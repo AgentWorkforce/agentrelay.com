@@ -6,13 +6,13 @@ const proxyRoutes: Record<string, string> = {
   "/observer": "https://observer.relaycast.dev",
 };
 
-function getOrigin(pathname: string, env: Env): string {
+function matchRoute(pathname: string, env: Env): { origin: string; prefix: string } {
   for (const [prefix, origin] of Object.entries(proxyRoutes)) {
     if (pathname.startsWith(prefix)) {
-      return origin;
+      return { origin, prefix };
     }
   }
-  return env.NEXT_APP_ORIGIN;
+  return { origin: env.NEXT_APP_ORIGIN, prefix: "" };
 }
 
 export default {
@@ -24,11 +24,14 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
-    const origin = getOrigin(url.pathname, env);
+    const { origin, prefix } = matchRoute(url.pathname, env);
 
     url.hostname = new URL(origin).hostname;
     url.port = "";
     url.protocol = "https:";
+    if (prefix) {
+      url.pathname = url.pathname.slice(prefix.length) || "/";
+    }
 
     const subRequest = new Request(url.toString(), request);
 
