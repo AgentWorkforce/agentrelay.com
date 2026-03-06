@@ -4,7 +4,7 @@ interface Env {
 
 const proxyRoutes: Record<string, string> = {
   "/observer": "https://observer.relaycast.dev",
-  "/openclaw": "https://agentrelay.dev",
+  "/openclaw": "https://agentrelay.net",
 };
 
 function getOrigin(pathname: string, env: Env): string {
