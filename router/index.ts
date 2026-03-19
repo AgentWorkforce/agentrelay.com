@@ -31,7 +31,16 @@ export default {
     url.port = "";
     url.protocol = "https:";
 
-    const subRequest = new Request(url.toString(), request);
+    const headers = new Headers(request.headers);
+    headers.set("X-Forwarded-Host", request.headers.get("Host") || "");
+    headers.set("X-Forwarded-Proto", "https");
+
+    const subRequest = new Request(url.toString(), {
+      method: request.method,
+      headers,
+      body: request.body,
+      redirect: "manual",
+    });
 
     try {
       const response = await fetch(subRequest);
