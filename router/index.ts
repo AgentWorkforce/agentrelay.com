@@ -25,14 +25,15 @@ export default {
       return Response.redirect(url.toString(), 301);
     }
 
-    const origin = getOrigin(url.pathname, env);
+    const requestHost = request.headers.get("Host") || url.hostname;
+    const originUrl = new URL(getOrigin(url.pathname, env));
 
-    url.hostname = new URL(origin).hostname;
+    url.hostname = originUrl.hostname;
     url.port = "";
     url.protocol = "https:";
 
     const headers = new Headers(request.headers);
-    headers.set("X-Forwarded-Host", request.headers.get("Host") || "");
+    headers.set("X-Forwarded-Host", requestHost);
     headers.set("X-Forwarded-Proto", "https");
 
     const subRequest = new Request(url.toString(), {
@@ -42,8 +43,6 @@ export default {
       redirect: "manual",
     });
 
-    const requestHost = request.headers.get("Host") || url.hostname;
-
     try {
       const response = await fetch(subRequest);
       const responseHeaders = new Headers(response.headers);
@@ -52,7 +51,7 @@ export default {
       if (location) {
         try {
           const loc = new URL(location);
-          if (loc.hostname === new URL(origin).hostname) {
+          if (loc.hostname === originUrl.hostname) {
             loc.hostname = requestHost;
             responseHeaders.set("Location", loc.toString());
           }
