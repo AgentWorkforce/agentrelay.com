@@ -34,6 +34,7 @@ export default {
 
     const headers = new Headers(request.headers);
     headers.set("X-Forwarded-Host", requestHost);
+    headers.set("X-Original-Host", requestHost);
     headers.set("X-Forwarded-Proto", "https");
 
     const subRequest = new Request(url.toString(), {
