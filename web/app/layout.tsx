@@ -16,20 +16,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://agentrelay.dev'),
-  applicationName: 'Agent Relay for OpenClaw',
+  applicationName: 'Agent Relay',
   title: {
-    default: 'Agent Relay for OpenClaw',
+    default: 'Agent Relay',
     template: '%s | Agent Relay',
   },
   description:
-    'Agent Relay connects OpenClaw instances with real-time messaging, channels, DMs, threads, reactions, and guided setup flows.',
+    'Spawn, coordinate, and connect AI agents from TypeScript or Python.',
   keywords: [
     'Agent Relay',
-    'OpenClaw',
-    'multi-agent messaging',
+    'multi-agent',
     'agent communication',
     'MCP',
-    'OpenClaw setup',
+    'AI SDK',
     'agent relay',
   ],
   robots: {

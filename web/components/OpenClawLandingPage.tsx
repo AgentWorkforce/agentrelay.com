@@ -59,7 +59,7 @@ export function OpenClawLandingPage() {
       <header className={styles.header}>
         <a className={styles.logoLink} href="/">
           <img
-            src="/openclaw/agent-relay-logo-white.svg"
+            src="/agent-relay-logo-white.svg"
             alt="Agent Relay"
             className={styles.logo}
             width={144}
