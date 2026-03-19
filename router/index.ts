@@ -42,20 +42,29 @@ export default {
       redirect: "manual",
     });
 
+    const requestHost = request.headers.get("Host") || url.hostname;
+
     try {
       const response = await fetch(subRequest);
+      const responseHeaders = new Headers(response.headers);
 
-      if (!response.body) {
-        return response;
+      const location = responseHeaders.get("Location");
+      if (location) {
+        try {
+          const loc = new URL(location);
+          if (loc.hostname === new URL(origin).hostname) {
+            loc.hostname = requestHost;
+            responseHeaders.set("Location", loc.toString());
+          }
+        } catch {
+          // relative URL, leave as-is
+        }
       }
 
-      const { readable, writable } = new TransformStream();
-      response.body.pipeTo(writable);
-
-      return new Response(readable, {
+      return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
-        headers: new Headers(response.headers),
+        headers: responseHeaders,
       });
     } catch (error) {
       return new Response(
