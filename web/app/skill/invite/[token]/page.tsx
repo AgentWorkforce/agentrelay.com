@@ -44,7 +44,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     title: 'OpenClaw Workspace Invite',
     description: 'Private invite instructions for joining an Agent Relay workspace from OpenClaw.',
     alternates: {
-      canonical: 'https://agentrelay.dev/openclaw/skill',
+      canonical: 'https://agentrelay.dev/skill',
     },
     robots: {
       index: false,

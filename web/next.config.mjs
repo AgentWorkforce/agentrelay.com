@@ -6,11 +6,10 @@ const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  basePath: '/openclaw',
   reactStrictMode: true,
   outputFileTracingRoot: path.resolve(__dirname, '..'),
   outputFileTracingIncludes: {
-    '/*': ['../packages/openclaw/skill/SKILL.md'],
+    '/*': ['../packages/openclaw/skill/SKILL.md', '../docs/**/*.mdx'],
   },
 };
 

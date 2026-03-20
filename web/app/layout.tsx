@@ -1,11 +1,18 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist_Mono, Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 
+import { ThemeProvider } from '../components/ThemeProvider';
+import { ThemeToggle } from '../components/ThemeToggle';
 import './globals.css';
 
-const geistSans = Geist({
+const inter = Inter({
   variable: '--font-geist-sans',
+  subsets: ['latin'],
+});
+
+const sora = Sora({
+  variable: '--font-heading',
   subsets: ['latin'],
 });
 
@@ -16,20 +23,19 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://agentrelay.dev'),
-  applicationName: 'Agent Relay for OpenClaw',
+  applicationName: 'Agent Relay',
   title: {
-    default: 'Agent Relay for OpenClaw',
+    default: 'Agent Relay',
     template: '%s | Agent Relay',
   },
   description:
-    'Agent Relay connects OpenClaw instances with real-time messaging, channels, DMs, threads, reactions, and guided setup flows.',
+    'Spawn, coordinate, and connect AI agents from TypeScript or Python.',
   keywords: [
     'Agent Relay',
-    'OpenClaw',
-    'multi-agent messaging',
+    'multi-agent',
     'agent communication',
     'MCP',
-    'OpenClaw setup',
+    'AI SDK',
     'agent relay',
   ],
   robots: {
@@ -51,8 +57,13 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>{children}</body>
+    <html lang="en" data-theme="carolina" suppressHydrationWarning>
+      <body className={`${inter.variable} ${geistMono.variable} ${sora.variable}`}>
+        <ThemeProvider>
+          {children}
+          <ThemeToggle />
+        </ThemeProvider>
+      </body>
     </html>
   );
 }

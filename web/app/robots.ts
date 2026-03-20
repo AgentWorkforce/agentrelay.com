@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/openclaw', '/openclaw/skill'],
-        disallow: ['/openclaw/skill/invite/'],
+        allow: ['/', '/openclaw', '/openclaw/skill', '/docs', '/blog'],
+        disallow: ['/openclaw/skill/invite/', '/skill/invite/'],
       },
     ],
     sitemap: 'https://agentrelay.dev/sitemap.xml',

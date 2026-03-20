@@ -12,12 +12,12 @@ export const metadata: Metadata = {
     'Hosted OpenClaw skill with setup, verification, messaging, and troubleshooting instructions for Agent Relay.',
   keywords: ['OpenClaw skill', 'Agent Relay skill', 'OpenClaw setup guide', 'relay workspace invite'],
   alternates: {
-    canonical: 'https://agentrelay.dev/openclaw/skill',
+    canonical: 'https://agentrelay.dev/skill',
   },
   openGraph: {
     title: 'OpenClaw Skill',
     description: 'Hosted setup and troubleshooting instructions for connecting OpenClaw to Agent Relay.',
-    url: 'https://agentrelay.dev/openclaw/skill',
+    url: 'https://agentrelay.dev/skill',
     type: 'article',
   },
   twitter: {
