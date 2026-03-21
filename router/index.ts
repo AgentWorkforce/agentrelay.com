@@ -5,7 +5,6 @@ interface Env {
 const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const PRIMARY_HOST = "agentrelay.dev";
-const WWW_HOST = "www.agentrelay.dev";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 
@@ -22,9 +21,9 @@ function isCloudPath(pathname: string): boolean {
 }
 
 export function getOrigin(hostname: string, pathname: string, env: Env): string {
-  // The agentrelay.dev apex is a split router:
+  // The production agentrelay.dev apex is a split router:
   //   1. /observer* stays on the Relaycast observer app
-  //   2. /cloud* goes to the Next.js cloud app
+  //   2. /cloud* goes to the cloud app's public www origin
   //   3. everything else falls back to the legacy proxy target
   if (hostname === PRIMARY_HOST) {
     if (isObserverPath(pathname)) {
@@ -42,12 +41,6 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
-    if (url.hostname === WWW_HOST) {
-      url.hostname = PRIMARY_HOST;
-      return Response.redirect(url.toString(), 301);
-    }
-
     const requestHost = request.headers.get("Host") || url.hostname;
     const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
 
