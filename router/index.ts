@@ -3,10 +3,23 @@ interface Env {
 }
 
 const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
+const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const PRIMARY_HOST = "agentrelay.dev";
 const WWW_HOST = "www.agentrelay.dev";
+const OBSERVER_PATH_PREFIX = "/observer";
 
-function getOrigin(hostname: string, env: Env): string {
+function isObserverPath(pathname: string): boolean {
+  return (
+    pathname === OBSERVER_PATH_PREFIX ||
+    pathname.startsWith(`${OBSERVER_PATH_PREFIX}/`)
+  );
+}
+
+function getOrigin(hostname: string, pathname: string, env: Env): string {
+  if (isObserverPath(pathname)) {
+    return OBSERVER_ORIGIN;
+  }
+
   if (hostname === PRIMARY_HOST) {
     return env.NEXT_APP_ORIGIN;
   }
@@ -24,7 +37,7 @@ export default {
     }
 
     const requestHost = request.headers.get("Host") || url.hostname;
-    const originUrl = new URL(getOrigin(url.hostname, env));
+    const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
 
     url.hostname = originUrl.hostname;
     url.port = "";
