@@ -1,5 +1,5 @@
 interface Env {
-  NEXT_APP_ORIGIN: string;
+  NEXT_PUBLIC_APP_URL: string;
 }
 
 const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
@@ -32,7 +32,7 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
     }
 
     if (isCloudPath(pathname)) {
-      return env.NEXT_APP_ORIGIN;
+      return env.NEXT_PUBLIC_APP_URL;
     }
   }
 
