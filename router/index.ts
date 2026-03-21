@@ -1,32 +1,48 @@
 interface Env {
-  NEXT_APP_ORIGIN: string;
+  NEXT_PUBLIC_APP_URL: string;
 }
 
-const proxyRoutes: Record<string, string> = {
-  "/observer": "https://observer.relaycast.dev",
-  "/openclaw": "https://agentrelay.net",
-};
+const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
+const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
+const PRIMARY_HOST = "agentrelay.dev";
+const OBSERVER_PATH_PREFIX = "/observer";
+const CLOUD_PATH_PREFIX = "/cloud";
 
-function getOrigin(pathname: string, env: Env): string {
-  for (const [prefix, origin] of Object.entries(proxyRoutes)) {
-    if (pathname.startsWith(prefix)) {
-      return origin;
+function isPathWithinPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
+function isObserverPath(pathname: string): boolean {
+  return isPathWithinPrefix(pathname, OBSERVER_PATH_PREFIX);
+}
+
+function isCloudPath(pathname: string): boolean {
+  return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
+}
+
+export function getOrigin(hostname: string, pathname: string, env: Env): string {
+  // The production agentrelay.dev apex is a split router:
+  //   1. /observer* stays on the Relaycast observer app
+  //   2. /cloud* goes to the cloud app's public www origin
+  //   3. everything else falls back to the legacy proxy target
+  if (hostname === PRIMARY_HOST) {
+    if (isObserverPath(pathname)) {
+      return OBSERVER_ORIGIN;
+    }
+
+    if (isCloudPath(pathname)) {
+      return env.NEXT_PUBLIC_APP_URL;
     }
   }
-  return env.NEXT_APP_ORIGIN;
+
+  return FALLBACK_PROXY_ORIGIN;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
-    if (url.hostname === "www.agentrelay.dev") {
-      url.hostname = "agentrelay.dev";
-      return Response.redirect(url.toString(), 301);
-    }
-
     const requestHost = request.headers.get("Host") || url.hostname;
-    const originUrl = new URL(getOrigin(url.pathname, env));
+    const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
 
     url.hostname = originUrl.hostname;
     url.port = "";
@@ -67,10 +83,9 @@ export default {
         headers: responseHeaders,
       });
     } catch (error) {
-      return new Response(
-        JSON.stringify({ error: (error as Error).message }),
-        { status: 500 },
-      );
+      return new Response(JSON.stringify({ error: (error as Error).message }), {
+        status: 500,
+      });
     }
   },
 };
