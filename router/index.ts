@@ -7,21 +7,33 @@ const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const PRIMARY_HOST = "agentrelay.dev";
 const WWW_HOST = "www.agentrelay.dev";
 const OBSERVER_PATH_PREFIX = "/observer";
+const CLOUD_PATH_PREFIX = "/cloud";
 
-function isObserverPath(pathname: string): boolean {
-  return (
-    pathname === OBSERVER_PATH_PREFIX ||
-    pathname.startsWith(`${OBSERVER_PATH_PREFIX}/`)
-  );
+function isPathWithinPrefix(pathname: string, prefix: string): boolean {
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
 
-function getOrigin(hostname: string, pathname: string, env: Env): string {
-  if (isObserverPath(pathname)) {
-    return OBSERVER_ORIGIN;
-  }
+function isObserverPath(pathname: string): boolean {
+  return isPathWithinPrefix(pathname, OBSERVER_PATH_PREFIX);
+}
 
+function isCloudPath(pathname: string): boolean {
+  return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
+}
+
+export function getOrigin(hostname: string, pathname: string, env: Env): string {
+  // The agentrelay.dev apex is a split router:
+  //   1. /observer* stays on the Relaycast observer app
+  //   2. /cloud* goes to the Next.js cloud app
+  //   3. everything else falls back to the legacy proxy target
   if (hostname === PRIMARY_HOST) {
-    return env.NEXT_APP_ORIGIN;
+    if (isObserverPath(pathname)) {
+      return OBSERVER_ORIGIN;
+    }
+
+    if (isCloudPath(pathname)) {
+      return env.NEXT_APP_ORIGIN;
+    }
   }
 
   return FALLBACK_PROXY_ORIGIN;
@@ -78,10 +90,9 @@ export default {
         headers: responseHeaders,
       });
     } catch (error) {
-      return new Response(
-        JSON.stringify({ error: (error as Error).message }),
-        { status: 500 },
-      );
+      return new Response(JSON.stringify({ error: (error as Error).message }), {
+        status: 500,
+      });
     }
   },
 };
