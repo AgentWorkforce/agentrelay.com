@@ -2,31 +2,29 @@ interface Env {
   NEXT_APP_ORIGIN: string;
 }
 
-const proxyRoutes: Record<string, string> = {
-  "/observer": "https://observer.relaycast.dev",
-  "/openclaw": "https://agentrelay.net",
-};
+const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
+const PRIMARY_HOST = "agentrelay.dev";
+const WWW_HOST = "www.agentrelay.dev";
 
-function getOrigin(pathname: string, env: Env): string {
-  for (const [prefix, origin] of Object.entries(proxyRoutes)) {
-    if (pathname.startsWith(prefix)) {
-      return origin;
-    }
+function getOrigin(hostname: string, env: Env): string {
+  if (hostname === PRIMARY_HOST) {
+    return env.NEXT_APP_ORIGIN;
   }
-  return env.NEXT_APP_ORIGIN;
+
+  return FALLBACK_PROXY_ORIGIN;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
-    if (url.hostname === "www.agentrelay.dev") {
-      url.hostname = "agentrelay.dev";
+    if (url.hostname === WWW_HOST) {
+      url.hostname = PRIMARY_HOST;
       return Response.redirect(url.toString(), 301);
     }
 
     const requestHost = request.headers.get("Host") || url.hostname;
-    const originUrl = new URL(getOrigin(url.pathname, env));
+    const originUrl = new URL(getOrigin(url.hostname, env));
 
     url.hostname = originUrl.hostname;
     url.port = "";
