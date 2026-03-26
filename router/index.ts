@@ -1,5 +1,5 @@
 interface Env {
-  NEXT_PUBLIC_APP_URL: string;
+  CLOUD_APP_ORIGIN: string;
 }
 
 const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
@@ -23,7 +23,7 @@ function isCloudPath(pathname: string): boolean {
 export function getOrigin(hostname: string, pathname: string, env: Env): string {
   // /cloud* always goes to the Next.js cloud app regardless of host
   if (isCloudPath(pathname)) {
-    return env.NEXT_PUBLIC_APP_URL;
+    return env.CLOUD_APP_ORIGIN;
   }
 
   // The production agentrelay.dev apex is a split router:
