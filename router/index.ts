@@ -20,6 +20,73 @@ function isCloudPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
 }
 
+function stripPathPrefix(pathname: string, prefix: string): string {
+  if (pathname === prefix) {
+    return "/";
+  }
+
+  if (pathname.startsWith(`${prefix}/`)) {
+    return pathname.slice(prefix.length);
+  }
+
+  return pathname;
+}
+
+function addPathPrefix(pathname: string, prefix: string): string {
+  if (!prefix) {
+    return pathname;
+  }
+
+  if (pathname === "/") {
+    return prefix;
+  }
+
+  if (pathname === prefix || pathname.startsWith(`${prefix}/`) || pathname.startsWith(`${prefix}?`)) {
+    return pathname;
+  }
+
+  return `${prefix}${pathname}`;
+}
+
+export function getUpstreamPath(pathname: string): string {
+  if (isCloudPath(pathname)) {
+    return stripPathPrefix(pathname, CLOUD_PATH_PREFIX);
+  }
+
+  return pathname;
+}
+
+export function rewriteLocation(
+  location: string,
+  originUrl: URL,
+  requestHost: string,
+  requestProtocol: string,
+  mountPrefix = "",
+): string {
+  if (!location) {
+    return location;
+  }
+
+  try {
+    const absolute = new URL(location);
+    if (absolute.hostname !== originUrl.hostname) {
+      return location;
+    }
+
+    absolute.hostname = requestHost;
+    absolute.port = "";
+    absolute.protocol = requestProtocol;
+    absolute.pathname = addPathPrefix(absolute.pathname, mountPrefix);
+    return absolute.toString();
+  } catch {
+    if (location.startsWith("/")) {
+      return addPathPrefix(location, mountPrefix);
+    }
+
+    return location;
+  }
+}
+
 export function getOrigin(hostname: string, pathname: string, env: Env): string {
   // /cloud* always goes to the Next.js cloud app regardless of host
   if (isCloudPath(pathname)) {
@@ -43,7 +110,9 @@ export default {
     const url = new URL(request.url);
     const requestHost = request.headers.get("Host") || url.hostname;
     const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
+    const mountPrefix = isCloudPath(url.pathname) ? CLOUD_PATH_PREFIX : "";
 
+    url.pathname = getUpstreamPath(url.pathname);
     url.hostname = originUrl.hostname;
     url.port = "";
     url.protocol = "https:";
@@ -52,6 +121,9 @@ export default {
     headers.set("X-Forwarded-Host", requestHost);
     headers.set("X-Original-Host", requestHost);
     headers.set("X-Forwarded-Proto", "https");
+    if (mountPrefix) {
+      headers.set("X-Forwarded-Prefix", mountPrefix);
+    }
 
     const subRequest = new Request(url.toString(), {
       method: request.method,
@@ -66,15 +138,10 @@ export default {
 
       const location = responseHeaders.get("Location");
       if (location) {
-        try {
-          const loc = new URL(location);
-          if (loc.hostname === originUrl.hostname) {
-            loc.hostname = requestHost;
-            responseHeaders.set("Location", loc.toString());
-          }
-        } catch {
-          // relative URL, leave as-is
-        }
+        responseHeaders.set(
+          "Location",
+          rewriteLocation(location, originUrl, requestHost, "https:", mountPrefix),
+        );
       }
 
       return new Response(response.body, {
