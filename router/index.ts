@@ -87,13 +87,9 @@ export function rewriteLocation(
   }
 }
 
-function isApiPath(pathname: string): boolean {
-  return isPathWithinPrefix(pathname, "/api");
-}
-
 export function getOrigin(hostname: string, pathname: string, env: Env): string {
-  // /cloud* and /api* always go to the Next.js cloud app regardless of host
-  if (isCloudPath(pathname) || isApiPath(pathname)) {
+  // /cloud* always goes to the Next.js cloud app regardless of host
+  if (isCloudPath(pathname)) {
     return env.CLOUD_APP_ORIGIN;
   }
 
