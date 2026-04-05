@@ -49,10 +49,6 @@ function addPathPrefix(pathname: string, prefix: string): string {
 }
 
 export function getUpstreamPath(pathname: string): string {
-  if (isCloudPath(pathname)) {
-    return stripPathPrefix(pathname, CLOUD_PATH_PREFIX);
-  }
-
   return pathname;
 }
 
