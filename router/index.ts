@@ -4,7 +4,7 @@ interface Env {
 
 const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
-const PRIMARY_HOST = "agentrelay.dev";
+const PRIMARY_HOST = "agentrelay.com";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 
@@ -49,10 +49,6 @@ function addPathPrefix(pathname: string, prefix: string): string {
 }
 
 export function getUpstreamPath(pathname: string): string {
-  if (isCloudPath(pathname)) {
-    return stripPathPrefix(pathname, CLOUD_PATH_PREFIX);
-  }
-
   return pathname;
 }
 
@@ -93,7 +89,7 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
     return env.CLOUD_APP_ORIGIN;
   }
 
-  // The production agentrelay.dev apex is a split router:
+  // The production agentrelay.com apex is a split router:
   //   1. /observer* stays on the Relaycast observer app
   //   2. everything else falls back to the legacy proxy target
   if (hostname === PRIMARY_HOST) {
