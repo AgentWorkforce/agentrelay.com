@@ -2,7 +2,7 @@ interface Env {
   CLOUD_APP_ORIGIN: string;
 }
 
-const FALLBACK_PROXY_ORIGIN = "https://agentrelay.net";
+const FALLBACK_PROXY_ORIGIN = "https://orgin.agentrelay.net/";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const PRIMARY_HOST = "agentrelay.com";
 const OBSERVER_PATH_PREFIX = "/observer";
