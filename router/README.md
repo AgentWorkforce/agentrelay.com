@@ -10,7 +10,9 @@ RelayFile observer deployment is wired from the production job in
 `scripts/deploy-file-observer-pages.sh`, which packs
 `@relayfile/file-observer@latest`, builds it with
 `FILE_OBSERVER_BASE_PATH=/observer/file`, and deploys the detected static output
-to the Cloudflare Pages project `relayfile-file-observer`.
+to the Cloudflare Pages project `relayfile-file-observer`. The script creates
+that Pages project with the configured production branch when it is missing, so
+the first production deploy does not require manual Cloudflare setup.
 
 ```
                                      ┌────────────────────────────────────┐                                        
