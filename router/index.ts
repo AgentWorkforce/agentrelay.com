@@ -59,6 +59,18 @@ function addPathPrefix(pathname: string, prefix: string): string {
   return `${prefix}${pathname}`;
 }
 
+function hostnameFromHost(host: string, protocol: string): string {
+  try {
+    return new URL(`${protocol}//${host}`).hostname;
+  } catch {
+    return host.split(":")[0] ?? host;
+  }
+}
+
+function isPublicFileObserverLocation(hostname: string, pathname: string): boolean {
+  return isPrimaryFileObserverPath(hostname, pathname);
+}
+
 export function getUpstreamPath(hostname: string, pathname: string): string {
   if (isPrimaryFileObserverPath(hostname, pathname)) {
     return stripPathPrefix(pathname, FILE_OBSERVER_PATH_PREFIX);
@@ -92,6 +104,10 @@ export function rewriteLocation(
 
   try {
     const absolute = new URL(location);
+    if (isPublicFileObserverLocation(absolute.hostname, absolute.pathname)) {
+      return location;
+    }
+
     if (absolute.hostname !== originUrl.hostname) {
       return location;
     }
@@ -103,6 +119,16 @@ export function rewriteLocation(
     return absolute.toString();
   } catch {
     if (location.startsWith("/")) {
+      try {
+        const requestHostname = hostnameFromHost(requestHost, requestProtocol);
+        const locationUrl = new URL(location, `${requestProtocol}//${requestHost}`);
+        if (isPublicFileObserverLocation(requestHostname, locationUrl.pathname)) {
+          return location;
+        }
+      } catch {
+        // Fall through to the normal mount-prefix rewrite.
+      }
+
       return addPathPrefix(location, mountPrefix);
     }
 
