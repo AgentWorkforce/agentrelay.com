@@ -1,10 +1,13 @@
 interface Env {
   CLOUD_APP_ORIGIN: string;
+  FILE_OBSERVER_ORIGIN?: string;
 }
 
-const FALLBACK_PROXY_ORIGIN = "https://orgin.agentrelay.net/";
+const FALLBACK_PROXY_ORIGIN = "https://orgin.agentrelay.net";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
+const DEFAULT_FILE_OBSERVER_ORIGIN = "https://relayfile-file-observer.pages.dev";
 const PRIMARY_HOST = "agentrelay.com";
+const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 
@@ -14,6 +17,14 @@ function isPathWithinPrefix(pathname: string, prefix: string): boolean {
 
 function isObserverPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, OBSERVER_PATH_PREFIX);
+}
+
+function isFileObserverPath(pathname: string): boolean {
+  return isPathWithinPrefix(pathname, FILE_OBSERVER_PATH_PREFIX);
+}
+
+function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean {
+  return hostname === PRIMARY_HOST && isFileObserverPath(pathname);
 }
 
 function isCloudPath(pathname: string): boolean {
@@ -50,6 +61,18 @@ function addPathPrefix(pathname: string, prefix: string): string {
 
 export function getUpstreamPath(pathname: string): string {
   return pathname;
+}
+
+export function getMountPrefix(hostname: string, pathname: string): string {
+  if (isCloudPath(pathname)) {
+    return CLOUD_PATH_PREFIX;
+  }
+
+  if (isPrimaryFileObserverPath(hostname, pathname)) {
+    return FILE_OBSERVER_PATH_PREFIX;
+  }
+
+  return "";
 }
 
 export function rewriteLocation(
@@ -90,9 +113,14 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   }
 
   // The production agentrelay.com apex is a split router:
-  //   1. /observer* stays on the Relaycast observer app
-  //   2. everything else falls back to the legacy proxy target
+  //   1. /observer/file* goes to the RelayFile file observer app
+  //   2. /observer* stays on the Relaycast observer app
+  //   3. everything else falls back to the legacy proxy target
   if (hostname === PRIMARY_HOST) {
+    if (isPrimaryFileObserverPath(hostname, pathname)) {
+      return env.FILE_OBSERVER_ORIGIN ?? DEFAULT_FILE_OBSERVER_ORIGIN;
+    }
+
     if (isObserverPath(pathname)) {
       return OBSERVER_ORIGIN;
     }
@@ -106,7 +134,7 @@ export default {
     const url = new URL(request.url);
     const requestHost = request.headers.get("Host") || url.hostname;
     const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
-    const mountPrefix = isCloudPath(url.pathname) ? CLOUD_PATH_PREFIX : "";
+    const mountPrefix = getMountPrefix(url.hostname, url.pathname);
 
     url.pathname = getUpstreamPath(url.pathname);
     url.hostname = originUrl.hostname;
