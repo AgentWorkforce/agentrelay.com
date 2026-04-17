@@ -59,7 +59,11 @@ function addPathPrefix(pathname: string, prefix: string): string {
   return `${prefix}${pathname}`;
 }
 
-export function getUpstreamPath(pathname: string): string {
+export function getUpstreamPath(hostname: string, pathname: string): string {
+  if (isPrimaryFileObserverPath(hostname, pathname)) {
+    return stripPathPrefix(pathname, FILE_OBSERVER_PATH_PREFIX);
+  }
+
   return pathname;
 }
 
@@ -136,7 +140,7 @@ export default {
     const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
     const mountPrefix = getMountPrefix(url.hostname, url.pathname);
 
-    url.pathname = getUpstreamPath(url.pathname);
+    url.pathname = getUpstreamPath(url.hostname, url.pathname);
     url.hostname = originUrl.hostname;
     url.port = "";
     url.protocol = "https:";
