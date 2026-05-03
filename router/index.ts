@@ -187,7 +187,10 @@ export default {
     });
 
     try {
-      const response = await fetch(subRequest);
+      // Use `globalThis.fetch` rather than a bare `fetch` identifier: Cloudflare
+      // Workers can hoist bare `fetch` off `globalThis` and throw
+      // `TypeError: Illegal invocation`. See sage `.claude/rules/workers-fetch.md`.
+      const response = await globalThis.fetch(subRequest);
       const responseHeaders = new Headers(response.headers);
 
       const location = responseHeaders.get("Location");
