@@ -1,13 +1,18 @@
+import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
+
 interface Env {
   CLOUD_APP_ORIGIN: string;
   FILE_OBSERVER_ORIGIN?: string;
-  ROUTER_CONFIG?: {
-    get(key: string): Promise<string | null>;
-  };
+  TRAFFIC_RECORDER?: RecorderEnv["TRAFFIC_RECORDER"];
+  ROUTER_CONFIG?: RecorderEnv["ROUTER_CONFIG"];
   WEBHOOK_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
   WEBHOOK_WORKER_ORIGIN?: string;
+}
+
+function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
+  return Boolean(env.TRAFFIC_RECORDER && env.ROUTER_CONFIG);
 }
 
 const FALLBACK_PROXY_ORIGIN = "https://orgin.agentrelay.net";
@@ -214,7 +219,7 @@ function buildWorkerOriginRequest(request: Request, requestUrl: URL, workerOrigi
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     if (await shouldUseWebhookWorker(url.pathname, env)) {
       if (env.WEBHOOK_WORKER) {
@@ -244,6 +249,7 @@ export default {
       headers.set("X-Forwarded-Prefix", mountPrefix);
     }
 
+    const recordingRequest = hasRecorderEnv(env) ? (request.clone() as unknown as Request) : null;
     const subRequest = new Request(url.toString(), {
       method: request.method,
       headers,
@@ -255,8 +261,8 @@ export default {
       // Use `globalThis.fetch` rather than a bare `fetch` identifier: Cloudflare
       // Workers can hoist bare `fetch` off `globalThis` and throw
       // `TypeError: Illegal invocation`. See sage `.claude/rules/workers-fetch.md`.
-      const response = await globalThis.fetch(subRequest);
-      const responseHeaders = new Headers(response.headers);
+      const upstreamResponse = await globalThis.fetch(subRequest);
+      const responseHeaders = new Headers(upstreamResponse.headers);
 
       const location = responseHeaders.get("Location");
       if (location) {
@@ -266,11 +272,17 @@ export default {
         );
       }
 
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
+      const response = new Response(upstreamResponse.body, {
+        status: upstreamResponse.status,
+        statusText: upstreamResponse.statusText,
         headers: responseHeaders,
       });
+
+      if (recordingRequest && hasRecorderEnv(env)) {
+        ctx.waitUntil(maybeRecord(recordingRequest, response.clone(), env, ctx));
+      }
+
+      return response;
     } catch (error) {
       return new Response(JSON.stringify({ error: (error as Error).message }), {
         status: 500,
