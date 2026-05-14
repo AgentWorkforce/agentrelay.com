@@ -1,10 +1,15 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
+import { maybeRateLimit, type RateLimitEnv } from "./src/rate-limit.js";
 
 interface Env {
   CLOUD_APP_ORIGIN: string;
+  CLOUD_WEB_WORKER?: {
+    fetch(request: Request): Promise<Response>;
+  };
   FILE_OBSERVER_ORIGIN?: string;
   TRAFFIC_RECORDER?: RecorderEnv["TRAFFIC_RECORDER"];
   ROUTER_CONFIG?: RecorderEnv["ROUTER_CONFIG"];
+  RATE_LIMIT_COUNTERS?: RateLimitEnv["RATE_LIMIT_COUNTERS"];
   WEBHOOK_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -22,6 +27,7 @@ const PRIMARY_HOST = "agentrelay.com";
 const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
+const CLOUD_ORIGIN_FLAG_KEY = "cloudOrigin";
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 
 // Exact paths the webhook worker handles. Other sub-paths under
@@ -168,7 +174,9 @@ export function rewriteLocation(
 }
 
 export function getOrigin(hostname: string, pathname: string, env: Env): string {
-  // /cloud* always goes to the Next.js cloud app regardless of host
+  // /cloud* defaults to the Next.js cloud app regardless of host. Requests only
+  // reach this branch when the KV flag has not already forwarded them to the
+  // cloud-web Worker.
   if (isCloudPath(pathname)) {
     return env.CLOUD_APP_ORIGIN;
   }
@@ -188,6 +196,19 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   }
 
   return FALLBACK_PROXY_ORIGIN;
+}
+
+async function shouldUseCloudWebWorker(pathname: string, env: Env): Promise<boolean> {
+  if (!isCloudPath(pathname)) {
+    return false;
+  }
+
+  try {
+    const configured = await env.ROUTER_CONFIG?.get(CLOUD_ORIGIN_FLAG_KEY);
+    return configured?.trim().toLowerCase() === "workers";
+  } catch {
+    return false;
+  }
 }
 
 async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boolean> {
@@ -221,14 +242,59 @@ function buildWorkerOriginRequest(request: Request, requestUrl: URL, workerOrigi
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    // Per-key rate limiting runs BEFORE any worker routing so a runaway
+    // workspace gets bounded everywhere — including webhook ingress and
+    // /cloud* traffic. The bypass list inside maybeRateLimit exempts
+    // health and observer paths. See packages/router/src/rate-limit.ts
+    // and docs/security/rate-limiting.md.
+    const rateLimited = await maybeRateLimit(request, env);
+    if (rateLimited) {
+      return rateLimited;
+    }
+
+    // Clone the request up front so any branch that returns early (cloud-web
+    // Worker service binding, webhook Worker service binding, etc.) can
+    // still feed the recorder the original payload. Without this clone, the
+    // /cloud Worker path bypasses the recorder entirely and the replay
+    // harness has no corpus to prove equivalence during Phase 4 cutover.
+    // See Codex P2.6 on bundle PR #647.
+    const recorderRequestClone = hasRecorderEnv(env)
+      ? (request.clone() as unknown as Request)
+      : null;
+
+    if ((await shouldUseCloudWebWorker(url.pathname, env)) && env.CLOUD_WEB_WORKER) {
+      const workerResponse = await env.CLOUD_WEB_WORKER.fetch(request);
+      if (recorderRequestClone) {
+        ctx.waitUntil(
+          maybeRecord(recorderRequestClone, workerResponse.clone(), env, ctx),
+        );
+      }
+      return workerResponse;
+    }
+
     if (await shouldUseWebhookWorker(url.pathname, env)) {
       if (env.WEBHOOK_WORKER) {
-        return env.WEBHOOK_WORKER.fetch(request);
+        const workerResponse = await env.WEBHOOK_WORKER.fetch(request);
+        if (recorderRequestClone) {
+          ctx.waitUntil(
+            maybeRecord(recorderRequestClone, workerResponse.clone(), env, ctx),
+          );
+        }
+        return workerResponse;
       }
 
       const workerOrigin = env.WEBHOOK_WORKER_ORIGIN?.trim();
       if (workerOrigin) {
-        return globalThis.fetch(buildWorkerOriginRequest(request, url, workerOrigin));
+        const originResponse = await globalThis.fetch(
+          buildWorkerOriginRequest(request, url, workerOrigin),
+        );
+        if (recorderRequestClone) {
+          ctx.waitUntil(
+            maybeRecord(recorderRequestClone, originResponse.clone(), env, ctx),
+          );
+        }
+        return originResponse;
       }
     }
 
@@ -249,7 +315,11 @@ export default {
       headers.set("X-Forwarded-Prefix", mountPrefix);
     }
 
-    const recordingRequest = hasRecorderEnv(env) ? (request.clone() as unknown as Request) : null;
+    // Reuse the clone made at the top of fetch() for the recorder. The
+    // earlier clone covers all branches; making a second one here would
+    // be wasted bytes on every request and would double-record on the
+    // Lambda origin path.
+    const recordingRequest = recorderRequestClone;
     const subRequest = new Request(url.toString(), {
       method: request.method,
       headers,
