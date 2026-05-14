@@ -1,6 +1,13 @@
 interface Env {
   CLOUD_APP_ORIGIN: string;
   FILE_OBSERVER_ORIGIN?: string;
+  ROUTER_CONFIG?: {
+    get(key: string): Promise<string | null>;
+  };
+  WEBHOOK_WORKER?: {
+    fetch(request: Request): Promise<Response>;
+  };
+  WEBHOOK_WORKER_ORIGIN?: string;
 }
 
 const FALLBACK_PROXY_ORIGIN = "https://orgin.agentrelay.net";
@@ -10,6 +17,18 @@ const PRIMARY_HOST = "agentrelay.com";
 const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
+const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
+
+// Exact paths the webhook worker handles. Other sub-paths under
+// /api/v1/webhooks (notably /api/v1/webhooks/composio/connect/callback, an
+// OAuth callback served by Next.js) must continue to route to the Lambda even
+// when WEBHOOK_ORIGIN=worker, otherwise they 404 against the Worker.
+const WEBHOOK_WORKER_PATHS = new Set<string>([
+  "/api/v1/webhooks/composio",
+  "/api/v1/webhooks/github",
+  "/api/v1/webhooks/hookdeck",
+  "/api/v1/webhooks/nango",
+]);
 
 function isPathWithinPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -29,6 +48,13 @@ function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean 
 
 function isCloudPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
+}
+
+// True only for the exact paths the webhook worker knows how to handle. Used
+// to gate worker forwarding so unrelated routes under /api/v1/webhooks/* (e.g.
+// the Composio OAuth callback) still reach the Lambda.
+export function isWebhookWorkerPath(pathname: string): boolean {
+  return WEBHOOK_WORKER_PATHS.has(pathname);
 }
 
 function stripPathPrefix(pathname: string, prefix: string): string {
@@ -159,9 +185,48 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   return FALLBACK_PROXY_ORIGIN;
 }
 
+async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boolean> {
+  if (!isWebhookWorkerPath(pathname)) {
+    return false;
+  }
+
+  try {
+    const configured = await env.ROUTER_CONFIG?.get(WEBHOOK_ORIGIN_FLAG_KEY);
+    return configured?.trim().toLowerCase() === "worker";
+  } catch {
+    return false;
+  }
+}
+
+function buildWorkerOriginRequest(request: Request, requestUrl: URL, workerOrigin: string): Request {
+  const targetUrl = new URL(requestUrl.toString());
+  const originUrl = new URL(workerOrigin);
+  targetUrl.protocol = originUrl.protocol;
+  targetUrl.hostname = originUrl.hostname;
+  targetUrl.port = originUrl.port;
+
+  return new Request(targetUrl.toString(), {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: "manual",
+  });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (await shouldUseWebhookWorker(url.pathname, env)) {
+      if (env.WEBHOOK_WORKER) {
+        return env.WEBHOOK_WORKER.fetch(request);
+      }
+
+      const workerOrigin = env.WEBHOOK_WORKER_ORIGIN?.trim();
+      if (workerOrigin) {
+        return globalThis.fetch(buildWorkerOriginRequest(request, url, workerOrigin));
+      }
+    }
+
     const requestHost = request.headers.get("Host") || url.hostname;
     const originUrl = new URL(getOrigin(url.hostname, url.pathname, env));
     const mountPrefix = getMountPrefix(url.hostname, url.pathname);
