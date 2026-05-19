@@ -40,6 +40,7 @@ const WEBHOOK_WORKER_PATHS = new Set<string>([
   "/api/v1/webhooks/hookdeck",
   "/api/v1/webhooks/nango",
 ]);
+const NANGO_WEBHOOK_WORKER_PATH = "/api/v1/webhooks/nango";
 
 function isPathWithinPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
@@ -65,7 +66,11 @@ function isCloudPath(pathname: string): boolean {
 // to gate worker forwarding so unrelated routes under /api/v1/webhooks/* (e.g.
 // the Composio OAuth callback) still reach the Lambda.
 export function isWebhookWorkerPath(pathname: string): boolean {
-  return WEBHOOK_WORKER_PATHS.has(pathname);
+  return WEBHOOK_WORKER_PATHS.has(stripPathPrefix(pathname, CLOUD_PATH_PREFIX));
+}
+
+function isNangoWebhookWorkerPath(pathname: string): boolean {
+  return stripPathPrefix(pathname, CLOUD_PATH_PREFIX) === NANGO_WEBHOOK_WORKER_PATH;
 }
 
 function stripPathPrefix(pathname: string, prefix: string): string {
@@ -203,6 +208,10 @@ async function shouldUseCloudWebWorker(pathname: string, env: Env): Promise<bool
     return false;
   }
 
+  if (await shouldUseWebhookWorker(pathname, env)) {
+    return false;
+  }
+
   try {
     const configured = await env.ROUTER_CONFIG?.get(CLOUD_ORIGIN_FLAG_KEY);
     return configured?.trim().toLowerCase() === "workers";
@@ -223,13 +232,7 @@ export async function shouldUseNangoWebhookWorkerRoute(
   pathname: string,
   env: Env,
 ): Promise<boolean> {
-  void pathname;
-  void (await readWebhookOriginFlag(env));
-  return false;
-}
-
-async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boolean> {
-  if (!isWebhookWorkerPath(pathname)) {
+  if (!isNangoWebhookWorkerPath(pathname)) {
     return false;
   }
 
@@ -237,19 +240,34 @@ async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boole
   return configured?.trim().toLowerCase() === "worker";
 }
 
-function buildWorkerOriginRequest(request: Request, requestUrl: URL, workerOrigin: string): Request {
-  const targetUrl = new URL(requestUrl.toString());
-  const originUrl = new URL(workerOrigin);
-  targetUrl.protocol = originUrl.protocol;
-  targetUrl.hostname = originUrl.hostname;
-  targetUrl.port = originUrl.port;
+async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boolean> {
+  return shouldUseNangoWebhookWorkerRoute(pathname, env);
+}
 
-  return new Request(targetUrl.toString(), {
+function buildWebhookWorkerRequest(
+  request: Request,
+  requestUrl: URL,
+  workerOrigin?: string,
+): Request {
+  const targetUrl = new URL(requestUrl.toString());
+  targetUrl.pathname = stripPathPrefix(targetUrl.pathname, CLOUD_PATH_PREFIX);
+
+  if (workerOrigin) {
+    const originUrl = new URL(workerOrigin);
+    targetUrl.protocol = originUrl.protocol;
+    targetUrl.hostname = originUrl.hostname;
+    targetUrl.port = originUrl.port;
+  }
+
+  const init: RequestInit & { duplex?: "half" } = {
     method: request.method,
     headers: request.headers,
     body: request.body,
     redirect: "manual",
-  });
+    duplex: "half",
+  };
+
+  return new Request(targetUrl.toString(), init);
 }
 
 export default {
@@ -272,26 +290,28 @@ export default {
     // /cloud Worker path bypasses the recorder entirely and the replay
     // harness has no corpus to prove equivalence during Phase 4 cutover.
     // See Codex P2.6 on bundle PR #647.
-    const recorderRequestClone = hasRecorderEnv(env)
+    const recorderEnv = hasRecorderEnv(env) ? env : null;
+    const recorderRequestClone = recorderEnv
       ? (request.clone() as unknown as Request)
       : null;
 
     if ((await shouldUseCloudWebWorker(url.pathname, env)) && env.CLOUD_WEB_WORKER) {
       const workerResponse = await env.CLOUD_WEB_WORKER.fetch(request);
-      if (recorderRequestClone) {
+      if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
-          maybeRecord(recorderRequestClone, workerResponse.clone(), env, ctx),
+          maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
         );
       }
       return workerResponse;
     }
 
     if (await shouldUseWebhookWorker(url.pathname, env)) {
+      const webhookWorkerRequest = buildWebhookWorkerRequest(request, url);
       if (env.WEBHOOK_WORKER) {
-        const workerResponse = await env.WEBHOOK_WORKER.fetch(request);
-        if (recorderRequestClone) {
+        const workerResponse = await env.WEBHOOK_WORKER.fetch(webhookWorkerRequest);
+        if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
-            maybeRecord(recorderRequestClone, workerResponse.clone(), env, ctx),
+            maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
           );
         }
         return workerResponse;
@@ -300,11 +320,11 @@ export default {
       const workerOrigin = env.WEBHOOK_WORKER_ORIGIN?.trim();
       if (workerOrigin) {
         const originResponse = await globalThis.fetch(
-          buildWorkerOriginRequest(request, url, workerOrigin),
+          buildWebhookWorkerRequest(request, url, workerOrigin),
         );
-        if (recorderRequestClone) {
+        if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
-            maybeRecord(recorderRequestClone, originResponse.clone(), env, ctx),
+            maybeRecord(recorderRequestClone, originResponse.clone(), recorderEnv, ctx),
           );
         }
         return originResponse;
