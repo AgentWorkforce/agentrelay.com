@@ -211,17 +211,30 @@ async function shouldUseCloudWebWorker(pathname: string, env: Env): Promise<bool
   }
 }
 
+export async function readWebhookOriginFlag(env: Env): Promise<string | null> {
+  try {
+    return (await env.ROUTER_CONFIG?.get(WEBHOOK_ORIGIN_FLAG_KEY)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function shouldUseNangoWebhookWorkerRoute(
+  pathname: string,
+  env: Env,
+): Promise<boolean> {
+  void pathname;
+  void (await readWebhookOriginFlag(env));
+  return false;
+}
+
 async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boolean> {
   if (!isWebhookWorkerPath(pathname)) {
     return false;
   }
 
-  try {
-    const configured = await env.ROUTER_CONFIG?.get(WEBHOOK_ORIGIN_FLAG_KEY);
-    return configured?.trim().toLowerCase() === "worker";
-  } catch {
-    return false;
-  }
+  const configured = await readWebhookOriginFlag(env);
+  return configured?.trim().toLowerCase() === "worker";
 }
 
 function buildWorkerOriginRequest(request: Request, requestUrl: URL, workerOrigin: string): Request {
