@@ -27,8 +27,8 @@ const PRIMARY_HOST = "agentrelay.com";
 const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
-const CLOUD_ORIGIN_FLAG_KEY = "cloudOrigin";
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
+let loggedPhase5aLambdaEliminated = false;
 
 // Exact paths the webhook worker handles. Other sub-paths under
 // /api/v1/webhooks (notably /api/v1/webhooks/composio/connect/callback, an
@@ -180,8 +180,7 @@ export function rewriteLocation(
 
 export function getOrigin(hostname: string, pathname: string, env: Env): string {
   // /cloud* defaults to the Next.js cloud app regardless of host. Requests only
-  // reach this branch when the KV flag has not already forwarded them to the
-  // cloud-web Worker.
+  // reach this fallback when the cloud-web Worker service binding is absent.
   if (isCloudPath(pathname)) {
     return env.CLOUD_APP_ORIGIN;
   }
@@ -212,12 +211,16 @@ async function shouldUseCloudWebWorker(pathname: string, env: Env): Promise<bool
     return false;
   }
 
-  try {
-    const configured = await env.ROUTER_CONFIG?.get(CLOUD_ORIGIN_FLAG_KEY);
-    return configured?.trim().toLowerCase() === "workers";
-  } catch {
-    return false;
+  return true;
+}
+
+function logPhase5aLambdaEliminatedOnce(): void {
+  if (loggedPhase5aLambdaEliminated) {
+    return;
   }
+
+  loggedPhase5aLambdaEliminated = true;
+  console.log(JSON.stringify({ router_phase: "5a_lambda_eliminated" }));
 }
 
 export async function readWebhookOriginFlag(env: Env): Promise<string | null> {
@@ -295,7 +298,18 @@ export default {
       ? (request.clone() as unknown as Request)
       : null;
 
-    if ((await shouldUseCloudWebWorker(url.pathname, env)) && env.CLOUD_WEB_WORKER) {
+    if (await shouldUseCloudWebWorker(url.pathname, env)) {
+      logPhase5aLambdaEliminatedOnce();
+      if (!env.CLOUD_WEB_WORKER) {
+        return new Response(
+          JSON.stringify({ error: "cloud web worker binding unavailable" }),
+          {
+            status: 503,
+            headers: { "content-type": "application/json" },
+          },
+        );
+      }
+
       const workerResponse = await env.CLOUD_WEB_WORKER.fetch(request);
       if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
