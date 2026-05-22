@@ -28,6 +28,18 @@ const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
+
+// Header set by webhook-worker's queue consumer
+// (`packages/webhook-worker/src/queue-consumer.ts`'s `buildForwardHeaders`) on
+// outbound forwards to cloud-web's `/api/v1/webhooks/nango`. When the
+// `WEBHOOK_ORIGIN` flag is `"worker"`, the router would otherwise redirect
+// every `/api/v1/webhooks/nango` POST back to webhook-worker — including
+// webhook-worker's own outbound forwards, producing an infinite redelivery
+// loop bounded only by `maxRetries`. Honouring this header lets webhook-worker
+// reach cloud-web's `routeForwardEvent` → `handleGitHubForward` path which is
+// the actual destination of the forward.
+const WEBHOOK_WORKER_FORWARDED_HEADER = "x-cloud-webhook-worker-forwarded";
+const WEBHOOK_WORKER_FORWARDED_VALUE = "webhook-worker";
 let loggedPhase5aLambdaEliminated = false;
 
 // Exact paths the webhook worker handles. Other sub-paths under
@@ -202,12 +214,16 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   return FALLBACK_PROXY_ORIGIN;
 }
 
-async function shouldUseCloudWebWorker(pathname: string, env: Env): Promise<boolean> {
+async function shouldUseCloudWebWorker(
+  pathname: string,
+  request: Request,
+  env: Env,
+): Promise<boolean> {
   if (!isCloudPath(pathname)) {
     return false;
   }
 
-  if (await shouldUseWebhookWorker(pathname, env)) {
+  if (await shouldUseWebhookWorker(pathname, request, env)) {
     return false;
   }
 
@@ -243,7 +259,20 @@ export async function shouldUseNangoWebhookWorkerRoute(
   return configured?.trim().toLowerCase() === "worker";
 }
 
-async function shouldUseWebhookWorker(pathname: string, env: Env): Promise<boolean> {
+async function shouldUseWebhookWorker(
+  pathname: string,
+  request: Request,
+  env: Env,
+): Promise<boolean> {
+  // Break the redelivery loop: webhook-worker's queue consumer forwards the
+  // raw envelope back to the same `/api/v1/webhooks/nango` route on
+  // `origin.agentrelay.cloud` so cloud-web's `handleGitHubForward` can run.
+  // Without this header check, the router catches that forward and redirects
+  // it back to webhook-worker, which re-enqueues, ad infinitum (or until
+  // `maxRetries`).
+  if (request.headers.get(WEBHOOK_WORKER_FORWARDED_HEADER) === WEBHOOK_WORKER_FORWARDED_VALUE) {
+    return false;
+  }
   return shouldUseNangoWebhookWorkerRoute(pathname, env);
 }
 
@@ -298,7 +327,7 @@ export default {
       ? (request.clone() as unknown as Request)
       : null;
 
-    if (await shouldUseCloudWebWorker(url.pathname, env)) {
+    if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
       if (!env.CLOUD_WEB_WORKER) {
         return new Response(
@@ -319,7 +348,7 @@ export default {
       return workerResponse;
     }
 
-    if (await shouldUseWebhookWorker(url.pathname, env)) {
+    if (await shouldUseWebhookWorker(url.pathname, request, env)) {
       const webhookWorkerRequest = buildWebhookWorkerRequest(request, url);
       if (env.WEBHOOK_WORKER) {
         const workerResponse = await env.WEBHOOK_WORKER.fetch(webhookWorkerRequest);
