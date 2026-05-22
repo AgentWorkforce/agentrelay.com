@@ -20,7 +20,7 @@ function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
   return Boolean(env.TRAFFIC_RECORDER && env.ROUTER_CONFIG);
 }
 
-const FALLBACK_PROXY_ORIGIN = "https://orgin.agentrelay.net";
+const FALLBACK_PROXY_ORIGIN = "https://origin.agentrelay.net";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const DEFAULT_FILE_OBSERVER_ORIGIN = "https://relayfile-file-observer.pages.dev";
 const PRIMARY_HOST = "agentrelay.com";
@@ -188,7 +188,7 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   // The production agentrelay.com apex is a split router:
   //   1. /observer/file* goes to the RelayFile file observer app
   //   2. /observer* stays on the Relaycast observer app
-  //   3. everything else falls back to the legacy proxy target
+  //   3. everything else falls back to the relay web origin
   if (hostname === PRIMARY_HOST) {
     if (isPrimaryFileObserverPath(hostname, pathname)) {
       return env.FILE_OBSERVER_ORIGIN ?? DEFAULT_FILE_OBSERVER_ORIGIN;
