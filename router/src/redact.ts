@@ -16,6 +16,10 @@ const FULL_BODY_REDACTION_PATHS = [
   /^\/api\/v1\/cli\/login(?:\/.*)?$/,
   /^\/api\/v1\/integrations\/nango\/connect-link(?:\/.*)?$/,
   /^\/api\/v1\/workspaces\/[a-zA-Z0-9_-]+\/integrations\/connect-session(?:\/.*)?$/,
+  // Recorder transcript ingest carries full meeting transcript_text/summary_text;
+  // never persist its body to the traffic corpus. Match with or without the
+  // /cloud app prefix.
+  /^\/(?:cloud\/)?api\/v1\/webhooks\/transcripts(?:\/.*)?$/,
 ];
 
 const JSON_SECRET_KEYS = new Set([

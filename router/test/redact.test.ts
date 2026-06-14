@@ -29,6 +29,16 @@ describe("router redaction", () => {
     ).toBe("[REDACTED:25]");
   });
 
+  it("fully redacts the recorder transcript ingest body (with and without /cloud prefix)", () => {
+    const body = JSON.stringify({ transcript_text: "private meeting words", summary_text: "x" });
+    expect(redactBody("/api/v1/webhooks/transcripts", body, "application/json")).toBe(
+      `[REDACTED:${body.length}]`,
+    );
+    expect(redactBody("/cloud/api/v1/webhooks/transcripts", body, "application/json")).toBe(
+      `[REDACTED:${body.length}]`,
+    );
+  });
+
   it("scrubs sensitive keys from JSON bodies", () => {
     expect(
       redactBody(
