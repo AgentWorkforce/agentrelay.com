@@ -38,12 +38,15 @@ GitHub Actions:
   (ephemeral `*.workers.dev` URL, no custom domain; Cloudflare expires old
   versions automatically — no stale-preview cleanup needed)
 
-Required GitHub Actions config (environments `prod` + `preview`):
+Required GitHub Actions config (repository-level — prod and previews share the
+same Cloudflare account, so no per-environment scoping is needed):
 
 - Secrets: `CLOUDFLARE_API_TOKEN` (Workers Scripts + Workers Routes + DNS edit on
   the account)
 - Vars: `CLOUDFLARE_ACCOUNT_ID`, `NEXT_PUBLIC_POSTHOG_KEY`
   (optional `NEXT_PUBLIC_POSTHOG_HOST`, defaults to `https://i.agentrelay.com`)
+
+Pushes to `main` auto-deploy to production; PRs get an ephemeral preview version.
 
 The apex `agentrelay.com` reaches this site via the router's fallback; domain
 consolidation onto `*.agentrelay.com` is a later phase.

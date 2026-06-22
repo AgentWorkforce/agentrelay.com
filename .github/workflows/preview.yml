@@ -19,7 +19,6 @@ jobs:
     # Same-repo PRs only (forks can't read the Cloudflare secret).
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    environment: preview
     timeout-minutes: 20
     steps:
       - name: Checkout code
