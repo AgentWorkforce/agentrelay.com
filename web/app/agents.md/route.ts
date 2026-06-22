@@ -1,31 +1,34 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 // Markdown endpoint for /agents, relocated from app/agents/route.ts so that
-// app/agents/page.tsx can serve the HTML gallery. Preserves the original
-// Content-Type and Cache-Control so any external LLM tooling that fetched the
-// markdown keeps working at /agents.md.
+// app/agents/page.tsx can serve the HTML gallery. Serves the AgentWorkforce/relay
+// README so any external LLM tooling that fetched the markdown keeps working at
+// /agents.md.
+//
+// The README lives in a different (public) repo, so it's fetched from GitHub at
+// build / revalidation rather than read from the local filesystem — which also
+// suits the Cloudflare Workers runtime, where node:fs is unavailable.
 
-export const dynamic = 'force-static';
+export const revalidate = 86400;
 
-const README_CANDIDATES = [
-  path.resolve(process.cwd(), 'README.md'),
-  path.resolve(process.cwd(), '../README.md'),
-];
+const RELAY_README_URL =
+  'https://raw.githubusercontent.com/AgentWorkforce/relay/main/README.md';
 
-function readReadme(): string {
-  for (const candidate of README_CANDIDATES) {
-    if (fs.existsSync(candidate)) {
-      return fs.readFileSync(candidate, 'utf8');
+const FALLBACK =
+  '# Agent Relay\n\nReal-time messaging between AI agents.\n\nSee https://github.com/AgentWorkforce/relay for full documentation.';
+
+async function loadReadme(): Promise<string> {
+  try {
+    const response = await fetch(RELAY_README_URL);
+    if (response.ok) {
+      return await response.text();
     }
+  } catch {
+    // Network failure at build/revalidation — serve the fallback below.
   }
-  return '# Agent Relay\n\nReal-time messaging between AI agents.\n\nSee https://github.com/AgentWorkforce/relay for full documentation.';
+  return FALLBACK;
 }
 
-const CONTENT = readReadme();
-
 export async function GET() {
-  return new Response(CONTENT, {
+  return new Response(await loadReadme(), {
     headers: {
       'Content-Type': 'text/markdown; charset=utf-8',
       'Cache-Control': 'public, max-age=86400',
