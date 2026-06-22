@@ -1,13 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import matter from 'gray-matter';
 import { encodeCodeFenceMeta } from './code-fence-meta';
-import { resolveContentDir } from './content-paths';
+import { readContentFile } from './content-store';
 import type { DocsVersionId } from './docs-versions';
-
-const DOCS_DIR = resolveContentDir('docs');
-const LEGACY_7_1_1_DOCS_DIR = path.join(DOCS_DIR, '7.1.1');
 
 export interface DocFrontmatter {
   title: string;
@@ -136,8 +130,8 @@ function buildSearchSnippet(content: string): string {
   return textLines.join(' ').slice(0, 500);
 }
 
-function getDocsDir(version: DocsVersionId): string {
-  return version === 'v7.1.1' ? LEGACY_7_1_1_DOCS_DIR : DOCS_DIR;
+function getDocsPrefix(version: DocsVersionId): string {
+  return version === 'v7.1.1' ? 'docs/7.1.1' : 'docs';
 }
 
 function rewriteLegacyDocsLinks(content: string, basePath: string): string {
@@ -155,13 +149,12 @@ export function getDoc(
   version: DocsVersionId = 'v8',
   options: { linkBasePath?: string } = {}
 ): DocContent | null {
-  const filePath = path.join(getDocsDir(version), `${slug}.mdx`);
+  const raw = readContentFile(`${getDocsPrefix(version)}/${slug}.mdx`);
 
-  if (!fs.existsSync(filePath)) {
+  if (raw === null) {
     return null;
   }
 
-  const raw = fs.readFileSync(filePath, 'utf8');
   const { data, content } = matter(raw);
   const legacyLinkBasePath = options.linkBasePath ?? '/docs/7.1.1';
   const docContent = version === 'v7.1.1' ? rewriteLegacyDocsLinks(content, legacyLinkBasePath) : content;
@@ -197,9 +190,11 @@ export function getSearchIndex(): SearchEntry[] {
   const { getAllDocSlugs } = require('./docs-nav') as typeof import('./docs-nav');
   const slugs = getAllDocSlugs();
 
-  return slugs.map((slug) => {
-    const filePath = path.join(DOCS_DIR, `${slug}.mdx`);
-    const raw = fs.readFileSync(filePath, 'utf8');
+  return slugs.flatMap((slug) => {
+    const raw = readContentFile(`docs/${slug}.mdx`);
+    if (raw === null) {
+      return [];
+    }
     const { data, content } = matter(raw);
     const body = buildSearchSnippet(content);
 
@@ -210,12 +205,14 @@ export function getSearchIndex(): SearchEntry[] {
       headings.push(m[1].replace(/`([^`]+)`/g, '$1').trim());
     }
 
-    return {
-      slug,
-      title: (data.title as string) || slug,
-      description: (data.description as string) || '',
-      headings,
-      body,
-    };
+    return [
+      {
+        slug,
+        title: (data.title as string) || slug,
+        description: (data.description as string) || '',
+        headings,
+        body,
+      },
+    ];
   });
 }

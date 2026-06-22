@@ -1,4 +1,4 @@
-name: Deploy Web (SST)
+name: Deploy Web (Cloudflare)
 
 on:
   push:
@@ -7,22 +7,17 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: sst-web-production
+  group: deploy-web-production
   cancel-in-progress: false
 
 permissions:
   contents: read
-  id-token: write
 
 jobs:
   deploy-production:
     name: Deploy production
     runs-on: ubuntu-latest
     environment: prod
-    env:
-      AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-      AWS_REGION: ${{ vars.AWS_REGION }}
-      SST_STAGE: production
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,34 +31,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate Cloudflare token
+      - name: Build OpenNext (Cloudflare)
+        working-directory: web
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-        run: |
-          if [ -z "${CLOUDFLARE_API_TOKEN}" ]; then
-            echo "Missing required secret: CLOUDFLARE_API_TOKEN"
-            exit 1
-          fi
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ vars.NEXT_PUBLIC_POSTHOG_HOST || 'https://i.agentrelay.com' }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
+        run: npm run cf:build
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5.1.1
-        with:
-          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: gha-prod-${{ github.run_id }}
-
-      - name: Assert AWS account
-        run: bash .github/scripts/assert-aws-account.sh "$AWS_ACCOUNT_ID" "$SST_STAGE" deploy
-
-      - name: Repair failed ACM certificate state
-        env:
-          ACM_REGION: us-east-1
-        run: bash .github/scripts/repair-failed-sst-acm-cert.sh
-
-      - name: Deploy production SST app
+      - name: Deploy to Cloudflare
         working-directory: web
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_DEFAULT_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-          NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
-        run: ../node_modules/.bin/sst deploy --stage "$SST_STAGE"
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy

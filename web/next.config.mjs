@@ -20,6 +20,15 @@ const nextConfig = {
       type: 'asset/source',
     });
 
+    // Load docs/blog MDX under content/ as raw strings so lib/content-store.ts
+    // can embed them in the bundle via require.context — the Cloudflare Workers
+    // runtime has no filesystem to read them from at request time.
+    config.module.rules.push({
+      test: /\.mdx$/,
+      include: path.resolve(__dirname, 'content'),
+      type: 'asset/source',
+    });
+
     return config;
   },
   async rewrites() {

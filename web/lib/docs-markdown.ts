@@ -1,13 +1,9 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import matter from 'gray-matter';
 
-import { resolveContentDir } from './content-paths';
+import { readContentFile } from './content-store';
 import { docsNav, getAllDocSlugs } from './docs-nav';
 import { absoluteUrl } from './site';
 
-const DOCS_DIR = resolveContentDir('docs');
 const DOCS_BASE_URL = absoluteUrl('/docs');
 
 export function getDocMarkdownUrl(slug: string): string {
@@ -26,12 +22,11 @@ type MarkdownDoc = {
 };
 
 function readDocSource(slug: string): { title: string; description: string; content: string } | null {
-  const filePath = path.join(DOCS_DIR, `${slug}.mdx`);
-  if (!fs.existsSync(filePath)) {
+  const raw = readContentFile(`docs/${slug}.mdx`);
+  if (raw === null) {
     return null;
   }
 
-  const raw = fs.readFileSync(filePath, 'utf8');
   const { data, content } = matter(raw);
   return {
     title: (data.title as string) || slug,

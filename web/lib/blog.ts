@@ -1,10 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
 import matter from 'gray-matter';
-import { resolveContentDir } from './content-paths';
 
-const BLOG_DIR = resolveContentDir('blog');
+import { listContentFiles, readContentFile } from './content-store';
+
 const BLOG_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export interface BlogFrontmatter {
@@ -108,7 +105,10 @@ function readPostFromFile(fileName: string): BlogPost | null {
     return null;
   }
 
-  const raw = fs.readFileSync(path.join(BLOG_DIR, fileName), 'utf8');
+  const raw = readContentFile(`blog/${fileName}`);
+  if (raw === null) {
+    return null;
+  }
   const { data, content } = matter(raw);
 
   return {
@@ -121,7 +121,7 @@ function readPostFromFile(fileName: string): BlogPost | null {
 }
 
 export function getAllPosts(): BlogPost[] {
-  const files = fs.readdirSync(BLOG_DIR).filter((file) => file.endsWith('.mdx'));
+  const files = listContentFiles('blog').filter((file) => file.endsWith('.mdx'));
 
   return files
     .map((file) => readPostFromFile(file))
@@ -134,10 +134,9 @@ export function getPost(slug: string): BlogPost | null {
     return null;
   }
 
-  const filePath = path.join(BLOG_DIR, `${slug}.mdx`);
-  if (!fs.existsSync(filePath)) return null;
+  const raw = readContentFile(`blog/${slug}.mdx`);
+  if (raw === null) return null;
 
-  const raw = fs.readFileSync(filePath, 'utf8');
   const { data, content } = matter(raw);
 
   return {

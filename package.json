@@ -10,12 +10,10 @@
     "web"
   ],
   "scripts": {
-    "dev": "cd web && ../node_modules/.bin/sst dev",
-    "web": "npm --workspace web run dev",
+    "dev": "npm --workspace web run dev",
     "build": "npm --workspace web run build",
-    "test": "npm --workspace web run test"
-  },
-  "devDependencies": {
-    "sst": "^4.5.1"
+    "test": "npm --workspace web run test",
+    "preview": "npm --workspace web run preview",
+    "deploy": "npm --workspace web run deploy"
   }
 }

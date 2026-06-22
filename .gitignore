@@ -6,10 +6,13 @@ node_modules/
 web/.next/
 web/out/
 
-# SST / OpenNext
-.sst/
-web/.sst/
+# OpenNext (Cloudflare) build output
 web/.open-next/
+
+# Wrangler
+.wrangler/
+web/.wrangler/
+web/.dev.vars
 
 # Build info
 **/tsconfig.tsbuildinfo

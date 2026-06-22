@@ -11,12 +11,14 @@ const postHog = process.env.NEXT_PUBLIC_POSTHOG_KEY
 
 const PUBLIC_FILE = /\.(?:png|jpe?g|gif|webp|svg|ico|txt|xml)$/i;
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   if (PUBLIC_FILE.test(request.nextUrl.pathname)) return NextResponse.next();
   if (!postHog) return NextResponse.next();
   return postHog(request);
 }
 
 export const config = {
+  // Edge middleware (not Next 16's Node.js `proxy.ts`) so it bundles for the
+  // Cloudflare Workers runtime via OpenNext.
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

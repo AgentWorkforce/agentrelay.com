@@ -5,6 +5,10 @@ import { getAllPosts } from '../lib/blog';
 import { getAllDocSlugs } from '../lib/docs-nav';
 import { absoluteUrl } from '../lib/site';
 
+// ISR so OpenNext serves it from the incremental cache on Cloudflare Workers;
+// it enumerates docs/blog from the filesystem, which only works at build time.
+export const revalidate = 86400;
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
