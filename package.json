@@ -1,0 +1,21 @@
+{
+  "name": "agentrelay.com",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "cd web && ../node_modules/.bin/sst dev",
+    "web": "npm --workspace web run dev",
+    "build": "npm --workspace web run build",
+    "test": "npm --workspace web run test"
+  },
+  "devDependencies": {
+    "sst": "^4.5.1"
+  }
+}
