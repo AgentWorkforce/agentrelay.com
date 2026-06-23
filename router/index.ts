@@ -20,7 +20,10 @@ function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
   return Boolean(env.TRAFFIC_RECORDER && env.ROUTER_CONFIG);
 }
 
-const FALLBACK_PROXY_ORIGIN = "https://origin.agentrelay.net";
+// The apex agentrelay.com marketing/docs site. Served by the standalone
+// agentrelay.com repo on Cloudflare Workers (OpenNext); the legacy AWS origin
+// at origin.agentrelay.net is retired. See AgentWorkforce/agentrelay.com.
+const FALLBACK_PROXY_ORIGIN = "https://origin-web.agentrelay.com";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const DEFAULT_FILE_OBSERVER_ORIGIN = "https://relayfile-file-observer.pages.dev";
 const PRIMARY_HOST = "agentrelay.com";

@@ -54,7 +54,7 @@ the first production deploy does not require manual Cloudflare setup.
                                                         │                                                          
                                                         ▼                                                          
                                      ┌────────────────────────────────────┐                                        
-                                     │   https://origin.agentrelay.net    │                                        
+                                     │  https://origin-web.agentrelay.com │                                        
                                      └────────────────────────────────────┘                                        
                                                                                                                    
                                                                                                                    
