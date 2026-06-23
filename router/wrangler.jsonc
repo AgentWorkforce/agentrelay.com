@@ -1,0 +1,50 @@
+{
+  "$schema": "../web/node_modules/wrangler/config-schema.json",
+  "name": "agentrelay-router",
+  "main": "index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The router fronts agentrelay.com. It binds resources that remain OWNED BY THE
+  // CLOUD SST APP in the same Cloudflare account — referenced here by stable
+  // name/id. These identifiers are cloud-owned; if cloud ever recreates the
+  // resource the value here must be updated (see the repo's Phase 2 notes).
+
+  // /cloud* → the cloud Next.js Worker (script name is stable in prod).
+  "services": [
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
+  ],
+
+  // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
+  // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
+  // namespace id so both gateways increment the same per-workspace counters.
+  // Look up the prod ids: `wrangler kv namespace list` (titles router-config,
+  // rate-limit-counters).
+  "kv_namespaces": [
+    { "binding": "ROUTER_CONFIG", "id": "REPLACE_ME__router_config_kv_id" },
+    { "binding": "RATE_LIMIT_COUNTERS", "id": "REPLACE_ME__rate_limit_counters_kv_id" }
+  ],
+
+  // Replay/traffic recorder corpus (14-day lifecycle, owned by cloud).
+  "r2_buckets": [
+    { "binding": "TRAFFIC_RECORDER", "bucket_name": "traffic-recorder" }
+  ],
+
+  "vars": {
+    "CLOUD_APP_ORIGIN": "https://origin.agentrelay.cloud",
+    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",
+    // The cloud webhook worker's generated *.workers.dev URL. Look it up with
+    // `wrangler deployments list --name <webhook worker script>` or the dashboard.
+    "WEBHOOK_WORKER_ORIGIN": "REPLACE_ME__webhook_worker_workers_dev_url"
+  },
+
+  // Start on a staging hostname for parity verification against the live apex;
+  // flip "pattern" to "agentrelay.com" at the cutover step.
+  "routes": [
+    { "pattern": "router-next.agentrelay.com", "custom_domain": true }
+  ],
+
+  "workers_dev": false,
+  "preview_urls": true,
+  "observability": { "enabled": true }
+}
