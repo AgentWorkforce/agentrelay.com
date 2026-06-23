@@ -352,9 +352,14 @@ export default {
     }
 
     if (await shouldUseWebhookWorker(url.pathname, request, env)) {
-      const webhookWorkerRequest = buildWebhookWorkerRequest(request, url);
+      // Build the forwarded Request inside each branch: request.body is a
+      // ReadableStream that can back only one Request, so constructing it before
+      // the env.WEBHOOK_WORKER check would disturb the stream and make the
+      // WEBHOOK_WORKER_ORIGIN fallback throw a TypeError.
       if (env.WEBHOOK_WORKER) {
-        const workerResponse = await env.WEBHOOK_WORKER.fetch(webhookWorkerRequest);
+        const workerResponse = await env.WEBHOOK_WORKER.fetch(
+          buildWebhookWorkerRequest(request, url),
+        );
         if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
             maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
@@ -435,6 +440,7 @@ export default {
     } catch (error) {
       return new Response(JSON.stringify({ error: (error as Error).message }), {
         status: 500,
+        headers: { "content-type": "application/json" },
       });
     }
   },
