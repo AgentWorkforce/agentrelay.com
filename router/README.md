@@ -16,9 +16,9 @@ the first production deploy does not require manual Cloudflare setup.
 
 ```
                                      ┌────────────────────────────────────┐                                        
-                                     │       @agentworkforce/cloud        │                                        
+                                     │   @agentworkforce/agentrelay.com   │                                        
                                      │                                    │                                        
-                                     │/packages/router (Cloudflare worker)│                                        
+                                     │    /router (Cloudflare worker)     │                                        
                                      └────────────────────────────────────┘                                        
                                                                                                                    
                                     ┌──────────────────────────────────────┐                                       
@@ -39,9 +39,9 @@ the first production deploy does not require manual Cloudflare setup.
                                                         │                                                          
                                                         │                                                          
 ┌────────────────────────────────────┐            All Other Routes           ┌────────────────────────────────────┐
-│       @agentworkforce/cloud        │      (/, /docs, /blog, /openclaw)     │     @agentworkforce/relaycast      │
+│   @agentworkforce/agentrelay.com   │      (/, /docs, /blog, /openclaw)     │     @agentworkforce/relaycast      │
 │                                    │                  │                    │                                    │
-│     /packages/web (NextJs App)     │                  │                    │ /packages/observer-dashboard       │
+│         /web (NextJs App)          │                  │                    │ /packages/observer-dashboard       │
 │                                    │                  │                    │ /@relayfile/file-observer          │
 └────────────────────────────────────┘                  │                    └────────────────────────────────────┘
                                                         │                                                          
@@ -59,7 +59,7 @@ the first production deploy does not require manual Cloudflare setup.
                                                                                                                    
                                                                                                                    
                                      ┌────────────────────────────────────┐                                        
-                                     │       @agentworkforce/relay        │                                        
+                                     │   @agentworkforce/agentrelay.com   │                                        
                                      │                                    │                                        
                                      │         /web (NextJs App)          │                                        
                                      └────────────────────────────────────┘                                        
