@@ -1,0 +1,52 @@
+{
+  "$schema": "../web/node_modules/wrangler/config-schema.json",
+  "name": "agentrelay-router",
+  "main": "index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The router fronts agentrelay.com. It binds resources that remain OWNED BY THE
+  // CLOUD SST APP in the same Cloudflare account — referenced here by stable
+  // name/id. These identifiers are cloud-owned; if cloud ever recreates the
+  // resource the value here must be updated (see the repo's Phase 2 notes).
+
+  // Service bindings reference cloud's Workers by stable prod script name
+  // (no *.workers.dev URL to pin): /cloud* → the cloud Next.js Worker;
+  // WEBHOOK_WORKER → the dedicated webhook Worker the router can offload
+  // /api/v1/webhooks/* to when the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is "worker"
+  // (the router code prefers this binding over the WEBHOOK_WORKER_ORIGIN URL).
+  "services": [
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" },
+    { "binding": "WEBHOOK_WORKER", "service": "webhook-worker" }
+  ],
+
+  // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
+  // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
+  // namespace id so both gateways increment the same per-workspace counters.
+  // Look up the prod ids: `wrangler kv namespace list` (titles router-config,
+  // rate-limit-counters).
+  "kv_namespaces": [
+    { "binding": "ROUTER_CONFIG", "id": "e73a3fc0c2514460bdd3afae463e5234" },
+    { "binding": "RATE_LIMIT_COUNTERS", "id": "40c2049dd4ce40f4b8f8143d53075731" }
+  ],
+
+  // Replay/traffic recorder corpus (14-day lifecycle, owned by cloud).
+  "r2_buckets": [
+    { "binding": "TRAFFIC_RECORDER", "bucket_name": "traffic-recorder" }
+  ],
+
+  "vars": {
+    "CLOUD_APP_ORIGIN": "https://origin.agentrelay.cloud",
+    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev"
+  },
+
+  // Start on a staging hostname for parity verification against the live apex;
+  // flip "pattern" to "agentrelay.com" at the cutover step.
+  "routes": [
+    { "pattern": "router-next.agentrelay.com", "custom_domain": true }
+  ],
+
+  "workers_dev": false,
+  "preview_urls": true,
+  "observability": { "enabled": true }
+}

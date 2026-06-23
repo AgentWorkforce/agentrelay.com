@@ -7,13 +7,15 @@
     "node": ">=20.9.0"
   },
   "workspaces": [
-    "web"
+    "web",
+    "router"
   ],
   "scripts": {
     "dev": "npm --workspace web run dev",
     "build": "npm --workspace web run build",
-    "test": "npm --workspace web run test",
+    "test": "npm --workspaces run test",
     "preview": "npm --workspace web run preview",
-    "deploy": "npm --workspace web run deploy"
+    "deploy": "npm --workspace web run deploy",
+    "deploy:router": "npm --workspace router run deploy"
   }
 }
