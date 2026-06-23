@@ -21,8 +21,8 @@
   // Look up the prod ids: `wrangler kv namespace list` (titles router-config,
   // rate-limit-counters).
   "kv_namespaces": [
-    { "binding": "ROUTER_CONFIG", "id": "REPLACE_ME__router_config_kv_id" },
-    { "binding": "RATE_LIMIT_COUNTERS", "id": "REPLACE_ME__rate_limit_counters_kv_id" }
+    { "binding": "ROUTER_CONFIG", "id": "e73a3fc0c2514460bdd3afae463e5234" },
+    { "binding": "RATE_LIMIT_COUNTERS", "id": "40c2049dd4ce40f4b8f8143d53075731" }
   ],
 
   // Replay/traffic recorder corpus (14-day lifecycle, owned by cloud).
