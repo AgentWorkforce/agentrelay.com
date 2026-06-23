@@ -11,17 +11,12 @@
   // resource the value here must be updated (see the repo's Phase 2 notes).
 
   // /cloud* → the cloud Next.js Worker, by stable prod script name.
+  // (Webhook offload uses the WEBHOOK_WORKER_ORIGIN URL below, not a service
+  // binding — SST names the webhook Worker with a random hash suffix, so it
+  // isn't bindable by a stable script name.)
   "services": [
     { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
   ],
-
-  // NOTE: webhook offload (the router forwarding /api/v1/webhooks/* to the
-  // dedicated webhook Worker when the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is
-  // "worker") is intentionally NOT wired yet. Cloud configures this via the
-  // `WEBHOOK_WORKER_ORIGIN` *.workers.dev URL (not a service binding). Add it
-  // back here before the apex cutover IF the flag is "worker"; until then the
-  // router routes webhooks through the normal /cloud path (flag="lambda"
-  // behavior). See PR notes.
 
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
   // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
@@ -40,7 +35,13 @@
 
   "vars": {
     "CLOUD_APP_ORIGIN": "https://origin.agentrelay.cloud",
-    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev"
+    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",
+    // The dedicated webhook Worker the router forwards /api/v1/webhooks/* to when
+    // the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is "worker" (it is, in prod). This
+    // is cloud-owned and the script name carries a random hash suffix, so it
+    // would change if cloud recreates that Worker — re-copy it from the live
+    // router's WEBHOOK_WORKER_ORIGIN if webhook routing ever 5xxs.
+    "WEBHOOK_WORKER_ORIGIN": "https://cloud-production-webhookworkerscript-mbehwvfu.agent-workforce.workers.dev"
   },
 
   // Start on a staging hostname for parity verification against the live apex;
