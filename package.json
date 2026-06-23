@@ -1,0 +1,19 @@
+{
+  "name": "agentrelay.com",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm --workspace web run dev",
+    "build": "npm --workspace web run build",
+    "test": "npm --workspace web run test",
+    "preview": "npm --workspace web run preview",
+    "deploy": "npm --workspace web run deploy"
+  }
+}

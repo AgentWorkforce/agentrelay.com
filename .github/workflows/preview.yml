@@ -1,0 +1,96 @@
+name: Preview Web (Cloudflare)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: preview-web-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Deploy Preview
+    # Same-repo PRs only (forks can't read the Cloudflare secret).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build OpenNext (Cloudflare)
+        working-directory: web
+        env:
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ vars.NEXT_PUBLIC_POSTHOG_HOST || 'https://i.agentrelay.com' }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
+        run: npm run cf:build
+
+      - name: Upload preview version
+        id: preview
+        working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -o pipefail
+
+          upload_log="$(mktemp)"
+          # Upload a new version WITHOUT promoting it to production. Cloudflare
+          # retains/expires versions automatically, so there is no stale-stage
+          # cleanup to run. A per-version preview URL is minted only when the
+          # account has a workers.dev subdomain enabled; if it isn't, the upload
+          # still succeeds and we just skip the URL (don't fail the check).
+          npx wrangler versions upload | tee "$upload_log"
+
+          preview_url="$(grep -oE 'https://[a-z0-9][a-z0-9-]*\.[a-z0-9-]+\.workers\.dev' "$upload_log" | tail -n 1 || true)"
+          echo "preview_url=${preview_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Comment on PR
+        continue-on-error: true
+        uses: actions/github-script@v7
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        with:
+          script: |
+            const prNum = context.payload.pull_request.number;
+            const url = process.env.PREVIEW_URL;
+            const body = url
+              ? `**Preview deployed!**\n\n` +
+                `| Environment | URL |\n` +
+                `|-------------|-----|\n` +
+                `| Web | ${url} |\n\n` +
+                `This is a Cloudflare Workers preview version of this PR's build.`
+              : `**Preview built** — a Cloudflare Worker version was uploaded for this PR, ` +
+                `but no per-version preview URL was returned. Enable a workers.dev subdomain ` +
+                `on the Cloudflare account to get preview URLs.`;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNum,
+            });
+            const existing = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Preview deployed')
+            );
+
+            const params = { owner: context.repo.owner, repo: context.repo.repo, body };
+            if (existing) {
+              await github.rest.issues.updateComment({ ...params, comment_id: existing.id });
+            } else {
+              await github.rest.issues.createComment({ ...params, issue_number: prNum });
+            }

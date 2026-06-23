@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.npm-cache/
+
+# Next.js
+web/.next/
+web/out/
+
+# OpenNext (Cloudflare) build output
+web/.open-next/
+
+# Wrangler
+.wrangler/
+web/.wrangler/
+web/.dev.vars
+
+# Build info
+**/tsconfig.tsbuildinfo
+
+# Runtime data
+web/waitlist.json
+
+# Env
+.env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
