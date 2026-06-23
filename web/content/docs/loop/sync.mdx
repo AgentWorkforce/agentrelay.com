@@ -1,0 +1,69 @@
+---
+title: 'Sync'
+description: 'How ai-hist sync imports your agent history incrementally, what gets indexed, and how to keep it current with watch mode.'
+---
+
+`ai-hist sync` is the command that builds your history. It reads your local agent files, dedupes, and indexes everything into a SQLite database with full-text search. The first run imports everything; every run after that is incremental — it tracks byte offsets per file and only reads what is new.
+
+```bash
+ai-hist sync
+```
+
+## What gets imported
+
+A single `sync` covers every supported source in one pass:
+
+- **Claude Code** — local JSONL history
+- **Codex CLI** — local JSONL history
+- **Cursor** — per-session JSONL transcripts
+- **OpenCode** — local SQLite database
+- **Agent Relay** — workspace messages via the Relaycast API (when configured)
+- **Trajectories** — compacted per-run JSON files capturing decisions and retrospectives
+
+See [Sources](/docs/loop/sources) for exactly where each reads from on disk and how to configure the API-backed ones.
+
+## Incremental by design
+
+Sync is cheap to run often. For the file-based sources (Claude Code, Codex, Cursor), it tracks a byte offset per file in a `.sync-state.json` state file and only reads the bytes appended since last time. Re-running `ai-hist sync` after a long coding session reads just the new lines, not the whole file.
+
+Deduplication is enforced at the database level — entries are unique on the combination of source, timestamp, and prompt — so syncing the same data twice never creates duplicates.
+
+<Note>
+  Cursor transcript lines carry no per-line timestamp, so sync uses the file's modification time at sync time. Running sync regularly keeps those timestamps close to reality.
+</Note>
+
+## Continuous sync with watch
+
+To keep history current without thinking about it, run watch mode. It runs the same sync on a loop:
+
+```bash
+ai-hist watch                  # sync every 60s
+ai-hist watch --interval 30    # sync every 30s
+```
+
+For a fully managed background loop, schedule `ai-hist sync` with your OS scheduler — a launchd agent on macOS or a cron entry on Linux. The [relayhistory README](https://github.com/AgentWorkforce/relayhistory) includes ready-to-copy launchd and cron snippets.
+
+```bash
+# Linux: sync every minute via cron
+echo "* * * * * ~/.local/bin/ai-hist sync >> /tmp/ai-hist-sync.log 2>&1" | crontab -
+```
+
+## Cloud sync
+
+Everything above is local. When you want your history backed up durably and available on every machine, opt into Relayloop Cloud and push with the cloud sync loop:
+
+```bash
+ai-hist cloud sync     # encrypt + push new entries since last push
+ai-hist cloud watch    # continuous push loop, like local watch
+```
+
+Local sync and cloud sync are independent. The local CLI keeps working offline, and cloud sync layers durable backup and cross-device access on top.
+
+<CardGroup cols={2}>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    What cloud sync adds and how to opt in.
+  </Card>
+  <Card title="Cloud architecture" href="/docs/loop/cloud-architecture">
+    How local sync reads, encrypts, and pushes to the cloud.
+  </Card>
+</CardGroup>

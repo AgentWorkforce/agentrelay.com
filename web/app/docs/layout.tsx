@@ -8,15 +8,22 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import styles from '../../components/docs/docs.module.css';
 import { getSearchIndex } from '../../lib/docs';
+import { productBasePath, productSections, getProductSearchIndex } from '../../lib/product-docs';
 
 const searchIndex = getSearchIndex();
+const productScopes = productSections.map((section) => ({
+  id: section.id,
+  label: section.label,
+  basePath: productBasePath(section),
+  index: getProductSearchIndex(section),
+}));
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
     <DocsLanguageProvider>
       <div className={styles.docsPage}>
         <SiteNav
-          center={<DocsSearch index={searchIndex} />}
+          center={<DocsSearch index={searchIndex} productScopes={productScopes} />}
           actions={<GitHubStarsBadge />}
           mobileMenuContent={<DocsNav variant="mobileMenu" />}
           hideMobileDocsLink

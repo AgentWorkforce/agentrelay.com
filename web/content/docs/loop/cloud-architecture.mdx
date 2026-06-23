@@ -1,0 +1,61 @@
+---
+title: 'Cloud Architecture'
+description: 'How Relayloop Cloud works end to end: local sync reads files, encrypts them, and POSTs ciphertext over HTTPS to ingestion, storage, and query APIs.'
+---
+
+Relayloop Cloud is deliberately thin where it matters. The client does the work — reading, encrypting, and deciding — and the server stores what it is handed. This page traces the path a history entry takes from a local file to the cloud and back, and names the components it passes through. It is grounded in the [relayhistory-cloud architecture](https://github.com/AgentWorkforce/relayhistory-cloud).
+
+## The path of an entry
+
+The flow is the same shape as local [sync](/docs/loop/sync), with two steps added before the data leaves your machine:
+
+1. **Read** — `ai-hist cloud sync` reads new entries from your local sources, exactly as local sync does.
+2. **Encrypt** — each entry is encrypted on the client. The key never leaves your machine. See [Privacy](/docs/loop/privacy) for the cryptographic detail.
+3. **POST** — the client sends the ciphertext payload to the cloud over HTTPS. Only ciphertext crosses the wire.
+4. **Store** — the cloud ingestion API checks for duplicates and stores the encrypted blobs.
+5. **Query and decrypt** — to read history back, the client (CLI or browser) fetches ciphertext from the query API and decrypts it locally.
+
+The server stores ciphertext blobs plus a small amount of operational metadata. It cannot reconstruct your content.
+
+## Components
+
+### Ingestion API
+
+Receives sync payloads from the CLI. It is stateless — the business logic lives in the client. A sync request carries a batch of entries, each with its ciphertext, nonce, authentication tag, and operational metadata. The server checks each entry's content hash against what it has already stored and skips duplicates, then stores the rest. It also exposes a sync-state endpoint that returns only operational metadata — last sync time and entry count, never content.
+
+### Storage layer
+
+Per-row encryption: every stored row is an encrypted blob keyed by a one-way content hash used for deduplication, alongside the nonce, authentication tag, and schema version. No plaintext content is stored anywhere in the database. The server cannot reconstruct user data even with full database access.
+
+### Auth service
+
+Handles identity and tenant scoping. Authentication establishes *who you are* and which organization you belong to — it grants no decryption access. Identity and encryption-key custody are deliberately separate concerns: logging in does not unlock content. The auth service also handles team membership and seat counting for billing.
+
+### Query API
+
+Returns the ciphertext blobs the server stored, scoped to the authenticated user and org. The client decrypts locally. It also exposes hard-delete endpoints (for a single entry or a full account) and a streaming export endpoint that hands back all your ciphertext for the client to decrypt and write to a local file.
+
+### Hosted MCP endpoint
+
+Lets you point Claude and other MCP clients at a hosted URL instead of running a local MCP server. This is the one place data is transiently decrypted server-side to fulfill tool calls; it is opt-in and clearly disclosed, and the local MCP server remains the zero-trust default. See [Privacy](/docs/loop/privacy) for the trade-off.
+
+### Web dashboard
+
+A single-page app that does all decryption in the browser. On login it pulls your encrypted entries, unlocks your key locally, decrypts into an in-memory index, and runs search client-side. No decrypted content — not even a search query — is sent back to the server.
+
+## What the server can see
+
+The server holds your encrypted blobs plus a thin layer of metadata it needs to operate: your identity and org, your entry count (for billing), each entry's creation timestamp (for sync ordering), and a content hash (for deduplication). The prompt text, project path, session ID, source, and trajectory decisions are all encrypted. The content hash is one-way and reveals only that two entries are duplicates.
+
+## Where the CLI fits
+
+The cloud commands are additive. `ai-hist cloud login` sets up auth and stores your key in the OS keychain; `ai-hist cloud sync` and `ai-hist cloud watch` push encrypted entries; `ai-hist cloud pull` fetches and decrypts them onto a new machine; `ai-hist cloud export` and `ai-hist cloud delete` give you data portability and deletion. Your local-only commands are untouched.
+
+<CardGroup cols={2}>
+  <Card title="Privacy" href="/docs/loop/privacy">
+    The encryption model and its honest limits.
+  </Card>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    What cloud adds and how to opt in.
+  </Card>
+</CardGroup>

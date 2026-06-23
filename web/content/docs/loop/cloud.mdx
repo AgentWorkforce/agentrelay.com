@@ -1,0 +1,80 @@
+---
+title: 'Relayloop Cloud'
+description: 'An opt-in sync target that adds durable backup, cross-device access, unified search, team recall, a web UI, and a hosted MCP endpoint.'
+---
+
+Relayloop Cloud is a hosted layer on top of the local-first `ai-hist` CLI. The CLI stays exactly as it is — fully functional with no account, working offline. Cloud is an opt-in sync target that adds the things a local SQLite file on one laptop cannot: durable backup, access from every machine, search across your whole team, a web UI, and a hosted MCP endpoint.
+
+The core promise is simple, and architectural rather than just policy: your data is yours to store and yours to remove at any time. See [Privacy](/docs/loop/privacy) for the full data-handling model.
+
+## Why opt in
+
+A local database is fast and private, but it lives on one disk. The moment you work across two machines, replace a laptop, or want a teammate to benefit from a session you ran, you hit its limits. Cloud closes those gaps.
+
+<CardGroup cols={2}>
+  <Card title="Durable backup">
+    Local files get corrupted or deleted. Cloud history is durable — your record survives a wiped disk or a new machine.
+  </Card>
+  <Card title="Cross-device access">
+    Sync history to a new machine instantly and never lose a conversation between devices.
+  </Card>
+  <Card title="Unified search">
+    One place to search across every AI tool you use, from any device.
+  </Card>
+  <Card title="Team recall">
+    Search your teammates' shared sessions so the team never solves the same problem twice.
+  </Card>
+  <Card title="Web UI">
+    A dashboard to search, browse sessions, and view stats in the browser — no terminal required.
+  </Card>
+  <Card title="Hosted MCP">
+    Point your Claude config at a URL instead of running a local MCP server.
+  </Card>
+</CardGroup>
+
+## Opt in from the CLI
+
+Cloud lives under the `ai-hist cloud` command group. Log in once, then push:
+
+```bash
+ai-hist cloud login    # authenticate and set up your encryption key
+ai-hist cloud sync     # encrypt + push new entries since last push
+ai-hist cloud pull     # fetch + decrypt remote entries into the local DB
+ai-hist cloud watch    # continuous push loop, like local watch
+ai-hist cloud status   # show sync state, entry count, last push
+```
+
+Your local commands — `sync`, `search`, `show`, `session`, `stats` — do not change. Cloud sync layers on top of them.
+
+## Local vs. cloud at a glance
+
+| Capability | Local CLI | Relayloop Cloud |
+|------------|-----------|-----------------|
+| Sync, search, show, stats | Yes | Yes |
+| Works offline | Yes | Local CLI still works offline |
+| No account required | Yes | Account required |
+| Durable backup | No (single disk) | Yes |
+| Cross-device access | No | Yes |
+| Web UI | No | Yes |
+| Hosted MCP endpoint | Local MCP server | Hosted endpoint (opt-in) |
+| Team recall / shared sessions | No | Yes ([Teams](/docs/loop/teams)) |
+
+## The local CLI never breaks
+
+This is the deal: nothing about going to cloud takes anything away locally. The CLI remains MIT-licensed and fully functional with zero cloud dependency. You can run entirely local forever, turn on cloud sync when you need backup or a second device, and turn on team features when your team is ready.
+
+<CardGroup cols={2}>
+  <Card title="Cloud architecture" href="/docs/loop/cloud-architecture">
+    How sync reads, encrypts, and pushes to the cloud.
+  </Card>
+  <Card title="Privacy" href="/docs/loop/privacy">
+    Encryption, scrubbing, and your data rights.
+  </Card>
+  <Card title="Teams" href="/docs/loop/teams">
+    Shared memory, onboarding, and pricing.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/docs/loop/teams" icon="rocket">
+  Start free and local. Turn on team sync — and the network — when you are ready.
+</BannerLink>

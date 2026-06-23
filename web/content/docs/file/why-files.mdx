@@ -1,0 +1,53 @@
+---
+title: 'Why files'
+description: 'The case for a file interface over typed tool schemas: reactive invocation, multi-agent coordination, and context efficiency.'
+---
+
+The "give agents a filesystem" idea is a healthy direction, and Relayfile makes a specific bet: the filesystem is the most-trained-on API in existence, and an LLM is more reliable reading a directory than juggling a dozen typed APIs. Three concrete reasons make files the right substrate for SaaS integrations.
+
+## Reactive invocation
+
+Provider webhooks normalize into file events. When a Linear issue is created or a Notion page edited, your agent wakes up to the changed file — no webhook parsing, no provider-specific payload handling, no bespoke adapter per integration. The event is already in a shape the agent can read.
+
+This is the structural difference from request/response tool surfaces. A typed tool can only be called; it has no notion of *being woken up* by external state changing. Relayfile inverts that:
+
+```
+Linear webhook → Cloud sync → /linear/issues/X.json revision++ → change event
+                                                                     ↓
+                                                  agent A reacts, writes a comment
+                                                  agent B reacts, files a Slack ping
+                                                  agent C reacts, opens a PR
+```
+
+The same event fans out to every agent subscribed to that path. This is the substrate that makes **proactive agents** possible — agents reacting to provider state instead of waiting for a user prompt. See [Real-time sync](/docs/file/realtime-sync) for how that fan-out works, and [Agents](/docs/file/agents) for the `onEvent` helper.
+
+## Coordination
+
+Multiple agents working through the same filesystem can see each other's writes immediately, scoped by ACL. Multi-agent collaboration becomes a property of the substrate, not something each app re-implements.
+
+When agent A writes a file, agent B sees the new contents on the next read — within a second, no commit, no push, no merge. A reviewer agent can `tail -F` an issue a worker is updating and watch progress live. A persona-orchestrator can watch its workers' writes without a coordination protocol layered on top.
+
+None of that requires anything beyond the filesystem. **The filesystem is the protocol.** Per-agent surfaces are scoped with [ACLs](/docs/file/acls) so each worker sees only the paths it should.
+
+## Context efficiency
+
+A typical MCP setup loads 100+ tool schemas into every agent session before any work happens. Files load nothing — context cost is what the agent actually opens.
+
+- `ls` returns what's there. Exhaustive enumeration beats query-by-query API retrieval, where a tool call returns paginated search results and the agent has to guess at filters.
+- The tool surface is **O(1)** in the number of providers. `listTree` / `readFile` / write operations work identically across `/linear`, `/notion`, `/github`, and every other integration — there is no per-provider schema for the model to learn.
+- Cross-provider composition is free: `grep -r`, `cp`, and `cat` semantics work across providers because they're all just files.
+
+Contrast that with N typed tool servers, where each connected provider adds another batch of schemas to the context window and cross-provider work needs bespoke glue per pair.
+
+## When a typed tool still wins
+
+Files are not always the answer. For a single provider, a single agent, and a one-shot action that needs server-side validation — `linear.create_issue(title, priority, …)` enforcing the shape at call time — a dedicated MCP is simpler and richer. The two compose well: Relayfile for reads, synthesis, and the stateful multi-provider substrate; an MCP for typed one-shot writes. See [Comparison](/docs/file/comparison) for the full breakdown.
+
+<CardGroup cols={2}>
+  <Card title="Real-time sync" href="/docs/file/realtime-sync">
+    How write-through invalidation makes multi-agent coordination reliable.
+  </Card>
+  <Card title="Comparison" href="/docs/file/comparison">
+    Relayfile vs MCP servers, virtual-FS projects, and rolling your own.
+  </Card>
+</CardGroup>

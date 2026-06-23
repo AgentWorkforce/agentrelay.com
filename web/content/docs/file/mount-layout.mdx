@@ -1,0 +1,85 @@
+---
+title: 'Mount layout'
+description: 'Every Relayfile mount is self-describing: LAYOUT.md, per-integration layout files, _index.json, canonical naming, and four alias views.'
+---
+
+Every mount is self-describing. The agent never needs to learn paths from external documentation — `cat mount/LAYOUT.md` lists everything, and per-integration `.layout.md` files document the tree shape for each provider. This is deliberate: an agent oriented by reading the tree itself doesn't carry path knowledge in its prompt or schema.
+
+## The tree
+
+```
+mount/
+├── LAYOUT.md                              # virtual, read-only — top-level guide
+├── _index.json                            # root listing
+├── linear/
+│   ├── .layout.md                         # linear-specific tree shape
+│   ├── issues/
+│   │   ├── _index.json
+│   │   ├── AGE-12__fix-login-bug.json     # canonical: <slug>__<id>
+│   │   ├── by-title/AGE-12-fix-login-bug.json
+│   │   ├── by-id/AGE-12.json
+│   │   └── by-state/in-progress/AGE-12__fix-login-bug.json
+│   └── users/by-name/dana.json
+└── github/
+    └── repos/
+        ├── _index.json
+        ├── acme/api/
+        │   └── pulls/42__bump-deps/meta.json
+        └── by-name/acme__api.json
+```
+
+## Self-describing files
+
+Three kinds of metadata files make the tree navigable without prior knowledge:
+
+- **`LAYOUT.md`** at the root is a virtual, read-only guide to the top-level structure. It's the first thing an agent should `cat` after mounting.
+- **`<integration>/.layout.md`** documents the tree shape for a single provider — what directories exist under `linear/`, what each holds.
+- **`_index.json`** in every directory lists the rows that directory contains, so an agent can read one file to understand a directory rather than walking every entry.
+
+## Canonical naming
+
+Entity files follow a `<sanitized-name>__<id>` convention so identifiers are recoverable from any filename. The ID is always the **last** `__`-separated segment:
+
+```text
+inbox/threads/Re_Welcome__01HXYZ.json
+inbox/threads/01HXYZ.json
+```
+
+The first path is the canonical human-readable form. The second is a legacy fallback that remains readable during the naming transition — consumers should accept both the new-style filename and the bare `<id>` basename while producers are updated.
+
+<Note>
+  Because the ID is recoverable from the filename, an agent can read `AGE-12__fix-login-bug.json`, derive the identifier `AGE-12`, and write back to the canonical path without a separate lookup.
+</Note>
+
+## The four alias views
+
+Each resource type ships four alias views out of the box, so an agent can navigate the same records by whichever key it has in hand:
+
+- **`by-title/`** — slug lookups (`AGE-12-fix-login-bug.json`).
+- **`by-id/`** — identifier lookups (`AGE-12.json`).
+- **`by-name/`** — human-readable name lookups (`dana.json`, `acme__api.json`).
+- **`by-state/`** — grouped by issue or PR state (`by-state/in-progress/...`).
+
+These are views over the same canonical entities, not copies you have to keep in sync. An agent that knows only a state can `ls by-state/in-progress/`; one that knows only a name can read `by-name/dana.json`.
+
+## Lazy repo materialization
+
+For huge-org workspaces, GitHub repo subtrees can be materialized lazily rather than exported up front. Opt in with `--lazy-repos`:
+
+```bash
+RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
+  --workspace ws_demo \
+  --local-dir ./relayfile-mount \
+  --lazy-repos
+```
+
+This avoids pulling every repo tree on mount; subtrees populate on demand as they're accessed. Combine it with `--remote-path` (see [Run locally](/docs/file/run-locally)) to scope the mount to specific subtrees from the start.
+
+<CardGroup cols={2}>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    How ls/cat/grep map to reads and how writing canonical paths maps to writeback.
+  </Card>
+  <Card title="ACLs" href="/docs/file/acls">
+    Scope which parts of this tree each agent can see and write.
+  </Card>
+</CardGroup>

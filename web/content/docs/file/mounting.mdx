@@ -1,0 +1,113 @@
+---
+title: 'Mounting from a sandbox'
+description: 'Attach an authorized Relayfile workspace as local files from inside a sandbox with mountWorkspace and ensureMountedWorkspace.'
+---
+
+Once a user has signed in and connected their providers in Agent Relay Cloud, a sandbox — Daytona, E2B, an ephemeral container, or your own runtime — can attach the workspace as local files in a single SDK call. This is the programmatic sibling of the [`relayfile setup` CLI](/docs/file/cli): same outcome, different entry point. Use the CLI for human-driven setup; use the SDK from inside an already-authorized sandbox or agent runtime.
+
+## `mountWorkspace`
+
+`RelayfileSetup.mountWorkspace` mounts a workspace you already know is ready. It mints a fresh mount-session token, launches and supervises the `relayfile-mount` process, and resolves once the mount is reachable.
+
+```ts
+import { RelayfileSetup } from "@relayfile/sdk"
+
+const setup = new RelayfileSetup({ accessToken })
+
+const handle = await setup.mountWorkspace({
+  workspaceId: "rw_…",
+  localDir: "/workspace",
+})
+
+// /workspace is now a live mount of the workspace
+console.log(handle.expiresAt)
+await handle.stop()
+```
+
+You can pass either a `workspaceId` (the SDK joins internally) or a `WorkspaceHandle` you already hold. `remotePath` (default `/`) scopes the mount to a subtree, and `mode` defaults to `poll`.
+
+## `ensureMountedWorkspace`
+
+Use `ensureMountedWorkspace` when you also want provider-readiness gating in the same call. It checks the provider before issuing any mount-session request, so no token is minted if the provider isn't ready.
+
+```ts
+const handle = await setup.ensureMountedWorkspace({
+  workspaceId: "rw_…",
+  provider: "notion",
+  verifyProvider: true,
+  localDir: "/workspace",
+})
+```
+
+This is the standard entry point for sandbox integrators — it removes the race where an agent mounts before the provider has finished its first sync.
+
+## Provider readiness errors
+
+`ensureMountedWorkspace` surfaces two typed errors so callers can give meaningful diagnostics without an extra round-trip:
+
+- **`ProviderNotConnectedError`** — thrown when the provider isn't connected to the workspace at all. Carries `.provider`.
+- **`ProviderNotReadyError`** — thrown when the connection exists but isn't ready within `providerReadyTimeoutMs`. Carries `{ provider, state, initialSyncState }`.
+
+```ts
+import { ProviderNotConnectedError, ProviderNotReadyError } from "@relayfile/sdk"
+
+try {
+  const handle = await setup.ensureMountedWorkspace({
+    workspaceId: "rw_…",
+    provider: "notion",
+    verifyProvider: true,
+    providerReadyTimeoutMs: 30_000,
+    localDir: "/workspace",
+  })
+} catch (err) {
+  if (err instanceof ProviderNotConnectedError) {
+    console.error(`Provider ${err.provider} is not connected to this workspace.`)
+  } else if (err instanceof ProviderNotReadyError) {
+    console.error(`Provider ${err.provider} connected but not ready. State: ${err.state}`)
+  }
+  throw err
+}
+```
+
+Pass `verifyProvider: false` to skip the probe entirely (equivalent to calling `mountWorkspace`).
+
+## The mounted handle
+
+Both methods resolve to a `MountedWorkspaceHandle`. The SDK supervises the local `relayfile-mount` process for you and only resolves once the mount is reachable. The handle exposes:
+
+- **`ready`** — `true` once the first sync completes.
+- **`expiresAt`** — ISO timestamp from the token mint.
+- **`suggestedRefreshAt`** — when to refresh before expiry.
+- **`env()`** — the environment block for child processes (`RELAYFILE_BASE_URL`, `RELAYFILE_TOKEN`, `RELAYFILE_WORKSPACE`, `RELAYFILE_LOCAL_DIR`, and the Relaycast keys). Spread it into a sandbox process's env.
+- **`status()`** — a fresh readiness snapshot; reads `${localDir}/.relay/state.json` and falls back to an HTTP probe.
+- **`stop()`** — idempotent shutdown that drains in-flight syncs and never deletes the local directory.
+
+```ts
+const env = handle.env()
+await sandbox.process.executeCommand("ls /workspace", { env })
+await handle.stop()
+```
+
+<Note>
+  The sandbox receives only a workspace-scoped Relayfile JWT, the server URL, and a Relaycast key — never the user's Cloud access token or PII. The minted token's scopes are a subset of the caller's grant, so passing `scopes: ["fs:read"]` yields a read-only mount even if the caller can write. Pair this with [ACLs](/docs/file/acls) for least-privilege fleets.
+</Note>
+
+## Contrast with the CLI
+
+`relayfile setup` and `mountWorkspace`/`ensureMountedWorkspace` reach the same end state — a workspace mounted at a local directory:
+
+| | `relayfile setup` (CLI) | `mountWorkspace` / `ensureMountedWorkspace` (SDK) |
+|---|---|---|
+| Entry point | human or agent at a shell | code inside an authorized sandbox |
+| Login | runs the cloud login flow | uses an access token you already hold |
+| Provider connect | opens the OAuth flow | assumes connected; `ensure*` gates on readiness |
+| Process management | starts the mount loop in the foreground | SDK launches and supervises the process |
+
+<CardGroup cols={2}>
+  <Card title="The SDK" href="/docs/file/sdk">
+    `RelayFileClient` reads and writes once you're mounted.
+  </Card>
+  <Card title="CLI reference" href="/docs/file/cli">
+    The `relayfile setup` human-driven path.
+  </Card>
+</CardGroup>

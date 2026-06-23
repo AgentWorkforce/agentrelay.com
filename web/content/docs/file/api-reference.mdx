@@ -1,0 +1,167 @@
+---
+title: 'API reference'
+description: 'The Relayfile v1 HTTP API: Bearer auth, the workspace filesystem endpoints (tree, file, bulk, events), and the sync and writeback surfaces.'
+---
+
+The Relayfile data plane is a plain HTTP API. Every workspace operation — reading the tree, reading and writing files, ingesting webhooks, checking sync status — is a request against `/v1/workspaces/{workspaceId}/...`. The full machine-readable contract is the OpenAPI spec in the repo at [`openapi/relayfile-v1.openapi.yaml`](https://github.com/AgentWorkforce/relayfile/blob/main/openapi/relayfile-v1.openapi.yaml); this page is the runnable summary.
+
+## Authentication
+
+Authenticated requests carry a Bearer token and a correlation ID:
+
+```bash
+export RELAYFILE_BASE_URL=http://127.0.0.1:8080
+export RELAYFILE_WORKSPACE=ws_live
+export RELAYFILE_TOKEN="$(./scripts/generate-dev-token.sh ${RELAYFILE_WORKSPACE})"
+export RELAYFILE_CORRELATION_ID="corr_$(date +%s)"
+```
+
+Every authenticated call includes:
+
+```bash
+-H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+-H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}"
+```
+
+`X-Correlation-Id` is **required** on authenticated HTTP requests — it's used for traceability and auditability across requests. Tokens are scope-aware: the OpenAPI contract defines `fs:read` and `fs:write` scopes, and the data plane enforces them. Do **not** send `X-Workspace-Id`; the routing layer sets it internally.
+
+<Warning>
+  Use the `rw_…` workspace ID returned by `mount-session` / join for every data-plane call — never the request-side app UUID. Passing an app UUID returns `404 workspace_not_found`. The [SDK](/docs/file/sdk) resolves this for you; raw-HTTP callers must resolve it first.
+</Warning>
+
+## Health
+
+`GET /health` returns a liveness response and requires no auth:
+
+```bash
+curl -sS "${RELAYFILE_BASE_URL}/health" | jq .
+```
+
+## Filesystem
+
+The filesystem endpoints are the core surface. All are scoped to a workspace.
+
+### List a tree
+
+`GET /v1/workspaces/{workspaceId}/fs/tree` lists files and directories under a path.
+
+```bash
+curl -sS \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/tree?path=/&depth=2" | jq .
+```
+
+### Read a file
+
+`GET /v1/workspaces/{workspaceId}/fs/file` reads one file.
+
+```bash
+curl -sS \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/file?path=/README.md" | jq .
+```
+
+### Write a file
+
+`PUT /v1/workspaces/{workspaceId}/fs/file` creates or updates one file.
+
+```bash
+curl -sS -X PUT \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  -H "Content-Type: application/json" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/file" \
+  -d '{ "path": "/docs/guide.md", "content": "# agent guide", "contentType": "text/markdown" }' | jq .
+```
+
+### Delete a file
+
+`DELETE /v1/workspaces/{workspaceId}/fs/file` deletes one file.
+
+```bash
+curl -sS -X DELETE \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/file?path=/docs/guide.md" | jq .
+```
+
+### Bulk write
+
+`POST /v1/workspaces/{workspaceId}/fs/bulk` writes many files in one request.
+
+```bash
+curl -sS -X POST \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  -H "Content-Type: application/json" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/bulk" \
+  -d '{ "files": [ { "path": "/src/app.js", "content": "console.log(1);", "contentType": "application/javascript" } ] }' | jq .
+```
+
+### Other filesystem endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `GET .../fs/events?path=/&limit=20` | Read the filesystem event feed |
+| `GET .../fs/query?path=/documents&...` | Structured metadata query (filters synced metadata, not path) |
+| `GET .../fs/export?format=json\|tar\|patch` | Export visible files, optionally scoped with `path=` |
+| `GET .../fs/ws?token=...` | Upgrade to a WebSocket stream of real-time changes |
+
+<Note>
+  `fs/query` matches against each file's synced `provider`/`semantics` metadata, not the path prefix — a provider's content is only queryable if its sync tags that metadata. For reads over un-tagged providers, prefer `fs/tree` + `fs/file`. The [SDK](/docs/file/sdk) wraps all of these as `listTree`, `readFile`, `writeFile`, `bulkWrite`, `deleteFile`, `queryFiles`, and `subscribe`.
+</Note>
+
+## Sync
+
+Inspect and drive provider sync for a workspace:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET .../sync/status` | Workspace sync status (per-provider readiness) |
+| `GET .../sync/ingress` | Ingress queue and reliability counters |
+| `GET .../sync/dead-letter` | List dead-letter envelopes |
+| `POST .../sync/dead-letter/{id}/replay` | Replay one dead-letter envelope |
+| `POST .../sync/dead-letter/{id}/ack` | Acknowledge a dead-letter envelope |
+| `POST .../sync/refresh` | Trigger a sync refresh |
+
+```bash
+curl -sS \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/sync/status" | jq .
+```
+
+## Webhooks and writeback
+
+Push normalized provider events in, and drive outbound writeback work:
+
+| Endpoint | Purpose |
+|---|---|
+| `POST .../webhooks/ingest` | Submit a provider-agnostic webhook into a workspace |
+| `POST /v1/internal/webhook-envelopes` | Internal envelope ingest (trusted callers; may require HMAC in prod) |
+| `GET .../writeback/pending` | List outbound writeback items awaiting a provider |
+| `POST .../writeback/{itemId}/ack` | Acknowledge a processed writeback item |
+
+```bash
+curl -sS -X POST \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "X-Correlation-Id: webhook_test_1" \
+  -H "Content-Type: application/json" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/webhooks/ingest" \
+  -d '{ "provider": "salesforce", "event_type": "file.updated", "path": "/salesforce/Account_123", "data": { "content": "Account details", "contentType": "text/plain" }, "delivery_id": "sf_evt_123" }' | jq .
+```
+
+## Operations and admin
+
+`GET .../ops`, `GET .../ops/{opId}`, and `POST .../ops/{opId}/replay` list, fetch, and replay workspace operations. The admin plane (`/v1/admin/...`) exposes backend config, cross-workspace ingress and sync health, and envelope/op replay. Most workspace and admin endpoints use Bearer auth; internal ingress may use service-to-service signing in production.
+
+<CardGroup cols={2}>
+  <Card title="The SDK" href="/docs/file/sdk">
+    The typed client over this HTTP surface.
+  </Card>
+  <Card title="OpenAPI spec" href="https://github.com/AgentWorkforce/relayfile/blob/main/openapi/relayfile-v1.openapi.yaml">
+    The full machine-readable v1 contract.
+  </Card>
+</CardGroup>

@@ -1,0 +1,163 @@
+---
+title: 'CLI reference'
+description: 'The relayfile CLI: setup, login, seed, tree, mount, and the relayfile-mount daemon flags, with auth and token resolution rules.'
+---
+
+The `relayfile` CLI is the primary interface for humans and CI to work with Relayfile workspaces. It wraps the HTTP API and the mount sync engine into one tool: minimal flags, sensible defaults, composable with pipes (`--json` everywhere), and no implicit destructive actions (deletes require `--yes`).
+
+## Authentication
+
+The CLI resolves a token in priority order, first match wins:
+
+1. `--token` flag (one-off override)
+2. `RELAYFILE_TOKEN` env var (CI/CD)
+3. the canonical relay cloud session (cloud-hosted interactive use)
+4. `~/.relayfile/credentials.json` (self-hosted / API-key compatibility)
+
+For the cloud-hosted path, login is owned by the `agent-relay` CLI: `agent-relay login`, then `agent-relay workspace switch <name>`, then any `relayfile` command. For self-hosted servers, use the API-key path:
+
+```bash
+relayfile login --api-key --server https://api.relayfile.dev
+```
+
+If no token is found, the CLI prints: `Error: not authenticated. Run 'agent-relay login' for Cloud or set RELAYFILE_TOKEN.`
+
+## `relayfile setup`
+
+The low-friction Cloud setup path for humans and agent-guided onboarding. It ensures you're logged in, creates or joins a Cloud workspace, requests a hosted connect session for the chosen provider, waits until it reports ready, and starts the mount loop.
+
+```bash
+relayfile setup --provider notion --workspace my-project --local-dir ./relayfile-mount
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--provider` | prompted (`github`) | Integration to connect; `none` to skip |
+| `--workspace` | prompted | Workspace name to create or join |
+| `--local-dir` | prompted (`./relayfile-mount`) | Local mount directory |
+| `--cloud-api-url` | `https://agentrelay.com/cloud` | Cloud API URL |
+| `--cloud-token` | `RELAYFILE_CLOUD_TOKEN` | Cloud token for headless setup; skips browser login |
+| `--no-open` | `false` | Print login/connect URLs instead of opening a browser |
+| `--skip-mount` | `false` | Complete setup without starting the mount loop |
+| `--once` | `false` | Run one mount sync cycle and exit |
+
+Re-running with the same workspace name reuses the workspace, refreshes the session, and only opens a new connect flow when the provider isn't already connected. See [Relayfile Cloud](/docs/file/cloud).
+
+## `relayfile login`
+
+Authenticate through the canonical relay session, or the self-hosted API-key path.
+
+```bash
+relayfile login [--no-open]
+relayfile login --api-key --server https://api.relayfile.dev
+```
+
+The default path delegates to `agent-relay login`. `--api-key` keeps the self-hosted compatibility path and writes `~/.relayfile/credentials.json` with `0600` permissions.
+
+## `relayfile seed`
+
+Bulk-upload a local directory into a workspace, respecting `.gitignore` and `--exclude` patterns.
+
+```bash
+relayfile seed my-workspace ./src
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--exclude` | (none) | Glob patterns to exclude (repeatable) |
+| `--dry-run` | `false` | List files that would upload, without uploading |
+| `--batch-size` | `50` | Files per bulk API request |
+
+It walks the directory and posts batches to the bulk write endpoint, printing progress.
+
+## `relayfile tree`
+
+List a remote workspace path without mounting.
+
+```bash
+relayfile tree my-workspace / --depth 2
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--depth` | `1` | Maximum tree depth |
+| `--json` | `false` | Print the raw API response |
+
+Prints a compact human-readable tree by default; `--json` is for scripts. `relayfile read <workspace> <path>` (alias `relayfile cat`) reads a single file the same way.
+
+## `relayfile mount`
+
+Mount a workspace to a local directory, syncing changes in real time. This replaces the standalone daemon for end users.
+
+```bash
+relayfile mount my-workspace ./local-mirror
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--interval` | `30s` | Polling interval between sync cycles |
+| `--once` | `false` | Run a single sync cycle and exit (CI) |
+| `--mode` | `poll` | `poll` (synced mirror, recommended) or `fuse` (opt-in, POSIX) |
+| `--background` | `false` | Detach; write PID to `.relay/mount.pid`, logs to `.relay/mount.log` |
+| `--no-websocket` | `false` | Disable WebSocket streaming, poll only |
+
+In `poll` mode the daemon maintains a synced mirror accelerated by a WebSocket invalidation channel. `fuse` mode is gated by build tags and unavailable in the OSS build (the CLI exits cleanly with a clear message rather than falling back silently). Stop a background mount with `relayfile stop` and tail its log with `relayfile logs`.
+
+## The `relayfile-mount` daemon
+
+`cmd/relayfile-mount` is the minimal single-purpose daemon, kept for backwards compatibility and deployments that want it directly. It's configured by flags or environment variables:
+
+```bash
+RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
+  --base-url http://localhost:9090 \
+  --workspace ws_demo \
+  --local-dir ./relayfile-mount \
+  --remote-path /github \
+  --fuse-content-ttl 10s
+```
+
+| Flag / env | Default | Description |
+|---|---|---|
+| `--base-url` / `RELAYFILE_BASE_URL` | `http://127.0.0.1:8080` | Relayfile API base URL |
+| `--workspace` / `RELAYFILE_WORKSPACE` | — (required) | Workspace ID to mount |
+| `--local-dir` / `RELAYFILE_LOCAL_DIR` | — (required) | Local mirror directory |
+| `RELAYFILE_TOKEN` | — (required) | Bearer token |
+| `--remote-path` / `RELAYFILE_REMOTE_PATH` | `/` | Remote subtree to mirror (repeatable) |
+| `--paths-file` | — | JSON array or newline list of remote roots |
+| `--fuse-content-ttl` / `RELAYFILE_MOUNT_FUSE_CONTENT_TTL` | `30s` | FUSE content cache TTL |
+| `RELAYFILE_MOUNT_INTERVAL` | `2s` | Polling interval |
+| `RELAYFILE_MOUNT_TIMEOUT` | `15s` | Per-sync timeout |
+
+See [Run locally](/docs/file/run-locally) for the daemon in context and [Local development](/docs/file/local-development) for the no-Docker loop.
+
+## Other commands
+
+| Command | Purpose |
+|---|---|
+| `relayfile workspace create / list / delete` | Manage workspaces |
+| `relayfile export` | Download a snapshot (`--format tar\|json\|patch`) |
+| `relayfile status` | Per-provider sync state, lag, conflicts, denials |
+| `relayfile integration connect / list / disconnect` | Manage provider integrations after setup |
+| `relayfile pull` | Force a reconcile of a path or the whole workspace |
+| `relayfile permissions` | Show writable paths and expected schema for a path |
+| `relayfile ops list / replay` | Inspect and replay dead-lettered writeback ops |
+| `relayfile stop` / `relayfile logs` | Control and read a background mount daemon |
+
+## Global flags
+
+| Flag | Env var | Description |
+|---|---|---|
+| `--server` | `RELAYFILE_SERVER` | Server base URL |
+| `--token` | `RELAYFILE_TOKEN` | Bearer token |
+| `--workspace` | `RELAYFILE_WORKSPACE` | Workspace name or ID |
+| `--json` | — | Emit JSON instead of tables |
+| `--verbose` | — | Debug logging to stderr |
+
+<CardGroup cols={2}>
+  <Card title="Run locally" href="/docs/file/run-locally">
+    The Docker stack and the mount daemon in context.
+  </Card>
+  <Card title="Relayfile Cloud" href="/docs/file/cloud">
+    What `relayfile setup` connects to.
+  </Card>
+</CardGroup>

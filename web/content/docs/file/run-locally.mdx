@@ -1,0 +1,97 @@
+---
+title: 'Run locally'
+description: 'Run the Relayfile daemon with Docker, hit the VFS over curl, and mount a workspace with relayfile-mount and its FUSE cache flags.'
+---
+
+Relayfile runs as a lightweight background daemon. That's where OAuth tokens stay warm, provider rate limits are absorbed, webhook deliveries are deduplicated, and events fan out to all subscribed agents. It's an integration runtime — the same reason you run a database process rather than re-implementing storage per request. If you'd rather not run it, [Relayfile Cloud](/docs/file/cloud) runs the daemon for you.
+
+## Start the Docker stack
+
+The fastest local path brings up the file server, the dev token issuer, and a seed step that creates a sample workspace:
+
+```bash
+cd docker
+docker compose up --build
+```
+
+This starts three services:
+
+| Service | URL | Purpose |
+|---|---|---|
+| relayfile | `http://localhost:9090` | VFS API |
+| relayauth | `http://localhost:9091` | local dev token issuer |
+| seed | exits after setup | creates `ws_demo` sample files |
+
+## Call the API over curl
+
+The seed step prints a dev token to its logs. Pull it out, then read the tree and a file:
+
+```bash
+TOKEN="$(docker compose logs seed | awk '/token/ {print $NF}' | tail -1)"
+
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "X-Correlation-Id: quickstart-tree" \
+  "http://localhost:9090/v1/workspaces/ws_demo/fs/tree?path=/"
+
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "X-Correlation-Id: quickstart-read" \
+  "http://localhost:9090/v1/workspaces/ws_demo/fs/file?path=/docs/welcome.md"
+```
+
+`X-Correlation-Id` is required on authenticated requests. The full endpoint set is in the [API reference](/docs/file/api-reference).
+
+## Mount the workspace
+
+Mount `ws_demo` as ordinary local files with the `relayfile-mount` daemon:
+
+```bash
+cd ..
+RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
+  --base-url http://localhost:9090 \
+  --workspace ws_demo \
+  --local-dir ./relayfile-mount
+```
+
+Now any local tool or agent can use `./relayfile-mount` like a normal directory.
+
+## Scope the mount to subtrees
+
+On large workspaces you don't want to pull the whole tree. Limit the daemon to one or more remote subtrees by repeating `--remote-path`. Each subtree is mirrored under the matching path inside `--local-dir`, which avoids full-workspace export pulls:
+
+```bash
+RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
+  --base-url http://localhost:9090 \
+  --workspace ws_demo \
+  --local-dir ./relayfile-mount \
+  --remote-path /github \
+  --remote-path /slack/channels/proj-cloud
+```
+
+For long path lists, pass `--paths-file ./paths.json`. The file may be a JSON array of remote roots or a newline-separated list. Combine with `--lazy-repos` (see [Mount layout](/docs/file/mount-layout)) for huge-org GitHub workspaces.
+
+## Tune the FUSE caches
+
+The FUSE layer caches file content in kernel memory independently of its attribute TTL. By default content is held for 30 seconds and attributes for 2 seconds. Tune content caching with `--fuse-content-ttl` (or the `RELAYFILE_MOUNT_FUSE_CONTENT_TTL` env var) when your workload needs fresher reads or can tolerate a longer cache window:
+
+```bash
+# 10-second content cache — reduces kernel re-reads for stable workspaces
+RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
+  --workspace ws_demo \
+  --local-dir ./relayfile-mount \
+  --fuse-content-ttl 10s
+```
+
+<Note>
+  The mount daemon reads its config from the environment: `RELAYFILE_BASE_URL` (default `http://127.0.0.1:8080`), `RELAYFILE_TOKEN`, `RELAYFILE_WORKSPACE`, `RELAYFILE_REMOTE_PATH`, `RELAYFILE_LOCAL_DIR`, `RELAYFILE_MOUNT_INTERVAL` (default `2s`), and `RELAYFILE_MOUNT_TIMEOUT` (default `15s`). The flags above override the corresponding variables.
+</Note>
+
+This kernel content cache is independent of the SDK's [client-side read cache](/docs/file/realtime-sync) — they operate at different layers and are tuned separately.
+
+<CardGroup cols={2}>
+  <Card title="Local development" href="/docs/file/local-development">
+    Run the daemon without Docker, with the durable-local backend profile.
+  </Card>
+  <Card title="API reference" href="/docs/file/api-reference">
+    The full HTTP surface the daemon talks to.
+  </Card>
+</CardGroup>

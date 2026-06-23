@@ -273,6 +273,59 @@
   transform: translateY(-50%);
 }
 
+/* ── Product section sidebar header (Relayfile / Relayloop) ── */
+
+.productHeader {
+  margin-bottom: 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.productBackLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
+  text-decoration: none;
+  margin-bottom: 0.75rem;
+  transition: color 0.15s;
+}
+
+.productBackLink:hover {
+  color: var(--primary);
+}
+
+.productHeaderName {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.productHeaderName:hover {
+  color: var(--primary);
+}
+
+.productHeaderIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--primary);
+}
+
+.productHeaderTagline {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--fg-muted);
+}
+
 .navGroup {
   margin-bottom: 1.25rem;
 }

@@ -1,0 +1,64 @@
+---
+title: 'Relayfile'
+description: 'The event layer for AI agents — normalize SaaS webhooks into a consistent, ACL-scoped file tree your agents read and write with ls, cat, and grep.'
+---
+
+Your SaaS tools are always firing events. A Linear issue is created, a Notion page edited, a GitHub PR opened — and something should react. But every provider fires webhooks differently: different payload shapes, different auth schemes, different retry semantics. Building that normalization for each provider is the plumbing nobody wants to write.
+
+Relayfile normalizes webhooks from Linear, Notion, GitHub, Slack, HubSpot, Salesforce, and the rest of your SaaS stack into a consistent, ACL'd file tree, then delivers them to your agents. Agents wake up to a ready filesystem, read what changed, and write back — using `cat`, `grep`, and file-write operations they already know. One integration point. Zero webhook parsing.
+
+LLMs are far better at reading files than calling typed tools — the filesystem is the most-trained-on API in existence. Relayfile leans on that instead of fighting it.
+
+## The entire interface
+
+There is no new SDK to learn and no MCP schemas eating your context window — just the bash and file IO an agent already knows.
+
+```bash
+$ ls mount/
+github  linear  notion  slack
+
+$ cat mount/linear/issues/AGE-12.json
+{ "identifier": "AGE-12", "title": "Fix login bug", "state": "Todo", ... }
+
+$ echo '{"description":"Updated by reviewer agent"}' \
+    > mount/linear/issues/AGE-12.json   # PATCH back to Linear
+
+$ grep -l '"state":"Todo"' mount/linear/issues/*.json
+```
+
+`ls` lists what's there. `cat` reads a record. Writing a JSON file patches it back to the provider. Removing a file deletes the record. The filesystem is the protocol.
+
+## Why files beat tool schemas
+
+A typical MCP setup loads 100+ tool schemas into every agent session before any work happens. Files load nothing — context cost is exactly what the agent opens. An LLM is also more reliable reading a directory than juggling N typed APIs, and `ls` gives you exhaustive enumeration where a tool call returns paginated search results.
+
+There are three reasons the file interface wins, covered in depth on [Why files](/docs/file/why-files):
+
+- **Reactive invocation.** Provider webhooks normalize into file events. Your agent wakes up to the changed file, not a raw payload it has to parse.
+- **Coordination.** Multiple agents working through the same filesystem see each other's writes immediately, scoped by ACL.
+- **Context efficiency.** Files load nothing into context until an agent reads them.
+
+<Note>
+  Relayfile is the file layer of the Agent Relay platform. Where Agent Relay gives agents a [communication layer](/docs/introduction) — messaging, delivery, and actions — Relayfile gives them the integration layer: every connected SaaS tool exposed as files.
+</Note>
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/file/quickstart">
+    Get a working mount in minutes — hosted with `relayfile setup`, or local with Docker.
+  </Card>
+  <Card title="Mount layout" href="/docs/file/mount-layout">
+    Self-describing mounts: `LAYOUT.md`, `_index.json`, canonical naming, and the alias views.
+  </Card>
+  <Card title="The SDK" href="/docs/file/sdk">
+    `@relayfile/sdk` — `RelayFileClient` reads and writes, plus `RelayfileSetup` for mounting.
+  </Card>
+  <Card title="Relayfile Cloud" href="/docs/file/cloud">
+    Hosted Agent Relay runs the daemon, OAuth, and sync workers — connect with one token.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/docs/file/quickstart" icon="rocket">
+  Mount your first provider-backed workspace.
+</BannerLink>

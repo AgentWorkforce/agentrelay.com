@@ -1,0 +1,60 @@
+---
+title: 'Introduction'
+description: 'Relayloop is the system of record for how your team works with AI agents — searchable history, token spend, and patterns that compound.'
+---
+
+Relayloop captures every conversation you and your team have with AI coding agents — Claude Code, Codex, Cursor, Agent Relay, and more — into one searchable record, and turns that record into leverage. It is local-first: a single Rust-backed CLI (`ai-hist`) syncs your agent history into a local SQLite database with full-text search, on your machine, with no account required. The hosted layer, **Relayloop Cloud**, is opt-in.
+
+The local engine binary is `ai-hist`. Wherever you see that command in these docs, it is the real CLI you install and run.
+
+## The problem
+
+Three things go wrong once a team starts leaning on AI agents, and they get worse with scale.
+
+- **AI leverage is bimodal.** Your strongest engineers pull 5–10× out of coding agents; most of the team gets 1×. The gap is prompting skill — tribal, undocumented, and gone the day someone leaves.
+- **Spend is invisible.** Real money flows to tokens every month with almost no visibility into where it goes, which model burned it, or which loop ran away.
+- **Nothing compounds.** Every session — the prompts that worked, the dead ends, the decisions — evaporates when the terminal closes. There is no shared playbook and no improvement loop.
+
+## The three lenses
+
+Relayloop looks at your agent history through three lenses.
+
+<CardGroup cols={3}>
+  <Card title="Recall">
+    A searchable history of how your team prompts. Your best engineers' patterns become a living playbook everyone can draw from — find the prompt, the session, and the resume command in seconds.
+  </Card>
+  <Card title="Burn">
+    Token spend by model, tool, project, and engineer. Find the waste, forecast the cost, and kill runaway loops before they bill you twice.
+  </Card>
+  <Card title="Insights">
+    Patterns become proactive guidance and repo rules, so your baseline rises every week and your codebase gets steadily more agent-ready.
+  </Card>
+</CardGroup>
+
+## Local-first, cloud opt-in
+
+The CLI works completely offline. `ai-hist sync` reads your local agent files, dedupes, and indexes everything into a SQLite database at `~/.local/share/ai-hist/ai-history.db`. Nothing leaves your machine unless you choose to turn on cloud sync.
+
+When you want durable backup, cross-device access, a web UI, and team recall, you opt into [Relayloop Cloud](/docs/loop/cloud). The local CLI does not change and keeps working offline either way.
+
+<Note>
+  Relayloop indexes Agent Relay history as one of its sources. If you coordinate agents with [Agent Relay](/docs/introduction), those conversations land in the same searchable corpus as your Claude Code and Codex sessions.
+</Note>
+
+## Start here
+
+<CardGroup cols={3}>
+  <Card title="Install" href="/docs/loop/install">
+    Install the `ai-hist` CLI in one command and set up your PATH.
+  </Card>
+  <Card title="Search" href="/docs/loop/search">
+    Full-text search across every agent session you have ever run.
+  </Card>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    Opt into durable backup, cross-device sync, and team recall.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/docs/loop/quickstart" icon="rocket">
+  Go from zero to a searchable agent history in five minutes.
+</BannerLink>

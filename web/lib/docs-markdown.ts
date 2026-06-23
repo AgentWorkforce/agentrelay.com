@@ -85,7 +85,7 @@ function renderBannerLink(attrs: string, body: string): string {
   return href ? `[${label}](${href})` : label;
 }
 
-function renderMarkdownBody(content: string): string {
+export function renderMarkdownBody(content: string): string {
   let output = content;
 
   output = output.replace(/<CodeGroup>\s*/g, '');

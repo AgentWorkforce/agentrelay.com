@@ -1,0 +1,111 @@
+---
+title: 'Quickstart'
+description: 'The fastest path to a working Relayfile mount — hosted with one command, or local with Docker — then read and write provider files.'
+---
+
+There are two ways to get a working mount. The **hosted** path runs the integration stack for you — OAuth, sync workers, writeback — so you only run a local mount. The **local OSS** path runs the file server yourself with Docker. Pick whichever fits; both end with provider-backed files in an ordinary directory.
+
+## Hosted: one command
+
+If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running infrastructure, use Hosted Agent Relay. The CLI logs you in, creates or joins a cloud workspace, completes provider auth, waits for sync, and mounts the result.
+
+```bash
+relayfile setup \
+  --provider notion \
+  --workspace my-agent \
+  --local-dir ./relayfile-mount \
+  --no-open
+```
+
+`--no-open` prints the hosted login and connect URLs instead of opening a browser — useful inside agents and headless environments. The command connects to `agentrelay.com`, completes the Nango connect flow, blocks until the provider reports ready, and starts the mount sync loop.
+
+When it returns, `./relayfile-mount` is a live mirror of your workspace:
+
+```bash
+ls ./relayfile-mount/notion
+cat ./relayfile-mount/LAYOUT.md
+```
+
+See [Relayfile Cloud](/docs/file/cloud) for what the hosted plane manages, and [Mounting](/docs/file/mounting) to do the same thing programmatically from a sandbox.
+
+## Local: Docker stack
+
+The local path runs the file server, the dev token issuer, and a seed step that creates a sample `ws_demo` workspace.
+
+```bash
+cd docker
+docker compose up --build
+```
+
+This starts three services:
+
+| Service | URL | Purpose |
+|---|---|---|
+| relayfile | `http://localhost:9090` | VFS API |
+| relayauth | `http://localhost:9091` | local dev token issuer |
+| seed | exits after setup | creates `ws_demo` sample files |
+
+### Get a token and call the API
+
+The seed step prints a dev token to its logs. Grab it, then hit the tree and file endpoints:
+
+```bash
+TOKEN="$(docker compose logs seed | awk '/token/ {print $NF}' | tail -1)"
+
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "X-Correlation-Id: quickstart-tree" \
+  "http://localhost:9090/v1/workspaces/ws_demo/fs/tree?path=/"
+
+curl -H "Authorization: Bearer $TOKEN" \
+  -H "X-Correlation-Id: quickstart-read" \
+  "http://localhost:9090/v1/workspaces/ws_demo/fs/file?path=/docs/welcome.md"
+```
+
+`X-Correlation-Id` is required on authenticated requests for traceability. The full endpoint surface is in the [API reference](/docs/file/api-reference).
+
+### Mount it as local files
+
+```bash
+cd ..
+RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
+  --base-url http://localhost:9090 \
+  --workspace ws_demo \
+  --local-dir ./relayfile-mount
+```
+
+Now any local tool or agent can use `./relayfile-mount` like a normal directory. See [Run locally](/docs/file/run-locally) for the full daemon flag set, including `--remote-path` to mirror a subtree and `--fuse-content-ttl` to tune the content cache.
+
+## Read and write
+
+Once mounted, the interface is the filesystem you already know:
+
+```bash
+# read
+cat ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+
+# patch back to the provider by writing the canonical path
+echo '{"state":"In Review"}' \
+  > ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+
+# find across providers
+grep -rl '"state":"Todo"' ./relayfile-mount/linear/issues/
+```
+
+See [Reads and writes](/docs/file/reads-and-writes) for the full PATCH / CREATE / DELETE model.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Mount layout" href="/docs/file/mount-layout">
+    Learn the tree shape: `LAYOUT.md`, `_index.json`, canonical naming, and alias views.
+  </Card>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    How file ops map to PATCH, CREATE, and DELETE — and where schemas live.
+  </Card>
+  <Card title="The SDK" href="/docs/file/sdk">
+    Use `RelayFileClient` from any agent runtime, with the built-in read cache.
+  </Card>
+  <Card title="Agents" href="/docs/file/agents">
+    One `connect()` call for Vercel AI SDK, OpenAI Agents SDK, and LangChain.
+  </Card>
+</CardGroup>

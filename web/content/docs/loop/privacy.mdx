@@ -1,0 +1,75 @@
+---
+title: 'Privacy'
+description: 'How Relayloop Cloud handles your data: encrypted in transit and at rest, secrets scrubbed on ingest, end-to-end encryption available, and full data rights.'
+---
+
+Relayloop is local-first, so the most private option is always to run the CLI and sync nothing. When you do opt into [Relayloop Cloud](/docs/loop/cloud), the data-handling model is built to be honest about what we can and cannot see — and to give you concrete controls, not just promises. This page describes how data is protected, what is scrubbed, the end-to-end-encrypted option and its real limits, and your rights to export and delete.
+
+## Encrypted in transit and at rest
+
+All cloud sync travels over HTTPS, and stored data is encrypted at rest, access-controlled, and audited. Secrets and PII — API keys, tokens, credentials — are scrubbed on ingest, before content is stored.
+
+Your data is never used to train models without your explicit opt-in. Any cross-team learning that powers [Insights](/docs/loop/teams) is always aggregated and anonymized — one customer never sees another's content.
+
+## Two trust tiers
+
+There are two distinct trust models, and it matters which one you are on.
+
+### Team tier (default)
+
+The default tier is vendor-readable: data is encrypted in transit and at rest, secret-scrubbed, and consent-gated, with no training without opt-in. It is readable by the platform so that it can power features like the cross-team learning flywheel. This is the standard SaaS trust model with privacy controls layered on.
+
+### Enterprise / Private tier (end-to-end encrypted)
+
+For teams whose IP or compliance rules mean content cannot leave at all, the Enterprise tier runs end-to-end encrypted, or self-hosted in your own VPC or on-prem. This tier trades the cross-team flywheel for total privacy.
+
+<Note>
+  Choose the tier that matches your constraints. The Team tier is more capable because the platform can read content to help; the Enterprise tier is more private because it cannot. See [Teams](/docs/loop/teams) for how the tiers map to pricing.
+</Note>
+
+## How end-to-end encryption works
+
+On the Enterprise / Private tier, the design principle is that the server stores ciphertext and holds no decryption keys. Even with full database access, neither an attacker nor the platform can read your content.
+
+- **Content encryption** uses AES-256-GCM, with each entry encrypted independently under a fresh nonce. The whole entry — prompt, project path, session ID, source — is encrypted.
+- **Key custody is separate from login.** Authentication establishes who you are; it grants no decryption access. The encryption key is a client-held master key, generated on your first device and never sent to the server.
+- **The master key is wrapped by a separate secret** — an encryption passphrase (or a passkey via WebAuthn-PRF). The server stores only the wrapped key and its salt: ciphertext that is useless without the passphrase. A printed recovery kit is issued at setup, because a lost passphrase means data is unrecoverable by design.
+
+### Browser decryption
+
+The web dashboard decrypts entirely in the browser. You sign in for identity, enter your passphrase (or tap a passkey), the browser unwraps the key locally and decrypts entries in memory, and search runs against that in-memory index. The key is held only for the tab's lifetime and discarded when the tab closes — never persisted, never sent to the server. This is the same model used by Bitwarden, ProtonMail, and 1Password web clients.
+
+### Honest limits
+
+End-to-end encryption is not magic, and the limits deserve to be stated plainly:
+
+- **JavaScript delivery.** With a web app, the browser executes JavaScript served by the server on every page load. This shifts one trust assumption that the CLI does not have: you trust that the server is delivering the same JS that is in the open source repo. This is mitigated — not eliminated — by Subresource Integrity (the browser refuses JS that does not match a published hash), a strict Content Security Policy, an open-source web client whose build hashes are published, and holding the key only in tab-scoped session storage. For maximum security, use the CLI, where the key lives in the OS keychain and never touches a browser.
+- **Compromised client device.** If your device is compromised, the local key can be extracted. Encryption protects data on our servers, not on a machine an attacker already controls.
+- **Weak passphrase.** A memory-hard KDF slows brute-force of the wrapped key but cannot save a very weak passphrase; minimum entropy is enforced, and the passkey path is preferred where available.
+- **Hosted MCP endpoint.** The [hosted MCP endpoint](/docs/loop/cloud-architecture) is the one place data is transiently decrypted server-side, which requires trusting the server. It is opt-in and clearly disclosed; the local MCP server stays the zero-trust default.
+
+## What the server can see
+
+On the end-to-end tier the server holds your ciphertext plus a thin operational layer: your identity and org, the wrapped key and its salt (ciphertext only), entry count for billing, per-entry creation timestamp for ordering, and a one-way content hash for deduplication. Prompt text, project paths, session IDs, sources, and trajectory decisions are encrypted. The content hash reveals only that two entries are duplicates.
+
+## Your data rights
+
+These are commitments backed by mechanics, not just policy. They map to GDPR Articles 15, 17, and 20 and CCPA rights.
+
+- **Delete, immediately and permanently.** Delete a single entry with `ai-hist cloud delete <id>`, or your whole account with `ai-hist cloud delete-account`. Deletes are hard deletes — rows are removed, not flagged — completing synchronously. Nightly backups are retained for 7 days for disaster recovery and disclosed explicitly; after 7 days no copy exists on our infrastructure.
+- **Export, any time, always free.** `ai-hist cloud export --output my-history.jsonl.gz` streams your ciphertext, decrypts it locally, and writes NDJSON in the same format as local `ai-hist export`. It imports straight into a local database with `ai-hist import` — no cloud dependency.
+- **No training use.** Your data is never used to train any model, ours or anyone's. This is written into the Terms of Service and is not waivable.
+- **No third-party analytics SDKs** in the sync client.
+
+## Compliance posture
+
+The end-to-end architecture is a structural compliance asset: it makes several controls provable rather than procedural. The roadmap targets SOC 2 (Security, Confidentiality, Privacy), then ISO 27001 and ISO 27701, with an EU–U.S. Data Privacy Framework self-certification and a CSA STAR self-assessment along the way. Data Processing Agreements are available for enterprise customers. Before any of those certifications land, the strongest assurance is the open-source client itself — a skeptical security team can read the encryption code and verify the claim.
+
+<CardGroup cols={2}>
+  <Card title="Cloud architecture" href="/docs/loop/cloud-architecture">
+    Where encryption sits in the data flow.
+  </Card>
+  <Card title="Teams" href="/docs/loop/teams">
+    How the trust tiers map to pricing.
+  </Card>
+</CardGroup>

@@ -1,0 +1,149 @@
+---
+title: 'CLI Reference'
+description: 'The full ai-hist command surface: sync, search, recent, show, context, session, stats, watch, and the cloud command group, with flags.'
+---
+
+This is the complete `ai-hist` command reference. The CLI is Rust-default — the public `ai-hist` command routes the whole surface through the Rust engine, with the legacy Python CLI available only as an explicit escape hatch (see [Install](/docs/loop/install)). Everything below runs locally against the SQLite database at `~/.local/share/ai-hist/ai-history.db` (override with `AI_HIST_DB`).
+
+## `sync`
+
+Import all history into the local database. Incremental — only reads new bytes on re-run.
+
+```bash
+ai-hist sync
+```
+
+Covers Claude Code, Codex, Cursor, OpenCode, Agent Relay (when configured), and trajectories. See [Sync](/docs/loop/sync) and [Sources](/docs/loop/sources).
+
+## `search`
+
+Full-text search across all sources.
+
+```bash
+ai-hist search "authentication bug"
+ai-hist search "refactor" --source claude --limit 10
+ai-hist search "deploy" --project relay
+```
+
+| Flag | Effect |
+|------|--------|
+| `--source <name>` | Restrict to one source: `claude`, `codex`, `cursor`, `relay`, `trajectory`, `opencode` |
+| `--project <path>` | Restrict to a project |
+| `--limit <n>` | Cap the number of results |
+
+Results include entry IDs (`#NNN`) used to drill in. See [Search](/docs/loop/search).
+
+## `recent`
+
+Show the most recent prompts, no query needed.
+
+```bash
+ai-hist recent                 # last 20
+ai-hist recent 50              # last 50
+ai-hist recent --source claude --project my-app
+```
+
+Takes an optional count argument and the same `--source` / `--project` filters as `search`.
+
+## `show`
+
+Drill into a specific entry by ID. Prints the full prompt, metadata, session info, and the exact resume command.
+
+```bash
+ai-hist show 4521
+```
+
+## `context`
+
+Show an entry's surrounding context: same-session entries plus nearby entries in a time window.
+
+```bash
+ai-hist context 4521
+ai-hist context 4521 --window 15   # ±15 min window (default: 5)
+```
+
+| Flag | Effect |
+|------|--------|
+| `--window <minutes>` | Width of the nearby-entry time window (default: 5) |
+
+## `session`
+
+View all prompts in a session by session ID.
+
+```bash
+ai-hist session abc-1234-def
+ai-hist session abc-1234-def --full   # no truncation
+```
+
+| Flag | Effect |
+|------|--------|
+| `--full` | Show full prompts without truncation |
+
+See [Sessions](/docs/loop/sessions) for `show`, `context`, `session`, and resume commands together.
+
+## `stats`
+
+Print a database overview: total entries, breakdown by source, date range, and top projects.
+
+```bash
+ai-hist stats
+```
+
+See [Stats](/docs/loop/stats) for the Burn lens.
+
+## `watch`
+
+Run sync repeatedly on an interval — continuous local sync.
+
+```bash
+ai-hist watch                  # sync every 60s
+ai-hist watch --interval 30    # sync every 30s
+```
+
+| Flag | Effect |
+|------|--------|
+| `--interval <seconds>` | Seconds between syncs (default: 60) |
+
+## `cloud`
+
+The opt-in [Relayloop Cloud](/docs/loop/cloud) command group. Local commands keep working unchanged; these add durable backup and cross-device access.
+
+```bash
+ai-hist cloud login            # authenticate and set up your encryption key
+ai-hist cloud sync             # encrypt + push new entries since last push
+ai-hist cloud pull             # fetch + decrypt remote entries into the local DB
+ai-hist cloud watch            # continuous push loop
+ai-hist cloud status           # show sync state, entry count, last push
+ai-hist cloud export --output my-history.jsonl.gz   # export all data
+ai-hist cloud delete <id>      # hard-delete a single entry from the cloud
+ai-hist cloud delete-account   # full account deletion
+```
+
+## Resume commands
+
+`ai-hist show <id>` prints the resume command for the recording tool. The forms are:
+
+```bash
+cd /path/to/project && claude --resume <session_id>          # Claude Code
+codex resume <session_id>                                     # Codex
+cd /path/to/project && cursor-agent --resume=<session_id>     # Cursor
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `AI_HIST_DB` | Override the database path |
+| `AI_HIST_CLI` | Dispatch mode: `auto` (default), `rust`, `python` |
+| `AI_HIST_RUST_BIN` | Use an explicit Rust binary instead of the default |
+| `RELAYCAST_API_KEY` / `RELAYCAST_WORKSPACE_ID` | Configure Agent Relay sync |
+| `TRAJECTORY_ROOT` | Explicit root for trajectory sync |
+
+<CardGroup cols={2}>
+  <Card title="Install" href="/docs/loop/install">
+    Dispatch modes and escape hatches in detail.
+  </Card>
+  <Card title="Quickstart" href="/docs/loop/quickstart">
+    The core commands in a five-minute walkthrough.
+  </Card>
+</CardGroup>

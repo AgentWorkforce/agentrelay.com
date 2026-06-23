@@ -35,10 +35,46 @@ import { SiClaude, SiPython, SiTypescript } from 'react-icons/si';
 
 import { docsNav, legacyDocsNav } from '../../lib/docs-nav';
 import { getDocsVersionForPath, legacyDocsBasePath, v8DocsBasePath } from '../../lib/docs-versions';
+import { getProductSectionForPath, productBasePath } from '../../lib/product-docs-nav';
 import { DocsVersionSelect } from './DocsVersionSelect';
+import { FolderOpen as FolderOpenIcon, Repeat } from 'lucide-react';
 import styles from './docs.module.css';
 
 type NavIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+
+const productSectionIcons: Record<string, NavIcon> = {
+  file: FolderOpenIcon,
+  loop: Repeat,
+};
+
+const productNavIcons: Record<string, NavIcon> = {
+  introduction: Compass,
+  quickstart: Rocket,
+  install: Rocket,
+  'why-files': BookOpen,
+  'mount-layout': FolderOpen,
+  'reads-and-writes': Send,
+  acls: Shield,
+  'realtime-sync': Activity,
+  'run-locally': Terminal,
+  'local-development': Terminal,
+  mounting: FolderOpen,
+  sdk: SiTypescript,
+  agents: Bot,
+  'adapters-and-providers': Plug,
+  comparison: BookOpen,
+  cloud: Cloud,
+  'api-reference': Network,
+  cli: Terminal,
+  sync: Activity,
+  search: Compass,
+  sessions: BsChatRightText,
+  sources: Network,
+  stats: Zap,
+  'cloud-architecture': Network,
+  privacy: PiLockKeyDuotone,
+  teams: Users,
+};
 
 const navIcons: Record<string, NavIcon> = {
   introduction: Compass,
@@ -89,9 +125,18 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
   const pathname = usePathname();
   const navRef = useRef<HTMLElement | null>(null);
   const isSidebar = variant === 'sidebar';
+  const productSection = getProductSectionForPath(pathname ?? '/docs');
   const docsVersion = getDocsVersionForPath(pathname ?? '/docs');
-  const navGroups = docsVersion === 'v7.1.1' ? legacyDocsNav : docsNav;
-  const docsBasePath = docsVersion === 'v8' ? v8DocsBasePath : legacyDocsBasePath;
+  const navGroups = productSection
+    ? productSection.nav
+    : docsVersion === 'v7.1.1'
+      ? legacyDocsNav
+      : docsNav;
+  const docsBasePath = productSection
+    ? productBasePath(productSection)
+    : docsVersion === 'v8'
+      ? v8DocsBasePath
+      : legacyDocsBasePath;
 
   useEffect(() => {
     if (!isSidebar) return;
@@ -140,7 +185,23 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
       className={`${styles.sidebar} ${!isSidebar ? styles.mobileSidebar : ''}`}
       aria-label="Documentation"
     >
-      {!isSidebar && <DocsVersionSelect />}
+      {!isSidebar && !productSection && <DocsVersionSelect />}
+      {productSection &&
+        (() => {
+          const ProductIcon = productSectionIcons[productSection.id] ?? BookOpen;
+          return (
+            <div className={styles.productHeader}>
+              <Link href="/docs/introduction" className={styles.productBackLink}>
+                ← Agent Relay docs
+              </Link>
+              <Link href={docsBasePath} className={styles.productHeaderName}>
+                <ProductIcon className={styles.productHeaderIcon} aria-hidden="true" />
+                <span>{productSection.label}</span>
+              </Link>
+              <p className={styles.productHeaderTagline}>{productSection.tagline}</p>
+            </div>
+          );
+        })()}
       {navGroups.map((group) => (
         <div key={group.title} className={styles.navGroup}>
           <h4 className={styles.navGroupTitle}>{group.title}</h4>
@@ -150,8 +211,14 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
               const isActive =
                 pathname === href ||
                 (item.slug === 'introduction' &&
-                  (pathname === '/docs' || pathname === legacyDocsBasePath || pathname === v8DocsBasePath));
-              const Icon = navIcons[item.slug] ?? BookOpen;
+                  (productSection
+                    ? pathname === docsBasePath
+                    : pathname === '/docs' ||
+                      pathname === legacyDocsBasePath ||
+                      pathname === v8DocsBasePath));
+              const Icon = productSection
+                ? (productNavIcons[item.slug] ?? BookOpen)
+                : (navIcons[item.slug] ?? BookOpen);
               return (
                 <li key={item.slug}>
                   <Link href={href} className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}>

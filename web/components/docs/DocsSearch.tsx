@@ -3,13 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import type { SearchEntry } from '../../lib/docs';
 import s from './docs-search.module.css';
 
+export interface ProductSearchScope {
+  id: string;
+  label: string;
+  basePath: string;
+  index: SearchEntry[];
+}
+
 interface DocsSearchProps {
   index: SearchEntry[];
+  productScopes?: ProductSearchScope[];
 }
 
 function search(query: string, index: SearchEntry[]): SearchEntry[] {
@@ -36,13 +44,20 @@ function search(query: string, index: SearchEntry[]): SearchEntry[] {
     .map((r) => r.entry);
 }
 
-export function DocsSearch({ index }: DocsSearchProps) {
+export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-  const results = search(query, index);
+  const pathname = usePathname();
+
+  const activeScope = productScopes.find(
+    (scope) => pathname === scope.basePath || pathname?.startsWith(`${scope.basePath}/`)
+  );
+  const activeIndex = activeScope?.index ?? index;
+  const basePath = activeScope?.basePath ?? '/docs';
+  const results = search(query, activeIndex);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -53,9 +68,9 @@ export function DocsSearch({ index }: DocsSearchProps) {
   const navigate = useCallback(
     (slug: string) => {
       close();
-      router.push(`/docs/${slug}`);
+      router.push(`${basePath}/${slug}`);
     },
-    [close, router]
+    [basePath, close, router]
   );
 
   // Reset active index when results change
@@ -135,7 +150,7 @@ export function DocsSearch({ index }: DocsSearchProps) {
                 <input
                   ref={inputRef}
                   className={s.input}
-                  placeholder="Search documentation..."
+                  placeholder={activeScope ? `Search ${activeScope.label} docs...` : 'Search documentation...'}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -152,7 +167,7 @@ export function DocsSearch({ index }: DocsSearchProps) {
                     results.map((entry, i) => (
                       <Link
                         key={entry.slug}
-                        href={`/docs/${entry.slug}`}
+                        href={`${basePath}/${entry.slug}`}
                         className={`${s.result} ${i === activeIdx ? s.resultActive : ''}`}
                         onClick={() => close()}
                         onMouseEnter={() => setActiveIdx(i)}

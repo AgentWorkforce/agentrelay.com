@@ -1,0 +1,67 @@
+---
+title: 'Stats'
+description: 'The Burn lens: see your agent history at a glance, attribute token spend by model, tool, project, and engineer, and kill runaway loops.'
+---
+
+`ai-hist stats` is your dashboard for the corpus you have built — and the entry point to the Burn lens. At its simplest it tells you how much history you have and where it came from. As your record grows, it becomes the place to see where token spend actually goes and which sessions are burning money for nothing.
+
+## Overview
+
+Run `stats` for a snapshot of the whole database:
+
+```bash
+ai-hist stats
+```
+
+Example output:
+
+```
+Total entries: 47,665
+
+By source:
+  claude: 37,406
+  codex: 10,259
+
+Date range:
+  2025-10-05 to 2026-03-08
+
+Top 10 projects:
+   8,701  /Users/you/Projects/my-app
+   4,586  /Users/you/Projects/api-server
+   ...
+```
+
+You get total entries, a breakdown by source, the date range covered, and your busiest projects — a fast read on where your AI work is concentrated.
+
+## The Burn lens
+
+Recall tells you *how* your team prompts. Burn tells you what it costs. The same history that makes sessions searchable also makes spend attributable: every entry is tagged with its source (tool), its project, and — once you sync as a team via [Relayloop Cloud](/docs/loop/cloud) — the engineer behind it.
+
+That attribution turns an opaque monthly token bill into answers:
+
+- **By model and tool** — which agents and models account for the spend.
+- **By project** — which codebases are the expensive ones to work in.
+- **By engineer** — where leverage is high and where sessions churn.
+
+## Finding waste and runaway loops
+
+The patterns Burn surfaces are the ones worth acting on:
+
+- **Repeated dead ends** — the same prompt retried over and over in a session is a signal that an approach is not landing. Drill in with [`ai-hist context <id>`](/docs/loop/sessions) to see the loop.
+- **Runaway loops** — a session that keeps regenerating without converging burns tokens fast. Catching these early, before they bill you twice, is direct savings.
+- **Expensive habits** — a project that consistently costs more per task is a candidate for better repo rules, which the [Insights](/docs/loop/teams) lens turns into proactive guidance.
+
+The goal of Burn is lower, more predictable token spend — not by rationing, but by seeing the waste clearly enough to cut it.
+
+<Note>
+  Burn is most useful with continuous [sync](/docs/loop/sync) running so the numbers reflect today's work, not last week's snapshot. Pair it with [Insights](/docs/loop/teams) to turn the waste you find into rules that prevent it.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    Per-engineer attribution across the team.
+  </Card>
+  <Card title="Teams" href="/docs/loop/teams">
+    Turn Burn patterns into Insights and repo rules.
+  </Card>
+</CardGroup>

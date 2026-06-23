@@ -1,0 +1,86 @@
+---
+title: 'Quickstart'
+description: 'From zero to a searchable agent history: sync your sessions, find a past prompt, and resume the conversation.'
+---
+
+This walks you from a fresh install to real value in a few commands: pull your agent history into a local database, search it, drill into a session, and jump back into the exact conversation. Everything here runs locally and needs no account. If you have not installed yet, start with [Install](/docs/loop/install).
+
+## 1. Sync your history
+
+Pull every supported source into the local database. The first run reads everything; later runs are incremental and only read new bytes.
+
+```bash
+ai-hist sync
+```
+
+This imports Claude Code, Codex CLI, Cursor, OpenCode, Agent Relay (when configured), and compacted trajectory runs. See [Sources](/docs/loop/sources) for exactly what is read and from where.
+
+## 2. Search across everything
+
+Full-text search runs over all sources at once:
+
+```bash
+ai-hist search "authentication bug"
+```
+
+Results come back with entry IDs in the form `#NNN`. Those IDs are your handle for drilling deeper. Narrow the search with filters when you need to:
+
+```bash
+ai-hist search "refactor" --source claude --limit 10
+ai-hist search "deploy" --project relay
+```
+
+See [Search](/docs/loop/search) for the full filter set.
+
+## 3. Drill into an entry
+
+Take an entry ID from your search results and look at the full prompt, its session, and the exact command to resume it:
+
+```bash
+ai-hist show 4521
+```
+
+To see what else was happening around that moment — the same session plus nearby entries — use `context`:
+
+```bash
+ai-hist context 4521
+ai-hist context 4521 --window 15   # widen to a 15-minute window
+```
+
+To browse an entire conversation, use `session` with the session ID:
+
+```bash
+ai-hist session abc-1234-def
+ai-hist session abc-1234-def --full   # no truncation
+```
+
+## 4. Resume the conversation
+
+`ai-hist show <id>` prints the exact resume command for the tool that recorded the session. Run it to pick the conversation back up where it left off:
+
+```bash
+cd /path/to/project && claude --resume <session_id>          # Claude Code
+codex resume <session_id>                                     # Codex
+cd /path/to/project && cursor-agent --resume=<session_id>     # Cursor
+```
+
+<Note>
+  Copy the resume command straight from `ai-hist show <id>` rather than hand-building it — it already has the right project directory and session ID filled in.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Sync" href="/docs/loop/sync">
+    Keep your history current with continuous watch mode.
+  </Card>
+  <Card title="Sessions" href="/docs/loop/sessions">
+    Drill into sessions and resume across every tool.
+  </Card>
+  <Card title="Stats" href="/docs/loop/stats">
+    The Burn lens: see where your token spend goes.
+  </Card>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    Add durable backup and team recall when you are ready.
+  </Card>
+</CardGroup>

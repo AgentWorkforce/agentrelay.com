@@ -1,0 +1,69 @@
+---
+title: 'Search'
+description: 'Full-text search across every agent session with ai-hist search and recent, using entry IDs as the handle to drill deeper.'
+---
+
+Search is the Recall lens. Once you have [synced](/docs/loop/sync), every prompt you and your team have ever sent to an AI agent is one query away — across Claude Code, Codex, Cursor, OpenCode, Agent Relay, and trajectories at the same time. Search is powered by SQLite FTS5, so it is fast even over tens of thousands of entries.
+
+## Full-text search
+
+Search across all sources with a query string:
+
+```bash
+ai-hist search "authentication bug"
+```
+
+Results come back ranked, each with an entry ID in the form `#NNN`. That ID is your handle to drill in further.
+
+## Filters
+
+Narrow a search by source, project, or result count:
+
+```bash
+ai-hist search "refactor" --source claude --limit 10
+ai-hist search "deploy" --source relay
+ai-hist search "retry policy" --source trajectory
+ai-hist search "deploy" --project relay
+```
+
+- `--source` — restrict to one source. Valid values are `claude`, `codex`, `cursor`, `relay`, `trajectory`, and `opencode`. See [Sources](/docs/loop/sources).
+- `--project` — restrict to a project (matched against the recorded project path).
+- `--limit` — cap the number of results returned.
+
+## Recent prompts
+
+To see what you have been working on most recently without a query, use `recent`:
+
+```bash
+ai-hist recent                              # last 20
+ai-hist recent 50                           # last 50
+ai-hist recent --source claude --project my-app
+```
+
+`recent` accepts the same `--source` and `--project` filters as search.
+
+## Entry IDs are the drill-in handle
+
+Search and recent both surface entry IDs (`#NNN`). Use them to move from a hit to the full picture:
+
+```bash
+ai-hist search "deploy"   # find #4521 in the results
+ai-hist show 4521         # full prompt, session info, resume command
+ai-hist context 4521      # what else was happening in that session, plus nearby entries
+ai-hist session <id>      # browse the full conversation
+```
+
+This is the core Recall loop: search broad, find the entry, then [drill into the session](/docs/loop/sessions) and resume it.
+
+<Note>
+  Searching for a problem you have hit before is the fastest way to recover a working approach — find the prompt that solved it last time, then reuse or resume it.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Sessions" href="/docs/loop/sessions">
+    Show, context, session, and per-tool resume commands.
+  </Card>
+  <Card title="Sources" href="/docs/loop/sources">
+    The full list of sources and `--source` filter values.
+  </Card>
+</CardGroup>

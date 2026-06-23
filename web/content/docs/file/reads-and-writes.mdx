@@ -1,0 +1,89 @@
+---
+title: 'Reads and writes'
+description: 'File-native reads with ls/cat/grep/find and writes that map to PATCH, CREATE, and DELETE — with per-resource schemas discoverable in-tree.'
+---
+
+Relayfile maps the agent's native filesystem vocabulary directly onto provider operations. Reads are ordinary file reads; writes are ordinary file writes that queue a provider writeback. There are no tool schemas in context — the agent uses `ls`, `cat`, `grep`, `find`, and file writes exactly as it would on a local disk.
+
+## File-native reads
+
+Every read operation is something an agent already knows how to do:
+
+```bash
+# enumerate
+ls mount/linear/issues/
+
+# read one record
+cat mount/linear/issues/AGE-12__fix-login-bug.json
+
+# search across records — exhaustive, no API pagination
+grep -rl '"state":"Todo"' mount/linear/issues/
+
+# find by name
+find mount/linear/users/by-name -name 'dana.json'
+```
+
+This is the whole read interface. `ls` returns what's there (exhaustive enumeration, not a paginated search result), `cat` reads a record, and `grep`/`find` work because everything is a real file. There are no schemas to load before any of this works — context cost is exactly what the agent opens.
+
+When using the SDK or HTTP API directly, the equivalents are `listTree` and `readFile`; see [The SDK](/docs/file/sdk) and the [API reference](/docs/file/api-reference).
+
+## File-native writes
+
+Writes follow three intuitive rules:
+
+- **PATCH** a record by writing to its canonical path. The new content is queued as a writeback to the provider.
+- **CREATE** by saving a draft filename. Writing a new file under the right directory creates the corresponding provider record.
+- **DELETE** by removing the file. Deleting the file queues a delete on the provider.
+
+```bash
+# PATCH: update an existing Linear issue
+echo '{"state":"In Review","description":"PR #42"}' \
+  > mount/linear/issues/AGE-12__fix-login-bug.json
+
+# CREATE: save a draft to create a new record
+echo '{"title":"Investigate flaky test","priority":2}' \
+  > mount/linear/issues/draft-flaky-test.json
+
+# DELETE: remove the file to delete the record
+rm mount/linear/labels/stale.json
+```
+
+Writes are durable: they're recorded in Relayfile's writeback queue and processed by provider workers with retry and dead-letter handling, so an agent doesn't race the provider's rate limits directly.
+
+<Note>
+  Through the SDK, `writeFile` takes a `baseRevision` for optimistic concurrency (`baseRevision: "*"` means create-or-overwrite). When two agents write the same path, a conflicting write surfaces a `RevisionConflictError` instead of silently clobbering. Bulk writes are unconditional create-or-overwrite. See [The SDK](/docs/file/sdk).
+</Note>
+
+## Discovering schemas in-tree
+
+You don't need an out-of-band schema registry. Per-resource schemas are discoverable in the tree itself at `<resource>/.schema.json`:
+
+```bash
+cat mount/linear/issues/.schema.json
+```
+
+An agent that wants to create or patch a record reads the adjacent schema file to learn the expected shape, then writes a conforming JSON file. This keeps the contract co-located with the data — the same self-describing principle as [`LAYOUT.md` and `.layout.md`](/docs/file/mount-layout).
+
+The exact write semantics and field mapping per provider are defined by the [adapters](/docs/file/adapters-and-providers), which own webhook-to-path mapping and writeback behavior.
+
+## Reads and writes across providers
+
+Because every provider is just paths, cross-provider workflows need no special glue:
+
+```bash
+# read a Notion page, then file a Linear follow-up
+cat mount/notion/pages/roadmap__abc.json
+echo '{"title":"Follow up on roadmap","priority":3}' \
+  > mount/linear/issues/draft-roadmap-followup.json
+```
+
+Scope which providers and paths a given agent can read versus write with [ACLs](/docs/file/acls) — for example, read Notion and write Linear follow-ups, nothing else.
+
+<CardGroup cols={2}>
+  <Card title="ACLs" href="/docs/file/acls">
+    Restrict each agent's read and write surface.
+  </Card>
+  <Card title="Adapters and providers" href="/docs/file/adapters-and-providers">
+    Where webhook-to-path mapping and writeback behavior are defined.
+  </Card>
+</CardGroup>
