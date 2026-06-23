@@ -10,9 +10,14 @@
   // name/id. These identifiers are cloud-owned; if cloud ever recreates the
   // resource the value here must be updated (see the repo's Phase 2 notes).
 
-  // /cloud* → the cloud Next.js Worker (script name is stable in prod).
+  // Service bindings reference cloud's Workers by stable prod script name
+  // (no *.workers.dev URL to pin): /cloud* → the cloud Next.js Worker;
+  // WEBHOOK_WORKER → the dedicated webhook Worker the router can offload
+  // /api/v1/webhooks/* to when the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is "worker"
+  // (the router code prefers this binding over the WEBHOOK_WORKER_ORIGIN URL).
   "services": [
-    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" },
+    { "binding": "WEBHOOK_WORKER", "service": "webhook-worker" }
   ],
 
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
@@ -32,10 +37,7 @@
 
   "vars": {
     "CLOUD_APP_ORIGIN": "https://origin.agentrelay.cloud",
-    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",
-    // The cloud webhook worker's generated *.workers.dev URL. Look it up with
-    // `wrangler deployments list --name <webhook worker script>` or the dashboard.
-    "WEBHOOK_WORKER_ORIGIN": "REPLACE_ME__webhook_worker_workers_dev_url"
+    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev"
   },
 
   // Start on a staging hostname for parity verification against the live apex;
