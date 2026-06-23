@@ -10,15 +10,18 @@
   // name/id. These identifiers are cloud-owned; if cloud ever recreates the
   // resource the value here must be updated (see the repo's Phase 2 notes).
 
-  // Service bindings reference cloud's Workers by stable prod script name
-  // (no *.workers.dev URL to pin): /cloud* → the cloud Next.js Worker;
-  // WEBHOOK_WORKER → the dedicated webhook Worker the router can offload
-  // /api/v1/webhooks/* to when the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is "worker"
-  // (the router code prefers this binding over the WEBHOOK_WORKER_ORIGIN URL).
+  // /cloud* → the cloud Next.js Worker, by stable prod script name.
   "services": [
-    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" },
-    { "binding": "WEBHOOK_WORKER", "service": "webhook-worker" }
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
   ],
+
+  // NOTE: webhook offload (the router forwarding /api/v1/webhooks/* to the
+  // dedicated webhook Worker when the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is
+  // "worker") is intentionally NOT wired yet. Cloud configures this via the
+  // `WEBHOOK_WORKER_ORIGIN` *.workers.dev URL (not a service binding). Add it
+  // back here before the apex cutover IF the flag is "worker"; until then the
+  // router routes webhooks through the normal /cloud path (flag="lambda"
+  // behavior). See PR notes.
 
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
   // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
