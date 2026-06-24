@@ -1,0 +1,63 @@
+---
+title: 'Sessions'
+description: 'Drill into a single entry, see its surrounding context, browse a whole session, and resume the conversation in any tool.'
+---
+
+Search gets you to an entry; sessions get you the whole story behind it. Once you have an entry ID from [search](/docs/loop/search), three commands let you zoom from a single prompt out to the full conversation — and then jump back into it in the original tool.
+
+## Show a single entry
+
+`show` takes an entry ID and prints the full prompt, its metadata, the session it belongs to, and — crucially — the exact command to resume it:
+
+```bash
+ai-hist show 4521
+```
+
+This is the command to reach for first. The resume command it prints is built for the tool that recorded the session, with the right project directory and session ID already filled in.
+
+## See surrounding context
+
+`context` shows what else was happening around an entry: other entries from the same session, plus nearby entries within a time window.
+
+```bash
+ai-hist context 4521
+ai-hist context 4521 --window 15   # widen to a 15-minute window (default: 5)
+```
+
+This is useful when one prompt only makes sense alongside the steps before and after it — the failed attempt, the fix, the follow-up.
+
+## Browse a whole session
+
+When you want the full conversation, pass a session ID to `session`:
+
+```bash
+ai-hist session abc-1234-def
+ai-hist session abc-1234-def --full   # no truncation
+```
+
+By default long prompts are truncated for readability. Add `--full` to see every prompt in full.
+
+## Resume in any tool
+
+The fastest path back into a conversation is to copy the resume command printed by `ai-hist show <id>`. The shape depends on the recording tool:
+
+```bash
+cd /path/to/project && claude --resume <session_id>          # Claude Code
+codex resume <session_id>                                     # Codex
+cd /path/to/project && cursor-agent --resume=<session_id>     # Cursor
+```
+
+Note that Claude Code and Cursor expect you to be in the project directory first, which is why the printed command includes the `cd`. The placeholder `<session_id>` is filled in for you by `ai-hist show`.
+
+<Note>
+  Don't hand-build resume commands. `ai-hist show <id>` already knows the source, the project path, and the session ID, and prints the exact command for that tool.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Search" href="/docs/loop/search">
+    Find the entry ID to start from.
+  </Card>
+  <Card title="CLI reference" href="/docs/loop/cli">
+    Every command and flag in one place.
+  </Card>
+</CardGroup>

@@ -1,0 +1,46 @@
+---
+title: 'Cloud Architecture'
+description: 'How Relayloop Cloud works: the CLI pushes scrubbed history to a Cloudflare Workers API backed by Neon and pgvector, with an end-to-end-encrypted Enterprise tier.'
+---
+
+Relayloop Cloud is the hosted convergence store that local history pushes into. The CLI captures and normalizes; the cloud ingests, scrubs, indexes, and serves. This page traces the path an entry takes from a local file to the cloud and names the components it passes through. It is grounded in the [relayhistory-cloud](https://github.com/AgentWorkforce/relayhistory-cloud) source.
+
+## The path of an entry
+
+1. **Authenticate** — `ai-hist login` exchanges an Agent Relay Cloud session for a scoped token (`rth_at_…`), stored in `$RELAYHISTORY_HOME/auth.json`.
+2. **Push** — `ai-hist push` reads new local rows past the last cursor and `POST`s them to `/v1/ingest` as a batch.
+3. **Scrub** — on the default tier the server scrubs secrets and PII at ingest: API keys and tokens are redacted, home paths are normalized (`/Users/you/…` → `/Users/~/…`), and the stored record is reduced to an allowlist.
+4. **Store and embed** — accepted rows land in the `convergence_events` table with a vector embedding for semantic search. The server deduplicates on batch and event id and advances the cursor only after it accepts the batch.
+5. **Serve** — team features (`pair check`, `learn distill`) and queries read back from that store, scoped to your org and workspace.
+
+## Components
+
+### API (Cloudflare Workers)
+
+The API is a Cloudflare Worker built with the Hono framework and deployed via SST, served at `history.agentrelay.com`. It is stateless request-handling in front of the database. The main route is `POST /v1/ingest`, which takes a batch of records plus the machine identity and sync cursors and returns `{ batchId, received, accepted, cursors }`.
+
+### Storage (Neon + pgvector)
+
+The default tier stores history in **Neon** (managed Postgres) through Drizzle ORM, with the **pgvector** extension providing an HNSW index over 1536-dimension embeddings for semantic search. A `convergence_events` row holds the scrubbed content, task metadata, token/cost fields (`inputTokens`, `outputTokens`, `costUsdMicros`, `model`, `provider`), and the embedding. A `machines` table tracks per-machine sync cursors.
+
+### Auth service
+
+`ai-hist login` rides Agent Relay Cloud's device flow; the cloud verifies the token and derives `{ userId, orgId, workspaceId }`. Sessions are stored as token *hashes* (never plaintext) in `auth_sessions`, with short-lived access tokens and longer-lived refresh tokens. Every query hard-filters by `(orgId, workspaceId, userId, machineId)`, so there is no cross-tenant access.
+
+## Trust tiers
+
+The stack differs by tier. This is the single most important thing to understand about the cloud:
+
+- **Default tier — vendor-readable.** Content is stored readable in Neon (after secret/PII scrubbing) so it can power semantic search and the cross-team learning features. It is encrypted in transit and at rest at the infrastructure level, access-controlled, and never used to train models without explicit opt-in.
+- **Enterprise tier — end-to-end encrypted.** For teams whose content cannot leave their boundary, the Enterprise tier stores opaque ciphertext in Cloudflare **D1** (metadata) and **R2** (encrypted blobs), or self-hosts in your own VPC. This tier trades the cross-team flywheel for total privacy.
+
+See [Privacy](/docs/loop/privacy) for the data-handling model of each tier.
+
+<CardGroup cols={2}>
+  <Card title="Privacy" href="/docs/loop/privacy">
+    What is scrubbed, what is readable, and the two trust tiers.
+  </Card>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    What pushing to the cloud adds and how to opt in.
+  </Card>
+</CardGroup>

@@ -1,0 +1,93 @@
+---
+title: 'Install'
+description: 'Install the ai-hist CLI in one command, set up your PATH, and understand the Rust-default dispatch and its escape hatches.'
+---
+
+Relayloop ships as a single CLI named `ai-hist`. One install script builds the Rust engine, drops launchers into your local bin directory, and leaves you ready to run `ai-hist sync`. No account is required — installing the CLI gives you the full local-first product.
+
+## Install
+
+Run the install script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AgentWorkforce/relayhistory/main/install.sh | sh
+```
+
+The installer owns the Rust build. It compiles the engine, places the binary under the `ai-hist` install directory, and writes deterministic launchers for `ai-hist`, `ai-hist-rust`, and `ai-hist-python`.
+
+## PATH setup
+
+The launchers install to `~/.local/bin`. Make sure that directory is on your `PATH`:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"   # add to .zshrc / .bashrc
+```
+
+Open a new shell (or `source` your profile) and confirm:
+
+```bash
+ai-hist stats
+```
+
+If the command is found, you are installed. A fresh database reports zero entries until you run your first [sync](/docs/loop/sync).
+
+## Requirements
+
+The install script requires:
+
+- **`cargo`** — to build the Rust engine. If Rust is missing, install it from [rustup.rs](https://rustup.rs/) and rerun the script.
+- **`python3`** — used by the legacy compatibility launcher.
+
+Normal use does not require you to run any Cargo commands yourself. The script handles the build and points the wrapper at the exact binary it produced.
+
+## Rust-default dispatch
+
+`ai-hist` is a Rust-default CLI. The public `ai-hist` command routes the entire user-facing command surface — `sync`, `search`, `recent`, `show`, `context`, `session`, `stats`, `watch` — through the Rust engine. The legacy Python CLI remains installed only as an explicit compatibility escape hatch; auto mode never routes normal commands to Python.
+
+See the [DISPATCH_MATRIX](https://github.com/AgentWorkforce/relayhistory/blob/main/DISPATCH_MATRIX.md) for the tested parity table.
+
+## Escape hatches
+
+You can override dispatch when you need to:
+
+```bash
+# Force the Rust CLI explicitly
+AI_HIST_CLI=rust ai-hist search deploy
+
+# Use the legacy Python compatibility path
+AI_HIST_CLI=python ai-hist sync
+
+# Point the wrapper at a specific Rust binary
+AI_HIST_RUST_BIN=/absolute/path/to/ai-hist-rust-bin ai-hist search deploy
+
+# Call the launchers directly
+ai-hist-rust search deploy
+ai-hist-python sync
+```
+
+The dispatch modes are:
+
+- `AI_HIST_CLI=auto` (default) — Rust for the user-facing surface.
+- `AI_HIST_CLI=rust` — force Rust.
+- `AI_HIST_CLI=python` — force the legacy Python CLI.
+
+<Note>
+  The Rust default honors `XDG_DATA_HOME` before falling back to `~/.local/share/ai-hist/ai-history.db`, matching the legacy Python default. Existing databases stay compatible.
+</Note>
+
+## Database location
+
+By default the database lives at `~/.local/share/ai-hist/ai-history.db`. Override it with the `AI_HIST_DB` environment variable — for example, to keep it in a synced folder:
+
+```bash
+export AI_HIST_DB="$HOME/Dropbox/ai-history/ai-history.db"
+```
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/loop/quickstart">
+    Sync, search, and resume a conversation.
+  </Card>
+  <Card title="Sources" href="/docs/loop/sources">
+    What gets imported and where it reads from on disk.
+  </Card>
+</CardGroup>

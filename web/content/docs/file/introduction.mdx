@@ -1,0 +1,87 @@
+---
+title: 'Relayfile'
+description: 'When a SaaS event fires, your agent wakes up with the full context already on disk. No API calls, no webhook parsing, no ingestion code.'
+---
+
+A page is updated in Notion, a Linear issue changes state, a Hubspot deal is closed and you want your AI agent to react to it in real time proactively. 
+
+
+How do you do that today? In each system you configure webhook notifications and a target address, then wire up provider-specific logic to invoke your agent and react to the payload. Often you also have to call the API for additional data so the agent has everything it needs.
+
+
+What if you could do this with just a few lines of code and your agent wakes with all the context it needs in its filesystem?
+
+Relayfile materializes your full provider state as a file tree and keeps it current with webhooks. When an event fires, `/linear/issues/ENG-123.json` is already there. `/linear/issues/by-state/triage/` is already there. No API calls needed.
+
+
+```bash
+relayfile listen \
+  --path "/linear/issues/by-state/triage/**" \
+  --event file.created \
+  --run "claude --print 'Triage this: {{path}}'"
+```
+
+
+## Connect a provider
+
+<CodeGroup>
+```bash CLI
+relayfile setup --provider linear
+```
+```typescript SDK
+import { RelayfileSetup } from '@relayfile/sdk/cli'
+import { onWrite } from '@relayfile/sdk'
+
+const setup = await RelayfileSetup.login()
+const workspace = await setup.createWorkspace({ name: 'my-workspace' })
+
+const { connectLink } = await workspace.connectIntegration('linear')
+if (connectLink) {
+  console.log('Authorize Linear:', connectLink)
+  await workspace.waitForConnection('linear')
+}
+```
+</CodeGroup>
+
+## The entire interface
+
+The agent can simply read and write back to files to make changes:
+
+```bash
+$ relayfile mount --local-dir ./mount   # mirror the workspace to disk
+
+$ ls mount/
+github  linear  notion  slack
+
+$ cat mount/linear/issues/AGE-12.json
+{ "identifier": "AGE-12", "title": "Fix login bug", "state": "Todo", ... }
+
+$ echo '{"description":"Updated by reviewer agent"}' \
+    > mount/linear/issues/AGE-12.json   # PATCH back to Linear
+
+$ grep -l '"state":"Todo"' mount/linear/issues/*.json
+```
+
+`ls` lists what's there. `cat` reads a record. Writing a JSON file patches it back to the provider. Removing a file deletes the record. The filesystem is the protocol.
+
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/file/quickstart">
+    Get a working mount in minutes — hosted with `relayfile setup`, or local with Docker.
+  </Card>
+  <Card title="Mount layout" href="/docs/file/mount-layout">
+    Self-describing mounts: `LAYOUT.md`, `_index.json`, canonical naming, and the alias views.
+  </Card>
+  <Card title="The SDK" href="/docs/file/sdk">
+    `@relayfile/sdk` — `RelayFileClient` reads and writes, plus `RelayfileSetup` for mounting.
+  </Card>
+  <Card title="Relayfile Cloud" href="/docs/file/cloud">
+    Hosted Agent Relay runs the daemon, OAuth, and sync workers — connect with one token.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/docs/file/quickstart" icon="rocket">
+  Mount your first provider-backed workspace.
+</BannerLink>

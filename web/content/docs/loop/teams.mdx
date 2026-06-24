@@ -1,0 +1,57 @@
+---
+title: 'Teams'
+description: 'Where Relayloop is headed for teams: shared organizational memory, faster onboarding, the Insights flywheel — and what works today.'
+---
+
+For an individual, Relayloop is a searchable memory. For a team, it becomes shared organizational memory — and an improvement loop that raises everyone's baseline. The thesis behind [Relayloop](/docs/loop/introduction) is that AI leverage is bimodal: your best engineers get 5–10× from coding agents while most of the team gets 1×, and the difference is prompting skill that today is tribal and undocumented. Team features close that gap.
+
+<Note>
+  **What works today.** Once teammates [push](/docs/loop/cloud) to the same org, history is scoped and visible at the org level, and any session can be excluded from a push with `--incognito`. The richer team features below — shared session management, onboarding flows, roles, and the Insights flywheel — are on the roadmap, not yet shipped.
+</Note>
+
+## Shared organizational memory
+
+When teammates push their history to the same organization, the team's prompts become a common corpus scoped to your org. The direction is that anyone can search how a colleague approached a problem instead of solving it from scratch — your best engineers' patterns as a living playbook, the Recall lens team-wide.
+
+## Onboarding acceleration <span>(coming soon)</span>
+
+New hires inherit the team's accumulated AI history on day one. Instead of learning the codebase and the team's prompting style by osmosis, they search how the team approached similar work and start from a known-good pattern.
+
+## Knowledge retention <span>(coming soon)</span>
+
+When someone leaves, their AI-assisted work history stays with the organization. The sessions, the decisions, and — through trajectory records — the *why* behind them remain searchable.
+
+## The network that learns <span>(coming soon)</span>
+
+The Insights flywheel is the longer-term bet: Relayloop learns what works across every team on the platform and feeds generalized, anonymized lessons back to you. Cross-team learning is always aggregated and anonymized — one customer never sees another's content — and data is never used to train models without explicit opt-in. Teams that need full isolation can run the [Enterprise tier](/docs/loop/privacy) end-to-end encrypted or in their own VPC, trading the flywheel for total privacy.
+
+## Pricing
+
+Pricing is being finalized. The intended shape:
+
+<CardGroup cols={3}>
+  <Card title="Free">
+    Local-first, single engineer, up and running in five minutes. The full `ai-hist` CLI with no account.
+  </Card>
+  <Card title="Team (planned)">
+    Org dashboard, shared sessions, and team plus network Insights. Per-seat, pricing TBD.
+  </Card>
+  <Card title="Enterprise (planned)">
+    SSO/SAML, end-to-end encryption or self-host/VPC, audit log, and data residency.
+  </Card>
+</CardGroup>
+
+Start free and local. Turn on cloud push — and team features as they ship — when you are ready.
+
+<CardGroup cols={2}>
+  <Card title="Cloud" href="/docs/loop/cloud">
+    Opt into push and the team features built on it.
+  </Card>
+  <Card title="Privacy" href="/docs/loop/privacy">
+    How team data is handled and the two trust tiers.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/docs/loop/install" icon="rocket">
+  Install the CLI and start building your team's shared memory.
+</BannerLink>

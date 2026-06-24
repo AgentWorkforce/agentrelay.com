@@ -1,0 +1,58 @@
+---
+title: 'ACLs'
+description: 'Scope each agent to exactly the paths it should read and write with per-agent ACLs, so multi-agent fleets run least-privilege by default.'
+---
+
+In a multi-agent fleet you rarely want every agent to see and mutate the whole tree. Relayfile scopes each agent's read and write surface with per-agent ACLs, so an agent sees only the paths it should — readonly on the rest of the tree, fully invisible where you want it invisible. Least-privilege becomes a property of the substrate rather than something each app re-implements.
+
+## Scoping an agent
+
+ACLs are expressed via `.relayfile.acl` and map an agent to the paths it may read and write. The model is path-scoped: an agent's grant is a set of read and write globs, and any operation outside them is denied.
+
+A common pattern is a reviewer agent that can read everything under `/notion` but only write Linear follow-ups:
+
+```text
+# agent: reviewer
+read   /notion/**
+read   /linear/**
+write  /linear/issues/**
+```
+
+An implementer agent might have the inverse — write to a narrow slice and read broadly:
+
+```text
+# agent: label-bot
+read   /linear/**
+write  /linear/labels/**
+```
+
+Anything not listed is denied. The rest of the tree is readonly (or invisible) to that agent depending on how you scope its reads.
+
+## Readonly by default
+
+The safe default is readonly: an agent can `ls`, `cat`, and `grep` its readable paths but cannot write back unless a write grant explicitly covers the path. This means handing a new agent a workspace token is non-destructive by default — it can observe and synthesize without any risk of mutating provider state until you grant writes.
+
+<Note>
+  When you scope tokens through the SDK or Cloud, request the path-scoped form (`relayfile:fs:read:/notion/**`, `relayfile:fs:write:/linear/labels/**`) for true least-privilege. Requesting a bare `fs:read` / `fs:write` scope can fall back to a broad grant. See [The SDK](/docs/file/sdk) and [Relayfile Cloud](/docs/file/cloud).
+</Note>
+
+## Multi-agent least privilege
+
+ACLs are what make a fleet of agents safe to run against the same workspace. Each agent gets a narrow, scoped surface:
+
+- Agent A — `read /notion/**` only. A pure summarizer; can never mutate anything.
+- Agent B — `read /linear/**`, `write /linear/labels/**`. Can triage labels and nothing else.
+- Agent C — `read /github/**`, `write /github/repos/acme/api/pulls/**`. Reviews PRs in one repo.
+
+Because the agents coordinate through the same filesystem (see [Real-time sync](/docs/file/realtime-sync)), they can observe each other's writes in real time while remaining unable to step outside their own grant. A denied write is rejected, not silently dropped, so misconfiguration surfaces immediately rather than corrupting state.
+
+This is the per-agent equivalent of giving each microservice its own credentials: the blast radius of any single agent is bounded by its ACL, not by the size of the workspace.
+
+<CardGroup cols={2}>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    What read and write operations the ACL grants apply to.
+  </Card>
+  <Card title="The SDK" href="/docs/file/sdk">
+    Mint downscoped tokens per agent with `agentInviteScoped`.
+  </Card>
+</CardGroup>

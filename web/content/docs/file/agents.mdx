@@ -1,0 +1,103 @@
+---
+title: 'Agents'
+description: 'One connect() call gives your agent path-scoped read tools, a writeback lifecycle, and reactive onEvent webhooks — identically across Vercel AI SDK, OpenAI Agents SDK, and LangChain.'
+---
+
+`@relayfile/agents` is a thin framework adapter over [the SDK](/docs/file/sdk). One `connect()` call gives your agent path-scoped read tools, a proven writeback lifecycle, and `onEvent` reactive webhooks — working identically against the Vercel AI SDK, OpenAI Agents SDK, and LangChain. Examples never reach into `@relayfile/sdk` directly; the package re-exports the type surface and the error classes you need.
+
+```bash
+npm install @relayfile/agents
+```
+
+## One connect, three frameworks
+
+`connect()` runs the canonical Cloud bootstrap and returns a handle. `tools.*` adapt that handle into each framework's native tool shape:
+
+```ts
+import { connect, tools } from "@relayfile/agents"
+
+const rf = await connect({ scopes: ["relayfile:fs:read:/notion/**"] })
+
+// Vercel AI SDK
+const { text } = await generateText({
+  model: anthropic("claude-sonnet-4-6"),
+  tools: tools.vercel(rf, { readPaths: ["/notion"] }),
+  prompt: "Summarise the Notion workspace.",
+})
+
+// OpenAI Agents SDK
+const agent = new Agent({ name: "x", tools: tools.openai(rf, { readPaths: ["/notion"] }) })
+
+// LangChain
+const graph = createReactAgent({ tools: tools.langchain(rf, { readPaths: ["/notion"] }) })
+```
+
+The interface is **O(1)** in the number of providers: `listTree` / `readFile` / writeback work identically across every integration, so adding `/linear` or `/github` doesn't add tool schemas the model must learn.
+
+## The connect handle
+
+```ts
+const rf = await connect({ workspaceId?, scopes?, agentName? })
+// → { client, workspaceId, cloudWorkspaceId, credSource, writeback }
+```
+
+- `rf.client` — the raw `RelayFileClient` escape hatch for anything the helpers don't cover.
+- `rf.workspaceId` — the `rw_` id from join; use it for any direct SDK calls.
+- `rf.writeback.*` — the writeback lifecycle helpers below.
+
+## Writeback lifecycle
+
+The `writeback` helpers wrap the create / read / update / delete cycle with the right `baseRevision` and conflict handling:
+
+```ts
+rf.writeback.create(root, payload, opts?)              // CREATE a record under a root
+rf.writeback.readCanonical(canonicalPath, opts?)        // read the canonical entity
+rf.writeback.update(canonicalPath, baseRevision, patch) // PATCH with optimistic concurrency
+rf.writeback.delete(canonicalPath, baseRevision, opts?) // DELETE the record
+rf.writeback.deleteDraft(draftPath)                     // local-only Relayfile cleanup
+```
+
+Concurrency safety comes from `baseRevision` plus `RevisionConflictError` — two agents writing the same record don't silently clobber. See [Reads and writes](/docs/file/reads-and-writes) for the underlying model.
+
+## Reactive onEvent
+
+The biggest structural difference from per-provider MCPs is that Relayfile is event-driven, not request/response. Every provider webhook becomes a workspace file event any number of agents can subscribe to:
+
+```
+Linear webhook → Cloud sync → /linear/issues/X.json revision++ → WebSocket event
+                                                                      ↓
+                                                  agent A reacts, writes a comment
+                                                  agent B reacts, files a Slack ping
+                                                  agent C reacts, opens a PR
+```
+
+The SDK exposes `connectWebSocket({ onEvent })` and a glob-based `subscribe()` for filtering. This is the substrate for **proactive agents** — agents reacting to provider state changes rather than waiting for a prompt. See [Real-time sync](/docs/file/realtime-sync).
+
+## Works with
+
+Anything that can read and write files works with Relayfile — that's the point. Confirmed integration recipes ship for:
+
+| Framework | Recipe |
+|---|---|
+| Claude Code | the `setting-up-relayfile` skill |
+| Vercel AI SDK | `@relayfile/agents` · Notion read · Linear writeback · reactive `onEvent` |
+| OpenAI Agents SDK | `@relayfile/agents` · Notion read · Linear writeback |
+| LangChain | `@relayfile/agents` · Notion read · Linear writeback |
+| Anything that runs `bash` | works out of the box (it's a real OS mount) |
+
+## When to use this vs a provider MCP
+
+Honest answer: for **1 provider × 1 agent × one-shot action**, a dedicated provider MCP is simpler and can model provider-specific operations richer than a generic schema-validate-and-write. For **N providers and/or N agents**, Relayfile is the substrate and the gap widens with each one added — a shared, ACL'd, versioned filesystem rather than a per-provider client. The two compose: Relayfile for the stateful multi-provider substrate, an MCP for typed one-shot writes. See [Comparison](/docs/file/comparison).
+
+## Credentials
+
+Two sources, in order: env overrides for CI (`CLOUD_API_URL`, `CLOUD_API_ACCESS_TOKEN`, `CLOUD_WORKSPACE_ID`), then `~/.agentworkforce/relay/cloud-auth.json` written by `agent-relay cloud login`. One login per machine; per-app permissions live in Cloud.
+
+<CardGroup cols={2}>
+  <Card title="The SDK" href="/docs/file/sdk">
+    The `RelayFileClient` and `RelayfileSetup` this package wraps.
+  </Card>
+  <Card title="Real-time sync" href="/docs/file/realtime-sync">
+    The change stream that powers `onEvent`.
+  </Card>
+</CardGroup>

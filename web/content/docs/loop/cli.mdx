@@ -1,0 +1,214 @@
+---
+title: 'CLI Reference'
+description: 'The full ai-hist command surface: sync, search, recent, show, context, session, stats, pack, watch, export/import, tags, and the cloud commands (login, push), with flags.'
+---
+
+This is the complete `ai-hist` command reference. The CLI is Rust-default — the public `ai-hist` command routes the whole surface through the Rust engine, with the legacy Python CLI available only as an explicit escape hatch (see [Install](/docs/loop/install)). Local commands run against the SQLite database at `~/.local/share/ai-hist/ai-history.db` (override with `AI_HIST_DB`); cloud commands talk to Relayloop Cloud.
+
+## Local: capture and query
+
+### `sync`
+
+Import all history into the local database. Incremental — only reads new bytes on re-run.
+
+```bash
+ai-hist sync
+```
+
+Covers Claude Code, Codex, Cursor, Grok, OpenCode, Agent Relay (when configured), and trajectories. See [Sync](/docs/loop/sync) and [Sources](/docs/loop/sources).
+
+### `watch`
+
+Run sync repeatedly on an interval — continuous local sync.
+
+```bash
+ai-hist watch                  # sync every 60s
+ai-hist watch --interval 30    # sync every 30s
+```
+
+| Flag | Effect |
+|------|--------|
+| `--interval <seconds>` | Seconds between syncs (default: 60) |
+
+### `search`
+
+Full-text search across all sources.
+
+```bash
+ai-hist search "authentication bug"
+ai-hist search "refactor" --source claude --limit 10
+ai-hist search --tag relayfile-migration
+```
+
+| Flag | Effect |
+|------|--------|
+| `--source <name>` | Restrict to one source: `claude`, `codex`, `cursor`, `grok`, `relay`, `trajectory`, `opencode` |
+| `--project <path>` | Restrict to a project |
+| `--tag <name>` | Restrict to a tagged session |
+| `--limit <n>` | Cap the number of results (default: 20) |
+| `--fts` | Force the FTS index path |
+| `--json` | JSON output |
+
+Results include entry IDs used to drill in. See [Search](/docs/loop/search).
+
+### `recent`
+
+Show the most recent prompts, no query needed.
+
+```bash
+ai-hist recent                 # last 20
+ai-hist recent 50              # last 50
+ai-hist recent --source claude --project my-app
+```
+
+Takes an optional count and the same `--source` / `--project` / `--tag` / `--json` filters as `search`.
+
+### `show`
+
+Drill into a specific entry by ID. Prints the full prompt, metadata, session info, and the exact resume command.
+
+```bash
+ai-hist show 4521
+ai-hist show 4521 --json
+```
+
+### `context`
+
+Show an entry's surrounding context: same-session entries plus nearby entries in a time window.
+
+```bash
+ai-hist context 4521
+ai-hist context 4521 --window 15   # ±15 min window (default: 5)
+```
+
+### `session`
+
+View all prompts in a session by session ID.
+
+```bash
+ai-hist session abc-1234-def
+ai-hist session abc-1234-def --full   # no truncation
+```
+
+See [Sessions](/docs/loop/sessions) for `show`, `context`, `session`, and resume commands together.
+
+### `stats`
+
+Print a database overview: total entries, breakdown by source, date range, and top projects.
+
+```bash
+ai-hist stats
+```
+
+See [Stats](/docs/loop/stats).
+
+### `pack`
+
+Build a compact evidence bundle for a query — matching entries plus their resume commands, optionally token-budgeted.
+
+```bash
+ai-hist pack "deploy" --limit 10
+ai-hist pack "auth" --tokens 4000 --json
+```
+
+| Flag | Effect |
+|------|--------|
+| `--source` / `--project` / `--tag` | Same scoping as `search` |
+| `--limit <n>` | Max entries (default: 10) |
+| `--tokens <n>` | Truncate prompts to fit a token budget (default: 0 = no limit) |
+| `--json` | JSON output |
+
+### `resume`
+
+Print the resume command for the best-matching session in one step.
+
+```bash
+ai-hist resume "auth middleware refactor"
+```
+
+## Tagging
+
+Tags group sessions for later retrieval. `--tag` then scopes `search`, `recent`, `stats`, and `pack`.
+
+```bash
+ai-hist tag abc-1234-def release-prep        # tag a session (creates the tag if new)
+ai-hist tag abc-1234-def release-prep --color "#ff8800"
+ai-hist untag abc-1234-def release-prep      # remove a tag
+ai-hist tags                                 # list all tags
+ai-hist tags --tag release-prep --sessions   # list sessions under a tag
+```
+
+## Data portability
+
+Local export/import — no cloud required.
+
+```bash
+ai-hist export backup.jsonl                  # JSONL (also .jsonl.gz)
+ai-hist export backup.sqlite --format sqlite
+ai-hist export --since 2026-01-01 --source claude
+ai-hist import backup.jsonl                  # JSONL, .jsonl.gz, or SQLite
+ai-hist import backup.jsonl --dry-run        # preview without writing
+```
+
+## Cloud: login and push
+
+There is no `ai-hist cloud` subcommand group. Cloud is two top-level commands: authenticate once, then push. See [Relayloop Cloud](/docs/loop/cloud).
+
+```bash
+ai-hist login                  # authenticate via Agent Relay Cloud; stores a token in $RELAYHISTORY_HOME
+ai-hist push                   # send new local history to the cloud (incremental, idempotent)
+ai-hist push --json
+ai-hist push --incognito abc-1234-def   # exclude specific sessions from the push (repeatable)
+```
+
+`push` is cursor-based and idempotent — it only sends rows past the last accepted cursor, and the server deduplicates. Your local commands are unaffected.
+
+### `pair check`
+
+Ask your team's shared history for advisory warnings before a risky change. Requires a prior `ai-hist push`.
+
+```bash
+ai-hist pair check --task "refactor auth" --file src/auth/middleware.ts
+ai-hist pair check --file src/db/schema.ts --limit 5 --json
+```
+
+### `learn distill`
+
+Distill local session history into structured decision / finding / reflection events.
+
+```bash
+ai-hist learn distill --source claude --limit 5
+ai-hist learn distill --session_id abc-1234-def --dry_run
+```
+
+## Resume commands
+
+`ai-hist show <id>` prints the resume command for the recording tool. The forms are:
+
+```bash
+cd /path/to/project && claude --resume <session_id>          # Claude Code
+codex resume <session_id>                                     # Codex
+cd /path/to/project && cursor-agent --resume=<session_id>     # Cursor
+```
+
+## Environment variables
+
+| Variable | Purpose |
+|----------|---------|
+| `AI_HIST_DB` | Override the database path |
+| `XDG_DATA_HOME` | Honored before falling back to `~/.local/share/ai-hist/ai-history.db` |
+| `AI_HIST_CLI` | Dispatch mode: `auto` (default), `rust`, `python` |
+| `AI_HIST_RUST_BIN` | Use an explicit Rust binary instead of the default |
+| `RELAYHISTORY_HOME` | Cloud auth + sync-cursor directory (default `~/.agentworkforce/relayhistory-prod`) |
+| `RELAYCAST_API_KEY` / `RELAYCAST_WORKSPACE_ID` | Configure Agent Relay sync |
+| `OPENCODE_DB` | Override the OpenCode SQLite path |
+| `TRAJECTORY_ROOT` | Explicit root for trajectory sync |
+
+<CardGroup cols={2}>
+  <Card title="Install" href="/docs/loop/install">
+    Dispatch modes and escape hatches in detail.
+  </Card>
+  <Card title="Quickstart" href="/docs/loop/quickstart">
+    The core commands in a five-minute walkthrough.
+  </Card>
+</CardGroup>

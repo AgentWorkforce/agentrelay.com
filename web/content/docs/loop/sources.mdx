@@ -1,0 +1,71 @@
+---
+title: 'Sources'
+description: 'The agent tools Relayloop indexes, where each reads from on disk, and the --source filter values you use to scope queries.'
+---
+
+Relayloop's value comes from aggregating history that is otherwise scattered across a half-dozen tools and file formats. A single [`ai-hist sync`](/docs/loop/sync) pulls all of them into one indexed corpus. This page lists every supported source, where it reads from, and the `--source` value you use to filter [search](/docs/loop/search) and [recent](/docs/loop/search).
+
+## Supported sources
+
+| Source | `--source` value | Where it reads from |
+|--------|------------------|---------------------|
+| Claude Code | `claude` | `~/.claude/history.jsonl` |
+| Codex CLI | `codex` | `~/.codex/history.jsonl` |
+| Cursor | `cursor` | Per-session JSONL under `~/.cursor/projects/...` |
+| Grok | `grok` | Per-session JSONL under `~/.grok/sessions/...` |
+| Agent Relay | `relay` | Relaycast API (`https://api.relaycast.dev/v1`) |
+| Trajectories | `trajectory` | Compacted per-run JSON files |
+| OpenCode | `opencode` | Local SQLite (`~/.local/share/opencode/opencode.db`) |
+
+Pass any of these to `--source` to scope a query:
+
+```bash
+ai-hist search "deploy" --source claude
+ai-hist recent --source codex
+ai-hist search "retry policy" --source trajectory
+```
+
+## File-based sources
+
+**Claude Code, Codex, Cursor, and Grok** are synced incrementally from local files using byte-offset tracking, so re-syncing only reads what is new.
+
+- **Claude Code** reads `~/.claude/history.jsonl`, using its `display`, `timestamp`, `project`, and `sessionId` fields.
+- **Codex CLI** reads `~/.codex/history.jsonl`, using its `text`, `ts`, and `session_id` fields.
+- **Cursor** reads per-session transcripts at `~/.cursor/projects/<encoded-path>/agent-transcripts/<uuid>/<uuid>.jsonl`. User prompts are extracted from the message content. Because Cursor lines carry no per-line timestamp, the file modification time at sync time is used instead.
+- **Grok** reads per-session chat history at `~/.grok/sessions/<encoded-path>/<session-id>/chat_history.jsonl` alongside its `summary.json`.
+
+**OpenCode** is read from a local SQLite database (`$OPENCODE_DB` or `~/.local/share/opencode/opencode.db`), joining user text parts to their sessions. Reads are WAL-safe so an active OpenCode session is not disrupted.
+
+## Agent Relay
+
+[Agent Relay](/docs/introduction) history is pulled from the Relaycast API with cursor-based pagination, indexing each message's `sender`, `content`, `channel`, and `timestamp`. Configure it with environment variables:
+
+```bash
+export RELAYCAST_API_KEY="rk_live_..."
+export RELAYCAST_WORKSPACE_ID="ws_abc123"
+```
+
+## Trajectories
+
+Trajectories are compacted per-run JSON files that capture the *why* behind an agent run — the task, the decisions made, the alternatives considered, and a retrospective. They round out the searchable history with structured reasoning, not just prompts.
+
+By default, sync discovers `~/Projects/**/.trajectories/**/compacted/*.json`. Point it at an explicit root with:
+
+```bash
+export TRAJECTORY_ROOT="/path/to/repo/.trajectories"
+```
+
+Sync then scans `$TRAJECTORY_ROOT/**/compacted/*.json`. Each file is one completed run, with fields like `personaId`, `projectId`, `task`, `decisions`, and `retrospective`. A searchable `trajectory` row is inserted into the history index, and the structured decisions and retrospectives are also retained for richer queries.
+
+<Note>
+  Trajectory sync indexes the runtime-emitted per-run contract files, not aggregate compaction artifacts.
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Sync" href="/docs/loop/sync">
+    How sync reads and dedupes these sources.
+  </Card>
+  <Card title="Search" href="/docs/loop/search">
+    Use `--source` to scope queries.
+  </Card>
+</CardGroup>

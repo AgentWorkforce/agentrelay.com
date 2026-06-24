@@ -1,0 +1,68 @@
+---
+title: 'Quickstart'
+description: 'The fastest path to a working Relayfile mount: hosted with one command, then read and write provider files.'
+---
+
+The fastest path is **hosted**: Agent Relay runs the integration stack for you — OAuth, sync workers, writeback — so you only run a local mount. One command and you have provider-backed files in an ordinary directory.
+
+<Note>
+  Want to run the whole stack yourself instead? See [Run locally](/docs/file/run-locally) for the self-hosted Docker path. The source lives at [github.com/AgentWorkforce/relayfile](https://github.com/AgentWorkforce/relayfile) — clone it first.
+</Note>
+
+## One command
+
+If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running infrastructure, use Hosted Agent Relay. The CLI logs you in, creates or joins a cloud workspace, completes provider auth, waits for sync, and mounts the result.
+
+```bash
+relayfile setup \
+  --provider notion \
+  --workspace my-agent \
+  --local-dir ./relayfile-mount \
+  --no-open
+```
+
+`--no-open` prints the hosted login and connect URLs instead of opening a browser — useful inside agents and headless environments. The command connects to `agentrelay.com`, completes the Nango connect flow, blocks until the provider reports ready, and starts the mount sync loop.
+
+When it returns, `./relayfile-mount` is a live mirror of your workspace:
+
+```bash
+ls ./relayfile-mount/notion
+cat ./relayfile-mount/LAYOUT.md
+```
+
+See [Relayfile Cloud](/docs/file/cloud) for what the hosted plane manages, and [Mounting](/docs/file/mounting) to do the same thing programmatically from a sandbox.
+
+## Read and write
+
+Once mounted, the interface is the filesystem you already know:
+
+```bash
+# read
+cat ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+
+# patch back to the provider by writing the canonical path
+echo '{"state":"In Review"}' \
+  > ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+
+# find across providers
+grep -rl '"state":"Todo"' ./relayfile-mount/linear/issues/
+```
+
+See [Reads and writes](/docs/file/reads-and-writes) for the full PATCH / CREATE / DELETE model.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Mount layout" href="/docs/file/mount-layout">
+    Learn the tree shape: `LAYOUT.md`, `_index.json`, canonical naming, and alias views.
+  </Card>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    How file ops map to PATCH, CREATE, and DELETE — and where schemas live.
+  </Card>
+  <Card title="The SDK" href="/docs/file/sdk">
+    Use `RelayFileClient` from any agent runtime, with the built-in read cache.
+  </Card>
+  <Card title="Agents" href="/docs/file/agents">
+    One `connect()` call for Vercel AI SDK, OpenAI Agents SDK, and LangChain.
+  </Card>
+</CardGroup>

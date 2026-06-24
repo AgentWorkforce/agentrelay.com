@@ -1,0 +1,135 @@
+---
+title: 'The SDK'
+description: 'Use @relayfile/sdk: RelayFileClient for reads, writes, and bulk operations with a built-in read cache, plus RelayfileSetup for joining and mounting.'
+---
+
+`@relayfile/sdk` is the TypeScript surface for talking to a Relayfile workspace. It has two halves: `RelayFileClient` for file operations against the data plane, and `RelayfileSetup` for the control-plane flow of logging in, joining a workspace, and mounting it. You can wrap a `RelayFileClient` call in any agent runtime — a Vercel AI SDK tool, a Claude SDK MCP tool, an OpenAI Agents SDK tool, or your own callback.
+
+```bash
+npm install @relayfile/sdk
+```
+
+## RelayFileClient
+
+Construct a client with a token (a string or a function that returns one, for auto-refresh):
+
+```ts
+import { RelayFileClient } from "@relayfile/sdk"
+
+const files = new RelayFileClient({ token: process.env.RELAYFILE_TOKEN! })
+
+// Use this as the body of any agent tool / runtime callback.
+export async function readRelayfile(path: string) {
+  return files.readFile("rw_123", path)
+}
+```
+
+### Reads
+
+```ts
+// list a subtree
+const tree = await files.listTree("rw_123", { path: "/notion", depth: 2 })
+
+// read one file (positional or options-object form both work)
+const page = await files.readFile("rw_123", "/notion/pages/roadmap__abc.json")
+```
+
+### Writes
+
+`writeFile` requires a `baseRevision` for optimistic concurrency — `If-Match` semantics. Use `baseRevision: "*"` for create-or-overwrite, or pass the last revision you read to detect conflicts:
+
+```ts
+await files.writeFile({
+  workspaceId: "rw_123",
+  path: "/linear/issues/AGE-12__fix-login-bug.json",
+  baseRevision: "*",
+  content: JSON.stringify({ state: "In Review" }),
+  contentType: "application/json",
+})
+```
+
+When a conflicting write loses the optimistic-concurrency check, the client throws `RevisionConflictError` instead of silently clobbering — catch it to re-read and retry.
+
+`bulkWrite` writes many files in one request. Bulk writes are unconditional create-or-overwrite (no per-file `baseRevision`):
+
+```ts
+await files.bulkWrite({
+  workspaceId: "rw_123",
+  files: [
+    { path: "/linear/labels/p0.json", content: "{...}", contentType: "application/json" },
+    { path: "/linear/labels/p1.json", content: "{...}", contentType: "application/json" },
+  ],
+})
+```
+
+`deleteFile` removes a file (and queues the provider delete), also taking a `baseRevision`:
+
+```ts
+await files.deleteFile({
+  workspaceId: "rw_123",
+  path: "/linear/labels/stale.json",
+  baseRevision: "*",
+})
+```
+
+For real-time work, `subscribe(globs, onChange)` and `connectWebSocket(workspaceId)` deliver change events; see [Real-time sync](/docs/file/realtime-sync).
+
+## The read cache
+
+`RelayFileClient` caches `readFile` responses by default (`v0.10.1+`): a 5-second TTL, 500-entry LRU, in-flight deduplication of concurrent reads for the same path, and automatic write-through invalidation on remote mutation events and on local `writeFile` / `bulkWrite` / `deleteFile`. Tune or disable it with the `readCache` option:
+
+```ts
+// custom TTL for fast-changing workspaces
+const files = new RelayFileClient({ token, readCache: { ttlMs: 2000 } })
+
+// disable caching entirely
+const files = new RelayFileClient({ token, readCache: false })
+```
+
+The defaults are conservative — short TTL plus event eviction — so readers rarely serve stale data. See [Real-time sync](/docs/file/realtime-sync) for how invalidation ties into multi-agent coordination.
+
+## RelayfileSetup
+
+`RelayfileSetup` drives the control plane: it mints a short-lived data-plane token from your Cloud credentials, joins a workspace, and hands you a `RelayFileClient` bound to it.
+
+```ts
+import { RelayfileSetup } from "@relayfile/sdk"
+
+// fromCloudTokens auto-refreshes within the refresh window
+const setup = RelayfileSetup.fromCloudTokens(
+  { accessToken, refreshToken, accessTokenExpiresAt },
+  { cloudApiUrl: "https://agentrelay.com/cloud" },
+)
+
+const workspace = await setup.joinWorkspace("rw_…")
+const client = workspace.client() // bound, auto-refreshing token
+
+const tree = await client.listTree(workspace.workspaceId, { path: "/notion", depth: 2 })
+```
+
+<Warning>
+  Always use the workspace ID returned by `joinWorkspace` / mount-session (the `rw_…` shard id) for every data-plane call — never the request-side app UUID. The SDK resolves this for you; raw-HTTP callers must resolve it first.
+</Warning>
+
+`RelayfileSetup` also handles mounting (`mountWorkspace`, `ensureMountedWorkspace` — see [Mounting from a sandbox](/docs/file/mounting)), connecting integrations (`connectIntegration`, `connectNotion`, `waitForConnection`), and minting per-agent scoped tokens. For least-privilege, mint a downscoped JWT with `agentInviteScoped({ scopes: ["relayfile:fs:read:/notion/**"] })` rather than the broad sync `agentInvite()`.
+
+<Note>
+  Request the path-scoped form (`relayfile:fs:read:/notion/**`) when scoping tokens. A bare `fs:read` / `fs:write` request can fall back to a broad grant. See [ACLs](/docs/file/acls).
+</Note>
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="Agents" href="/docs/file/agents">
+    `@relayfile/agents` wraps this client into one-call framework tools.
+  </Card>
+  <Card title="Mounting from a sandbox" href="/docs/file/mounting">
+    `RelayfileSetup` mount methods for sandboxes and runtimes.
+  </Card>
+  <Card title="API reference" href="/docs/file/api-reference">
+    The HTTP surface the client calls.
+  </Card>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    How write operations map to provider PATCH / CREATE / DELETE.
+  </Card>
+</CardGroup>
