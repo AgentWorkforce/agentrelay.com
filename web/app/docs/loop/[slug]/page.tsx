@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 
 import { ProductDocPage } from '../../../../components/docs/ProductDocPage';
+import { ogImage } from '../../../../lib/og-meta';
 import {
   getProductDoc,
   getProductDocMarkdownUrl,
@@ -27,12 +28,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Not Found' };
   }
 
+  const ogPath = `/docs/${SECTION_ID}/${slug}/og.png`;
+
   return {
     title: `${doc.frontmatter.title} — Relayloop`,
     description: doc.frontmatter.description,
     alternates: {
       canonical: absoluteUrl(`/docs/${SECTION_ID}/${slug}`),
       types: { 'text/markdown': getProductDocMarkdownUrl(SECTION_ID, slug) },
+    },
+    openGraph: {
+      title: `${doc.frontmatter.title} — Relayloop`,
+      description: doc.frontmatter.description,
+      url: absoluteUrl(`/docs/${SECTION_ID}/${slug}`),
+      type: 'article',
+      images: [ogImage(ogPath, `${doc.frontmatter.title} — Relayloop docs`)],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${doc.frontmatter.title} — Relayloop`,
+      description: doc.frontmatter.description,
+      images: [absoluteUrl(ogPath)],
     },
   };
 }

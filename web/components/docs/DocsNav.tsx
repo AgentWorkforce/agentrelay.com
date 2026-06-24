@@ -60,6 +60,7 @@ const productNavIcons: Record<string, NavIcon> = {
   'local-development': Terminal,
   mounting: FolderOpen,
   sdk: SiTypescript,
+  'python-sdk': SiPython,
   agents: Bot,
   'adapters-and-providers': Plug,
   comparison: BookOpen,
@@ -197,6 +198,9 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
               <Link href={docsBasePath} className={styles.productHeaderName}>
                 <ProductIcon className={styles.productHeaderIcon} aria-hidden="true" />
                 <span>{productSection.label}</span>
+                {productSection.version && (
+                  <span className={styles.productHeaderVersion}>v{productSection.version}</span>
+                )}
               </Link>
               <p className={styles.productHeaderTagline}>{productSection.tagline}</p>
             </div>

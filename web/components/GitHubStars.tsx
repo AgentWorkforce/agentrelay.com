@@ -1,8 +1,12 @@
+import { productSections } from '../lib/product-docs-nav';
+import { DocsGitHubStarsBadge, type DocsStarRepo } from './DocsGitHubStarsBadge';
 import s from './github-stars.module.css';
 
 type GitHubRepoResponse = {
   stargazers_count?: number;
 };
+
+const DEFAULT_REPO = 'agentworkforce/relay';
 
 function GithubIcon() {
   return (
@@ -16,9 +20,9 @@ function formatStarCount(stars: number): string {
   return stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : String(stars);
 }
 
-async function getGitHubStars(): Promise<string | null> {
+async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | null> {
   try {
-    const response = await fetch('https://api.github.com/repos/agentworkforce/relay', {
+    const response = await fetch(`https://api.github.com/repos/${repo}`, {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'agentrelay-web',
@@ -33,6 +37,32 @@ async function getGitHubStars(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/**
+ * Docs header badge that follows the active section: Relayfile under
+ * `/docs/file`, Relayloop under `/docs/loop`, Agent Relay elsewhere. Fetches
+ * every section's star count on the server, then the client picks by path.
+ */
+export async function DocsGitHubStarsBadgeServer() {
+  const targets: { id: string | null; repo: string; label: string }[] = [
+    { id: null, repo: DEFAULT_REPO, label: 'Agent Relay' },
+    ...productSections.map((section) => ({
+      id: section.id,
+      repo: section.repo,
+      label: section.label,
+    })),
+  ];
+
+  const counts = await Promise.all(targets.map((t) => getGitHubStars(t.repo)));
+  const repos: DocsStarRepo[] = targets.map((t, i) => ({
+    id: t.id,
+    href: `https://github.com/${t.repo}`,
+    label: t.label,
+    count: counts[i],
+  }));
+
+  return <DocsGitHubStarsBadge repos={repos} />;
 }
 
 export async function GitHubStarsBadge() {

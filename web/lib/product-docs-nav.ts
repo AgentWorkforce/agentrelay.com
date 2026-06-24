@@ -27,6 +27,8 @@ export interface ProductDocSection {
   tagline: string;
   /** GitHub org/repo, used for the sidebar source link. */
   repo: string;
+  /** Current published version, shown as a badge in the sidebar header. */
+  version?: string;
   nav: NavGroup[];
 }
 
@@ -35,6 +37,7 @@ export const fileSection: ProductDocSection = {
   label: 'Relayfile',
   tagline: 'The event layer for AI agents.',
   repo: 'AgentWorkforce/relayfile',
+  version: '0.10.12',
   nav: [
     {
       title: 'Start',
@@ -67,6 +70,7 @@ export const fileSection: ProductDocSection = {
       title: 'SDK & agents',
       items: [
         { title: 'TypeScript SDK', slug: 'sdk' },
+        { title: 'Python SDK', slug: 'python-sdk' },
         { title: 'Agent frameworks', slug: 'agents' },
       ],
     },
@@ -96,6 +100,7 @@ export const loopSection: ProductDocSection = {
   label: 'Relayloop',
   tagline: 'The system of record for how your team works with AI agents.',
   repo: 'AgentWorkforce/relayhistory',
+  version: '0.3.6',
   nav: [
     {
       title: 'Start',

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { DocsLanguageProvider } from '../../components/docs/DocsLanguageContext';
 import { DocsNav } from '../../components/docs/DocsNav';
 import { DocsSearch } from '../../components/docs/DocsSearch';
-import { GitHubStarsBadge } from '../../components/GitHubStars';
+import { DocsGitHubStarsBadgeServer } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import styles from '../../components/docs/docs.module.css';
@@ -24,7 +24,7 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
       <div className={styles.docsPage}>
         <SiteNav
           center={<DocsSearch index={searchIndex} productScopes={productScopes} />}
-          actions={<GitHubStarsBadge />}
+          actions={<DocsGitHubStarsBadgeServer />}
           mobileMenuContent={<DocsNav variant="mobileMenu" />}
           hideMobileDocsLink
         />
