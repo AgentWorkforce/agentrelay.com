@@ -230,6 +230,20 @@
   margin: 0 0 8px;
 }
 
+.versionStatic {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.35rem 0.85rem;
+}
+
 .versionSelectWrap {
   position: relative;
   display: block;
