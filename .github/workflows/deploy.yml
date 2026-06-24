@@ -37,6 +37,15 @@ jobs:
           NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
         run: npm run cf:build
 
+      # Copy the prerendered SSG cache into the assets bundle
+      # (assets/cdn-cgi/_next_cache). The site serves blog/docs pages from the
+      # static-assets incremental cache; without this the Worker falls back to
+      # on-demand MDX rendering, which fails in the Workers runtime (500). The
+      # bare `wrangler deploy` below does not run this, so do it here.
+      - name: Populate static-assets cache
+        working-directory: web
+        run: npx opennextjs-cloudflare populateCache remote
+
       - name: Deploy to Cloudflare
         working-directory: web
         env:
