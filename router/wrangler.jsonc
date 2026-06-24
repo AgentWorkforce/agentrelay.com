@@ -1,0 +1,56 @@
+{
+  "$schema": "../web/node_modules/wrangler/config-schema.json",
+  "name": "agentrelay-router",
+  "main": "index.ts",
+  "compatibility_date": "2025-04-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // The router fronts agentrelay.com. It binds resources that remain OWNED BY THE
+  // CLOUD SST APP in the same Cloudflare account — referenced here by stable
+  // name/id. These identifiers are cloud-owned; if cloud ever recreates the
+  // resource the value here must be updated (see the repo's Phase 2 notes).
+
+  // /cloud* → the cloud Next.js Worker, by stable prod script name.
+  // (Webhook offload uses the WEBHOOK_WORKER_ORIGIN URL below, not a service
+  // binding — SST names the webhook Worker with a random hash suffix, so it
+  // isn't bindable by a stable script name.)
+  "services": [
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
+  ],
+
+  // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
+  // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
+  // namespace id so both gateways increment the same per-workspace counters.
+  // Look up the prod ids: `wrangler kv namespace list` (titles router-config,
+  // rate-limit-counters).
+  "kv_namespaces": [
+    { "binding": "ROUTER_CONFIG", "id": "e73a3fc0c2514460bdd3afae463e5234" },
+    { "binding": "RATE_LIMIT_COUNTERS", "id": "40c2049dd4ce40f4b8f8143d53075731" }
+  ],
+
+  // Replay/traffic recorder corpus (14-day lifecycle, owned by cloud).
+  "r2_buckets": [
+    { "binding": "TRAFFIC_RECORDER", "bucket_name": "traffic-recorder" }
+  ],
+
+  "vars": {
+    "CLOUD_APP_ORIGIN": "https://origin.agentrelay.cloud",
+    "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",
+    // The dedicated webhook Worker the router forwards /api/v1/webhooks/* to when
+    // the ROUTER_CONFIG `WEBHOOK_ORIGIN` flag is "worker" (it is, in prod). This
+    // is cloud-owned and the script name carries a random hash suffix, so it
+    // would change if cloud recreates that Worker — re-copy it from the live
+    // router's WEBHOOK_WORKER_ORIGIN if webhook routing ever 5xxs.
+    "WEBHOOK_WORKER_ORIGIN": "https://incoming-webhooks.agentrelay.com"
+  },
+
+  // The apex front door. Cloud's prod AgentRelayRouter must have released the
+  // agentrelay.com custom domain (cloud#2461 deployed) before this claims it.
+  "routes": [
+    { "pattern": "agentrelay.com", "custom_domain": true }
+  ],
+
+  "workers_dev": false,
+  "preview_urls": true,
+  "observability": { "enabled": true }
+}
