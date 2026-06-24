@@ -35,7 +35,13 @@ You get total entries, a breakdown by source, the date range covered, and your b
 
 ## The Burn lens
 
-Recall tells you *how* your team prompts. Burn tells you what it costs. The same history that makes sessions searchable also makes spend attributable: every entry is tagged with its source (tool), its project, and — once you sync as a team via [Relayloop Cloud](/docs/loop/cloud) — the engineer behind it.
+Recall tells you *how* your team prompts. Burn tells you what it costs.
+
+<Note>
+  Local `ai-hist stats` reports entry counts, sources, date range, and top projects. Cost and token attribution — the Burn lens below — is built on the per-event token and cost fields (`inputTokens`, `outputTokens`, `costUsdMicros`, `model`, `provider`) captured in [Relayloop Cloud](/docs/loop/cloud), not in the local overview.
+</Note>
+
+Once your history is in the cloud, the same record that makes sessions searchable also makes spend attributable: each event carries its source (tool), project, model, and — across a team — the engineer behind it.
 
 That attribution turns an opaque monthly token bill into answers:
 

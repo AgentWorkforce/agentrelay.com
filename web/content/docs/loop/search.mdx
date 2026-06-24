@@ -3,7 +3,7 @@ title: 'Search'
 description: 'Full-text search across every agent session with ai-hist search and recent, using entry IDs as the handle to drill deeper.'
 ---
 
-Search is the Recall lens. Once you have [synced](/docs/loop/sync), every prompt you and your team have ever sent to an AI agent is one query away — across Claude Code, Codex, Cursor, OpenCode, Agent Relay, and trajectories at the same time. Search is powered by SQLite FTS5, so it is fast even over tens of thousands of entries.
+Search is the Recall lens. Once you have [synced](/docs/loop/sync), every prompt you and your team have ever sent to an AI agent is one query away — across Claude Code, Codex, Cursor, Grok, OpenCode, Agent Relay, and trajectories at the same time. Search is powered by SQLite FTS5, so it is fast even over tens of thousands of entries.
 
 ## Full-text search
 
@@ -26,7 +26,7 @@ ai-hist search "retry policy" --source trajectory
 ai-hist search "deploy" --project relay
 ```
 
-- `--source` — restrict to one source. Valid values are `claude`, `codex`, `cursor`, `relay`, `trajectory`, and `opencode`. See [Sources](/docs/loop/sources).
+- `--source` — restrict to one source. Valid values are `claude`, `codex`, `cursor`, `grok`, `relay`, `trajectory`, and `opencode`. See [Sources](/docs/loop/sources).
 - `--project` — restrict to a project (matched against the recorded project path).
 - `--limit` — cap the number of results returned.
 

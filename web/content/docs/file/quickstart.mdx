@@ -1,11 +1,15 @@
 ---
 title: 'Quickstart'
-description: 'The fastest path to a working Relayfile mount — hosted with one command, or local with Docker — then read and write provider files.'
+description: 'The fastest path to a working Relayfile mount: hosted with one command, then read and write provider files.'
 ---
 
-There are two ways to get a working mount. The **hosted** path runs the integration stack for you — OAuth, sync workers, writeback — so you only run a local mount. The **local OSS** path runs the file server yourself with Docker. Pick whichever fits; both end with provider-backed files in an ordinary directory.
+The fastest path is **hosted**: Agent Relay runs the integration stack for you — OAuth, sync workers, writeback — so you only run a local mount. One command and you have provider-backed files in an ordinary directory.
 
-## Hosted: one command
+<Note>
+  Want to run the whole stack yourself instead? See [Run locally](/docs/file/run-locally) for the self-hosted Docker path. The source lives at [github.com/AgentWorkforce/relayfile](https://github.com/AgentWorkforce/relayfile) — clone it first.
+</Note>
+
+## One command
 
 If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running infrastructure, use Hosted Agent Relay. The CLI logs you in, creates or joins a cloud workspace, completes provider auth, waits for sync, and mounts the result.
 
@@ -27,53 +31,6 @@ cat ./relayfile-mount/LAYOUT.md
 ```
 
 See [Relayfile Cloud](/docs/file/cloud) for what the hosted plane manages, and [Mounting](/docs/file/mounting) to do the same thing programmatically from a sandbox.
-
-## Local: Docker stack
-
-The local path runs the file server, the dev token issuer, and a seed step that creates a sample `ws_demo` workspace.
-
-```bash
-cd docker
-docker compose up --build
-```
-
-This starts three services:
-
-| Service | URL | Purpose |
-|---|---|---|
-| relayfile | `http://localhost:9090` | VFS API |
-| relayauth | `http://localhost:9091` | local dev token issuer |
-| seed | exits after setup | creates `ws_demo` sample files |
-
-### Get a token and call the API
-
-The seed step prints a dev token to its logs. Grab it, then hit the tree and file endpoints:
-
-```bash
-TOKEN="$(docker compose logs seed | awk '/token/ {print $NF}' | tail -1)"
-
-curl -H "Authorization: Bearer $TOKEN" \
-  -H "X-Correlation-Id: quickstart-tree" \
-  "http://localhost:9090/v1/workspaces/ws_demo/fs/tree?path=/"
-
-curl -H "Authorization: Bearer $TOKEN" \
-  -H "X-Correlation-Id: quickstart-read" \
-  "http://localhost:9090/v1/workspaces/ws_demo/fs/file?path=/docs/welcome.md"
-```
-
-`X-Correlation-Id` is required on authenticated requests for traceability. The full endpoint surface is in the [API reference](/docs/file/api-reference).
-
-### Mount it as local files
-
-```bash
-cd ..
-RELAYFILE_TOKEN="$TOKEN" go run ./cmd/relayfile-mount \
-  --base-url http://localhost:9090 \
-  --workspace ws_demo \
-  --local-dir ./relayfile-mount
-```
-
-Now any local tool or agent can use `./relayfile-mount` like a normal directory. See [Run locally](/docs/file/run-locally) for the full daemon flag set, including `--remote-path` to mirror a subtree and `--fuse-content-ttl` to tune the content cache.
 
 ## Read and write
 

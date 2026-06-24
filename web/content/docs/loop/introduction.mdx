@@ -24,9 +24,9 @@ Relayloop looks at your agent history through three lenses.
     A searchable history of how your team prompts. Your best engineers' patterns become a living playbook everyone can draw from — find the prompt, the session, and the resume command in seconds.
   </Card>
   <Card title="Burn">
-    Token spend by model, tool, project, and engineer. Find the waste, forecast the cost, and kill runaway loops before they bill you twice.
+    Token spend by model, tool, project, and engineer. Find the waste, forecast the cost, and kill runaway loops before they bill you twice. Cost attribution is captured in [Relayloop Cloud](/docs/loop/cloud).
   </Card>
-  <Card title="Insights">
+  <Card title="Insights (coming soon)">
     Patterns become proactive guidance and repo rules, so your baseline rises every week and your codebase gets steadily more agent-ready.
   </Card>
 </CardGroup>
@@ -35,7 +35,7 @@ Relayloop looks at your agent history through three lenses.
 
 The CLI works completely offline. `ai-hist sync` reads your local agent files, dedupes, and indexes everything into a SQLite database at `~/.local/share/ai-hist/ai-history.db`. Nothing leaves your machine unless you choose to turn on cloud sync.
 
-When you want durable backup, cross-device access, a web UI, and team recall, you opt into [Relayloop Cloud](/docs/loop/cloud). The local CLI does not change and keeps working offline either way.
+When you want a durable off-machine backup and team features, you opt into [Relayloop Cloud](/docs/loop/cloud) with `ai-hist login` and `ai-hist push`. The local CLI does not change and keeps working offline either way.
 
 <Note>
   Relayloop indexes Agent Relay history as one of its sources. If you coordinate agents with [Agent Relay](/docs/introduction), those conversations land in the same searchable corpus as your Claude Code and Codex sessions.
@@ -51,7 +51,7 @@ When you want durable backup, cross-device access, a web UI, and team recall, yo
     Full-text search across every agent session you have ever run.
   </Card>
   <Card title="Cloud" href="/docs/loop/cloud">
-    Opt into durable backup, cross-device sync, and team recall.
+    Push for a durable off-machine backup and team features like `pair check`.
   </Card>
 </CardGroup>
 

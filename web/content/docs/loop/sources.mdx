@@ -12,6 +12,7 @@ Relayloop's value comes from aggregating history that is otherwise scattered acr
 | Claude Code | `claude` | `~/.claude/history.jsonl` |
 | Codex CLI | `codex` | `~/.codex/history.jsonl` |
 | Cursor | `cursor` | Per-session JSONL under `~/.cursor/projects/...` |
+| Grok | `grok` | Per-session JSONL under `~/.grok/sessions/...` |
 | Agent Relay | `relay` | Relaycast API (`https://api.relaycast.dev/v1`) |
 | Trajectories | `trajectory` | Compacted per-run JSON files |
 | OpenCode | `opencode` | Local SQLite (`~/.local/share/opencode/opencode.db`) |
@@ -26,11 +27,12 @@ ai-hist search "retry policy" --source trajectory
 
 ## File-based sources
 
-**Claude Code, Codex, and Cursor** are synced incrementally from local files using byte-offset tracking, so re-syncing only reads what is new.
+**Claude Code, Codex, Cursor, and Grok** are synced incrementally from local files using byte-offset tracking, so re-syncing only reads what is new.
 
 - **Claude Code** reads `~/.claude/history.jsonl`, using its `display`, `timestamp`, `project`, and `sessionId` fields.
 - **Codex CLI** reads `~/.codex/history.jsonl`, using its `text`, `ts`, and `session_id` fields.
 - **Cursor** reads per-session transcripts at `~/.cursor/projects/<encoded-path>/agent-transcripts/<uuid>/<uuid>.jsonl`. User prompts are extracted from the message content. Because Cursor lines carry no per-line timestamp, the file modification time at sync time is used instead.
+- **Grok** reads per-session chat history at `~/.grok/sessions/<encoded-path>/<session-id>/chat_history.jsonl` alongside its `summary.json`.
 
 **OpenCode** is read from a local SQLite database (`$OPENCODE_DB` or `~/.local/share/opencode/opencode.db`), joining user text parts to their sessions. Reads are WAL-safe so an active OpenCode session is not disrupted.
 

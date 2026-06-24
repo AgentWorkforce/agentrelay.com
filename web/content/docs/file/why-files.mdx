@@ -1,47 +1,33 @@
 ---
 title: 'Why files'
-description: 'The case for a file interface over typed tool schemas: reactive invocation, multi-agent coordination, and context efficiency.'
+description: 'Most agents are reactive: you call them, they answer, they go dormant. Relayfile makes them proactive by turning provider state into files an agent can watch, read, and write.'
 ---
 
-The "give agents a filesystem" idea is a healthy direction, and Relayfile makes a specific bet: the filesystem is the most-trained-on API in existence, and an LLM is more reliable reading a directory than juggling a dozen typed APIs. Three concrete reasons make files the right substrate for SaaS integrations.
+The full argument lives in the blog post [Just Give the Agent Files](/blog/just-give-the-agent-files). The short version:
 
-## Reactive invocation
+- **MCP lets the agent pull. It is not how the world pushes a signal to the agent.** For push you need webhooks, and making a single agent proactive against Linear means a public endpoint, HMAC verification, a queue, deduplication, and retries. Then repeat per provider. Relayfile does that once and hands the agent a normalized file event instead.
+- **Stacked MCP tools bloat context.** Tool definitions can consume tens of thousands of tokens before any work begins. Files load nothing — context cost is exactly what the agent opens.
+- **The workspace is just files.** Every provider mounts at a well-known path. The agent explores with `ls`, reads with `cat`, searches with `grep` — no per-provider schema to learn.
+- **Writebacks are files too.** The agent writes a file; Relayfile handles provider auth, validation, retries, and the audit trail. No API call from the agent.
+- **Agents coordinate through the filesystem.** Writes propagate to every other agent in sub-second time, scoped by [ACL](/docs/file/acls). When agent A writes, agent B sees it on the next read. No message bus.
 
-Provider webhooks normalize into file events. When a Linear issue is created or a Notion page edited, your agent wakes up to the changed file — no webhook parsing, no provider-specific payload handling, no bespoke adapter per integration. The event is already in a shape the agent can read.
+## The benchmark
 
-This is the structural difference from request/response tool surfaces. A typed tool can only be called; it has no notion of *being woken up* by external state changing. Relayfile inverts that:
+We ran "what did I work on yesterday across GitHub, Linear, and Notion?" head-to-head against MCP, same prompt and accounts, across three Claude models. After adding `by-*` index directories and a pre-computed `digests/yesterday.md`, the filesystem won decisively:
 
-```
-Linear webhook → Cloud sync → /linear/issues/X.json revision++ → change event
-                                                                     ↓
-                                                  agent A reacts, writes a comment
-                                                  agent B reacts, files a Slack ping
-                                                  agent C reacts, opens a PR
-```
+| Model  | MCP cost | Relayfile cost | MCP turns | RF turns |
+| ------ | -------- | -------------- | --------- | -------- |
+| Opus   | $0.44    | $0.25          | 9         | 4        |
+| Sonnet | $0.27    | $0.07          | 18        | 4        |
+| Haiku  | failed¹  | $0.06          | —         | 4        |
 
-The same event fans out to every agent subscribed to that path. This is the substrate that makes **proactive agents** possible — agents reacting to provider state instead of waiting for a user prompt. See [Real-time sync](/docs/file/realtime-sync) for how that fan-out works, and [Agents](/docs/file/agents) for the `onEvent` helper.
+¹ MCP Haiku asked for clarification instead of acting. Relayfile Haiku completed the task.
 
-## Coordination
-
-Multiple agents working through the same filesystem can see each other's writes immediately, scoped by ACL. Multi-agent collaboration becomes a property of the substrate, not something each app re-implements.
-
-When agent A writes a file, agent B sees the new contents on the next read — within a second, no commit, no push, no merge. A reviewer agent can `tail -F` an issue a worker is updating and watch progress live. A persona-orchestrator can watch its workers' writes without a coordination protocol layered on top.
-
-None of that requires anything beyond the filesystem. **The filesystem is the protocol.** Per-agent surfaces are scoped with [ACLs](/docs/file/acls) so each worker sees only the paths it should.
-
-## Context efficiency
-
-A typical MCP setup loads 100+ tool schemas into every agent session before any work happens. Files load nothing — context cost is what the agent actually opens.
-
-- `ls` returns what's there. Exhaustive enumeration beats query-by-query API retrieval, where a tool call returns paginated search results and the agent has to guess at filters.
-- The tool surface is **O(1)** in the number of providers. `listTree` / `readFile` / write operations work identically across `/linear`, `/notion`, `/github`, and every other integration — there is no per-provider schema for the model to learn.
-- Cross-provider composition is free: `grep -r`, `cp`, and `cat` semantics work across providers because they're all just files.
-
-Contrast that with N typed tool servers, where each connected provider adds another batch of schemas to the context window and cross-provider work needs bespoke glue per pair.
+The digest is one file read that replaces 25 individual provider queries. Every structural improvement to the mount makes every future run cheaper — with MCP you are stuck at whatever the API returns. The [full write-up](/blog/just-give-the-agent-files) shows all three rounds, including the naive first pass where files lost.
 
 ## When a typed tool still wins
 
-Files are not always the answer. For a single provider, a single agent, and a one-shot action that needs server-side validation — `linear.create_issue(title, priority, …)` enforcing the shape at call time — a dedicated MCP is simpler and richer. The two compose well: Relayfile for reads, synthesis, and the stateful multi-provider substrate; an MCP for typed one-shot writes. See [Comparison](/docs/file/comparison) for the full breakdown.
+Files are not always the answer. For a single provider, a single agent, and a one-shot action that needs server-side validation, a dedicated MCP that enforces the shape at call time is simpler. The two compose: Relayfile for reads, synthesis, and the multi-provider substrate; an MCP for typed one-shot writes. See [Comparison](/docs/file/comparison).
 
 <CardGroup cols={2}>
   <Card title="Real-time sync" href="/docs/file/realtime-sync">

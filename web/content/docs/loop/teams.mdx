@@ -1,59 +1,54 @@
 ---
 title: 'Teams'
-description: 'Shared organizational memory, faster onboarding, knowledge retention, the Insights flywheel that learns across teams, and pricing tiers.'
+description: 'Where Relayloop is headed for teams: shared organizational memory, faster onboarding, the Insights flywheel — and what works today.'
 ---
 
-For an individual, Relayloop is a searchable memory. For a team, it becomes shared organizational memory — and an improvement loop that raises everyone's baseline. The thesis behind [Relayloop](/docs/loop/introduction) is that AI leverage is bimodal: your best engineers get 5–10× from coding agents while most of the team gets 1×, and the difference is prompting skill that today is tribal and undocumented. Team features close that gap and make sure nothing evaporates when people leave.
+For an individual, Relayloop is a searchable memory. For a team, it becomes shared organizational memory — and an improvement loop that raises everyone's baseline. The thesis behind [Relayloop](/docs/loop/introduction) is that AI leverage is bimodal: your best engineers get 5–10× from coding agents while most of the team gets 1×, and the difference is prompting skill that today is tribal and undocumented. Team features close that gap.
+
+<Note>
+  **What works today.** Once teammates [push](/docs/loop/cloud) to the same org, history is scoped and visible at the org level, and any session can be excluded from a push with `--incognito`. The richer team features below — shared session management, onboarding flows, roles, and the Insights flywheel — are on the roadmap, not yet shipped.
+</Note>
 
 ## Shared organizational memory
 
-When teammates opt into [cloud](/docs/loop/cloud) sync and share sessions, the team's prompts become a common corpus. Anyone can search how a colleague approached a problem instead of solving it from scratch. Your best engineers' patterns become a living playbook the whole team draws from — the Recall lens, but team-wide.
+When teammates push their history to the same organization, the team's prompts become a common corpus scoped to your org. The direction is that anyone can search how a colleague approached a problem instead of solving it from scratch — your best engineers' patterns as a living playbook, the Recall lens team-wide.
 
-## Onboarding acceleration
+## Onboarding acceleration <span>(coming soon)</span>
 
-New hires inherit the team's accumulated AI history on day one. Instead of learning the codebase and the team's prompting style by osmosis, they can search how the team has approached similar work and start from a known-good pattern. The ramp gets shorter and first-try acceptance goes up.
+New hires inherit the team's accumulated AI history on day one. Instead of learning the codebase and the team's prompting style by osmosis, they search how the team approached similar work and start from a known-good pattern.
 
-## Knowledge retention
+## Knowledge retention <span>(coming soon)</span>
 
-When someone leaves, their AI-assisted work history stays with the organization. The sessions, the decisions, and — through trajectory records — the *why* behind them, all remain searchable. Institutional knowledge that used to walk out the door now stays.
+When someone leaves, their AI-assisted work history stays with the organization. The sessions, the decisions, and — through trajectory records — the *why* behind them remain searchable.
 
-## The network that learns
+## The network that learns <span>(coming soon)</span>
 
-The Insights flywheel is what a single-team tool cannot match. Relayloop does not only learn from your team — it learns what works across every team on the platform and feeds the generalized, anonymized lessons back to you.
-
-> The more teams on Relayloop, the smarter your engineers' agents get.
-
-Your engineers get the benefit of patterns proven across thousands of others, automatically, without you running the experiments. Cross-team learning is always aggregated and anonymized — one customer never sees another's content — and your data is never used to train models without your explicit opt-in. Patterns turn into proactive guidance and repo rules, so your baseline rises every week and your codebase gets steadily more agent-ready. Teams that need full isolation can run the Enterprise tier end-to-end encrypted or in their own VPC, trading the flywheel for total privacy. See [Privacy](/docs/loop/privacy) for the trust model.
-
-## What to expect
-
-- Faster ramp for new and junior engineers.
-- Higher first-try acceptance and less agent rework.
-- Lower, more predictable token spend ([Burn](/docs/loop/stats)).
-- A prompting playbook that improves on its own — and gets better as the network grows.
+The Insights flywheel is the longer-term bet: Relayloop learns what works across every team on the platform and feeds generalized, anonymized lessons back to you. Cross-team learning is always aggregated and anonymized — one customer never sees another's content — and data is never used to train models without explicit opt-in. Teams that need full isolation can run the [Enterprise tier](/docs/loop/privacy) end-to-end encrypted or in their own VPC, trading the flywheel for total privacy.
 
 ## Pricing
+
+Pricing is being finalized. The intended shape:
 
 <CardGroup cols={3}>
   <Card title="Free">
     Local-first, single engineer, up and running in five minutes. The full `ai-hist` CLI with no account.
   </Card>
-  <Card title="Team">
-    From $49/mo for 5 seats. Org dashboard, shared sessions, and team plus network Insights.
+  <Card title="Team (planned)">
+    Org dashboard, shared sessions, and team plus network Insights. Per-seat, pricing TBD.
   </Card>
-  <Card title="Enterprise">
-    Custom. SSO/SAML, end-to-end encryption or self-host/VPC, audit log, and data residency.
+  <Card title="Enterprise (planned)">
+    SSO/SAML, end-to-end encryption or self-host/VPC, audit log, and data residency.
   </Card>
 </CardGroup>
 
-Start free and local. Turn on team sync — and the network — when you are ready.
+Start free and local. Turn on cloud push — and team features as they ship — when you are ready.
 
 <CardGroup cols={2}>
   <Card title="Cloud" href="/docs/loop/cloud">
-    Opt into sync, shared sessions, and the web UI.
+    Opt into push and the team features built on it.
   </Card>
   <Card title="Privacy" href="/docs/loop/privacy">
-    How team data is handled and the trust tiers.
+    How team data is handled and the two trust tiers.
   </Card>
 </CardGroup>
 

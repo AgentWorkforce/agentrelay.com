@@ -1,6 +1,6 @@
 ---
 title: 'Privacy'
-description: 'How Relayloop Cloud handles your data: encrypted in transit and at rest, secrets scrubbed on ingest, end-to-end encryption available, and full data rights.'
+description: 'How Relayloop Cloud handles your data across two trust tiers: a vendor-readable default with secrets scrubbed on ingest, and an end-to-end-encrypted Enterprise tier — plus full export and deletion rights.'
 ---
 
 Relayloop is local-first, so the most private option is always to run the CLI and sync nothing. When you do opt into [Relayloop Cloud](/docs/loop/cloud), the data-handling model is built to be honest about what we can and cannot see — and to give you concrete controls, not just promises. This page describes how data is protected, what is scrubbed, the end-to-end-encrypted option and its real limits, and your rights to export and delete.
@@ -29,6 +29,10 @@ For teams whose IP or compliance rules mean content cannot leave at all, the Ent
 
 ## How end-to-end encryption works
 
+<Note>
+  The end-to-end-encrypted Enterprise tier is in development and offered through enterprise contracts. The design below describes how it is built; the default Team tier is vendor-readable as described above.
+</Note>
+
 On the Enterprise / Private tier, the design principle is that the server stores ciphertext and holds no decryption keys. Even with full database access, neither an attacker nor the platform can read your content.
 
 - **Content encryption** uses AES-256-GCM, with each entry encrypted independently under a fresh nonce. The whole entry — prompt, project path, session ID, source — is encrypted.
@@ -46,7 +50,7 @@ End-to-end encryption is not magic, and the limits deserve to be stated plainly:
 - **JavaScript delivery.** With a web app, the browser executes JavaScript served by the server on every page load. This shifts one trust assumption that the CLI does not have: you trust that the server is delivering the same JS that is in the open source repo. This is mitigated — not eliminated — by Subresource Integrity (the browser refuses JS that does not match a published hash), a strict Content Security Policy, an open-source web client whose build hashes are published, and holding the key only in tab-scoped session storage. For maximum security, use the CLI, where the key lives in the OS keychain and never touches a browser.
 - **Compromised client device.** If your device is compromised, the local key can be extracted. Encryption protects data on our servers, not on a machine an attacker already controls.
 - **Weak passphrase.** A memory-hard KDF slows brute-force of the wrapped key but cannot save a very weak passphrase; minimum entropy is enforced, and the passkey path is preferred where available.
-- **Hosted MCP endpoint.** The [hosted MCP endpoint](/docs/loop/cloud-architecture) is the one place data is transiently decrypted server-side, which requires trusting the server. It is opt-in and clearly disclosed; the local MCP server stays the zero-trust default.
+- **Hosted MCP endpoint (planned).** A hosted MCP endpoint is on the roadmap. It would be the one place data is transiently decrypted server-side, which requires trusting the server — so it will be opt-in and clearly disclosed. The local MCP server (`npx ai-hist-mcp`) stays the zero-trust default.
 
 ## What the server can see
 
@@ -56,8 +60,8 @@ On the end-to-end tier the server holds your ciphertext plus a thin operational 
 
 These are commitments backed by mechanics, not just policy. They map to GDPR Articles 15, 17, and 20 and CCPA rights.
 
-- **Delete, immediately and permanently.** Delete a single entry with `ai-hist cloud delete <id>`, or your whole account with `ai-hist cloud delete-account`. Deletes are hard deletes — rows are removed, not flagged — completing synchronously. Nightly backups are retained for 7 days for disaster recovery and disclosed explicitly; after 7 days no copy exists on our infrastructure.
-- **Export, any time, always free.** `ai-hist cloud export --output my-history.jsonl.gz` streams your ciphertext, decrypts it locally, and writes NDJSON in the same format as local `ai-hist export`. It imports straight into a local database with `ai-hist import` — no cloud dependency.
+- **Delete, immediately and permanently.** The cloud API exposes hard deletes — a single entry (`DELETE /v1/entries/<id>`) or your whole account (`DELETE /v1/user`). Rows are removed, not flagged.
+- **Export, any time, always free.** Your local database is always exportable with `ai-hist export` (JSONL, `.jsonl.gz`, or SQLite), and re-importable with `ai-hist import` — no cloud dependency. The cloud also streams your stored records back via `GET /v1/export`.
 - **No training use.** Your data is never used to train any model, ours or anyone's. This is written into the Terms of Service and is not waivable.
 - **No third-party analytics SDKs** in the sync client.
 

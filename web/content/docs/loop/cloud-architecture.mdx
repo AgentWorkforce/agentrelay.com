@@ -1,61 +1,46 @@
 ---
 title: 'Cloud Architecture'
-description: 'How Relayloop Cloud works end to end: local sync reads files, encrypts them, and POSTs ciphertext over HTTPS to ingestion, storage, and query APIs.'
+description: 'How Relayloop Cloud works: the CLI pushes scrubbed history to a Cloudflare Workers API backed by Neon and pgvector, with an end-to-end-encrypted Enterprise tier.'
 ---
 
-Relayloop Cloud is deliberately thin where it matters. The client does the work — reading, encrypting, and deciding — and the server stores what it is handed. This page traces the path a history entry takes from a local file to the cloud and back, and names the components it passes through. It is grounded in the [relayhistory-cloud architecture](https://github.com/AgentWorkforce/relayhistory-cloud).
+Relayloop Cloud is the hosted convergence store that local history pushes into. The CLI captures and normalizes; the cloud ingests, scrubs, indexes, and serves. This page traces the path an entry takes from a local file to the cloud and names the components it passes through. It is grounded in the [relayhistory-cloud](https://github.com/AgentWorkforce/relayhistory-cloud) source.
 
 ## The path of an entry
 
-The flow is the same shape as local [sync](/docs/loop/sync), with two steps added before the data leaves your machine:
-
-1. **Read** — `ai-hist cloud sync` reads new entries from your local sources, exactly as local sync does.
-2. **Encrypt** — each entry is encrypted on the client. The key never leaves your machine. See [Privacy](/docs/loop/privacy) for the cryptographic detail.
-3. **POST** — the client sends the ciphertext payload to the cloud over HTTPS. Only ciphertext crosses the wire.
-4. **Store** — the cloud ingestion API checks for duplicates and stores the encrypted blobs.
-5. **Query and decrypt** — to read history back, the client (CLI or browser) fetches ciphertext from the query API and decrypts it locally.
-
-The server stores ciphertext blobs plus a small amount of operational metadata. It cannot reconstruct your content.
+1. **Authenticate** — `ai-hist login` exchanges an Agent Relay Cloud session for a scoped token (`rth_at_…`), stored in `$RELAYHISTORY_HOME/auth.json`.
+2. **Push** — `ai-hist push` reads new local rows past the last cursor and `POST`s them to `/v1/ingest` as a batch.
+3. **Scrub** — on the default tier the server scrubs secrets and PII at ingest: API keys and tokens are redacted, home paths are normalized (`/Users/you/…` → `/Users/~/…`), and the stored record is reduced to an allowlist.
+4. **Store and embed** — accepted rows land in the `convergence_events` table with a vector embedding for semantic search. The server deduplicates on batch and event id and advances the cursor only after it accepts the batch.
+5. **Serve** — team features (`pair check`, `learn distill`) and queries read back from that store, scoped to your org and workspace.
 
 ## Components
 
-### Ingestion API
+### API (Cloudflare Workers)
 
-Receives sync payloads from the CLI. It is stateless — the business logic lives in the client. A sync request carries a batch of entries, each with its ciphertext, nonce, authentication tag, and operational metadata. The server checks each entry's content hash against what it has already stored and skips duplicates, then stores the rest. It also exposes a sync-state endpoint that returns only operational metadata — last sync time and entry count, never content.
+The API is a Cloudflare Worker built with the Hono framework and deployed via SST, served at `history.agentrelay.com`. It is stateless request-handling in front of the database. The main route is `POST /v1/ingest`, which takes a batch of records plus the machine identity and sync cursors and returns `{ batchId, received, accepted, cursors }`.
 
-### Storage layer
+### Storage (Neon + pgvector)
 
-Per-row encryption: every stored row is an encrypted blob keyed by a one-way content hash used for deduplication, alongside the nonce, authentication tag, and schema version. No plaintext content is stored anywhere in the database. The server cannot reconstruct user data even with full database access.
+The default tier stores history in **Neon** (managed Postgres) through Drizzle ORM, with the **pgvector** extension providing an HNSW index over 1536-dimension embeddings for semantic search. A `convergence_events` row holds the scrubbed content, task metadata, token/cost fields (`inputTokens`, `outputTokens`, `costUsdMicros`, `model`, `provider`), and the embedding. A `machines` table tracks per-machine sync cursors.
 
 ### Auth service
 
-Handles identity and tenant scoping. Authentication establishes *who you are* and which organization you belong to — it grants no decryption access. Identity and encryption-key custody are deliberately separate concerns: logging in does not unlock content. The auth service also handles team membership and seat counting for billing.
+`ai-hist login` rides Agent Relay Cloud's device flow; the cloud verifies the token and derives `{ userId, orgId, workspaceId }`. Sessions are stored as token *hashes* (never plaintext) in `auth_sessions`, with short-lived access tokens and longer-lived refresh tokens. Every query hard-filters by `(orgId, workspaceId, userId, machineId)`, so there is no cross-tenant access.
 
-### Query API
+## Trust tiers
 
-Returns the ciphertext blobs the server stored, scoped to the authenticated user and org. The client decrypts locally. It also exposes hard-delete endpoints (for a single entry or a full account) and a streaming export endpoint that hands back all your ciphertext for the client to decrypt and write to a local file.
+The stack differs by tier. This is the single most important thing to understand about the cloud:
 
-### Hosted MCP endpoint
+- **Default tier — vendor-readable.** Content is stored readable in Neon (after secret/PII scrubbing) so it can power semantic search and the cross-team learning features. It is encrypted in transit and at rest at the infrastructure level, access-controlled, and never used to train models without explicit opt-in.
+- **Enterprise tier — end-to-end encrypted.** For teams whose content cannot leave their boundary, the Enterprise tier stores opaque ciphertext in Cloudflare **D1** (metadata) and **R2** (encrypted blobs), or self-hosts in your own VPC. This tier trades the cross-team flywheel for total privacy.
 
-Lets you point Claude and other MCP clients at a hosted URL instead of running a local MCP server. This is the one place data is transiently decrypted server-side to fulfill tool calls; it is opt-in and clearly disclosed, and the local MCP server remains the zero-trust default. See [Privacy](/docs/loop/privacy) for the trade-off.
-
-### Web dashboard
-
-A single-page app that does all decryption in the browser. On login it pulls your encrypted entries, unlocks your key locally, decrypts into an in-memory index, and runs search client-side. No decrypted content — not even a search query — is sent back to the server.
-
-## What the server can see
-
-The server holds your encrypted blobs plus a thin layer of metadata it needs to operate: your identity and org, your entry count (for billing), each entry's creation timestamp (for sync ordering), and a content hash (for deduplication). The prompt text, project path, session ID, source, and trajectory decisions are all encrypted. The content hash is one-way and reveals only that two entries are duplicates.
-
-## Where the CLI fits
-
-The cloud commands are additive. `ai-hist cloud login` sets up auth and stores your key in the OS keychain; `ai-hist cloud sync` and `ai-hist cloud watch` push encrypted entries; `ai-hist cloud pull` fetches and decrypts them onto a new machine; `ai-hist cloud export` and `ai-hist cloud delete` give you data portability and deletion. Your local-only commands are untouched.
+See [Privacy](/docs/loop/privacy) for the data-handling model of each tier.
 
 <CardGroup cols={2}>
   <Card title="Privacy" href="/docs/loop/privacy">
-    The encryption model and its honest limits.
+    What is scrubbed, what is readable, and the two trust tiers.
   </Card>
   <Card title="Cloud" href="/docs/loop/cloud">
-    What cloud adds and how to opt in.
+    What pushing to the cloud adds and how to opt in.
   </Card>
 </CardGroup>

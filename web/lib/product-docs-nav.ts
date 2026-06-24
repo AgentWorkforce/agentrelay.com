@@ -47,6 +47,7 @@ export const fileSection: ProductDocSection = {
     {
       title: 'Concepts',
       items: [
+        { title: 'Events and webhooks', slug: 'events' },
         { title: 'Mount layout', slug: 'mount-layout' },
         { title: 'Reads and writes', slug: 'reads-and-writes' },
         { title: 'Per-agent ACLs', slug: 'acls' },
@@ -56,6 +57,7 @@ export const fileSection: ProductDocSection = {
     {
       title: 'Running Relayfile',
       items: [
+        { title: 'Self-hosting', slug: 'self-hosting' },
         { title: 'Run locally', slug: 'run-locally' },
         { title: 'Local development', slug: 'local-development' },
         { title: 'Mounting a workspace', slug: 'mounting' },

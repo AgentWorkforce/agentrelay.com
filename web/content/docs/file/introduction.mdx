@@ -1,19 +1,55 @@
 ---
 title: 'Relayfile'
-description: 'The event layer for AI agents — normalize SaaS webhooks into a consistent, ACL-scoped file tree your agents read and write with ls, cat, and grep.'
+description: 'When a SaaS event fires, your agent wakes up with the full context already on disk. No API calls, no webhook parsing, no ingestion code.'
 ---
 
-Your SaaS tools are always firing events. A Linear issue is created, a Notion page edited, a GitHub PR opened — and something should react. But every provider fires webhooks differently: different payload shapes, different auth schemes, different retry semantics. Building that normalization for each provider is the plumbing nobody wants to write.
+A page is updated in Notion, a Linear issue changes state, a Hubspot deal is closed and you want your AI agent to react to it in real time proactively. 
 
-Relayfile normalizes webhooks from Linear, Notion, GitHub, Slack, HubSpot, Salesforce, and the rest of your SaaS stack into a consistent, ACL'd file tree, then delivers them to your agents. Agents wake up to a ready filesystem, read what changed, and write back — using `cat`, `grep`, and file-write operations they already know. One integration point. Zero webhook parsing.
 
-LLMs are far better at reading files than calling typed tools — the filesystem is the most-trained-on API in existence. Relayfile leans on that instead of fighting it.
+How do you do that today? In each system you configure webhook notifications and a target address, then wire up provider-specific logic to invoke your agent and react to the payload. Often you also have to call the API for additional data so the agent has everything it needs.
+
+
+What if you could do this with just a few lines of code and your agent wakes with all the context it needs in its filesystem?
+
+Relayfile materializes your full provider state as a file tree and keeps it current with webhooks. When an event fires, `/linear/issues/ENG-123.json` is already there. `/linear/issues/by-state/triage/` is already there. No API calls needed.
+
+
+```bash
+relayfile listen \
+  --path "/linear/issues/by-state/triage/**" \
+  --event file.created \
+  --run "claude --print 'Triage this: {{path}}'"
+```
+
+
+## Connect a provider
+
+<CodeGroup>
+```bash CLI
+relayfile setup --provider linear
+```
+```typescript SDK
+import { RelayfileSetup } from '@relayfile/sdk/cli'
+import { onWrite } from '@relayfile/sdk'
+
+const setup = await RelayfileSetup.login()
+const workspace = await setup.createWorkspace({ name: 'my-workspace' })
+
+const { connectLink } = await workspace.connectIntegration('linear')
+if (connectLink) {
+  console.log('Authorize Linear:', connectLink)
+  await workspace.waitForConnection('linear')
+}
+```
+</CodeGroup>
 
 ## The entire interface
 
-There is no new SDK to learn and no MCP schemas eating your context window — just the bash and file IO an agent already knows.
+The agent can simply read and write back to files to make changes:
 
 ```bash
+$ relayfile mount --local-dir ./mount   # mirror the workspace to disk
+
 $ ls mount/
 github  linear  notion  slack
 
@@ -28,19 +64,6 @@ $ grep -l '"state":"Todo"' mount/linear/issues/*.json
 
 `ls` lists what's there. `cat` reads a record. Writing a JSON file patches it back to the provider. Removing a file deletes the record. The filesystem is the protocol.
 
-## Why files beat tool schemas
-
-A typical MCP setup loads 100+ tool schemas into every agent session before any work happens. Files load nothing — context cost is exactly what the agent opens. An LLM is also more reliable reading a directory than juggling N typed APIs, and `ls` gives you exhaustive enumeration where a tool call returns paginated search results.
-
-There are three reasons the file interface wins, covered in depth on [Why files](/docs/file/why-files):
-
-- **Reactive invocation.** Provider webhooks normalize into file events. Your agent wakes up to the changed file, not a raw payload it has to parse.
-- **Coordination.** Multiple agents working through the same filesystem see each other's writes immediately, scoped by ACL.
-- **Context efficiency.** Files load nothing into context until an agent reads them.
-
-<Note>
-  Relayfile is the file layer of the Agent Relay platform. Where Agent Relay gives agents a [communication layer](/docs/introduction) — messaging, delivery, and actions — Relayfile gives them the integration layer: every connected SaaS tool exposed as files.
-</Note>
 
 ## Where to go next
 

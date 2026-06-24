@@ -1,9 +1,9 @@
 ---
 title: 'Relayloop Cloud'
-description: 'An opt-in sync target that adds durable backup, cross-device access, unified search, team recall, a web UI, and a hosted MCP endpoint.'
+description: 'An opt-in push target that adds durable off-machine backup and team features like pair check, with a web UI and cross-device pull on the roadmap.'
 ---
 
-Relayloop Cloud is a hosted layer on top of the local-first `ai-hist` CLI. The CLI stays exactly as it is — fully functional with no account, working offline. Cloud is an opt-in sync target that adds the things a local SQLite file on one laptop cannot: durable backup, access from every machine, search across your whole team, a web UI, and a hosted MCP endpoint.
+Relayloop Cloud is a hosted layer on top of the local-first `ai-hist` CLI. The CLI stays exactly as it is — fully functional with no account, working offline. Cloud is an opt-in push target that adds what a local SQLite file on one laptop cannot: a durable off-machine copy of your history and team features built on a shared org corpus (today, `pair check`). A web UI, cross-device pull, a hosted MCP endpoint, and the Insights flywheel are on the roadmap.
 
 The core promise is simple, and architectural rather than just policy: your data is yours to store and yours to remove at any time. See [Privacy](/docs/loop/privacy) for the full data-handling model.
 
@@ -13,38 +13,37 @@ A local database is fast and private, but it lives on one disk. The moment you w
 
 <CardGroup cols={2}>
   <Card title="Durable backup">
-    Local files get corrupted or deleted. Cloud history is durable — your record survives a wiped disk or a new machine.
-  </Card>
-  <Card title="Cross-device access">
-    Sync history to a new machine instantly and never lose a conversation between devices.
-  </Card>
-  <Card title="Unified search">
-    One place to search across every AI tool you use, from any device.
+    Local files get corrupted or deleted. Pushing to the cloud keeps a durable copy of your record off your laptop.
   </Card>
   <Card title="Team recall">
-    Search your teammates' shared sessions so the team never solves the same problem twice.
+    Once your team pushes to the same org, your collective history powers `pair check` — advisory warnings from past work before a risky change.
   </Card>
-  <Card title="Web UI">
-    A dashboard to search, browse sessions, and view stats in the browser — no terminal required.
+  <Card title="Cross-device access (coming soon)">
+    Hydrate a new machine from your cloud history. Today push is one-way (local → cloud); pull is on the roadmap.
   </Card>
-  <Card title="Hosted MCP">
-    Point your Claude config at a URL instead of running a local MCP server.
+  <Card title="Web UI (coming soon)">
+    A dashboard to search, browse sessions, and view Burn stats in the browser — no terminal required.
+  </Card>
+  <Card title="Hosted MCP (coming soon)">
+    Point your Claude config at a hosted URL instead of running the local `npx ai-hist-mcp` server.
+  </Card>
+  <Card title="Insights (coming soon)">
+    Cross-team patterns turned into proactive guidance and repo rules.
   </Card>
 </CardGroup>
 
 ## Opt in from the CLI
 
-Cloud lives under the `ai-hist cloud` command group. Log in once, then push:
+There is no `ai-hist cloud` subcommand. Cloud is two top-level commands: authenticate once, then push.
 
 ```bash
-ai-hist cloud login    # authenticate and set up your encryption key
-ai-hist cloud sync     # encrypt + push new entries since last push
-ai-hist cloud pull     # fetch + decrypt remote entries into the local DB
-ai-hist cloud watch    # continuous push loop, like local watch
-ai-hist cloud status   # show sync state, entry count, last push
+ai-hist login          # authenticate via Agent Relay Cloud; stores a token in $RELAYHISTORY_HOME
+ai-hist push           # send new local history to the cloud (incremental, idempotent)
 ```
 
-Your local commands — `sync`, `search`, `show`, `session`, `stats` — do not change. Cloud sync layers on top of them.
+`push` is cursor-based — it only sends rows past the last accepted cursor, and the server deduplicates, so it is safe to run often (or on a loop alongside `ai-hist watch`). Exclude specific sessions with `--incognito <session_id>`. Your local commands — `sync`, `search`, `show`, `session`, `stats` — do not change.
+
+Once your history is in the cloud, two team features build on it: `ai-hist pair check` surfaces advisory warnings from your team's past work before a risky change, and `ai-hist learn distill` turns sessions into structured decisions and findings. See the [CLI reference](/docs/loop/cli).
 
 ## Local vs. cloud at a glance
 
@@ -53,11 +52,12 @@ Your local commands — `sync`, `search`, `show`, `session`, `stats` — do not 
 | Sync, search, show, stats | Yes | Yes |
 | Works offline | Yes | Local CLI still works offline |
 | No account required | Yes | Account required |
-| Durable backup | No (single disk) | Yes |
-| Cross-device access | No | Yes |
-| Web UI | No | Yes |
-| Hosted MCP endpoint | Local MCP server | Hosted endpoint (opt-in) |
-| Team recall / shared sessions | No | Yes ([Teams](/docs/loop/teams)) |
+| Durable off-machine backup | No (single disk) | Yes (via `push`) |
+| Team recall (`pair check`) | No | Yes |
+| Cross-device pull | No | Coming soon |
+| Web UI / Burn dashboard | No | Coming soon |
+| Hosted MCP endpoint | Local (`npx ai-hist-mcp`) | Coming soon |
+| Shared session management / Insights | No | Coming soon ([Teams](/docs/loop/teams)) |
 
 ## The local CLI never breaks
 

@@ -48,22 +48,22 @@ For a fully managed background loop, schedule `ai-hist sync` with your OS schedu
 echo "* * * * * ~/.local/bin/ai-hist sync >> /tmp/ai-hist-sync.log 2>&1" | crontab -
 ```
 
-## Cloud sync
+## Pushing to the cloud
 
-Everything above is local. When you want your history backed up durably and available on every machine, opt into Relayloop Cloud and push with the cloud sync loop:
+Everything above is local. When you want your history in [Relayloop Cloud](/docs/loop/cloud) — for durable backup and team features — authenticate once, then push:
 
 ```bash
-ai-hist cloud sync     # encrypt + push new entries since last push
-ai-hist cloud watch    # continuous push loop, like local watch
+ai-hist login    # authenticate via Agent Relay Cloud
+ai-hist push     # send new local history to the cloud (incremental, idempotent)
 ```
 
-Local sync and cloud sync are independent. The local CLI keeps working offline, and cloud sync layers durable backup and cross-device access on top.
+There is no `ai-hist cloud` subcommand — `push` is the cloud counterpart to local `sync`. It is cursor-based and idempotent, so you can run it as often as you like. Local `sync` and cloud `push` are independent: the local CLI keeps working offline either way.
 
 <CardGroup cols={2}>
   <Card title="Cloud" href="/docs/loop/cloud">
-    What cloud sync adds and how to opt in.
+    What pushing to the cloud adds and how to opt in.
   </Card>
   <Card title="Cloud architecture" href="/docs/loop/cloud-architecture">
-    How local sync reads, encrypts, and pushes to the cloud.
+    The cloud stack and how a pushed entry is stored.
   </Card>
 </CardGroup>
