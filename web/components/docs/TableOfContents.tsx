@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 
 import type { TocItem } from '../../lib/docs';
+import { getProductSectionForPath } from '../../lib/product-docs-nav';
 import { useDocsLanguage } from './DocsLanguageContext';
 import { DocsVersionSelect } from './DocsVersionSelect';
 import styles from './docs.module.css';
@@ -10,6 +12,8 @@ import styles from './docs.module.css';
 export function TableOfContents({ items }: { items: TocItem[] }) {
   const [activeId, setActiveId] = useState('');
   const { language, setLanguage } = useDocsLanguage();
+  const pathname = usePathname() ?? '/docs';
+  const productSection = getProductSectionForPath(pathname);
 
   useEffect(() => {
     const headings = items.map((item) => document.getElementById(item.id)).filter(Boolean) as HTMLElement[];
@@ -47,7 +51,13 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
           </select>
         </label>
       </div>
-      <DocsVersionSelect />
+      {!productSection && <DocsVersionSelect />}
+      {productSection?.version && (
+        <div className={styles.versionControl}>
+          <span className={styles.versionLabel}>Version</span>
+          <span className={styles.versionStatic}>v{productSection.version}</span>
+        </div>
+      )}
 
       {items.length > 0 && (
         <nav className={styles.tocNav} aria-label="On this page">

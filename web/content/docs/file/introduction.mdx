@@ -24,13 +24,17 @@ relayfile listen \
 
 ## Connect a provider
 
-<CodeGroup>
-```bash CLI
+Connect with the CLI:
+
+```bash
 relayfile setup --provider linear
 ```
-```typescript SDK
+
+Or drive it from code — use the **Language** switcher (top right) to pick TypeScript or Python:
+
+<CodeGroup>
+```typescript TypeScript
 import { RelayfileSetup } from '@relayfile/sdk/cli'
-import { onWrite } from '@relayfile/sdk'
 
 const setup = await RelayfileSetup.login()
 const workspace = await setup.createWorkspace({ name: 'my-workspace' })
@@ -40,6 +44,17 @@ if (connectLink) {
   console.log('Authorize Linear:', connectLink)
   await workspace.waitForConnection('linear')
 }
+```
+```python Python
+import os
+from relayfile import RelayFileClient
+
+# The Python SDK is the data-plane client — connect a provider with the CLI
+# above, then point the client at the workspace token to read and write:
+client = RelayFileClient(
+    "https://api.relayfile.dev",
+    lambda: os.environ["RELAYFILE_TOKEN"],
+)
 ```
 </CodeGroup>
 
