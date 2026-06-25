@@ -41,7 +41,12 @@ function fail(msg) {
   process.exit(1);
 }
 
-if (!KEY) fail('INDEXNOW_KEY is not set — skipping. (set it as a repo variable)');
+if (!KEY) {
+  // Expected on forks / non-production runs where the var isn't exposed. Exit 0
+  // so the (continue-on-error) step stays green rather than showing a red X.
+  console.log('indexnow: INDEXNOW_KEY is not set — skipping.');
+  process.exit(0);
+}
 
 const [, , beforeArg, afterArg] = process.argv;
 const after = afterArg || 'HEAD';
@@ -89,9 +94,14 @@ function pathsForFile(file) {
 }
 
 async function fetchSitemapUrls() {
-  const res = await fetch(`${SITE_URL}/sitemap.xml`, {
-    headers: { 'user-agent': 'agentrelay-indexnow/1.0' },
-  });
+  let res;
+  try {
+    res = await fetch(`${SITE_URL}/sitemap.xml`, {
+      headers: { 'user-agent': 'agentrelay-indexnow/1.0' },
+    });
+  } catch (err) {
+    fail(`could not reach ${SITE_URL}/sitemap.xml: ${err.message}`);
+  }
   if (!res.ok) fail(`could not fetch sitemap.xml (${res.status})`);
   const xml = await res.text();
   const urls = new Set();
@@ -134,7 +144,12 @@ const added = [...current].filter((u) => !snapshot.has(u));
 const files = changedFiles();
 const wantAllAgents = files.some((f) => pathsForFile(f).includes('__AGENTS__'));
 const changedCandidates = new Set(
-  files.flatMap(pathsForFile).filter((p) => p && p !== '__AGENTS__').map((p) => `${SITE_URL}${p}`),
+  files
+    .flatMap(pathsForFile)
+    .filter((p) => p && p !== '__AGENTS__')
+    // Build URLs the same way sitemap.ts does (new URL against the origin) so
+    // they match the sitemap exactly — including the homepage's trailing slash.
+    .map((p) => new URL(p, SITE_URL).toString()),
 );
 if (wantAllAgents) {
   for (const u of current) if (u.startsWith(`${SITE_URL}/agents/`)) changedCandidates.add(u);
@@ -146,15 +161,10 @@ const changed = [...changedCandidates].filter((u) => current.has(u) && snapshot.
 const removed = [...snapshot].filter((u) => !current.has(u));
 if (removed.length) console.log(`indexnow: ${removed.length} URL(s) no longer in sitemap (not auto-submitted): ${removed.join(', ')}`);
 
-let urlList = [...new Set([...added, ...changed])];
+const urlList = [...new Set([...added, ...changed])];
 
 if (bootstrap) {
   console.log(`indexnow: no prior snapshot — bootstrapping. Announcing all ${urlList.length} published URL(s) once; future deploys submit only the delta.`);
-}
-
-if (urlList.length > MAX_URLS) {
-  console.log(`indexnow: capping submission at ${MAX_URLS} of ${urlList.length} URLs (IndexNow per-request limit).`);
-  urlList = urlList.slice(0, MAX_URLS);
 }
 
 if (urlList.length === 0) {
@@ -172,18 +182,31 @@ if (DRY_RUN) {
   process.exit(0);
 }
 
-const res = await fetch(ENDPOINT, {
-  method: 'POST',
-  headers: { 'content-type': 'application/json; charset=utf-8' },
-  body: JSON.stringify({ host: HOST, key: KEY, keyLocation: `${SITE_URL}/${KEY}.txt`, urlList }),
-});
+// Split into IndexNow's per-request limit so nothing is silently dropped (and
+// never recorded as submitted when it wasn't).
+const batches = [];
+for (let i = 0; i < urlList.length; i += MAX_URLS) batches.push(urlList.slice(i, i + MAX_URLS));
 
-// 200 = accepted, 202 = accepted/validation pending. Both are success.
-if (res.status === 200 || res.status === 202) {
-  console.log(`indexnow: ok (${res.status}).`);
-  // Persist the authoritative current set so the next deploy diffs against it.
-  writeSnapshot([...current]);
-} else {
-  const body = await res.text().catch(() => '');
-  fail(`endpoint returned ${res.status}: ${body}`);
+for (let i = 0; i < batches.length; i++) {
+  const batch = batches[i];
+  let res;
+  try {
+    res = await fetch(ENDPOINT, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ host: HOST, key: KEY, keyLocation: `${SITE_URL}/${KEY}.txt`, urlList: batch }),
+    });
+  } catch (err) {
+    fail(`could not reach IndexNow endpoint: ${err.message}`);
+  }
+  // 200 = accepted, 202 = accepted/validation pending. Both are success.
+  if (res.status !== 200 && res.status !== 202) {
+    const body = await res.text().catch(() => '');
+    fail(`endpoint returned ${res.status}: ${body}`);
+  }
+  console.log(`indexnow: batch ${i + 1}/${batches.length} ok (${res.status}, ${batch.length} URL(s)).`);
 }
+
+// Persist the authoritative current set only after every batch was accepted, so
+// nothing is marked submitted unless it actually was.
+writeSnapshot([...current]);
