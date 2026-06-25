@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const legacyDoc = getDoc(slug, 'v7.1.1');
     const canonical = absoluteUrl(`/docs/7.1.1/${slug}`);
     return {
-      title: legacyDoc?.frontmatter.title ?? 'Not Found',
+      title: legacyDoc?.frontmatter.metaTitle ?? legacyDoc?.frontmatter.title ?? 'Not Found',
       description: legacyDoc?.frontmatter.description,
       alternates: { canonical },
     };
@@ -44,15 +44,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Not Found' };
   }
 
+  const seoTitle = doc.frontmatter.metaTitle ?? doc.frontmatter.title;
+
   return {
-    title: doc.frontmatter.title,
+    title: seoTitle,
     description: doc.frontmatter.description,
     alternates: {
       canonical: absoluteUrl(`/docs/${slug}`),
       types: { 'text/markdown': getDocMarkdownUrl(slug) },
     },
     openGraph: {
-      title: doc.frontmatter.title,
+      title: seoTitle,
       description: doc.frontmatter.description,
       url: absoluteUrl(`/docs/${slug}`),
       type: 'article',
@@ -60,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: 'summary_large_image',
-      title: doc.frontmatter.title,
+      title: seoTitle,
       description: doc.frontmatter.description,
       images: [absoluteUrl(`/docs/${slug}/og.png`)],
     },

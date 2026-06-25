@@ -6,6 +6,8 @@ import type { DocsVersionId } from './docs-versions';
 export interface DocFrontmatter {
   title: string;
   description: string;
+  /** Optional SEO title used only in page metadata, not the visible H1 or nav. */
+  metaTitle?: string;
 }
 
 export interface SearchEntry {
@@ -177,6 +179,7 @@ export function getDoc(
     frontmatter: {
       title: (data.title as string) || slug,
       description: (data.description as string) || '',
+      metaTitle: (data.metaTitle as string) || undefined,
     },
     content: processed,
     toc,
