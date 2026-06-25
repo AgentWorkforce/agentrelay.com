@@ -2,10 +2,18 @@
 // Submit changed URLs to IndexNow (Bing, Yandex, Seznam, Naver, DuckDuckGo).
 //
 // IndexNow is a "this changed, please recrawl" ping — NOT a sitemap replacement
-// and NOT used by Google. We therefore submit only the delta for a deploy, never
-// the whole site. Candidate URLs are derived from the files changed between two
-// commits, then intersected with the live sitemap.xml so we never submit a 404
-// or an unpublished/dynamic route.
+// and NOT used by Google. We therefore submit only the delta for a deploy.
+//
+// Certainty comes from a committed snapshot of the last deploy's published URL
+// set (indexnow-state.json). Each run:
+//   1. current = the URL set from the freshly deployed sitemap.xml (authoritative)
+//   2. added   = current − snapshot                         (new pages — certain)
+//   3. changed = URLs from this deploy's git diff that already existed
+//                (content edits don't change the URL set, so the snapshot diff
+//                 alone can't see them)
+//   4. submit added ∪ changed, then rewrite the snapshot for the workflow to
+//      commit back. Anything submitted is always intersected with `current`, so
+//      we never ping a 404 / unpublished / dynamic route.
 //
 // Usage:
 //   node scripts/indexnow-submit.mjs <beforeSha> <afterSha>
@@ -13,15 +21,20 @@
 // Env:
 //   INDEXNOW_KEY   (required) the key, also hosted at /<key>.txt
 //   SITE_URL       (optional) defaults to https://agentrelay.com
-//   DRY_RUN        (optional) if "1"/"true", log the payload but don't POST
+//   STATE_FILE     (optional) defaults to ./indexnow-state.json (cwd = web/)
+//   DRY_RUN        (optional) "1"/"true" → log the payload, don't POST or write
 
 import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const SITE_URL = (process.env.SITE_URL || 'https://agentrelay.com').replace(/\/$/, '');
 const HOST = new URL(SITE_URL).host;
 const KEY = process.env.INDEXNOW_KEY;
+const STATE_FILE = process.env.STATE_FILE || 'indexnow-state.json';
 const DRY_RUN = /^(1|true)$/i.test(process.env.DRY_RUN || '');
 const ENDPOINT = 'https://api.indexnow.org/indexnow';
+// IndexNow caps a single submission at 10k URLs.
+const MAX_URLS = 10000;
 
 function fail(msg) {
   console.error(`indexnow: ${msg}`);
@@ -33,23 +46,28 @@ if (!KEY) fail('INDEXNOW_KEY is not set — skipping. (set it as a repo variable
 const [, , beforeArg, afterArg] = process.argv;
 const after = afterArg || 'HEAD';
 // On the first push to a branch GitHub passes an all-zero "before" SHA; fall
-// back to the single-commit diff so we still submit that deploy's changes.
+// back to the single-commit diff so we still catch that deploy's content edits.
 const ZERO = '0000000000000000000000000000000000000000';
 const before = !beforeArg || beforeArg === ZERO ? `${after}~1` : beforeArg;
 
 function changedFiles() {
   try {
-    const out = execFileSync('git', ['diff', '--name-only', `${before}..${after}`], {
+    return execFileSync('git', ['diff', '--name-only', `${before}..${after}`], {
       encoding: 'utf8',
-    });
-    return out.split('\n').map((l) => l.trim()).filter(Boolean);
+    })
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
   } catch (err) {
-    fail(`git diff ${before}..${after} failed: ${err.message}`);
+    // A missing range (shallow clone, rewritten history) shouldn't break the
+    // run — the snapshot diff still catches new pages. Just skip "changed".
+    console.warn(`indexnow: git diff ${before}..${after} failed (${err.message}); skipping changed-page detection.`);
+    return [];
   }
 }
 
-// Map a repo-relative changed file to the public URL path(s) it affects.
-// Paths here are relative to the repo root (the workflow runs from there).
+// Map a repo-relative changed file to the public path(s) it affects. Paths are
+// relative to the repo root (git diff emits root-relative paths from any cwd).
 function pathsForFile(file) {
   // Blog + docs content mirror the route tree: content/<x>.mdx -> /<x>
   let m = file.match(/^web\/content\/(blog\/.+|docs\/.+)\.mdx$/);
@@ -60,12 +78,11 @@ function pathsForFile(file) {
   m = file.match(/^web\/app\/(.+)\/page\.(tsx|mdx)$/);
   if (m && !m[1].includes('[')) return [`/${m[1]}`];
 
-  // Root page.
   if (/^web\/app\/page\.tsx$/.test(file)) return ['/'];
 
-  // The /agents catalog is data-driven (lib/agents.ts), so a change there can
-  // touch every agent page. Signal "all /agents URLs" and let the sitemap
-  // intersection narrow it to what's actually published.
+  // The /agents catalog is data-driven (lib/agents.ts): a change there can
+  // touch every agent page. Signal "all /agents URLs"; the intersection with
+  // the live sitemap below narrows it to what's actually published.
   if (file === 'web/lib/agents.ts') return ['__AGENTS__'];
 
   return [];
@@ -81,65 +98,91 @@ async function fetchSitemapUrls() {
   for (const match of xml.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/g)) {
     urls.add(match[1].trim());
   }
+  if (urls.size === 0) fail('sitemap.xml contained no <loc> entries');
   return urls;
 }
 
-const files = changedFiles();
-if (files.length === 0) {
-  console.log('indexnow: no changed files in range — nothing to submit.');
-  process.exit(0);
-}
-
-const wantAllAgents = files.some((f) => pathsForFile(f).includes('__AGENTS__'));
-const candidatePaths = new Set(
-  files.flatMap(pathsForFile).filter((p) => p && p !== '__AGENTS__'),
-);
-
-const sitemapUrls = await fetchSitemapUrls();
-const submit = new Set();
-
-for (const path of candidatePaths) {
-  const url = `${SITE_URL}${path}`;
-  if (sitemapUrls.has(url)) submit.add(url);
-  else console.log(`indexnow: skip (not in sitemap): ${url}`);
-}
-
-if (wantAllAgents) {
-  for (const url of sitemapUrls) {
-    if (url.startsWith(`${SITE_URL}/agents/`)) submit.add(url);
+function readSnapshot() {
+  if (!existsSync(STATE_FILE)) return new Set();
+  try {
+    const data = JSON.parse(readFileSync(STATE_FILE, 'utf8'));
+    return new Set(Array.isArray(data.urls) ? data.urls : []);
+  } catch (err) {
+    fail(`could not parse ${STATE_FILE}: ${err.message}`);
   }
 }
 
-const urlList = [...submit];
-if (urlList.length === 0) {
-  console.log('indexnow: no publishable changed URLs — nothing to submit.');
-  process.exit(0);
+function writeSnapshot(urls) {
+  const data = {
+    host: HOST,
+    count: urls.length,
+    // Sorted for stable diffs / clean review of the committed file.
+    urls: [...urls].sort(),
+  };
+  writeFileSync(STATE_FILE, `${JSON.stringify(data, null, 2)}\n`);
 }
 
-const payload = {
-  host: HOST,
-  key: KEY,
-  keyLocation: `${SITE_URL}/${KEY}.txt`,
-  urlList,
-};
+// ── 1. authoritative current set ────────────────────────────────────────────
+const current = await fetchSitemapUrls();
+
+// ── 2. new pages: certain, from the committed snapshot ───────────────────────
+const snapshot = readSnapshot();
+const bootstrap = snapshot.size === 0;
+const added = [...current].filter((u) => !snapshot.has(u));
+
+// ── 3. edited existing pages: from this deploy's git diff ─────────────────────
+const files = changedFiles();
+const wantAllAgents = files.some((f) => pathsForFile(f).includes('__AGENTS__'));
+const changedCandidates = new Set(
+  files.flatMap(pathsForFile).filter((p) => p && p !== '__AGENTS__').map((p) => `${SITE_URL}${p}`),
+);
+if (wantAllAgents) {
+  for (const u of current) if (u.startsWith(`${SITE_URL}/agents/`)) changedCandidates.add(u);
+}
+// Only existing, still-published URLs (added ones are already covered above).
+const changed = [...changedCandidates].filter((u) => current.has(u) && snapshot.has(u));
+
+// ── 4. submit the union, then persist the new snapshot ───────────────────────
+const removed = [...snapshot].filter((u) => !current.has(u));
+if (removed.length) console.log(`indexnow: ${removed.length} URL(s) no longer in sitemap (not auto-submitted): ${removed.join(', ')}`);
+
+let urlList = [...new Set([...added, ...changed])];
+
+if (bootstrap) {
+  console.log(`indexnow: no prior snapshot — bootstrapping. Announcing all ${urlList.length} published URL(s) once; future deploys submit only the delta.`);
+}
+
+if (urlList.length > MAX_URLS) {
+  console.log(`indexnow: capping submission at ${MAX_URLS} of ${urlList.length} URLs (IndexNow per-request limit).`);
+  urlList = urlList.slice(0, MAX_URLS);
+}
+
+if (urlList.length === 0) {
+  console.log('indexnow: no new or changed URLs to submit.');
+  // Snapshot already matches current (no added/removed) — nothing to persist.
+  if (removed.length && !DRY_RUN) writeSnapshot([...current]);
+  process.exit(0);
+}
 
 console.log(`indexnow: submitting ${urlList.length} URL(s):`);
 for (const u of urlList) console.log(`  ${u}`);
 
 if (DRY_RUN) {
-  console.log('indexnow: DRY_RUN set — not posting.');
+  console.log('indexnow: DRY_RUN set — not posting or writing snapshot.');
   process.exit(0);
 }
 
 const res = await fetch(ENDPOINT, {
   method: 'POST',
   headers: { 'content-type': 'application/json; charset=utf-8' },
-  body: JSON.stringify(payload),
+  body: JSON.stringify({ host: HOST, key: KEY, keyLocation: `${SITE_URL}/${KEY}.txt`, urlList }),
 });
 
 // 200 = accepted, 202 = accepted/validation pending. Both are success.
 if (res.status === 200 || res.status === 202) {
   console.log(`indexnow: ok (${res.status}).`);
+  // Persist the authoritative current set so the next deploy diffs against it.
+  writeSnapshot([...current]);
 } else {
   const body = await res.text().catch(() => '');
   fail(`endpoint returned ${res.status}: ${body}`);

@@ -11,7 +11,8 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  # write so the IndexNow step can commit the updated sitemap snapshot back.
+  contents: write
 
 jobs:
   deploy-production:
@@ -57,10 +58,11 @@ jobs:
         run: npx wrangler deploy
 
       # Ping IndexNow (Bing/Yandex/Seznam/Naver/DuckDuckGo — not Google) with the
-      # URLs changed in this deploy. Submits only the delta intersected with the
-      # live sitemap, never the whole site. Production only; never runs on PR
-      # previews. The key is public (served at /<key>.txt), so it's fine inline;
-      # set the INDEXNOW_KEY repo var to override.
+      # pages new or changed in this deploy. Diffs the freshly deployed sitemap
+      # against the committed snapshot (web/indexnow-state.json) for new pages
+      # and the git range for content edits — never the whole site. Production
+      # only; never runs on PR previews. The key is public (served at /<key>.txt),
+      # so it's fine inline; set the INDEXNOW_KEY repo var to override.
       - name: Notify IndexNow of changed pages
         # Best-effort SEO ping after a successful deploy — never fail the deploy
         # over a search-engine notification.
@@ -70,3 +72,19 @@ jobs:
           INDEXNOW_KEY: ${{ vars.INDEXNOW_KEY || 'd15f21b935684761ad607fb06b70b3d5' }}
           SITE_URL: https://agentrelay.com
         run: node scripts/indexnow-submit.mjs "${{ github.event.before }}" "${{ github.sha }}"
+
+      # Persist the updated sitemap snapshot so the next deploy diffs against it.
+      # [skip ci] keeps this commit from re-triggering the deploy workflow.
+      - name: Commit updated IndexNow snapshot
+        continue-on-error: true
+        working-directory: web
+        run: |
+          if git diff --quiet -- indexnow-state.json; then
+            echo "indexnow: snapshot unchanged — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add indexnow-state.json
+          git commit -m "chore(seo): update IndexNow sitemap snapshot [skip ci]"
+          git push origin HEAD:main
