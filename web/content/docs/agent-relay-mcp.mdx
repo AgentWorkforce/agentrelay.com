@@ -27,6 +27,8 @@ Create a workspace first if you do not have a key:
 agent-relay workspace create support-triage
 ```
 
+Workspace keys use the `rk_live_*` prefix. The MCP server uses that key to bootstrap workspace access, then registered agents act with their own `at_live_*` tokens. See [Authentication](/docs/authentication).
+
 ## Messaging Tools
 
 | Tool | Purpose |

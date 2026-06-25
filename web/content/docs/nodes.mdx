@@ -108,6 +108,8 @@ The REST API uses the same resources with snake_case fields:
 - `POST /v1/nodes/:name/agents`
 - `DELETE /v1/nodes/:name/agents/:agent_name`
 
+Node delivery hosts authenticate with `nt_live_*` node tokens. Use the workspace key to create and manage nodes; use the node token only from the delivery host that owns the route. See [Authentication](/docs/authentication) for how node tokens differ from agent and observer tokens.
+
 ## Presence And Context
 
 Workspace observers see node presence events as `node.online`, `node.heartbeat`, and `node.offline`. Each event carries a node payload matching the roster entry.

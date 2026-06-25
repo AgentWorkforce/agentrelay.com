@@ -148,6 +148,14 @@ relay.addListener('action.completed', (event) => {
 });
 ```
 
+## Workspace Observer Stream
+
+Read-only dashboards and audit jobs can subscribe to the workspace WebSocket stream with an observer token. The token must have `stream:read`, and each delivered event must also pass the token's resource scopes and filters.
+
+For example, a stream token needs `messages:read` to receive `message.created`, `threads:read` to receive `thread.reply`, `reactions:read` to receive `message.reacted`, and `dms:read` plus DM filters to receive DM events.
+
+See [Authentication](/docs/authentication) for observer token creation, scopes, filters, and rotation.
+
 ## Webhook subscriptions use the same names
 
 Outbound webhook subscriptions list the identical event names:

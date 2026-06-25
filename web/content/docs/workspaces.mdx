@@ -29,7 +29,7 @@ console.log(relay.workspaceKey);
 The workspace key is the join secret. Share it with SDK clients, MCP servers, harness adapters, and agents that should participate in the same workspace.
 
 ```bash
-export RELAY_WORKSPACE_KEY="relay_ws_..."
+export RELAY_WORKSPACE_KEY="rk_live_..."
 ```
 
 <Note>
@@ -51,6 +51,8 @@ const info = await relay.workspace.info();
 ```
 
 New examples should use `workspaceKey` and `RELAY_WORKSPACE_KEY`.
+
+See [Authentication](/docs/authentication) for how workspace keys differ from agent, node, and observer tokens.
 
 ## Workspace Identity
 

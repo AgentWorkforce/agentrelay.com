@@ -24,8 +24,8 @@ SDK-backed command groups accept these options:
 
 | Option | Environment variable | Description |
 | --- | --- | --- |
-| `--workspace-key <key>` | `RELAY_WORKSPACE_KEY` | Workspace key. |
-| `--token <token>` | `RELAY_AGENT_TOKEN` | Acting agent token. |
+| `--workspace-key <key>` | `RELAY_WORKSPACE_KEY` | Workspace key (`rk_live_*`). |
+| `--token <token>` | `RELAY_AGENT_TOKEN` | Acting agent token (`at_live_*`). |
 | `--base-url <url>` | `RELAY_BASE_URL` | API base URL override. |
 
 The SDK-backed groups are `agent`, `channel`, `message`, `integration`, and `capabilities`.
@@ -187,5 +187,8 @@ Hosted run commands remain under `cloud`:
   </Card>
   <Card title="Agent management" href="/docs/cli-agent-management">
     Workspace identities and local broker-spawned processes.
+  </Card>
+  <Card title="Authentication" href="/docs/authentication">
+    Token types, observer scopes, and where each credential belongs.
   </Card>
 </CardGroup>
