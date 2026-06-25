@@ -42,6 +42,7 @@ export const docsNav: NavGroup[] = [
   {
     title: 'Delivery and sessions',
     items: [
+      { title: 'Architecture', slug: 'architecture' },
       { title: 'Delivery', slug: 'delivery' },
       { title: 'Nodes', slug: 'nodes' },
       { title: 'Harnesses', slug: 'harnesses' },

@@ -1,0 +1,128 @@
+---
+title: 'Architecture: nodes, the broker, and action runners'
+description: 'How Agent Relay routes reliable delivery through nodes, what the broker stack on a machine owns, and the vocabulary for brokers, the broker-pty-engine, the harness driver, and action runners.'
+---
+
+Agent Relay separates _what_ a message means from _where_ it is delivered. Messaging writes a
+durable record; [delivery](/docs/delivery) gets that record into a session. This page describes the
+delivery side end to end: the node model, the broker stack that runs on a machine, and the action
+runners that spawn and drive agents.
+
+## Everything is a node
+
+A **node** is a delivery endpoint connected to the engine over `/v1/node/ws`. Every agent is owned by
+a node, and that ownership is what tells the engine where to route the agent's future deliveries.
+
+Realtime delivery is **node-only** and reliable: each agent has a per-agent sequence, and the node
+acknowledges deliveries so the engine can replay anything unacked after a reconnect. The
+workspace stream at `/v1/ws` is **observer-only** — it feeds dashboards and audit views and is never a
+delivery path.
+
+A node has a **role**:
+
+| Role | Meaning |
+| --- | --- |
+| `broker` | A node that hosts many agents. One broker process is the machine's node. |
+| `direct` | A single self-connected agent — a "node of one." |
+
+When an agent is spawned through a node's action handler, it is **born owned by that node**
+(node-bound), so its messages route back to that node.
+
+<Note>
+  The node roles here — `broker` and `direct` — are the delivery-ownership model. The [Nodes](/docs/nodes)
+  page describes the registration _kinds_ (`direct_ws`, `fleet_ws`, `http_push`, `poll`) the SDK and REST
+  API expose. A `broker` node is a `fleet_ws` host; a `direct` node is an implicit `direct_ws` route.
+</Note>
+
+## The broker stack
+
+One broker stack runs per machine. It is the machine's node, and it is the only thing that talks to
+the engine.
+
+```text
+                  /v1/node/ws
+   engine  ◄──────────────────────►  broker  (role: broker — the machine's node)
+                                     │  • engine transport
+                                     │    (node + agent registration,
+                                     │     delivery routing, acks)
+                                     │  • broker-pty-engine
+                                     │
+                                     │   ◄── @agent-relay/harness-driver (SDK) ──┐
+                                     ▼                                           │
+                              broker-pty-engine                            action runner
+                              (spawns/owns PTYs)                  (TS / Swift / Python handlers)
+```
+
+**broker** — the process that is the machine's node (role `broker`). It is the **only** component that
+talks to the engine. It owns the engine transport (the `/v1/node/ws` connection, node and agent
+registration, delivery routing, and acks) and the broker-pty-engine.
+
+**broker-pty-engine** — the broker's internal generic PTY engine. It spawns and owns agent processes
+(PTYs), reads and writes to them, injects deliveries, and tears them down. It is harness-agnostic: no
+per-CLI logic is baked in.
+
+**@agent-relay/harness-driver** — the client SDK used to interface with the broker-pty-engine. A caller
+uses it to spawn a PTY (`{ command, args, env }`) and drive it. It is used **inside** action runners; it
+is not a standalone component.
+
+**action runner** — a pluggable, per-language (TypeScript / Swift / Python / …) handler host. It
+registers and runs **actions** (`spawn:claude`, `release`, or custom). When a handler needs a process,
+it calls `@agent-relay/harness-driver` to drive the broker-pty-engine. An action runner talks **only to
+the broker — never directly to the engine.**
+
+## Actions
+
+Spawning, releasing, and custom agent-to-agent RPC are all **actions**, invoked over the node
+connection. The engine — or another agent — **invokes** an action; the **action runner** handles it and
+replies with a result. See [Actions](/docs/actions) for the registration and discovery model agents use.
+
+## Delivery flow
+
+A message travels from the engine to an agent's session like this:
+
+1. The engine sends `deliver { delivery_id, agent_id, seq, payload }` over `/v1/node/ws`.
+2. The broker hands it to the broker-pty-engine, which injects it into the agent's PTY.
+3. The broker acks with `delivery.ack { agent, up_to_seq }`.
+
+Reactions and receipts ride the same `deliver` frame, distinguished by `payload.type`
+(`message.reacted` / `message.read`).
+
+## Spawn flow
+
+Spawning an agent runs through the action path:
+
+1. The engine sends `action.invoke(spawn:claude)`.
+2. The broker dispatches it to the action runner.
+3. The runner's handler resolves the CLI specifics and calls `@agent-relay/harness-driver`.
+4. The broker-pty-engine spawns the PTY.
+5. The broker registers the agent (node-bound) and replies `action.result`.
+
+Because the agent is registered node-bound, its future deliveries route back to the broker that spawned
+it — closing the loop with the delivery flow above.
+
+## Vocabulary
+
+| Term | Meaning |
+| --- | --- |
+| node | an engine delivery endpoint (`role: broker` or `direct`) |
+| broker | the machine's node (role `broker`): engine transport + broker-pty-engine; the only thing that talks to the engine |
+| broker-pty-engine | the broker's internal generic PTY engine (owns/drives PTYs) |
+| @agent-relay/harness-driver | client SDK to the broker-pty-engine, used inside action runners |
+| action runner | pluggable per-language handler host; runs actions; talks only to the broker |
+| invoke | calling an action |
+| action | a named capability (`spawn:claude`, `release`, custom) |
+
+<CardGroup cols={2}>
+  <Card title="Nodes" href="/docs/nodes">
+    Node kinds, registration, and the binding API the SDK and REST exposes.
+  </Card>
+  <Card title="Delivery" href="/docs/delivery">
+    Durable delivery records, receipts, retries, and delivery modes.
+  </Card>
+  <Card title="Actions" href="/docs/actions">
+    Registering, discovering, and invoking typed actions over MCP.
+  </Card>
+  <Card title="Harness driver package" href="/docs/harness-driver">
+    The optional package that drives managed session lifecycle.
+  </Card>
+</CardGroup>
