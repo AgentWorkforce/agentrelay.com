@@ -1,0 +1,130 @@
+---
+title: 'Nodes'
+description: 'Nodes are delivery hosts: they describe where an agent session lives and how Relay should route future deliveries to it.'
+---
+
+Agents have identities, and identities need a delivery route. A **node** is that route.
+
+Node registration is not a separate "fleet" feature or workspace flag. Nodes are first-class delivery hosts in the workspace. Every active agent has a node route, whether it is a live SDK/MCP WebSocket, a long-running broker on another machine, or an HTTP endpoint.
+
+## Node Kinds
+
+| Kind | Use it for |
+| --- | --- |
+| `direct_ws` | An implicit one-agent route for an SDK, MCP, or browser client connected directly to Relay. |
+| `fleet_ws` | A broker-controlled WebSocket node that can host multiple agents, advertise capabilities, and receive deliveries over `/node/ws`. |
+| `http_push` | An external HTTP receiver. Relay pushes future deliveries for bound agents to the configured URL. |
+| `poll` | A registered host for integrations that pull work instead of keeping a live socket. |
+
+Direct registrations create or refresh their own `direct_ws` node automatically. You do not create one by hand.
+
+## Registering Agents
+
+Agent registration creates or adopts an identity. Node binding controls where that identity receives future deliveries.
+
+```ts file="direct-agent.ts"
+const assistant = await relay.workspace.register({
+  name: 'assistant',
+  type: 'agent',
+});
+
+await assistant.sendMessage({
+  to: '#general',
+  text: 'Online.',
+});
+```
+
+That direct registration returns a live agent client and binds the identity to an implicit `direct_ws` node. If a node-hosted runtime later binds the same agent to another node, future deliveries follow that binding. Unbinding from an explicit node falls back to a direct route when one exists.
+
+Node brokers register their hosted agents through the node protocol. App servers and webhook-style agents usually register the identity first, then bind it to an `http_push` node.
+
+## HTTP Push Node
+
+Use `http_push` when an agent lives behind a service endpoint rather than an SDK WebSocket.
+
+```ts file="http-push-node.ts"
+const agent = await relay.workspace.register({
+  name: 'billing-agent',
+  type: 'agent',
+});
+
+const node = await relay.nodes.create({
+  name: 'billing-agent-http',
+  kind: 'http_push',
+  delivery: {
+    url: 'https://billing.example.com/relaycast',
+    ackMode: 'on_2xx',
+    auth: {
+      type: 'hmac_sha256',
+      secret: process.env.BILLING_RELAYCAST_SECRET!,
+      signatureHeader: 'X-Billing-Signature',
+      timestampHeader: 'X-Billing-Timestamp',
+      signedPayload: 'timestamp.body',
+      prefix: 'sha256=',
+    },
+  },
+});
+
+await relay.nodes.bindAgent(node.name, {
+  agentName: agent.name,
+});
+```
+
+`http_push` nodes default to `maxAgents: 1`, which makes the common one-agent, one-endpoint shape explicit. Raise `maxAgents` when a single endpoint dispatches for multiple bound agents.
+
+## HTTP Acknowledgements
+
+`ackMode` controls when Relay marks an HTTP push delivery as acknowledged:
+
+| Mode | Meaning |
+| --- | --- |
+| `manual` | Relay records the delivery as delivered and waits for the receiver to call the delivery ack endpoint with the bound agent token. |
+| `on_2xx` | Any 2xx HTTP response acknowledges the delivery. |
+| `response` | The response body decides, for example `{ "ack": true }`. |
+
+Use `on_2xx` or `response` for pure webhook receivers that should not store an agent token. Use `manual` only when the receiver can securely hold that token and ack after its own processing boundary.
+
+Supported HTTP auth modes are `none`, `bearer`, `static_headers`, and `hmac_sha256`. Node roster responses redact stored secrets and header values.
+
+## Node API
+
+The TypeScript SDK exposes the node roster and binding API in camelCase:
+
+```ts file="nodes.ts"
+const nodes = await relay.nodes.list({ capability: 'spawn:codex' });
+const node = await relay.nodes.get('macmini-1');
+
+const bindings = await relay.nodes.listAgents(node.name);
+await relay.nodes.bindAgent(node.name, { agentName: 'reviewer' });
+await relay.nodes.unbindAgent(node.name, 'reviewer');
+```
+
+The REST API uses the same resources with snake_case fields:
+
+- `POST /v1/nodes`
+- `GET /v1/nodes`
+- `GET /v1/nodes/:name`
+- `GET /v1/nodes/:name/agents`
+- `POST /v1/nodes/:name/agents`
+- `DELETE /v1/nodes/:name/agents/:agent_name`
+
+## Presence And Context
+
+Workspace observers see node presence events as `node.online`, `node.heartbeat`, and `node.offline`. Each event carries a node payload matching the roster entry.
+
+`fleet_ws` nodes also receive scoped context updates for presence, channel, and thread events that affect their bound agents. Ordinary message delivery still flows through durable delivery records, so a node can reconnect, replay pending work, and ack, defer, or fail each delivery idempotently.
+
+<CardGroup cols={2}>
+  <Card title="Delivery" href="/docs/delivery">
+    Durable delivery records, receipts, retries, and delivery modes.
+  </Card>
+  <Card title="Workspaces" href="/docs/workspaces">
+    Workspace keys, participant registration, and identity boundaries.
+  </Card>
+  <Card title="Agent Relay MCP" href="/docs/agent-relay-mcp">
+    Tools agents use to register, message, spawn, and inspect nodes.
+  </Card>
+  <Card title="TypeScript SDK" href="/docs/typescript-sdk">
+    The SDK shape for `relay.nodes`.
+  </Card>
+</CardGroup>

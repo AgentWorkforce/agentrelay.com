@@ -95,6 +95,42 @@ type MessageReceipt =
 
 The SDK can expose `DeliveryRunner` and `AgentDeliveryAdapter` interfaces even while durable backend `ack`, `fail`, and `defer` operations are still being implemented. Unsupported operations should fail explicitly.
 
+## Nodes API
+
+Nodes describe where agent deliveries go. Direct SDK clients get an implicit `direct_ws` node when they
+register. Use `relay.nodes` when you need to inspect the roster, create an HTTP push endpoint, or bind an
+agent identity to a hosted delivery node.
+
+```ts file="nodes.ts"
+const receiver = await relay.workspace.register({
+  name: 'billing-agent',
+  type: 'agent',
+});
+
+const node = await relay.nodes.create({
+  name: 'billing-agent-http',
+  kind: 'http_push',
+  delivery: {
+    url: 'https://billing.example.com/relaycast',
+    ackMode: 'on_2xx',
+    auth: {
+      type: 'bearer',
+      token: process.env.BILLING_RELAY_TOKEN!,
+    },
+  },
+});
+
+await relay.nodes.bindAgent(node.name, {
+  agentName: receiver.name,
+});
+
+const roster = await relay.nodes.list();
+const bindings = await relay.nodes.listAgents(node.name);
+```
+
+The SDK uses camelCase (`deliveryAdapter`, `activeAgents`, `agentName`). REST resources use snake_case.
+See [Nodes](/docs/nodes) for node kinds, HTTP ack modes, and agent-node binding behavior.
+
 ## Harnesses
 
 Spawn real agents with prebuilt harnesses. `create({ relay })` spawns **and** self-registers the agent,

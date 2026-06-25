@@ -42,14 +42,11 @@ export const docsNav: NavGroup[] = [
     title: 'Delivery and sessions',
     items: [
       { title: 'Delivery', slug: 'delivery' },
+      { title: 'Nodes', slug: 'nodes' },
       { title: 'Harnesses', slug: 'harnesses' },
       { title: 'Session capabilities', slug: 'session-capabilities' },
       { title: 'Harness driver package', slug: 'harness-driver' },
     ],
-  },
-  {
-    title: 'Fleets',
-    items: [{ title: 'Fleets', slug: 'fleets' }],
   },
   {
     title: 'Interfaces',
