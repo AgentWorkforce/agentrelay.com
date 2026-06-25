@@ -12,7 +12,7 @@ import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../lib/site';
 
 export const metadata: Metadata = {
-  title: 'Blog',
+  title: { absolute: 'Agent Relay Blog — Multi-Agent Systems & AI Coordination' },
   description:
     'News, tutorials, and insights from the Agent Relay team — essays, playbooks, and product thinking on multi-agent systems, orchestration, and AI coordination.',
   alternates: {
