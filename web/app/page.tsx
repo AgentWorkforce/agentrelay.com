@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { HomePosterText } from '../components/home/HomePosterText';
+import { HomeRelaySection } from '../components/home/HomeRelaySection';
 import { SiteFooter } from '../components/SiteFooter';
 import { SiteNav } from '../components/SiteNav';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../lib/og-meta';
@@ -51,6 +52,8 @@ export default function HomePage() {
       <main className={s.homeMain}>
         <HomePosterText />
       </main>
+
+      <HomeRelaySection />
 
       <SiteFooter />
     </div>
