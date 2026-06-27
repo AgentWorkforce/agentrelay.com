@@ -2,7 +2,7 @@ import s from '../../app/landing.module.css';
 
 // Edit these lines to change the homepage poster copy.
 const HOME_POSTER_LINES = ['UNLEASH', 'YOUR', 'TEAM'];
-const HOME_POSTER_SHADOW_STEPS = Array.from({ length: 260 }, (_, index) => index + 1);
+const HOME_POSTER_SHADOW_STEPS = Array.from({ length: 360 }, (_, index) => index + 1);
 const HOME_POSTER_LINE_START = 236;
 const HOME_POSTER_LINE_HEIGHT = 194;
 const HOME_POSTER_SHADOW_STEP_SIZE = 2.3;
