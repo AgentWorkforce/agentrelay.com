@@ -1,8 +1,7 @@
-import Link from 'next/link';
-
+import { HeroCommandCta } from './HeroCommandCta';
 import { HeroGraph } from './HeroGraph';
 import s from '../../app/landing.module.css';
-import { GitHubIcon, HeroBackdrop } from './icons';
+import { HeroBackdrop } from './icons';
 
 export function Hero() {
   return (
@@ -17,23 +16,7 @@ export function Hero() {
             multi-agent system without worrying about the glue.
           </p>
 
-          <div className={s.ctas}>
-            <Link href="/docs" className={s.ctaPrimary}>
-              Read Docs
-            </Link>
-            <Link href="/skill" className={s.ctaSecondary}>
-              Agent Skill
-            </Link>
-            <a
-              href="https://github.com/agentworkforce/relay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.ctaSecondary}
-            >
-              <GitHubIcon />
-              GitHub
-            </a>
-          </div>
+          <HeroCommandCta />
         </div>
 
         <div className={s.heroRight}>

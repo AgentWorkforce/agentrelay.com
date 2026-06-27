@@ -3,13 +3,13 @@ import Link from 'next/link';
 import { Rss } from 'lucide-react';
 
 import styles from '../../components/blog/blog.module.css';
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { getAllPosts } from '../../lib/blog';
 import { getAuthorInitials, getBlogAuthor } from '../../lib/blog-authors';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../lib/site';
+import landingStyles from '../landing.module.css';
 
 export const metadata: Metadata = {
   title: { absolute: 'Agent Relay Blog — Multi-Agent Systems & AI Coordination' },
@@ -46,6 +46,16 @@ function formatDate(dateStr: string): string {
 export default function BlogIndexPage() {
   const posts = getAllPosts();
   const allPosts = posts;
+  const navGetStartedLink = (
+    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
+      Get Started
+    </Link>
+  );
+  const mobileGetStartedLink = (
+    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
+      Get Started
+    </Link>
+  );
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -66,7 +76,7 @@ export default function BlogIndexPage() {
 
   return (
     <div className={styles.blogPage}>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
 
       <main className={styles.blogMain}>
         <script

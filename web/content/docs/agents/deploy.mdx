@@ -1,0 +1,33 @@
+---
+title: 'Deploy and operate'
+description: 'Run proactive agents with clear triggers, scoped credentials, observable output, and human approval where it matters.'
+---
+
+Deployment is where an agent becomes part of the team. Treat it like a small service with a narrower blast radius and a louder paper trail.
+
+## Before enabling a trigger
+
+- Scope credentials to the paths, repos, channels, and providers the agent actually needs.
+- Set a clear reporting channel or thread.
+- Decide which actions require approval.
+- Put a spending or runtime limit around open-ended work.
+- Test with a real event and confirm the final report is useful.
+
+## Operating loop
+
+An unattended agent should leave enough evidence that a teammate can answer:
+
+1. Why did it wake up?
+2. What context did it inspect?
+3. What did it change?
+4. What does a human need to review?
+
+If those answers are not visible in Relay, the agent is too quiet.
+
+## Promote slowly
+
+Start in report-only mode. Let the agent recommend the action, then graduate one permission at a time: comment, label, open a PR, merge, deploy.
+
+<BannerLink href="/docs/agents/build" icon="bot">
+  Design the agent contract before increasing autonomy.
+</BannerLink>

@@ -40,11 +40,13 @@ export function SiteNav({
   center,
   actions,
   mobileMenuContent,
+  hideLinks,
   hideMobileDocsLink,
 }: {
   center?: React.ReactNode;
   actions?: React.ReactNode;
   mobileMenuContent?: React.ReactNode;
+  hideLinks?: boolean;
   hideMobileDocsLink?: boolean;
 } = {}) {
   const pathname = usePathname();
@@ -74,18 +76,20 @@ export function SiteNav({
           {center && <div className={s.navCenter}>{center}</div>}
 
           <div className={s.navRight}>
-            <ul className={s.links}>
-              <li>
-                <Link href="/docs" className={s.link}>
-                  Docs
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className={s.link}>
-                  Blog
-                </Link>
-              </li>
-            </ul>
+            {!hideLinks && (
+              <ul className={s.links}>
+                <li>
+                  <Link href="/docs" className={s.link}>
+                    Docs
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className={s.link}>
+                    Blog
+                  </Link>
+                </li>
+              </ul>
+            )}
             <div className={s.actions}>{actions}</div>
           </div>
 
@@ -133,23 +137,27 @@ export function SiteNav({
               }
             }}
           >
-            {!hideMobileDocsLink && (
+            {!hideLinks && !hideMobileDocsLink && (
               <Link href="/docs" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                 Docs
               </Link>
             )}
-            <Link href="/blog" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
-              Blog
-            </Link>
-            <a
-              href="https://github.com/agentworkforce/relay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.mobileLink}
-              onClick={() => setMenuOpen(false)}
-            >
-              GitHub
-            </a>
+            {!hideLinks && (
+              <>
+                <Link href="/blog" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+                  Blog
+                </Link>
+                <a
+                  href="https://github.com/agentworkforce/relay"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={s.mobileLink}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  GitHub
+                </a>
+              </>
+            )}
             {mobileMenuContent}
           </div>
         )}
