@@ -45,6 +45,17 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // In-person event banner QR code → homepage, tagged so the traffic is
+      // attributable to the physical banner at the current event. Temporary
+      // (not permanent) so /banner can be repointed at the next event without
+      // browsers having cached a permanent redirect. Current event:
+      // AI Engineer World's Fair.
+      {
+        source: '/banner',
+        destination:
+          '/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
+        permanent: false,
+      },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
       { source: '/relayfile', destination: '/primitives#file', permanent: true },
       { source: '/relayfile/:path*', destination: '/primitives#file', permanent: true },
