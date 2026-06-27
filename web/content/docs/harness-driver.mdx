@@ -5,6 +5,12 @@ description: 'Use the optional harness driver package when Agent Relay needs to 
 
 Core Agent Relay does not need to own spawning. It owns messaging, delivery contracts, actions, and events.
 
+`@agent-relay/harness-driver` is the client SDK for the **broker-pty-engine** — the generic PTY engine
+inside the [broker](/docs/architecture) that spawns and owns agent processes. A caller uses it to spawn a
+PTY and drive it. It is used **inside an action runner**: when a node's `spawn` capability fires, the action
+runner resolves the harness that capability declares and calls the harness driver to start it, while the
+broker-pty-engine hosts the PTY. It is not a standalone service.
+
 The optional harness driver package owns managed session lifecycle:
 
 - create sessions

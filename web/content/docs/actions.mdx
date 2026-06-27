@@ -156,6 +156,24 @@ taskManager.registerAction({
 });
 ```
 
+## Node actions: spawn and release
+
+The same action model places work onto [nodes](/docs/nodes). A node advertises **capabilities** — named
+actions with a `kind` of `spawn` or `action` — and the engine routes an invocation to a node that provides
+the capability. Spawning and releasing an agent are both actions:
+
+- **Spawn** invokes the `spawn` (or `spawn:<harness>`) capability with input such as the harness/`cli`, a
+  `name`, an optional `target_node`, and optional `harnessConfig`. The engine places it on an eligible node,
+  which runs the harness its capability declares and registers the new agent through the node — so the agent
+  is born bound to that node and its messages route back there.
+- **Release** invokes the `release` action on the node that owns the agent.
+
+At the node-protocol layer these flow as `action.invoke` to the chosen node and `action.result
+{ invocation_id, output | error }` back. That result is delivered to the calling agent as the
+`action.completed` (or `action.failed`) event described above, so from the SDK both surfaces are the same
+fire-and-forget action. See [Architecture](/docs/architecture) for the full spawn flow and
+[Nodes](/docs/nodes) for placement, targeting, and capability declaration.
+
 ## MCP tool generation
 
 The agent-relay MCP exposes each registered action as an explicit tool, with JSON Schema generated from the

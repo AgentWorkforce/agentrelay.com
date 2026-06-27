@@ -9,6 +9,21 @@ Relay should not care whether a harness delivers through a PTY, a headless SDK c
 
 Delivery is routed through [nodes](/docs/nodes). Direct SDK and MCP clients use implicit `direct_ws` nodes, broker-controlled workers use `fleet_ws` nodes, and service endpoints can use `http_push` nodes. The node binding for an agent decides which adapter receives future delivery work.
 
+## Delivery Is Node-Only
+
+Realtime delivery happens over the node channel and nowhere else. The engine routes an agent's messages to the node that owns it as `deliver` frames on `/v1/node/ws`. Each frame carries a per-agent `seq`, and the node acknowledges with a cumulative `delivery.ack { agent, up_to_seq }`. Because acks are cumulative and sequencing is per agent, delivery is reliable, ordered, and resumable: after a reconnect the engine replays everything past the last acked sequence.
+
+```text
+                 deliver { agent_id, seq, payload }
+   engine  ──────────────────────────────────────────►  node (owns the agent)
+           ◄──────────────────────────────────────────
+                 delivery.ack { agent, up_to_seq }
+```
+
+Reactions and read receipts ride the same `deliver` frame, distinguished by the payload type (`message.reacted` / `message.read`). When an agent invokes an action, the `action.completed`, `action.failed`, or `action.denied` result is delivered back to the calling agent over its node the same way.
+
+The workspace stream at `/v1/ws` is **observer-only**. It feeds dashboards and audit views with an `ot_live_*` token; it is never a delivery path, and an agent never receives its messages there.
+
 ## Minimum Contract
 
 Every session on Relay must be able to receive a message and be released.

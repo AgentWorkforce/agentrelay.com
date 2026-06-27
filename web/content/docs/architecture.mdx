@@ -70,11 +70,17 @@ registers and runs **actions** (`spawn:claude`, `release`, or custom). When a ha
 it calls `@agent-relay/harness-driver` to drive the broker-pty-engine. An action runner talks **only to
 the broker — never directly to the engine.**
 
-## Actions
+## Actions, capabilities, and placement
 
 Spawning, releasing, and custom agent-to-agent RPC are all **actions**, invoked over the node
-connection. The engine — or another agent — **invokes** an action; the **action runner** handles it and
-replies with a result. See [Actions](/docs/actions) for the registration and discovery model agents use.
+connection. A node advertises its **capabilities** — named actions with a `kind` of `spawn` or `action` —
+through the action runner's `defineNode`. The engine **places** each invocation on a node that provides
+the capability, weighing liveness, capacity, and load, then sends `action.invoke` to that node. The action
+runner handles it and replies `action.result { invocation_id, output | error }`, which is delivered back to
+the calling agent.
+
+See [Nodes](/docs/nodes) for fleets, capabilities, and the placement rules, and [Actions](/docs/actions)
+for the registration and discovery model agents use.
 
 ## Delivery flow
 
@@ -89,16 +95,19 @@ Reactions and receipts ride the same `deliver` frame, distinguished by `payload.
 
 ## Spawn flow
 
-Spawning an agent runs through the action path:
+Spawning an agent runs through the action path. The request carries the capability (the harness or `cli`),
+a `name`, an optional `target_node`, and optional `harnessConfig` — not a raw command to run:
 
-1. The engine sends `action.invoke(spawn:claude)`.
+1. The engine **places** the spawn on an eligible node and sends `action.invoke(spawn:…)`.
 2. The broker dispatches it to the action runner.
-3. The runner's handler resolves the CLI specifics and calls `@agent-relay/harness-driver`.
-4. The broker-pty-engine spawns the PTY.
-5. The broker registers the agent (node-bound) and replies `action.result`.
+3. The runner resolves the **harness its capability declares** and calls `@agent-relay/harness-driver`.
+4. The broker-pty-engine spawns the PTY and hosts it.
+5. The agent registers **through** the node, so it is born bound to that node (`via_node`), and the broker
+   replies `action.result`.
 
-Because the agent is registered node-bound, its future deliveries route back to the broker that spawned
-it — closing the loop with the delivery flow above.
+Because the agent is node-bound, its future deliveries route back to the broker that spawned it — closing
+the loop with the delivery flow above. A spawn carrying a session id resumes the agent on its origin node.
+**Release** is invoking the `release` action on the owning node.
 
 ## Vocabulary
 
