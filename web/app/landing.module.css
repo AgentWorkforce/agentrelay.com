@@ -14,14 +14,16 @@
 }
 
 .homePage {
+  --home-nav-offset: 84px;
   background: #071724;
 }
 
 .homeMain {
   position: relative;
-  min-height: calc(100dvh - 84px);
+  min-height: 100dvh;
+  margin-top: calc(var(--home-nav-offset) * -1);
   overflow: hidden;
-  padding: 0;
+  padding: var(--home-nav-offset) 0 0;
   background:
     radial-gradient(circle at 15% 20%, rgba(116, 184, 226, 0.1), transparent 30%),
     linear-gradient(180deg, #14344a 0%, #123148 76%, #061723 76%, #061723 100%);
@@ -108,8 +110,11 @@
 }
 
 @media (max-width: 960px) {
+  .homePage {
+    --home-nav-offset: 72px;
+  }
+
   .homeMain {
-    min-height: calc(100dvh - 80px);
     background:
       radial-gradient(circle at 8% 18%, rgba(116, 184, 226, 0.1), transparent 34%),
       linear-gradient(180deg, #14344a 0%, #123148 74%, #061723 74%, #061723 100%);
