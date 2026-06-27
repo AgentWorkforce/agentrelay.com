@@ -1,0 +1,118 @@
+---
+title: 'Python SDK'
+description: 'Use relayfile-sdk: RelayFileClient (sync and async) for reads, writes, and bulk operations against a Relayfile workspace, plus on_write for event subscriptions.'
+---
+
+`relayfile-sdk` is the Python surface for the Relayfile data plane — the same file operations as the TypeScript [`@relayfile/sdk`](/docs/file/sdk) client, in idiomatic Python. It exposes `RelayFileClient` (and `AsyncRelayFileClient`) for reads and writes, and an `on_write` helper for subscribing to change events. The control-plane flow (login, mount) lives in the CLI and the TypeScript SDK; the Python SDK is for agents that read and write a workspace they already have a token for.
+
+```bash
+pip install relayfile-sdk
+```
+
+The import namespace is `relayfile`.
+
+## RelayFileClient
+
+Construct a client with a base URL and a token (a string, or a callable that returns one for auto-refresh):
+
+```python
+from relayfile import RelayFileClient
+
+client = RelayFileClient(
+    "https://api.relayfile.dev",
+    lambda: os.environ["RELAYFILE_TOKEN"],
+)
+```
+
+### Reads
+
+```python
+# list a subtree
+tree = client.list_tree("rw_123", {"path": "/notion", "depth": 2})
+
+# read one file
+page = client.read_file("rw_123", "/notion/pages/roadmap__abc.json")
+```
+
+### Writes
+
+`write_file` takes a `WriteFileInput` with a `base_revision` for optimistic concurrency (`If-Match` semantics). Use `"*"` for create-or-overwrite, or pass the last revision you read to detect conflicts:
+
+```python
+from relayfile import RelayFileClient, WriteFileInput, RevisionConflictError
+
+try:
+    client.write_file(WriteFileInput(
+        workspace_id="rw_123",
+        path="/linear/issues/AGE-12__fix-login-bug.json",
+        base_revision="*",
+        content='{"state": "In Review"}',
+        content_type="application/json",
+    ))
+except RevisionConflictError:
+    # another writer won the optimistic-concurrency check — re-read and retry
+    ...
+```
+
+`bulk_write` writes many files in one unconditional create-or-overwrite request, and `delete_file` removes a file (and queues the provider delete) with its own `base_revision`.
+
+### Async
+
+`AsyncRelayFileClient` mirrors the same surface with `await`:
+
+```python
+from relayfile import AsyncRelayFileClient
+
+async with AsyncRelayFileClient("https://api.relayfile.dev", token) as client:
+    page = await client.read_file("rw_123", "/linear/issues/AGE-12__fix-login-bug.json")
+```
+
+## Subscribing with on_write
+
+`on_write` subscribes a handler to change events on a path pattern, over the same WebSocket stream as the CLI's `listen`. Use it as a decorator or a direct call; it returns an unsubscribe function. Each event carries `path`, `operation`, and `source` (filter out `source == "agent"` to ignore your own writes):
+
+```python
+from relayfile import on_write
+
+unsubscribe = on_write(
+    "/linear/issues/by-state/triage/**",
+    lambda evt: handle(evt.path),
+    client=client,
+    workspace_id="rw_123",
+    operations=("create", "update"),
+)
+```
+
+See [Events and webhooks](/docs/file/events) for the event model and [Real-time sync](/docs/file/realtime-sync) for how change events fan out.
+
+## Workspace primitives
+
+The SDK also ships the canonical path helpers used by digest, layout, and writeback tooling — `DIGEST_PATHS`, `is_digest_path`, `provider_layout_path`, and `resource_schema_path` — so you build paths the same way the server does:
+
+```python
+from relayfile import provider_layout_path, resource_schema_path
+
+layout = client.read_file("rw_123", provider_layout_path("linear"))
+schema = client.read_file("rw_123", resource_schema_path("linear", "issues/AGE-16__abc/comments"))
+```
+
+<Note>
+  The Python SDK is the data-plane client. For logging in, joining a workspace, and mounting, use the [CLI](/docs/file/cli) or the TypeScript [`RelayfileSetup`](/docs/file/sdk#relayfilesetup) — then hand the resulting token to `RelayFileClient`.
+</Note>
+
+## Where to go next
+
+<CardGroup cols={2}>
+  <Card title="The SDK" href="/docs/file/sdk">
+    The TypeScript client and the `RelayfileSetup` control plane.
+  </Card>
+  <Card title="Events and webhooks" href="/docs/file/events">
+    The normalized event model `on_write` delivers.
+  </Card>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    How write operations map to provider PATCH / CREATE / DELETE.
+  </Card>
+  <Card title="API reference" href="/docs/file/api-reference">
+    The HTTP surface the client calls.
+  </Card>
+</CardGroup>
