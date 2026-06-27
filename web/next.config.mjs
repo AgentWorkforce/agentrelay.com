@@ -50,10 +50,17 @@ const nextConfig = {
       // (not permanent) so /banner can be repointed at the next event without
       // browsers having cached a permanent redirect. Current event:
       // AI Engineer World's Fair.
+      //
+      // The destination is an absolute URL on purpose. A relative root-path
+      // destination ('/?utm_...') 500s under our OpenNext/Cloudflare runtime:
+      // its URL parser treats the empty path segment of '/?...' as the whole
+      // string and feeds '/?...' to path-to-regexp, which throws "Unexpected
+      // MODIFIER" on the bare '?'. Using the absolute form routes through the
+      // external-URL branch, which splits the path and query correctly.
       {
         source: '/banner',
         destination:
-          '/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
+          'https://agentrelay.com/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
         permanent: false,
       },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
