@@ -38,15 +38,20 @@ export function HeroCommandCta() {
   }
 
   return (
-    <button className={s.heroCommandCta} type="button" onClick={handleCopy}>
-      <span className={s.heroCommandPrompt}>$</span>
-      <code className={s.heroCommandText}>{HERO_COMMAND}</code>
-      <span className={s.heroCommandCopyButton} aria-hidden="true">
-        {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+    <div className={s.heroCommandGroup}>
+      <span className={s.heroCommandIntro}>
+        Run our interactive onboarding to try it with your agent right now
       </span>
-      <span className={s.heroCommandCopied} aria-live="polite">
-        {copied ? 'Copied' : 'Copy'}
-      </span>
-    </button>
+      <button className={s.heroCommandCta} type="button" onClick={handleCopy}>
+        <span className={s.heroCommandPrompt}>$</span>
+        <code className={s.heroCommandText}>{HERO_COMMAND}</code>
+        <span className={s.heroCommandCopyButton} aria-hidden="true">
+          {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+        </span>
+        <span className={s.heroCommandCopied} aria-live="polite">
+          {copied ? 'Copied' : 'Copy'}
+        </span>
+      </button>
+    </div>
   );
 }

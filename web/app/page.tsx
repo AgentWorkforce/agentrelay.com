@@ -2,7 +2,6 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { HomePosterText } from '../components/home/HomePosterText';
-import { HomeRelaySection } from '../components/home/HomeRelaySection';
 import { SiteFooter } from '../components/SiteFooter';
 import { SiteNav } from '../components/SiteNav';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../lib/og-meta';
@@ -53,7 +52,14 @@ export default function HomePage() {
         <HomePosterText />
       </main>
 
-      <HomeRelaySection />
+      <section className={s.homeQuoteSection} aria-label="Agent Relay mission">
+        <blockquote className={s.homeMissionStatement}>
+          <h2>
+            Agent Relay is building the infrastructure for a world where teams of Agents work together to solve
+            human problems.
+          </h2>
+        </blockquote>
+      </section>
 
       <SiteFooter />
     </div>

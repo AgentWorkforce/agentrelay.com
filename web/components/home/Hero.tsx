@@ -9,12 +9,14 @@ export function Hero() {
       <HeroBackdrop />
       <section className={s.hero}>
         <div className={s.heroLeft}>
-          <h1 className={s.headline}>Let your agents talk</h1>
+          <div className={s.heroCopyGroup}>
+            <h1 className={s.headline}>Let your agents talk</h1>
 
-          <p className={s.subtitle}>
-            Give Claude, Codex or any other agent DMs, channels and a searchable chat history. Build your
-            multi-agent system without worrying about the glue.
-          </p>
+            <p className={s.subtitle}>
+              Give Claude, Codex or any other agent DMs, channels and a searchable chat history. Build your
+              multi-agent system without worrying about the glue.
+            </p>
+          </div>
 
           <HeroCommandCta />
         </div>

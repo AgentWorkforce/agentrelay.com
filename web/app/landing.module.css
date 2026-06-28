@@ -20,7 +20,7 @@
 
 .homeMain {
   position: relative;
-  min-height: 100dvh;
+  min-height: calc(100dvh + clamp(96px, 13vw, 190px));
   margin-top: calc(var(--home-nav-offset) * -1);
   overflow: hidden;
   padding: var(--home-nav-offset) 0 0;
@@ -68,13 +68,15 @@
 }
 
 .homePosterSvg {
-  position: absolute;
+  position: fixed;
   top: clamp(48px, 6vw, 88px);
   left: max(18px, calc(50% - 700px));
+  z-index: 1;
   width: min(1520px, 118vw);
   height: auto;
   overflow: visible;
   display: block;
+  pointer-events: none;
 }
 
 .homePosterTextLine,
@@ -83,7 +85,7 @@
   font-size: 230px;
   font-stretch: condensed;
   font-weight: 900;
-  letter-spacing: -0.061em;
+  letter-spacing: -0.031em;
   line-height: 1;
   paint-order: stroke fill;
   stroke-linejoin: round;
@@ -102,183 +104,71 @@
   stroke-width: 18px;
 }
 
+.homeQuoteSection {
+  position: relative;
+  z-index: 4;
+  margin-top: clamp(-210px, -13vw, -118px);
+  padding: clamp(96px, 10vw, 156px) 24px clamp(112px, 12vw, 174px);
+  overflow: hidden;
+  isolation: isolate;
+  border-top: 1px solid rgba(116, 184, 226, 0.1);
+  background:
+    radial-gradient(circle at 14% 12%, rgba(116, 184, 226, 0.08), transparent 30%),
+    linear-gradient(180deg, #061723 0%, #071927 58%, #06131f 100%);
+  box-shadow: 0 -48px 96px rgba(1, 8, 14, 0.24);
+}
+
+.homeQuoteSection::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(116, 184, 226, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(116, 184, 226, 0.026) 1px, transparent 1px);
+  background-size: 112px 112px;
+  mask-image: radial-gradient(circle at 28% 12%, black 0%, transparent 58%);
+  opacity: 0.3;
+  content: '';
+}
+
+.homeMissionStatement {
+  position: relative;
+  z-index: 1;
+  width: min(calc(100% - 48px), 1180px);
+  margin: 0 auto;
+  color: rgba(239, 247, 255, 0.92);
+  text-wrap: balance;
+}
+
+.homeMissionStatement::before {
+  display: block;
+  margin-bottom: clamp(12px, 1.8vw, 20px);
+  color: rgba(116, 184, 226, 0.5);
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(4rem, 7vw, 6.75rem);
+  font-weight: 700;
+  letter-spacing: -0.08em;
+  line-height: 0.62;
+  content: '\201C';
+}
+
+.homeMissionStatement h2 {
+  max-width: 980px;
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.25rem, 5.2vw, 5rem);
+  font-weight: 560;
+  letter-spacing: -0.055em;
+  line-height: 1.02;
+}
+
 .homeNavAction {
   min-height: 42px;
   padding: 10px 22px;
   font-size: 0.86rem;
   white-space: nowrap;
-}
-
-.homeRelaySection {
-  position: relative;
-  overflow: hidden;
-  padding: clamp(48px, 6vw, 78px) 24px clamp(76px, 8vw, 112px);
-  border-top: 1px solid rgba(116, 184, 226, 0.08);
-  background:
-    radial-gradient(circle at 76% 12%, rgba(116, 184, 226, 0.12), transparent 30%),
-    linear-gradient(180deg, #061723 0%, #081d2b 100%);
-}
-
-.homeRelaySection::before {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(90deg, rgba(116, 184, 226, 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(116, 184, 226, 0.032) 1px, transparent 1px);
-  background-size: 96px 96px;
-  mask-image: radial-gradient(circle at 68% 28%, black 0%, transparent 62%);
-  opacity: 0.28;
-  content: '';
-}
-
-.homeRelayInner {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(420px, 1fr);
-  align-items: center;
-  gap: clamp(44px, 7vw, 108px);
-  width: min(100%, 1180px);
-  margin: 0 auto;
-}
-
-.homeRelayCopy {
-  display: grid;
-  gap: 20px;
-  max-width: 560px;
-}
-
-.homeRelayKicker {
-  color: rgba(143, 202, 247, 0.72);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.homeRelayCopy h2 {
-  max-width: 12ch;
-  margin: 0;
-  color: rgba(239, 247, 255, 0.95);
-  font-family: var(--font-heading), sans-serif;
-  font-size: clamp(2.7rem, 5vw, 5.2rem);
-  font-weight: 640;
-  letter-spacing: -0.055em;
-  line-height: 0.96;
-}
-
-.homeRelayCopy p {
-  max-width: 54ch;
-  margin: 0;
-  color: rgba(195, 212, 228, 0.78);
-  font-size: clamp(1rem, 1.5vw, 1.14rem);
-  line-height: 1.65;
-}
-
-.homeRelayVisual {
-  position: relative;
-  min-height: 430px;
-  overflow: hidden;
-  padding: clamp(26px, 4vw, 42px);
-  border: 1px solid rgba(116, 184, 226, 0.16);
-  border-radius: 18px;
-  background:
-    linear-gradient(180deg, rgba(116, 184, 226, 0.08), rgba(116, 184, 226, 0.02)),
-    rgba(3, 13, 23, 0.42);
-  box-shadow:
-    inset 0 1px 0 rgba(239, 247, 255, 0.05),
-    0 28px 80px rgba(0, 0, 0, 0.18);
-}
-
-.homeRelayVisual::before {
-  position: absolute;
-  top: 50%;
-  right: -12%;
-  left: -12%;
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(116, 184, 226, 0.16),
-    rgba(116, 184, 226, 0.34),
-    transparent
-  );
-  content: '';
-}
-
-.homeRelaySignal {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.homeRelaySignal span {
-  position: absolute;
-  border: 1px solid rgba(116, 184, 226, 0.14);
-  border-radius: 999px;
-}
-
-.homeRelaySignal span:nth-child(1) {
-  inset: 42px 18% 72px 18%;
-}
-
-.homeRelaySignal span:nth-child(2) {
-  inset: 88px 10% 112px 10%;
-}
-
-.homeRelaySignal span:nth-child(3) {
-  inset: 134px 2% 152px 2%;
-}
-
-.homeRelayFlow {
-  position: relative;
-  display: grid;
-  gap: 16px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.homeRelayStep {
-  display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  gap: 18px;
-  align-items: start;
-  padding: 18px;
-  border: 1px solid rgba(116, 184, 226, 0.14);
-  border-radius: 14px;
-  background: rgba(6, 23, 35, 0.74);
-  box-shadow: inset 0 1px 0 rgba(239, 247, 255, 0.04);
-}
-
-.homeRelayStepIndex {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  aspect-ratio: 1;
-  border: 1px solid rgba(116, 184, 226, 0.24);
-  border-radius: 999px;
-  color: rgba(180, 220, 255, 0.82);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.74rem;
-  font-weight: 800;
-}
-
-.homeRelayStep h3 {
-  margin: 0 0 6px;
-  color: rgba(239, 247, 255, 0.92);
-  font-size: 1rem;
-  font-weight: 760;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-}
-
-.homeRelayStep p {
-  margin: 0;
-  color: rgba(195, 212, 228, 0.72);
-  font-size: 0.92rem;
-  line-height: 1.55;
 }
 
 @media (max-width: 960px) {
@@ -287,6 +177,7 @@
   }
 
   .homeMain {
+    min-height: calc(100dvh + clamp(72px, 14vw, 150px));
     background:
       radial-gradient(circle at 8% 18%, rgba(116, 184, 226, 0.1), transparent 34%),
       linear-gradient(180deg, #14344a 0%, #123148 100%);
@@ -303,27 +194,24 @@
     max-width: none;
   }
 
-  .homeRelayInner {
-    grid-template-columns: 1fr;
-    gap: 36px;
+  .homeQuoteSection {
+    margin-top: clamp(-160px, -12vw, -96px);
+    padding: clamp(82px, 10vw, 126px) 20px clamp(94px, 12vw, 140px);
   }
 
-  .homeRelayCopy {
-    max-width: 720px;
+  .homeMissionStatement {
+    width: min(calc(100% - 40px), 760px);
   }
 
-  .homeRelayCopy h2 {
-    max-width: 14ch;
+  .homeMissionStatement h2 {
+    font-size: clamp(2.15rem, 7.4vw, 4.2rem);
   }
 
-  .homeRelayVisual {
-    min-height: auto;
-  }
 }
 
 @media (max-width: 560px) {
   .homeMain {
-    min-height: 560px;
+    min-height: 620px;
     background:
       radial-gradient(circle at 10% 18%, rgba(116, 184, 226, 0.1), transparent 38%),
       linear-gradient(180deg, #14344a 0%, #123148 100%);
@@ -345,34 +233,40 @@
     stroke-width: 16px;
   }
 
-  .homeRelaySection {
-    padding: 62px 18px 78px;
+  .homeQuoteSection {
+    margin-top: -82px;
+    padding: 76px 0 82px;
   }
 
-  .homeRelayVisual {
-    padding: 16px;
-    border-radius: 14px;
+  .homeMissionStatement {
+    width: calc(100% - 44px);
   }
 
-  .homeRelayStep {
-    grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 16px;
+  .homeMissionStatement::before {
+    margin-bottom: 12px;
+    font-size: 4rem;
   }
+
+  .homeMissionStatement h2 {
+    font-size: clamp(1.8rem, 10vw, 3rem);
+    letter-spacing: -0.048em;
+    line-height: 1.05;
+  }
+
 }
 
 .aboutPage {
   background:
-    radial-gradient(circle at 76% 25%, rgba(116, 184, 226, 0.18), transparent 31%),
-    radial-gradient(circle at 18% 78%, rgba(88, 166, 255, 0.09), transparent 34%),
-    linear-gradient(180deg, #07111b 0%, #0d2233 50%, #08111a 100%);
+    radial-gradient(circle at 72% 18%, rgba(116, 184, 226, 0.16), transparent 30%),
+    radial-gradient(circle at 12% 72%, rgba(193, 103, 75, 0.09), transparent 34%),
+    linear-gradient(180deg, #07111b 0%, #0d2335 44%, #08111a 100%);
 }
 
 .aboutMain {
   position: relative;
   overflow: hidden;
   min-height: calc(100dvh - 80px);
-  padding: clamp(38px, 5vw, 74px) 24px 96px;
+  padding: clamp(30px, 4vw, 62px) 24px 112px;
 }
 
 .aboutMain::before {
@@ -381,14 +275,68 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(116, 184, 226, 0.055) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(116, 184, 226, 0.04) 1px, transparent 1px);
-  background-size: 84px 84px;
-  mask-image: radial-gradient(circle at 58% 34%, black 0%, transparent 64%);
-  opacity: 0.26;
+    linear-gradient(90deg, rgba(116, 184, 226, 0.045) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(116, 184, 226, 0.032) 1px, transparent 1px);
+  background-size: 92px 92px;
+  mask-image: radial-gradient(circle at 54% 26%, black 0%, transparent 64%);
+  opacity: 0.22;
+}
+
+.aboutWaveField {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.aboutWaveLayer {
+  position: absolute;
+  display: block;
+  width: min(980px, 78vw);
+  aspect-ratio: 1.9 / 1;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(143, 202, 247, 0.2) 0 1px,
+      transparent 1px 28px
+    );
+  filter: blur(0.1px);
+  mask-image: linear-gradient(90deg, transparent 0%, black 18%, black 78%, transparent 100%);
+  opacity: 0.28;
+}
+
+.aboutWaveLayerOne {
+  top: 86px;
+  right: -13vw;
+  transform: rotate(-13deg) skewY(-4deg);
+}
+
+.aboutWaveLayerTwo {
+  top: 560px;
+  left: -16vw;
+  width: min(1180px, 88vw);
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(193, 103, 75, 0.13) 0 1px,
+      transparent 1px 32px
+    );
+  opacity: 0.24;
+  transform: rotate(8deg) skewY(3deg);
+}
+
+.aboutWaveLayerThree {
+  right: -20vw;
+  bottom: 120px;
+  width: min(1020px, 84vw);
+  opacity: 0.18;
+  transform: rotate(12deg) skewY(5deg);
 }
 
 .aboutHero,
+.aboutStory,
 .aboutBeliefs,
 .aboutClosing {
   position: relative;
@@ -399,28 +347,27 @@
 
 .aboutHero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 0.68fr);
-  align-items: center;
-  gap: clamp(36px, 7vw, 96px);
-  min-height: min(560px, calc(100dvh - 156px));
-  padding: 8px 0 58px;
+  align-items: end;
+  min-height: min(560px, calc(100dvh - 168px));
+  padding: clamp(54px, 8vw, 116px) 0 82px;
 }
 
 .aboutHeroCopy {
   display: grid;
-  gap: 22px;
-  max-width: 780px;
+  gap: 26px;
+  max-width: 870px;
 }
 
 .aboutTitle {
-  max-width: 760px;
+  max-width: 840px;
   margin: 0;
   color: rgba(239, 247, 255, 0.96);
   font-family: var(--font-heading), sans-serif;
-  font-size: clamp(3.7rem, 6.4vw, 5.6rem);
+  font-size: clamp(4rem, 7vw, 6.75rem);
   font-weight: 620;
-  letter-spacing: -0.055em;
-  line-height: 0.96;
+  letter-spacing: -0.06em;
+  line-height: 0.92;
+  text-wrap: balance;
 }
 
 .aboutNoBreak {
@@ -428,137 +375,152 @@
 }
 
 .aboutLead {
-  max-width: 560px;
+  max-width: 590px;
   margin: 0;
-  color: rgba(195, 212, 228, 0.82);
+  color: rgba(204, 221, 236, 0.84);
   font-size: clamp(1.05rem, 1.7vw, 1.24rem);
-  line-height: 1.65;
+  line-height: 1.6;
+  text-wrap: pretty;
 }
 
-.aboutOrbit {
-  position: relative;
-  width: min(100%, 430px);
-  aspect-ratio: 1;
-  justify-self: end;
-  border-radius: 50%;
+.aboutStory {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.58fr) minmax(0, 1fr);
+  gap: clamp(28px, 6vw, 86px);
+  margin-top: -12px;
+  padding: clamp(34px, 5vw, 58px);
+  overflow: hidden;
+  border: 1px solid rgba(143, 202, 247, 0.14);
+  border-radius: 28px;
   background:
-    radial-gradient(circle at center, rgba(116, 184, 226, 0.18), transparent 28%),
-    radial-gradient(circle at center, rgba(7, 17, 31, 0.72), transparent 68%);
+    radial-gradient(circle at 4% 16%, rgba(116, 184, 226, 0.13), transparent 30%),
+    linear-gradient(135deg, rgba(9, 29, 45, 0.92), rgba(5, 16, 27, 0.72));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 28px 78px rgba(2, 7, 18, 0.2);
 }
 
-.aboutOrbit::before,
-.aboutOrbit::after {
+.aboutStory::before {
   content: '';
   position: absolute;
-  border-radius: inherit;
-  pointer-events: none;
-}
-
-.aboutOrbit::before {
-  inset: 16%;
-  background: radial-gradient(circle, rgba(116, 184, 226, 0.18), rgba(116, 184, 226, 0.02) 62%, transparent);
-  filter: blur(16px);
-}
-
-.aboutOrbit::after {
-  inset: 2px;
-  border: 1px solid rgba(116, 184, 226, 0.08);
-}
-
-.aboutOrbitRing {
-  position: absolute;
-  inset: 0;
-  border: 1px solid rgba(143, 202, 247, 0.18);
+  right: -18%;
+  bottom: -30%;
+  width: min(980px, 88vw);
+  aspect-ratio: 1.8 / 1;
   border-radius: 50%;
-}
-
-.aboutOrbitRingOuter {
-  transform: rotate(-10deg) scaleX(0.86);
-}
-
-.aboutOrbitRingInner {
-  inset: 18%;
-  border-color: rgba(143, 202, 247, 0.24);
-  transform: rotate(18deg) scaleY(0.78);
-}
-
-.aboutOrbitCore {
-  position: absolute;
-  inset: 50%;
-  display: grid;
-  width: clamp(104px, 12vw, 136px);
-  aspect-ratio: 1;
-  place-items: center;
-  border: 1px solid rgba(151, 204, 245, 0.2);
-  border-radius: 24px;
   background:
-    linear-gradient(180deg, rgba(151, 204, 245, 0.12), rgba(151, 204, 245, 0.03)),
-    rgba(5, 15, 27, 0.84);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 28px 70px rgba(2, 7, 18, 0.38);
-  transform: translate(-50%, -50%);
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(143, 202, 247, 0.18) 0 1px,
+      transparent 1px 26px
+    );
+  mask-image: linear-gradient(90deg, transparent 0%, black 20%, black 72%, transparent 100%);
+  opacity: 0.2;
+  transform: rotate(-9deg);
 }
 
-.aboutOrbitMark {
-  width: 60%;
-  height: auto;
-  filter: drop-shadow(0 16px 22px rgba(7, 17, 31, 0.36));
+.aboutStoryLead {
+  position: relative;
+  z-index: 1;
+  align-self: end;
+  max-width: 15ch;
+  margin: 0;
+  color: rgba(239, 247, 255, 0.94);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.15rem, 4.6vw, 4.8rem);
+  font-weight: 620;
+  letter-spacing: -0.052em;
+  line-height: 0.98;
+  text-wrap: balance;
 }
 
-.aboutOrbitNode {
-  position: absolute;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid rgba(143, 202, 247, 0.2);
-  border-radius: 999px;
-  background: rgba(6, 18, 31, 0.84);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 16px 36px rgba(2, 7, 18, 0.28);
-  color: rgba(231, 243, 255, 0.9);
-  font-size: 0.82rem;
-  font-weight: 650;
-  line-height: 1;
-  white-space: nowrap;
+.aboutStoryGrid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 16px;
 }
 
-.aboutOrbitNodeTop {
-  top: 8%;
-  left: 50%;
-  transform: translateX(-50%);
+.aboutStoryItem {
+  display: grid;
+  align-content: end;
+  min-height: 206px;
+  padding: 24px;
+  border: 1px solid rgba(143, 202, 247, 0.13);
+  border-radius: 20px;
+  background: rgba(4, 15, 26, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
 }
 
-.aboutOrbitNodeRight {
-  top: 48%;
-  right: -4%;
-  transform: translateY(-50%);
+.aboutStoryItemPrimary {
+  grid-row: span 2;
+  min-height: 428px;
+  background:
+    radial-gradient(circle at 22% 12%, rgba(116, 184, 226, 0.14), transparent 38%),
+    rgba(4, 15, 26, 0.68);
 }
 
-.aboutOrbitNodeBottom {
-  bottom: 8%;
-  left: 50%;
-  transform: translateX(-50%);
+.aboutStoryItem h2 {
+  max-width: 12ch;
+  margin: 0 0 12px;
+  color: rgba(239, 247, 255, 0.94);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.6rem, 2.7vw, 2.35rem);
+  font-weight: 620;
+  letter-spacing: -0.036em;
+  line-height: 1.02;
+  text-wrap: balance;
 }
 
-.aboutOrbitNodeLeft {
-  top: 48%;
-  left: -3%;
-  transform: translateY(-50%);
+.aboutStoryItem p {
+  max-width: 42ch;
+  margin: 0;
+  color: rgba(195, 212, 228, 0.75);
+  font-size: 0.98rem;
+  line-height: 1.62;
 }
 
 .aboutBeliefs {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
   gap: clamp(36px, 7vw, 92px);
-  padding: 76px 0 66px;
-  border-top: 1px solid rgba(143, 202, 247, 0.14);
+  padding: 104px 0 72px;
+}
+
+.aboutBeliefs::before {
+  content: '';
+  position: absolute;
+  top: 44px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(143, 202, 247, 0.2), transparent);
+}
+
+.aboutBeliefs::after {
+  content: '';
+  position: absolute;
+  top: 72px;
+  left: 2%;
+  width: min(460px, 42vw);
+  aspect-ratio: 2.2 / 1;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(116, 184, 226, 0.14) 0 1px,
+      transparent 1px 24px
+    );
+  mask-image: linear-gradient(90deg, black 0%, transparent 72%);
+  opacity: 0.18;
+  transform: rotate(8deg);
 }
 
 .aboutBeliefIntro {
+  position: relative;
+  z-index: 1;
   display: grid;
   align-content: start;
   gap: 18px;
@@ -584,19 +546,23 @@
 }
 
 .aboutBeliefList {
+  position: relative;
+  z-index: 1;
   display: grid;
   align-content: start;
+  padding-top: 10px;
 }
 
 .aboutBeliefItem {
   display: grid;
-  gap: 8px;
-  padding: 26px 0;
-  border-top: 1px solid rgba(143, 202, 247, 0.14);
+  grid-template-columns: minmax(0, 0.46fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 30px 0;
+  border-top: 1px solid rgba(143, 202, 247, 0.13);
 }
 
 .aboutBeliefItem:last-child {
-  border-bottom: 1px solid rgba(143, 202, 247, 0.14);
+  border-bottom: 1px solid rgba(143, 202, 247, 0.13);
 }
 
 .aboutBeliefItem h3 {
@@ -618,10 +584,42 @@
 }
 
 .aboutClosing {
-  padding: 34px 0 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.34fr);
+  gap: clamp(30px, 7vw, 92px);
+  align-items: end;
+  margin-top: 16px;
+  padding: clamp(32px, 5vw, 58px);
+  overflow: hidden;
+  border: 1px solid rgba(143, 202, 247, 0.16);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(116, 184, 226, 0.16), transparent 32%),
+    linear-gradient(145deg, rgba(9, 30, 46, 0.88), rgba(6, 15, 24, 0.9));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.aboutClosing::before {
+  content: '';
+  position: absolute;
+  right: -18%;
+  top: -72%;
+  width: min(840px, 82vw);
+  aspect-ratio: 1.9 / 1;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(
+      ellipse at center,
+      rgba(143, 202, 247, 0.16) 0 1px,
+      transparent 1px 28px
+    );
+  opacity: 0.2;
+  transform: rotate(12deg);
 }
 
 .aboutClosing p {
+  position: relative;
+  z-index: 1;
   max-width: 900px;
   margin: 0;
   color: rgba(239, 247, 255, 0.92);
@@ -632,15 +630,46 @@
   line-height: 1.05;
 }
 
+.aboutClosingStack {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 12px;
+}
+
+.aboutClosingStack span {
+  display: flex;
+  align-items: center;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(143, 202, 247, 0.14);
+  border-radius: 999px;
+  background: rgba(5, 16, 28, 0.56);
+  color: rgba(226, 240, 251, 0.8);
+  font-size: 0.9rem;
+  font-weight: 650;
+  line-height: 1;
+}
+
 @media (max-width: 960px) {
   .aboutMain {
     padding: 44px 20px 80px;
   }
 
+  .aboutWaveLayerOne {
+    top: 120px;
+    right: -32vw;
+  }
+
+  .aboutWaveLayerTwo {
+    top: 780px;
+    left: -38vw;
+  }
+
   .aboutHero {
     grid-template-columns: 1fr;
     min-height: auto;
-    padding: 34px 0 62px;
+    padding: 34px 0 58px;
   }
 
   .aboutHeroCopy {
@@ -649,23 +678,50 @@
 
   .aboutTitle {
     max-width: 760px;
-    font-size: clamp(3.35rem, 12vw, 5.4rem);
+    font-size: clamp(3.35rem, 11vw, 5.4rem);
   }
 
-  .aboutOrbit {
-    width: min(78vw, 380px);
-    justify-self: center;
-    margin-top: 8px;
+  .aboutStory {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 34px;
+  }
+
+  .aboutStoryLead {
+    max-width: 18ch;
+  }
+
+  .aboutStoryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutStoryItem,
+  .aboutStoryItemPrimary {
+    grid-row: auto;
+    min-height: 224px;
   }
 
   .aboutBeliefs {
     grid-template-columns: 1fr;
     gap: 34px;
-    padding: 58px 0 58px;
+    padding: 82px 0 58px;
   }
 
   .aboutBeliefIntro h2 {
     max-width: 13ch;
+  }
+
+  .aboutBeliefItem {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .aboutClosing {
+    grid-template-columns: 1fr;
+  }
+
+  .aboutClosingStack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -677,6 +733,10 @@
   .aboutMain::before {
     background-size: 56px 56px;
     opacity: 0.18;
+  }
+
+  .aboutWaveLayer {
+    width: 760px;
   }
 
   .aboutHero {
@@ -696,30 +756,32 @@
     font-size: 1rem;
   }
 
-  .aboutOrbit {
-    width: min(86vw, 320px);
+  .aboutStory {
+    padding: 24px;
+    border-radius: 22px;
   }
 
-  .aboutOrbitCore {
+  .aboutStoryItem {
+    min-height: 202px;
+    padding: 20px;
     border-radius: 18px;
   }
 
-  .aboutOrbitNode {
-    min-height: 34px;
-    padding: 0 11px;
-    font-size: 0.76rem;
-  }
-
-  .aboutOrbitNodeRight {
-    right: -1%;
-  }
-
-  .aboutOrbitNodeLeft {
-    left: -1%;
+  .aboutBeliefs::after {
+    width: 78vw;
   }
 
   .aboutBeliefItem {
     padding: 22px 0;
+  }
+
+  .aboutClosing {
+    padding: 24px;
+    border-radius: 22px;
+  }
+
+  .aboutClosingStack {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -809,8 +871,14 @@
 .heroLeft {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 32px;
   padding-top: 56px;
+}
+
+.heroCopyGroup {
+  display: grid;
+  gap: 10px;
+  max-width: 610px;
 }
 
 .heroRight {
@@ -854,6 +922,7 @@
 }
 
 .headline {
+  margin: 0;
   font-family: var(--font-heading), sans-serif;
   font-size: clamp(3.2rem, 7vw, 5.5rem);
   font-weight: 500;
@@ -868,6 +937,7 @@
 }
 
 .subtitle {
+  margin: 0;
   font-size: 1.1rem;
   line-height: 1.65;
   color: var(--fg-muted);
@@ -882,14 +952,30 @@
   padding-top: 4px;
 }
 
+.heroCommandGroup {
+  display: grid;
+  gap: 10px;
+  width: min(100%, 610px);
+  margin-top: 0;
+}
+
+.heroCommandIntro {
+  color: rgba(184, 211, 232, 0.62);
+  font-size: 0.78rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.25;
+  max-width: 56ch;
+}
+
 .heroCommandCta {
   appearance: none;
   position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  width: min(100%, 610px);
-  margin-top: 6px;
+  width: 100%;
+  margin-top: 0;
   min-height: 54px;
   padding: 10px 12px 10px 16px;
   border: 1px solid rgba(116, 184, 226, 0.2);
@@ -1123,6 +1209,17 @@
   z-index: 3;
 }
 
+.featuresSection > .installSection {
+  order: 4;
+  grid-column: 1 / -1;
+  width: 100vw;
+  margin: 0 calc(50% - 50vw);
+  padding: 84px 40px 96px;
+  border-top: 1px solid rgba(116, 184, 226, 0.08);
+  border-bottom: 1px solid rgba(116, 184, 226, 0.08);
+  background: #0d2638;
+}
+
 .installInner {
   position: relative;
   width: 100%;
@@ -1132,6 +1229,11 @@
   align-items: center;
   gap: clamp(36px, 6vw, 72px);
   padding: 44px 40px 0;
+}
+
+.featuresSection > .installSection .installInner {
+  max-width: 1120px;
+  padding: 0 40px;
 }
 
 .installInner::before {
@@ -1147,6 +1249,11 @@
     color-mix(in srgb, var(--primary) 38%, transparent),
     transparent
   );
+}
+
+.featuresSection > .installSection .installInner::before,
+.featuresSection > .installSection .installInner::after {
+  content: none;
 }
 
 .installInner::after {
@@ -1272,187 +1379,296 @@
 .installVisual {
   position: relative;
   display: grid;
-  align-content: center;
-  gap: 18px;
-  min-height: 286px;
-  padding: 24px;
-  overflow: hidden;
+  place-items: center;
+  min-height: 256px;
+  padding: 16px 0;
+  overflow: visible;
   isolation: isolate;
-  border: 1px solid rgba(116, 184, 226, 0.16);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(116, 184, 226, 0.08), rgba(116, 184, 226, 0.02)),
-    rgba(4, 18, 31, 0.36);
-  box-shadow:
-    inset 0 1px 0 rgba(237, 247, 255, 0.06),
-    inset 0 -1px 0 rgba(116, 184, 226, 0.04);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .installVisual::before,
 .installVisual::after {
-  position: absolute;
-  inset: 28px 38px 82px;
-  border: 1px solid rgba(116, 184, 226, 0.16);
-  border-radius: 50%;
-  content: '';
-  z-index: -1;
-}
-
-.installVisual::after {
-  inset: 52px 74px 106px;
-  opacity: 0.58;
+  content: none;
 }
 
 .installVisualOrbit {
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 178px;
+  width: min(100%, 330px);
 }
 
 .installVisualOrbit::before,
 .installVisualOrbit::after {
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  top: 50%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(116, 184, 226, 0.22),
-    rgba(166, 211, 136, 0.22),
-    transparent
-  );
-  content: '';
+  content: none;
 }
 
-.installVisualOrbit::after {
-  left: 50%;
-  right: auto;
-  top: 20%;
-  bottom: 20%;
-  width: 1px;
-  height: auto;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(116, 184, 226, 0.18),
-    rgba(166, 211, 136, 0.18),
-    transparent
-  );
+.installConnectionLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  color: #74b8e2;
+  opacity: 0;
+  overflow: visible;
+  pointer-events: none;
+  transform: scale(0.98);
+  transition:
+    opacity 0.26s ease,
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.installConnectionLine,
+.installConnectionLineSoft {
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.installConnectionLine {
+  opacity: 0.24;
+  stroke-dasharray: 2 10;
+}
+
+.installConnectionLineSoft {
+  opacity: 0.08;
+  stroke-dasharray: 2 14;
+}
+
+.installConnectionPulse {
+  fill: currentColor;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .installAgentLogos {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 68px);
+  gap: 8px 18px;
+  align-items: center;
+  justify-content: center;
+  width: auto;
 }
 
 .installAgentLogo {
-  position: absolute;
+  --logo-rest: translate3d(0, 0, 0);
+  --logo-hover: translate3d(0, 0, 0) rotate(0deg) scale(1);
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 68px;
+  height: 68px;
   margin: 0;
-  border: 1px solid rgba(156, 207, 255, 0.18);
-  color: var(--fg);
-  border-radius: 12px;
-  background: rgba(7, 17, 31, 0.72);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.16);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(230, 244, 255, 0.92);
+  opacity: 0.94;
+  transform: var(--logo-rest);
   transition:
-    background 0.2s,
-    border-color 0.2s;
+    color 0.2s,
+    opacity 0.2s,
+    transform 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
 }
 
 .installAgentLogo:nth-child(1) {
-  top: 4px;
-  left: 50%;
-  transform: translateX(-50%);
+  --logo-rest: translate3d(-10px, 12px, 0) rotate(-12deg) scale(1.04);
+  color: #c1674b;
+  z-index: 4;
 }
 
 .installAgentLogo:nth-child(2) {
-  top: 46px;
-  right: 14px;
+  --logo-rest: translate3d(3px, -5px, 0) rotate(5deg) scale(1.08);
+  color: rgba(239, 248, 255, 0.94);
+  z-index: 7;
 }
 
 .installAgentLogo:nth-child(3) {
-  right: 18%;
-  bottom: 4px;
+  --logo-rest: translate3d(12px, 10px, 0) rotate(11deg) scale(1.03);
+  z-index: 5;
 }
 
 .installAgentLogo:nth-child(4) {
-  bottom: 4px;
-  left: 18%;
+  --logo-rest: translate3d(-13px, -4px, 0) rotate(7deg) scale(1.04);
+  color: inherit;
+  z-index: 6;
 }
 
 .installAgentLogo:nth-child(5) {
-  top: 46px;
-  left: 14px;
+  --logo-rest: translate3d(0, 3px, 0) rotate(-3deg) scale(1.07);
+  color: #3178c6;
+  z-index: 8;
 }
 
+.installAgentLogo:nth-child(6) {
+  --logo-rest: translate3d(13px, -6px, 0) rotate(9deg) scale(1.04);
+  color: #ff4d4d;
+  z-index: 5;
+}
+
+.installAgentLogo:nth-child(7) {
+  --logo-rest: translate3d(-12px, -10px, 0) rotate(-14deg) scale(1.07);
+  color: #f05138;
+  z-index: 3;
+}
+
+.installAgentLogo:nth-child(8) {
+  --logo-rest: translate3d(1px, 9px, 0) rotate(4deg) scale(1.05);
+  color: rgba(239, 248, 255, 0.92);
+  z-index: 6;
+}
+
+.installAgentLogo:nth-child(9) {
+  --logo-rest: translate3d(12px, -12px, 0) rotate(12deg) scale(1.04);
+  color: inherit;
+  z-index: 4;
+}
+
+.installVisual:hover .installAgentLogo,
 .installAgentLogo:hover {
-  border-color: rgba(156, 207, 255, 0.3);
-  background: rgba(9, 25, 41, 0.82);
+  opacity: 1;
+  transform: var(--logo-hover);
+}
+
+.installVisual:hover .installConnectionLayer {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .installAgentLogoIcon {
-  width: 2rem;
-  height: 2rem;
+  width: 2.8rem;
+  height: 2.8rem;
   color: currentColor;
   flex-shrink: 0;
 }
 
-.installVisualCore {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  gap: 9px;
-  width: 112px;
-  height: 112px;
-  border: 1px solid rgba(156, 207, 255, 0.2);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 50% 10%, rgba(156, 207, 255, 0.14), transparent 46%),
-    rgba(7, 17, 31, 0.84);
-  box-shadow:
-    inset 0 1px 0 rgba(237, 247, 255, 0.08),
-    0 20px 42px rgba(0, 0, 0, 0.2);
-  color: rgba(222, 238, 251, 0.9);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+@media (prefers-reduced-motion: no-preference) {
+  .installVisual:hover .installConnectionPulseOne {
+    animation: installPulseX 3.1s 0.05s infinite ease-out;
+  }
+
+  .installVisual:hover .installConnectionPulseTwo {
+    animation: installPulseXReverse 3.3s 0.72s infinite ease-out;
+  }
+
+  .installVisual:hover .installConnectionPulseThree {
+    animation: installPulseY 3.4s 0.38s infinite ease-out;
+  }
+
+  .installVisual:hover .installConnectionPulseFour {
+    animation: installPulseYReverse 3.6s 1.1s infinite ease-out;
+  }
 }
 
-.installVisualMark {
-  width: 44px;
-  height: auto;
+@keyframes installPulseX {
+  0% {
+    opacity: 0;
+    transform: translateX(0) scale(0.7);
+  }
+
+  16% {
+    opacity: 0.46;
+  }
+
+  68% {
+    opacity: 0.18;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(166px) scale(0.7);
+  }
 }
 
-.installVisualCode {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid rgba(116, 184, 226, 0.14);
-  border-radius: 10px;
-  background: rgba(2, 12, 22, 0.5);
+@keyframes installPulseXReverse {
+  0% {
+    opacity: 0;
+    transform: translateX(0) scale(0.7);
+  }
+
+  16% {
+    opacity: 0.4;
+  }
+
+  68% {
+    opacity: 0.16;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-166px) scale(0.7);
+  }
 }
 
-.installVisualCode span {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  color: rgba(196, 211, 226, 0.74);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.75rem;
-  line-height: 1.45;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+@keyframes installPulseY {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.7);
+  }
+
+  16% {
+    opacity: 0.36;
+  }
+
+  68% {
+    opacity: 0.14;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(152px) scale(0.7);
+  }
+}
+
+@keyframes installPulseYReverse {
+  0% {
+    opacity: 0;
+    transform: translateY(0) scale(0.7);
+  }
+
+  16% {
+    opacity: 0.32;
+  }
+
+  68% {
+    opacity: 0.12;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-152px) scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .installAgentLogo {
+    transition: none;
+  }
+
+  .installConnectionLayer {
+    transition: none;
+  }
+
+  .installConnectionPulse {
+    animation: none;
+  }
+
+  .installVisual:hover .installAgentLogo,
+  .installAgentLogo:hover {
+    transform: var(--logo-rest);
+    opacity: 0.94;
+  }
 }
 
 .installActions {
@@ -1811,7 +2027,7 @@
 }
 
 .commandsFeature {
-  order: 5;
+  order: 6;
   --feature-band-bg: #0b1c2a;
   padding-top: 36px;
 }
@@ -1837,11 +2053,11 @@
 }
 
 .featureSeparator.a2aSeparator {
-  order: 6;
+  order: 7;
 }
 
 .a2aFeature {
-  order: 7;
+  order: 8;
   --feature-band-bg: #0b1c2a;
   padding-top: 36px;
 }
@@ -1861,7 +2077,7 @@
 
 .featureSeparator {
   position: relative;
-  order: 4;
+  order: 5;
   grid-column: 1 / -1;
   width: 100vw;
   height: 70px;
@@ -4716,8 +4932,12 @@
   }
 
   .heroLeft {
-    gap: 22px;
+    gap: 28px;
     padding-top: 0;
+  }
+
+  .heroCopyGroup {
+    gap: 10px;
   }
 
   .heroRight {
@@ -4760,6 +4980,10 @@
     padding: 0 0 68px;
   }
 
+  .featuresSection > .installSection {
+    padding: 64px 24px 76px;
+  }
+
   .installInner {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -4774,6 +4998,10 @@
 
   .installInner::after {
     width: min(460px, calc(100% - 64px));
+  }
+
+  .featuresSection > .installSection .installInner {
+    padding: 0;
   }
 
   .waitlistSection {
@@ -4822,7 +5050,11 @@
   }
 
   .heroLeft {
-    gap: 24px;
+    gap: 26px;
+  }
+
+  .heroCopyGroup {
+    gap: 8px;
   }
 
   .headline {
@@ -4856,8 +5088,16 @@
     padding: 0 0 64px;
   }
 
+  .featuresSection > .installSection {
+    padding: 58px 28px 68px;
+  }
+
   .installInner {
     padding: 34px 28px 0;
+  }
+
+  .featuresSection > .installSection .installInner {
+    padding: 0;
   }
 
   .installInner::before {
@@ -4882,38 +5122,32 @@
   }
 
   .installVisual {
-    min-height: 250px;
-    padding: 18px;
-  }
-
-  .installVisual::before {
-    inset: 24px 26px 78px;
-  }
-
-  .installVisual::after {
-    inset: 52px 56px 104px;
+    min-height: 230px;
+    padding: 16px;
   }
 
   .installVisualOrbit {
-    min-height: 160px;
+    width: min(100%, 270px);
+  }
+
+  .installAgentLogos {
+    grid-template-columns: repeat(3, 56px);
+    gap: 6px 14px;
   }
 
   .installAgentLogo {
-    width: 38px;
-    height: 38px;
-  }
-
-  .installAgentLogo:nth-child(2) {
-    right: 0;
-  }
-
-  .installAgentLogo:nth-child(5) {
-    left: 0;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: 56px;
+    height: 56px;
+    transform: var(--logo-rest);
   }
 
   .installAgentLogoIcon {
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 2.2rem;
+    height: 2.2rem;
   }
 
   /* Keep the prompt box as a single row so Copy stays inline, matching the

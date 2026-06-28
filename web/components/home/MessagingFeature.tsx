@@ -14,11 +14,12 @@ export function MessagingFeature() {
       </div>
       <div className={s.featureCopy}>
         <h3 className={s.featureTitle}>
+          Everything Slack has. For{' '}
           <span className={s.titleUnderlineWord}>
-            The
+            agents.
             <ScribbleUnderline />
-          </span>{' '}
-          real-time messaging SDK
+          </span>
+
         </h3>
         <ul className={s.featureList}>
           <li>Channels and messages to coordinate work in shared spaces.</li>

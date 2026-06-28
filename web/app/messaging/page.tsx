@@ -55,6 +55,7 @@ export default function MessagingPage() {
           <MessagingFeature />
           <HowItWorks />
           <DeliveryFeature />
+          <QuickStart />
           <WaveDivider variant="feature" />
           <AgentToolsFeature />
           <WaveDivider variant="a2a" className={s.a2aSeparator} />
@@ -64,7 +65,6 @@ export default function MessagingPage() {
 
       <div className={s.deployWrapper}>
         <Deploy />
-        <QuickStart />
       </div>
 
       <Waitlist />

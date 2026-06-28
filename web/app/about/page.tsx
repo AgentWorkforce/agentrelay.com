@@ -45,27 +45,45 @@ export default function AboutPage() {
       <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
 
       <main className={s.aboutMain}>
+        <div className={s.aboutWaveField} aria-hidden="true">
+          <span className={`${s.aboutWaveLayer} ${s.aboutWaveLayerOne}`} />
+          <span className={`${s.aboutWaveLayer} ${s.aboutWaveLayerTwo}`} />
+          <span className={`${s.aboutWaveLayer} ${s.aboutWaveLayerThree}`} />
+        </div>
+
         <section className={s.aboutHero} aria-labelledby="about-title">
           <div className={s.aboutHeroCopy}>
             <h1 id="about-title" className={s.aboutTitle}>
               The future is <span className={s.aboutNoBreak}>agent-centered.</span>
             </h1>
             <p className={s.aboutLead}>
-              Software is becoming a network of agents that work with people, share context, and move work
-              forward.
+              Software is becoming a network of agents that share context, coordinate work, and act with clear
+              boundaries.
             </p>
           </div>
+        </section>
 
-          <div className={s.aboutOrbit} role="img" aria-label="Agent Relay at the center of agent work">
-            <span className={`${s.aboutOrbitRing} ${s.aboutOrbitRingOuter}`} />
-            <span className={`${s.aboutOrbitRing} ${s.aboutOrbitRingInner}`} />
-            <span className={`${s.aboutOrbitNode} ${s.aboutOrbitNodeTop}`}>People</span>
-            <span className={`${s.aboutOrbitNode} ${s.aboutOrbitNodeRight}`}>Tools</span>
-            <span className={`${s.aboutOrbitNode} ${s.aboutOrbitNodeBottom}`}>Memory</span>
-            <span className={`${s.aboutOrbitNode} ${s.aboutOrbitNodeLeft}`}>Files</span>
-            <span className={s.aboutOrbitCore}>
-              <img src="/brand-kit/agent-relay-mark-transparent.png" alt="" className={s.aboutOrbitMark} />
-            </span>
+        <section className={s.aboutStory} aria-label="Why Agent Relay exists">
+          <p className={s.aboutStoryLead}>
+            Agent work is moving out of single chats and into long-running systems.
+          </p>
+
+          <div className={s.aboutStoryGrid}>
+            <article className={`${s.aboutStoryItem} ${s.aboutStoryItemPrimary}`}>
+              <h2>The workspace is changing.</h2>
+              <p>
+                Agents are becoming participants in real workflows. They need a place to coordinate across tasks,
+                tools, and time.
+              </p>
+            </article>
+            <article className={s.aboutStoryItem}>
+              <h2>The record matters.</h2>
+              <p>Messages, files, delivery receipts, and decisions should stay visible after the run is over.</p>
+            </article>
+            <article className={s.aboutStoryItem}>
+              <h2>Control stays explicit.</h2>
+              <p>Every agent should act through permissions that people can inspect, narrow, and revoke.</p>
+            </article>
           </div>
         </section>
 
@@ -95,7 +113,12 @@ export default function AboutPage() {
         </section>
 
         <section className={s.aboutClosing} aria-label="Agent Relay purpose">
-          <p>Agent Relay exists to make that future reliable, open, and understandable.</p>
+          <p>Agent Relay exists to make agent work reliable, open, and understandable.</p>
+          <div className={s.aboutClosingStack} aria-label="Agent Relay principles">
+            <span>Reliable delivery</span>
+            <span>Open protocols</span>
+            <span>Visible control</span>
+          </div>
         </section>
       </main>
 
