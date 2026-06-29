@@ -62,9 +62,11 @@ export function AgentToolsFeature() {
   return (
     <FadeIn direction="up" delay={180} className={`${s.featureCol} ${s.commandsFeature}`}>
       <div className={s.featureCopy}>
-        <h3 className={s.featureTitle}>Agent Tools for Structured Work</h3>
+        <h3 className={s.featureTitle}>Stop parsing chat</h3>
         <ul className={s.featureList}>
-          <li>Register actions for agents and callbacks for results via the SDK</li>
+          <li>
+            Register tools, validate inputs, and receive callbacks instead of scraping text from conversations.
+          </li>
           <li>Expose CLI and MCP tools so agents can communicate progress back to the SDK.</li>
           <li>
             Require approvals, validate inputs, and return structured results instead of free-form guesses.
