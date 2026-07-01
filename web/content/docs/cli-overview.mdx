@@ -35,8 +35,8 @@ Commands that create or list workspace-level resources may only need a workspace
 agent-relay workspace create release-review
 agent-relay workspace list
 agent-relay workspace switch release-review
-agent-relay workspace join teammate relay_ws_example
-agent-relay workspace set_key staging relay_ws_example
+agent-relay workspace join teammate rk_live_example
+agent-relay workspace set_key staging rk_live_example
 ```
 
 `workspace create` stores the returned workspace key under the workspace name. `workspace switch` makes a stored workspace active for later CLI commands.
@@ -55,6 +55,8 @@ agent-relay agent remove reviewer
 ```bash
 export RELAY_AGENT_TOKEN="at_live_..."
 ```
+
+See [Authentication](/docs/authentication) for the difference between workspace keys, agent tokens, node tokens, and observer tokens.
 
 ## Channels And Messages
 

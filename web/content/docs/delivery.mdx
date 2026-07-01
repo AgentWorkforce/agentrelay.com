@@ -7,6 +7,23 @@ Messaging writes a durable record. Delivery gets that record into a session.
 
 Relay should not care whether a harness delivers through a PTY, a headless SDK callback, an app-server API, a webhook, a queue, or a native MCP notification. Relay cares about the semantic delivery mode, the message, the session capabilities, and the receipt.
 
+Delivery is routed through [nodes](/docs/nodes). Direct SDK and MCP clients use implicit `direct_ws` nodes, broker-controlled workers use `fleet_ws` nodes, and service endpoints can use `http_push` nodes. The node binding for an agent decides which adapter receives future delivery work.
+
+## Delivery Is Node-Only
+
+Realtime delivery happens over the node channel and nowhere else. The engine routes an agent's messages to the node that owns it as `deliver` frames on `/v1/node/ws`. Each frame carries a per-agent `seq`, and the node acknowledges with a cumulative `delivery.ack { agent, up_to_seq }`. Because acks are cumulative and sequencing is per agent, delivery is reliable, ordered, and resumable: after a reconnect the engine replays everything past the last acked sequence.
+
+```text
+                 deliver { agent_id, seq, payload }
+   engine  ──────────────────────────────────────────►  node (owns the agent)
+           ◄──────────────────────────────────────────
+                 delivery.ack { agent, up_to_seq }
+```
+
+Reactions and read receipts ride the same `deliver` frame, distinguished by the payload type (`message.reacted` / `message.read`). When an agent invokes an action, the `action.completed`, `action.failed`, or `action.denied` result is delivered back to the calling agent over its node the same way.
+
+The workspace stream at `/v1/ws` is **observer-only**. It feeds dashboards and audit views with an `ot_live_*` token; it is never a delivery path, and an agent never receives its messages there.
+
 ## Minimum Contract
 
 Every session on Relay must be able to receive a message and be released.
@@ -185,7 +202,27 @@ relay.addListener('delivery.failed', (e) =>
 
 WebSockets are how connected adapters hear about delivery work immediately. A harness adapter can subscribe to workspace events, filter deliveries for its session, and call `receiveMessage`.
 
-If a WebSocket is not available, delivery can still work through polling, queue workers, app-server webhooks, or MCP-triggered flush tools. The stored message and delivery record remain the source of truth.
+Direct WebSocket clients are modeled as implicit `direct_ws` nodes. Broker-controlled WebSocket workers are
+`fleet_ws` nodes that can host multiple bound agents and receive scoped context updates in addition to
+durable delivery work.
+
+If a WebSocket is not available, delivery can still work through polling, queue workers, app-server webhooks,
+HTTP push nodes, or MCP-triggered flush tools. The stored message and delivery record remain the source of
+truth.
+
+## HTTP Push Delivery
+
+An `http_push` node stores an external delivery endpoint and one or more agent bindings. When Relay creates
+a delivery for a bound agent, it dispatches the delivery to the node's URL with the configured auth mode.
+
+`ackMode` controls acknowledgement:
+
+- `manual` leaves the delivery delivered until the receiver calls the ack endpoint with the bound agent token.
+- `on_2xx` acks on any 2xx HTTP response.
+- `response` acks when the response body declares an ack.
+
+Use `on_2xx` or `response` for webhook receivers that should not hold agent tokens. Queue-backed deployments
+must run the HTTP push redrive sweep so due retries are dispatched after transient failures.
 
 ## Reliability Rules
 

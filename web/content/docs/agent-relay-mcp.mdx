@@ -28,6 +28,8 @@ Create a workspace first if you do not have a key:
 agent-relay workspace create support-triage
 ```
 
+Workspace keys use the `rk_live_*` prefix. The MCP server uses that key to bootstrap workspace access, then registered agents act with their own `at_live_*` tokens. See [Authentication](/docs/authentication).
+
 ## Messaging Tools
 
 | Tool | Purpose |
@@ -64,6 +66,17 @@ An agent using MCP can coordinate without SDK imports:
 4. Inspect `check_inbox`.
 5. Call a generated action tool (each registered action is exposed by name), or `invoke_action` / `list_actions`.
 6. Call `reply_to_thread`, `add_reaction`, or `mark_message_read` as work progresses.
+
+## Agent Registration And Nodes
+
+`register_agent` creates or adopts an agent identity for the MCP caller. A directly connected MCP server is
+routed through an implicit `direct_ws` node, so there is no separate node setup step for normal tool-based
+agents.
+
+`query_nodes` reads the workspace node roster. Use it to discover delivery hosts and capabilities before
+calling `spawn` or before asking an operator to bind an app-server agent to a node. Nodes are delivery
+routes, not a workspace feature flag: a roster entry can be a direct connection, a broker-controlled
+WebSocket worker, an HTTP push endpoint, or a polling integration.
 
 ## Generated Action Tools
 

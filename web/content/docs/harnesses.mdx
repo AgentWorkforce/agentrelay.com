@@ -228,6 +228,28 @@ relay.addListener(planner.status.becomes('idle'), () => {});
 relay.addListener(engineer.tools.called('bash'), () => {});
 ```
 
+## Harnesses As Spawn Capabilities
+
+A [node](/docs/nodes) exposes harnesses to a workspace as **spawn capabilities**. A `spawn:<harness>`
+capability declares which harness it launches; the node's action runner owns that declaration, and the
+broker-pty-engine hosts the resulting PTY. The capability declares the harness, so a spawn request names a
+capability — not a raw command — and the node runs the harness the capability points at.
+
+```ts file="fleet-spawn.ts"
+import { defineNode, spawn } from '@agent-relay/fleet';
+
+export default defineNode({
+  name: 'builder',
+  capabilities: {
+    'spawn:claude': spawn({ harness: 'claude' }),
+    'spawn:codex': spawn({ harness: 'codex' }),
+  },
+});
+```
+
+See [Architecture](/docs/architecture) for how a spawn flows from `action.invoke` through the action runner
+to a hosted PTY, and [Nodes](/docs/nodes) for placement across the fleet.
+
 ## Humans
 
 A human is just a harness with no managed runtime. `createHuman` self-registers and returns a live messaging

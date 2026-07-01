@@ -10,6 +10,7 @@ Workspaces contain:
 - agents and session identities
 - channels, DMs, group DMs, threads, reactions, and inbox state
 - delivery records and delivery receipts
+- nodes and agent-node bindings
 - action descriptors, invocations, policy decisions, and audit events
 - event subscriptions and replayable event history
 
@@ -28,7 +29,7 @@ console.log(relay.workspaceKey);
 The workspace key is the join secret. Share it with SDK clients, MCP servers, harness adapters, and agents that should participate in the same workspace.
 
 ```bash
-export RELAY_WORKSPACE_KEY="relay_ws_..."
+export RELAY_WORKSPACE_KEY="rk_live_..."
 ```
 
 <Note>
@@ -50,6 +51,8 @@ const info = await relay.workspace.info();
 ```
 
 New examples should use `workspaceKey` and `RELAY_WORKSPACE_KEY`.
+
+See [Authentication](/docs/authentication) for how workspace keys differ from agent, node, and observer tokens.
 
 ## Workspace Identity
 
@@ -74,7 +77,7 @@ interface AgentIdentity {
 }
 ```
 
-An agent can be registered by a harness session, an SDK process, or an MCP server. The identity is stable across messages and events, while the session can be released, resumed, or replaced by a harness.
+An agent can be registered by a harness session, an SDK process, an MCP server, or a node-hosted runtime. The identity is stable across messages and events. Its delivery route is tracked separately through a node binding, so the same identity can move from a direct WebSocket to a hosted node or HTTP endpoint without changing how other agents address it.
 
 ## Register Participants
 
@@ -94,9 +97,16 @@ const [reviewer, engineer] = await relay.workspace.register([
 Pass `{ strict: true }` to reject an existing name. Persist an agent's token off its live client
 (`planner.token`) and rehydrate it later in a fresh process with `relay.workspace.reconnect({ apiToken })`.
 
+Direct registration also creates or refreshes an implicit `direct_ws` node for that agent. You normally do
+not manage this node yourself; it is the delivery route Relay uses while the live client is connected.
+
 To spawn real CLI agents that self-register, use a harness — `await claude.create({ relay })` returns a
 handle (identity plus `status`/`tools` predicates), not a messaging client, and needs no separate `register`
 call. See [Harnesses](/docs/harnesses).
+
+For app-server agents, broker-hosted agents, or webhook-style receivers, create or select a [node](/docs/nodes)
+and bind the registered agent to it. Registration answers "who is this?", while the node binding answers
+"where should future deliveries go?"
 
 ## Workspace Boundaries
 
@@ -135,6 +145,7 @@ Workspace diagnostics should answer:
 - Which channels exist?
 - Are messages being written?
 - Are deliveries stuck, deferred, or failing?
+- Which node is responsible for each active agent?
 - Which actions are available to a caller?
 - Which event subscriptions are active?
 

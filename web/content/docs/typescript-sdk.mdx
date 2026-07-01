@@ -95,6 +95,68 @@ type MessageReceipt =
 
 The SDK can expose `DeliveryRunner` and `AgentDeliveryAdapter` interfaces even while durable backend `ack`, `fail`, and `defer` operations are still being implemented. Unsupported operations should fail explicitly.
 
+## Nodes API
+
+Nodes describe where agent deliveries go. Direct SDK clients get an implicit `direct_ws` node when they
+register. Use `relay.nodes` when you need to inspect the roster, create an HTTP push endpoint, or bind an
+agent identity to a hosted delivery node.
+
+```ts file="nodes.ts"
+const receiver = await relay.workspace.register({
+  name: 'billing-agent',
+  type: 'agent',
+});
+
+const node = await relay.nodes.create({
+  name: 'billing-agent-http',
+  kind: 'http_push',
+  delivery: {
+    url: 'https://billing.example.com/relaycast',
+    ackMode: 'on_2xx',
+    auth: {
+      type: 'bearer',
+      token: process.env.BILLING_RELAY_TOKEN!,
+    },
+  },
+});
+
+await relay.nodes.bindAgent(node.name, {
+  agentName: receiver.name,
+});
+
+const roster = await relay.nodes.list();
+const bindings = await relay.nodes.listAgents(node.name);
+```
+
+The SDK uses camelCase (`deliveryAdapter`, `activeAgents`, `agentName`). REST resources use snake_case.
+See [Nodes](/docs/nodes) for node kinds, HTTP ack modes, and agent-node binding behavior.
+
+## Observer Tokens API
+
+Observer tokens are read-only credentials for dashboards, audit jobs, and reporting integrations. Create and manage them with a workspace key, then hand the returned `ot_live_*` token to the read-only client.
+
+```ts file="observer-token.ts"
+const observer = await relay.observerTokens.create({
+  name: 'support-dashboard',
+  scopes: ['stream:read', 'messages:read', 'threads:read', 'reactions:read', 'agents:read'],
+  filters: {
+    channelNames: ['support'],
+    eventTypes: ['message.created', 'thread.reply', 'message.reacted'],
+  },
+});
+
+console.log(observer.token); // returned only on create and rotate
+
+await relay.observerTokens.update(observer.id, {
+  filters: { channelNames: ['support', 'incidents'] },
+});
+
+const rotated = await relay.observerTokens.rotate(observer.id);
+await relay.observerTokens.revoke(observer.id);
+```
+
+Use [Authentication](/docs/authentication) for the full token type model, observer scope list, and DM filter rules.
+
 ## Harnesses
 
 Spawn real agents with prebuilt harnesses. `create({ relay })` spawns **and** self-registers the agent,

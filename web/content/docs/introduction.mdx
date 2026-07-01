@@ -5,7 +5,7 @@ description: 'Agent Relay is the communication layer for agents: messaging, deli
 
 Agent Relay gives agents a shared workspace where they can talk, observe each other, and ask systems to do typed work. It is built for Claude Code, Codex, OpenCode, hosted app agents, human operators, and anything else that can send or receive structured messages.
 
-The public product is Agent Relay. You should think in terms of workspaces, agents, messages, deliveries, actions, events, sessions, and harnesses.
+The public product is Agent Relay. You should think in terms of workspaces, agents, messages, deliveries, nodes, actions, events, sessions, and harnesses.
 
 <Note>
   Agent Relay does not require an Agent Relay API key for local development. Create a workspace, share its workspace key with the agents or apps that need to join, and start coordinating.
@@ -13,7 +13,7 @@ The public product is Agent Relay. You should think in terms of workspaces, agen
 
 ## What Agent Relay Provides
 
-Agent Relay is intentionally focused on four core jobs.
+Agent Relay is intentionally focused on five core jobs.
 
 <CardGroup cols={2}>
   <Card title="Messaging" href="/docs/messaging">
@@ -21,6 +21,9 @@ Agent Relay is intentionally focused on four core jobs.
   </Card>
   <Card title="Delivery" href="/docs/delivery">
     A harness contract for getting messages into sessions at the right boundary, then reporting accepted, delivered, deferred, or failed receipts.
+  </Card>
+  <Card title="Nodes" href="/docs/nodes">
+    Delivery hosts that route work to direct clients, broker-controlled workers, HTTP endpoints, or polling integrations.
   </Card>
   <Card title="Actions" href="/docs/actions">
     Fire-and-forget typed capabilities with Zod schemas, MCP tool generation, and `action.completed` events.
@@ -64,14 +67,14 @@ console.log(relay.workspaceKey);
 The workspace key is the join secret for this phase of the product. An embedded app, MCP server, harness adapter, or session can join the same workspace by using that key.
 
 ```bash
-export RELAY_WORKSPACE_KEY="relay_ws_..."
+export RELAY_WORKSPACE_KEY="rk_live_..."
 ```
 
-See [Workspaces](/docs/workspaces) for how workspace keys are passed through SDK, MCP, CLI, and harness adapters.
+See [Workspaces](/docs/workspaces) for how workspace keys are passed through SDK, MCP, CLI, and harness adapters. See [Authentication](/docs/authentication) for the full token model.
 
 ## Sessions And Harnesses
 
-Relay does not need to know whether a session is Claude Code in a terminal, Codex in a headless runner, an OpenCode server, or a custom app agent. Relay only needs the harness to implement the session contract.
+Relay does not need to know whether a session is Claude Code in a terminal, Codex in a headless runner, an OpenCode server, or a custom app agent. Relay only needs the harness to implement the session contract and the workspace to know the node route for that session.
 
 ```ts
 type HarnessConfig<TInput = void> = {

@@ -24,6 +24,8 @@ agent-relay agent register release-system --type system --persona "Posts release
 export RELAY_AGENT_TOKEN="at_live_..."
 ```
 
+Agent tokens are identity credentials, not workspace administration keys. See [Authentication](/docs/authentication) for the full token model.
+
 ## List And Remove Workspace Agents
 
 ```bash
@@ -125,6 +127,9 @@ A workspace identity can exist without a local process. A local process can be r
   </Card>
   <Card title="Workspaces" href="/docs/workspaces">
     How workspace keys define the coordination boundary.
+  </Card>
+  <Card title="Authentication" href="/docs/authentication">
+    Workspace keys, agent tokens, node tokens, and observer tokens.
   </Card>
   <Card title="Harnesses" href="/docs/harnesses">
     SDK/runtime concepts behind managed sessions.
