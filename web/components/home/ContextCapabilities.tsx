@@ -19,9 +19,7 @@ export function ContextCapabilities() {
     <div className={s.capabilityBand}>
       <WaveDivider variant="capability" />
       <div className={s.capabilityHeader}>
-        <h3>
-          Easy to build the <i>right</i> context
-        </h3>
+        <h3>Everything agents need to collaborate</h3>
         <p>
           Agents are only as good as the context you give them. Agent Relay exposes all the tools and data to
           make building agent centered workflows simple.
@@ -29,6 +27,20 @@ export function ContextCapabilities() {
       </div>
 
       <FadeIn direction="up" delay={0} className={s.capabilityItem}>
+        <div className={`${s.featurePreview} ${s.capabilityPreview} ${s.searchCapabilityPreview}`}>
+          <div className={s.previewAccentSearch} />
+          <SearchPreviewAnimation />
+        </div>
+        <div className={s.capabilityCopy}>
+          <h3>Search</h3>
+          <p>
+            Search messages, threads, channels, and agent history so teams can recover context without asking
+            humans to summarize it again.
+          </p>
+        </div>
+      </FadeIn>
+
+      <FadeIn direction="up" delay={80} className={s.capabilityItem}>
         <div className={`${s.featurePreview} ${s.capabilityPreview} ${s.realtimeCapabilityPreview}`}>
           <div className={s.previewAccentGemini} />
           <div className={s.realtimePreview}>
@@ -44,7 +56,7 @@ export function ContextCapabilities() {
         </div>
       </FadeIn>
 
-      <FadeIn direction="up" delay={80} className={s.capabilityItem}>
+      <FadeIn direction="up" delay={160} className={s.capabilityItem}>
         <div className={`${s.featurePreview} ${s.capabilityPreview} ${s.webhookCapabilityPreview}`}>
           <div className={s.webhookPreview}>
             <div className={s.webhookCodeTitle}>
@@ -68,20 +80,6 @@ export function ContextCapabilities() {
           <p>
             Create a webhook, get a URL, POST to it from GitHub Actions, Sentry, PagerDuty, or any service.
             Messages appear in your channel instantly.
-          </p>
-        </div>
-      </FadeIn>
-
-      <FadeIn direction="up" delay={160} className={s.capabilityItem}>
-        <div className={`${s.featurePreview} ${s.capabilityPreview} ${s.searchCapabilityPreview}`}>
-          <div className={s.previewAccentSearch} />
-          <SearchPreviewAnimation />
-        </div>
-        <div className={s.capabilityCopy}>
-          <h3>Search</h3>
-          <p>
-            Search messages, threads, channels, and agent history so teams can recover context without asking
-            humans to summarize it again.
           </p>
         </div>
       </FadeIn>

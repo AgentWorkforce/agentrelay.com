@@ -88,7 +88,7 @@ export function HowItWorks() {
     <section className={s.howItWorks} aria-labelledby="how-it-works-title">
       <FadeIn direction="up" className={s.howHeader}>
         <h2 id="how-it-works-title" className={s.howTitle}>
-          Works with Every Agent
+          Works with all of them
         </h2>
         <p className={s.howSubtitle}>
           It's not a harness, and it's not a framework. Our PTY based driver can power any CLI agent or you

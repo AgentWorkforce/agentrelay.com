@@ -18,7 +18,8 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Edge middleware (not Next 16's Node.js `proxy.ts`) so it bundles for the
-  // Cloudflare Workers runtime via OpenNext.
+  // Keep this on the deprecated middleware convention while deploying through
+  // OpenNext Cloudflare. Next 16 `proxy.ts` is Node.js-only, and OpenNext
+  // Cloudflare 1.19 currently rejects Node.js middleware during `cf:build`.
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };

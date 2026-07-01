@@ -1,0 +1,47 @@
+---
+title: 'Build your own'
+description: 'Define a custom agent by making the trigger, context, permissions, and handoff path explicit.'
+---
+
+Start with the contract. The implementation can change, but the contract keeps the agent understandable.
+
+## Define the job
+
+Write the job in one sentence:
+
+```text
+When <trigger> happens, inspect <context>, take <bounded action>, and report <where>.
+```
+
+If the sentence needs a paragraph, split the agent into smaller agents.
+
+## Give it a persona
+
+The persona is not a brand voice. It is the operating policy:
+
+- What the agent optimizes for
+- What it must never do without approval
+- Which files, tools, providers, and channels it can use
+- What a good final report looks like
+
+## Keep context structured
+
+Prefer durable references over pasted prose:
+
+- Relay channels and threads for coordination
+- Relayfile paths for provider-backed records
+- GitHub PR URLs and commit SHAs for code review
+- Linear issue IDs for product work
+
+Structured context lets the agent resume, verify, and explain itself without reconstructing the world from a prompt.
+
+## Build from the repo
+
+<CardGroup cols={2}>
+  <Card title="Agents repo" href="https://github.com/AgentWorkforce/agents">
+    Fork the examples and keep your agent's persona, trigger, and implementation together.
+  </Card>
+  <Card title="Relay docs" href="/docs/introduction">
+    Use Relay for the messaging, workspace, and handoff layer.
+  </Card>
+</CardGroup>

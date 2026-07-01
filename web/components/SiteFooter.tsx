@@ -1,8 +1,93 @@
 import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 
 import { SITE_EMAIL } from '../lib/site';
 import { LogoIcon, LogoWordmark } from './SiteNav';
 import s from './site-footer.module.css';
+
+type FooterLink = {
+  href: string;
+  label: string;
+  showExternalIcon?: boolean;
+};
+
+type FooterColumn = {
+  links: FooterLink[];
+  title: string;
+};
+
+const footerColumns: FooterColumn[] = [
+  {
+    title: 'Products',
+    links: [
+      { label: 'Relay Cloud', href: 'https://agentrelay.com/cloud' },
+      { label: 'Reflex', href: '/reflex' },
+      { label: 'Pear', href: '/pear' },
+    ],
+  },
+  {
+    title: 'Open Source',
+    links: [
+      { label: 'Relay', href: '/messaging' },
+      { label: 'RelayFile', href: 'https://github.com/AgentWorkforce/relayfile' },
+      { label: 'RelayAuth', href: 'https://github.com/AgentWorkforce/relayauth' },
+      { label: 'RelayFlows', href: 'https://github.com/AgentWorkforce/relayflows' },
+      { label: 'Agents', href: '/agents' },
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      { label: 'Relay Docs', href: '/docs' },
+      { label: 'RelayFile Docs', href: '/docs/file' },
+      { label: 'Brand', href: '/brand' },
+      { label: 'GitHub', href: 'https://github.com/agentworkforce/relay' },
+      { label: 'Proactive Agents', href: 'https://proactiveagents.dev', showExternalIcon: true },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { label: 'Home', href: '/' },
+      { label: 'Blog', href: '/blog' },
+      { label: 'Careers', href: '/careers' },
+    ],
+  },
+  {
+    title: 'Help',
+    links: [
+      { label: 'Telemetry', href: '/telemetry' },
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
+      { label: 'Contact', href: `mailto:${SITE_EMAIL}` },
+    ],
+  },
+];
+
+function FooterTextLink({ href, label, showExternalIcon }: FooterLink) {
+  const isExternal = href.startsWith('http');
+  const isMail = href.startsWith('mailto:');
+
+  if (isExternal || isMail) {
+    return (
+      <a
+        href={href}
+        target={isExternal ? '_blank' : undefined}
+        rel={isExternal ? 'noopener noreferrer' : undefined}
+        className={s.link}
+      >
+        {label}
+        {showExternalIcon ? <ExternalLink className={s.externalIcon} aria-hidden="true" /> : null}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={s.link}>
+      {label}
+    </Link>
+  );
+}
 
 export function SiteFooter() {
   return (
@@ -17,116 +102,14 @@ export function SiteFooter() {
         </div>
 
         <div className={s.columns}>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Projects</h4>
-            <Link href="/pear" className={s.link}>
-              Pear
-            </Link>
-            <a
-              href="https://github.com/AgentWorkforce/relayfile"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Relayfile
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/relayauth"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Relayauth
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/trajectories"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Trajectories
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/burn"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Burn
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/relayflows"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Relayflows
-            </a>
-          </div>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Documentation</h4>
-            <Link href="/docs/introduction" className={s.link}>
-              Introduction
-            </Link>
-            <Link href="/docs/quickstart" className={s.link}>
-              Quickstart
-            </Link>
-            <Link href="/docs/messaging" className={s.link}>
-              Messaging
-            </Link>
-            <Link href="/docs/delivery" className={s.link}>
-              Delivery
-            </Link>
-            <Link href="/docs/actions" className={s.link}>
-              Actions
-            </Link>
-            <Link href="/docs/cli-overview" className={s.link}>
-              CLI
-            </Link>
-            <Link href="/docs/typescript-sdk" className={s.link}>
-              TypeScript SDK
-            </Link>
-          </div>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Resources</h4>
-            <Link href="/blog" className={s.link}>
-              Blog
-            </Link>
-            <Link href="/brand" className={s.link}>
-              Brand
-            </Link>
-            <a
-              href="https://proactiveagents.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Proactive Agents
-            </a>
-          </div>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Company</h4>
-            <a
-              href="https://github.com/agentworkforce/relay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              GitHub
-            </a>
-            <Link href="/telemetry" className={s.link}>
-              Telemetry
-            </Link>
-            <Link href="/privacy" className={s.link}>
-              Privacy
-            </Link>
-            <Link href="/terms" className={s.link}>
-              Terms
-            </Link>
-            <a href={`mailto:${SITE_EMAIL}`} className={s.link}>
-              Contact
-            </a>
-          </div>
+          {footerColumns.map((column) => (
+            <div className={s.col} key={column.title}>
+              <h4 className={s.colTitle}>{column.title}</h4>
+              {column.links.map((link) => (
+                <FooterTextLink key={`${column.title}-${link.label}`} {...link} />
+              ))}
+            </div>
+          ))}
         </div>
       </div>
 

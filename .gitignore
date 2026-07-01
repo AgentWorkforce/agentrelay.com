@@ -19,6 +19,7 @@ web/.dev.vars
 
 # Runtime data
 web/waitlist.json
+.agentworkforce/
 
 # Env
 .env

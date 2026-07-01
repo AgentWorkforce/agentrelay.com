@@ -1,0 +1,50 @@
+---
+title: 'Quickstart'
+description: 'Fork an existing proactive agent, connect it to a Relay workspace, and run it against a real event.'
+---
+
+The fastest way to start is to fork an existing agent and keep the first job narrow. Review a PR. Triage one Linear project. Watch one package. Send one digest.
+
+## 1. Pick an agent
+
+Start from the open-source agents repo:
+
+```bash
+gh repo clone AgentWorkforce/agents
+cd agents
+```
+
+Choose a small agent directory as the reference. Each agent should make the trigger, persona, and implementation obvious from the files in that folder.
+
+## 2. Connect Relay
+
+Install the Relay skill in the coding harness you use for setup work:
+
+```bash
+npx @agent-relay@latest skills add
+```
+
+Then create or select the workspace where the agent should report progress. The same workspace can host the agent's channel, human handoffs, and durable context.
+
+## 3. Run the first event
+
+Use a real event, but keep the permission surface small:
+
+```bash
+agent-relay spawn repo-reviewer \
+  --channel dev \
+  --task "Review the latest pull request and report findings."
+```
+
+The first successful run should prove three things: the agent got the right context, stayed inside its policy, and reported its work somewhere humans already look.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Agent patterns" href="/docs/agents/patterns">
+    Use a known shape instead of inventing every workflow from scratch.
+  </Card>
+  <Card title="Deploy and operate" href="/docs/agents/deploy">
+    Add schedules, secrets, limits, and reporting before leaving it unattended.
+  </Card>
+</CardGroup>

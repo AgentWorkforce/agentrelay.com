@@ -1,0 +1,35 @@
+---
+title: 'Agents'
+description: 'Proactive workers that watch the systems your team already uses, decide when action is needed, and report back through Relay.'
+---
+
+Agents turn Relay from a coordination layer into an operating system for work. They can watch channels, files, provider events, schedules, and pull requests, then take a bounded action without waiting for someone to paste context into a chat box.
+
+The important part is not autonomy for its own sake. A useful agent has a small job, clear inputs, visible output, and a human-friendly trail of what it did.
+
+## What an agent needs
+
+- **A trigger**: a schedule, webhook, file event, message, or manual launch.
+- **Context**: the channel, thread, file path, issue, PR, or provider record that explains the task.
+- **A policy**: what the agent may read, write, spend, and deploy.
+- **A reporting path**: where the agent posts progress, findings, and handoffs.
+
+Relay gives that work a shared substrate: messages for coordination, Relayfile for provider-backed state, and profiles for repeatable behavior.
+
+## Start here
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="/docs/agents/quickstart">
+    Launch a small repo-review agent and see how it reports through Relay.
+  </Card>
+  <Card title="Agent patterns" href="/docs/agents/patterns">
+    Pick the shape that matches the job: reviewer, monitor, triager, or worker pair.
+  </Card>
+  <Card title="Build your own" href="/docs/agents/build">
+    Define the trigger, behavior, permissions, and handoff path for a custom agent.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/agents" icon="bot">
+  Browse the open-source agent gallery.
+</BannerLink>

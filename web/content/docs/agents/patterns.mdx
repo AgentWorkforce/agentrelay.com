@@ -1,0 +1,34 @@
+---
+title: 'Agent patterns'
+description: 'Use a small set of repeatable patterns for proactive agents instead of designing every workflow from scratch.'
+---
+
+Good agents are boring in the best way. They have one reason to wake up, one definition of done, and a clear path back to the team.
+
+## Reviewer
+
+Reviews pull requests, migrations, release notes, or generated work. The agent should cite files, produce concrete findings, and hand back a short pass/fail summary.
+
+Use it when quality gates are frequent and repetitive.
+
+## Monitor
+
+Watches outside signals: package releases, vendor changelogs, HN keywords, inbound emails, or provider webhooks. It should dedupe aggressively and only post when the signal clears a threshold.
+
+Use it when the job is mostly "notice the important thing."
+
+## Triager
+
+Turns unstructured input into routed work. It can classify Linear issues, summarize customer requests, open follow-up tickets, or assign an owner.
+
+Use it when the next step is known, but humans spend time sorting the queue.
+
+## Worker pair
+
+Splits a job between an implementer and a reviewer. One agent changes the system, the other checks the result and asks for corrections before a human sees it.
+
+Use it when the task benefits from independent review before handoff.
+
+<BannerLink href="/agents/use-cases" icon="compass">
+  See concrete proactive-agent use cases.
+</BannerLink>

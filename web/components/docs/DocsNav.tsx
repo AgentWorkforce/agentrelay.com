@@ -8,6 +8,7 @@ import {
   Activity,
   BookOpen,
   Bot,
+  ChevronDown,
   Cloud,
   Clock3,
   Compass,
@@ -34,8 +35,14 @@ import { RiLayout5Line } from 'react-icons/ri';
 import { SiClaude, SiPython, SiTypescript } from 'react-icons/si';
 
 import { docsNav, legacyDocsNav } from '../../lib/docs-nav';
-import { getDocsVersionForPath, legacyDocsBasePath, v8DocsBasePath } from '../../lib/docs-versions';
-import { getProductSectionForPath, productBasePath } from '../../lib/product-docs-nav';
+import {
+  currentDocsVersion,
+  docsVersions,
+  getDocsVersionForPath,
+  legacyDocsBasePath,
+  v8DocsBasePath,
+} from '../../lib/docs-versions';
+import { getProductSectionForPath, productBasePath, productSections } from '../../lib/product-docs-nav';
 import { DocsVersionSelect } from './DocsVersionSelect';
 import { FolderOpen as FolderOpenIcon, Repeat } from 'lucide-react';
 import styles from './docs.module.css';
@@ -43,9 +50,31 @@ import styles from './docs.module.css';
 type NavIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
 
 const productSectionIcons: Record<string, NavIcon> = {
+  agents: Bot,
   file: FolderOpenIcon,
   loop: Repeat,
 };
+
+const currentRelayDocsVersion = docsVersions.find((version) => version.id === currentDocsVersion)?.shortLabel;
+
+const docsProductOptions = [
+  {
+    id: null,
+    label: 'Relay',
+    tagline: 'Messaging',
+    href: '/docs/introduction',
+    Icon: Mail,
+    version: currentRelayDocsVersion,
+  },
+  ...productSections.map((section) => ({
+    id: section.id,
+    label: section.label,
+    tagline: section.tagline,
+    href: `${productBasePath(section)}/introduction`,
+    Icon: productSectionIcons[section.id] ?? BookOpen,
+    version: section.version,
+  })),
+];
 
 const productNavIcons: Record<string, NavIcon> = {
   introduction: Compass,
@@ -62,6 +91,9 @@ const productNavIcons: Record<string, NavIcon> = {
   sdk: SiTypescript,
   'python-sdk': SiPython,
   agents: Bot,
+  patterns: Network,
+  build: Bot,
+  deploy: Rocket,
   'adapters-and-providers': Plug,
   comparison: BookOpen,
   cloud: Cloud,
@@ -187,25 +219,7 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
       aria-label="Documentation"
     >
       {!isSidebar && !productSection && <DocsVersionSelect />}
-      {productSection &&
-        (() => {
-          const ProductIcon = productSectionIcons[productSection.id] ?? BookOpen;
-          return (
-            <div className={styles.productHeader}>
-              <Link href="/docs/introduction" className={styles.productBackLink}>
-                ← Agent Relay docs
-              </Link>
-              <Link href={docsBasePath} className={styles.productHeaderName}>
-                <ProductIcon className={styles.productHeaderIcon} aria-hidden="true" />
-                <span>{productSection.label}</span>
-                {productSection.version && (
-                  <span className={styles.productHeaderVersion}>v{productSection.version}</span>
-                )}
-              </Link>
-              <p className={styles.productHeaderTagline}>{productSection.tagline}</p>
-            </div>
-          );
-        })()}
+      {(productSection || docsVersion === 'v8') && <DocsProductSwitcher activeId={productSection?.id ?? null} />}
       {navGroups.map((group) => (
         <div key={group.title} className={styles.navGroup}>
           <h4 className={styles.navGroupTitle}>{group.title}</h4>
@@ -236,5 +250,86 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
         </div>
       ))}
     </nav>
+  );
+}
+
+export function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
+  const activeProduct =
+    docsProductOptions.find((option) => option.id === activeId) ?? docsProductOptions[0];
+  const ActiveIcon = activeProduct.Icon;
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const closeSwitcher = () => {
+    if (detailsRef.current) {
+      detailsRef.current.open = false;
+    }
+  };
+  const closeSwitcherAfterNavigationStarts = () => {
+    window.setTimeout(closeSwitcher, 0);
+  };
+
+  return (
+    <div className={styles.productHeader}>
+      <details ref={detailsRef} className={styles.productSwitcher}>
+        <summary className={styles.productSwitcherSummary}>
+          <span className={styles.productSwitcherCurrent}>
+            <ActiveIcon className={styles.productHeaderIcon} aria-hidden="true" />
+            <span className={styles.productSwitcherText}>
+              <span className={styles.productSwitcherTitleRow}>
+                <span className={styles.productSwitcherLabel}>{activeProduct.label}</span>
+                {activeProduct.version && (
+                  <span className={styles.productHeaderVersion}>v{activeProduct.version}</span>
+                )}
+              </span>
+              <span className={styles.productHeaderTagline}>{activeProduct.tagline}</span>
+            </span>
+          </span>
+          <span className={styles.productSwitcherMeta}>
+            <ChevronDown className={styles.productSwitcherChevron} aria-hidden="true" />
+          </span>
+        </summary>
+        <div className={styles.productSwitcherMenu}>
+          {docsProductOptions.map((option) => {
+            const OptionIcon = option.Icon;
+            const isActive = option.id === activeId;
+            const isComingSoon = option.id === 'loop';
+            const optionContent = (
+              <>
+                <OptionIcon className={styles.productSwitcherOptionIcon} aria-hidden="true" />
+                <span className={styles.productSwitcherOptionText}>
+                  <span className={styles.productSwitcherOptionTitleRow}>
+                    <span className={styles.productSwitcherOptionLabel}>{option.label}</span>
+                    {isComingSoon && <span className={styles.productSwitcherOptionBadge}>Coming soon</span>}
+                  </span>
+                  <span className={styles.productSwitcherOptionTagline}>{option.tagline}</span>
+                </span>
+              </>
+            );
+            if (isComingSoon) {
+              return (
+                <div
+                  key={option.id}
+                  className={`${styles.productSwitcherOption} ${styles.productSwitcherOptionDisabled}`}
+                  aria-disabled="true"
+                >
+                  {optionContent}
+                </div>
+              );
+            }
+            return (
+              <Link
+                key={option.id ?? 'relay'}
+                href={option.href}
+                className={`${styles.productSwitcherOption} ${
+                  isActive ? styles.productSwitcherOptionActive : ''
+                }`}
+                onClick={closeSwitcherAfterNavigationStarts}
+              >
+                {optionContent}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
+    </div>
   );
 }

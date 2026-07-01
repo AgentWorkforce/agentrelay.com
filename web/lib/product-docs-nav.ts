@@ -1,5 +1,5 @@
 // Pure, dependency-free section + nav definitions for the standalone product
-// docs (Relayfile, Relayloop). This module is safe to import from client
+// docs (Relayfile, Agents, Reflex). This module is safe to import from client
 // components — it must NOT import anything that touches `node:fs` (e.g.
 // content-store), so the sidebar can use it without dragging server-only code
 // into the browser bundle. Content loaders live in `./product-docs`.
@@ -97,7 +97,7 @@ export const fileSection: ProductDocSection = {
 
 export const loopSection: ProductDocSection = {
   id: 'loop',
-  label: 'Relayloop',
+  label: 'Reflex',
   tagline: 'The system of record for how your team works with AI agents.',
   repo: 'AgentWorkforce/relayhistory',
   version: '0.3.6',
@@ -136,7 +136,34 @@ export const loopSection: ProductDocSection = {
   ],
 };
 
-export const productSections: ProductDocSection[] = [fileSection, loopSection];
+export const agentsSection: ProductDocSection = {
+  id: 'agents',
+  label: 'Agents',
+  tagline: 'Proactive workers you can fork, adapt, and deploy.',
+  repo: 'AgentWorkforce/agents',
+  nav: [
+    {
+      title: 'Start',
+      items: [
+        { title: 'Introduction', slug: 'introduction' },
+        { title: 'Quickstart', slug: 'quickstart' },
+      ],
+    },
+    {
+      title: 'Design',
+      items: [
+        { title: 'Agent patterns', slug: 'patterns' },
+        { title: 'Build your own', slug: 'build' },
+      ],
+    },
+    {
+      title: 'Run',
+      items: [{ title: 'Deploy and operate', slug: 'deploy' }],
+    },
+  ],
+};
+
+export const productSections: ProductDocSection[] = [fileSection, agentsSection, loopSection];
 
 export function getProductSection(id: string): ProductDocSection | null {
   return productSections.find((section) => section.id === id) ?? null;
