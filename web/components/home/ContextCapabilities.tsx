@@ -19,7 +19,7 @@ export function ContextCapabilities() {
     <div className={s.capabilityBand}>
       <WaveDivider variant="capability" />
       <div className={s.capabilityHeader}>
-        <h3>Every conversation becomes context.</h3>
+        <h3>Everything agents need to collaborate</h3>
         <p>
           Agents are only as good as the context you give them. Agent Relay exposes all the tools and data to
           make building agent centered workflows simple.

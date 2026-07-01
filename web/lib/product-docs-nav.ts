@@ -1,5 +1,5 @@
 // Pure, dependency-free section + nav definitions for the standalone product
-// docs (Relayfile, Agents, Relayloop). This module is safe to import from client
+// docs (Relayfile, Agents, Reflex). This module is safe to import from client
 // components — it must NOT import anything that touches `node:fs` (e.g.
 // content-store), so the sidebar can use it without dragging server-only code
 // into the browser bundle. Content loaders live in `./product-docs`.
@@ -97,7 +97,7 @@ export const fileSection: ProductDocSection = {
 
 export const loopSection: ProductDocSection = {
   id: 'loop',
-  label: 'Relayloop',
+  label: 'Reflex',
   tagline: 'The system of record for how your team works with AI agents.',
   repo: 'AgentWorkforce/relayhistory',
   version: '0.3.6',

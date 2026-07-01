@@ -5,7 +5,7 @@ import { Check, Copy } from 'lucide-react';
 
 import s from '../../app/landing.module.css';
 
-const HERO_COMMAND = 'npx @agent-relay@latest skills add';
+const HERO_COMMAND = 'npx agent-relay@latest skills add';
 
 async function copyCommand() {
   if (navigator.clipboard?.writeText) {

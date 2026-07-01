@@ -345,6 +345,14 @@
   min-width: 0;
 }
 
+.productSwitcherTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  width: fit-content;
+  min-width: 0;
+}
+
 .productSwitcherLabel {
   font-size: 1rem;
   font-weight: 700;
@@ -367,14 +375,19 @@
 }
 
 .productHeaderVersion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--fg-muted);
   border: 1px solid var(--border, rgba(116, 184, 226, 0.22));
   border-radius: 999px;
-  padding: 0.05rem 0.4rem;
-  line-height: 1.4;
+  min-height: 1rem;
+  padding: 0 0.4rem;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .productHeaderTagline {
@@ -432,6 +445,16 @@
   color: var(--fg);
 }
 
+.productSwitcherOptionDisabled {
+  cursor: default;
+  opacity: 0.68;
+}
+
+.productSwitcherOptionDisabled:hover {
+  background: transparent;
+  color: var(--fg-muted);
+}
+
 .productSwitcherOptionIcon {
   width: 0.95rem;
   height: 0.95rem;
@@ -446,14 +469,38 @@
   min-width: 0;
 }
 
-.productSwitcherOptionText span:first-child {
+.productSwitcherOptionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.productSwitcherOptionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.86rem;
   font-weight: 700;
   line-height: 1.2;
   color: currentColor;
+  white-space: nowrap;
 }
 
-.productSwitcherOptionText span:last-child {
+.productSwitcherOptionBadge {
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
+  border-radius: 999px;
+  padding: 0.05rem 0.34rem;
+  color: color-mix(in srgb, var(--primary) 68%, var(--fg-muted));
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.productSwitcherOptionTagline {
   font-size: 0.72rem;
   line-height: 1.35;
   color: var(--fg-faint);

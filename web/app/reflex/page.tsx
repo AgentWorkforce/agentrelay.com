@@ -3,14 +3,11 @@ import Link from 'next/link';
 import {
   ArrowRight,
   BellRing,
-  BookOpenCheck,
-  ChartNoAxesCombined,
   EyeOff,
   Gauge,
   Lightbulb,
   MessagesSquare,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 
 import { SiteFooter } from '../../components/SiteFooter';
@@ -77,6 +74,31 @@ const planSteps = [
   'Check the schema issue that caused three reverted PRs',
 ];
 
+const learnedSkillFiles = [
+  {
+    path: 'skills/frontend-forms.skill.md',
+    meta: 'Workflow copied from shipped form changes',
+  },
+  {
+    path: 'agents.md',
+    meta: 'Repository defaults for planning and review',
+  },
+  {
+    path: 'rules/auth-permissions.md',
+    meta: 'Guardrail from repeated policy misses',
+  },
+  {
+    path: 'mcp/playwright-harness.md',
+    meta: 'Best-value browser check for UI work',
+  },
+];
+
+const learnedSignals = [
+  'Session pattern accepted by reviewers',
+  'Tool sequence reused with low churn',
+  'Private run excluded from team memory',
+];
+
 const managerQuestions = [
   'Are we getting better?',
   'Where is money being wasted?',
@@ -85,40 +107,34 @@ const managerQuestions = [
   'What knowledge is trapped in individuals?',
 ];
 
-const heroUsageRows = [
-  { label: 'Tool calls', value: '8.4k', width: 92 },
-  { label: 'MCP usage', value: '71%', width: 71 },
-  { label: 'Accepted steers', value: '43', width: 58 },
-  { label: 'Review loops', value: '-28%', width: 38 },
-];
+const REFLEX_CLOUD_URL =
+  'https://agentrelay.com/cloud?ref=reflex&utm_source=agentrelay.com&utm_medium=reflex_landing&utm_campaign=reflex';
 
-const heroInsightTiles = [
-  {
-    tone: 'blue',
-    eyebrow: 'Workflow lift',
-    title: 'Storybook first keeps winning',
-    body: 'Frontend sessions that start from generated stories need fewer review passes.',
-    metric: '40% fewer loops',
-  },
-  {
-    tone: 'orange',
-    eyebrow: 'Waste found',
-    title: 'Auth retries are burning tokens',
-    body: 'Permission changes repeatedly stall when the policy fixture is skipped.',
-    metric: '5 reverted paths',
-  },
-];
+function reflexCloudHref(utmContent: string) {
+  return `${REFLEX_CLOUD_URL}&utm_content=${utmContent}`;
+}
+
+function WaveBreak({ tone = 'blue' }: { tone?: 'blue' | 'orange' }) {
+  return (
+    <div className={`${s.waveBreak} ${tone === 'orange' ? s.waveBreakOrange : s.waveBreakBlue}`} aria-hidden="true">
+      <svg viewBox="0 0 1440 110" preserveAspectRatio="none">
+        <path d="M-80 58C86 18 160 92 300 58C440 24 524 18 660 58C796 98 888 90 1030 58C1172 26 1260 18 1520 58" />
+        <path d="M-80 78C86 38 160 112 300 78C440 44 524 38 660 78C796 118 888 110 1030 78C1172 46 1260 38 1520 78" />
+      </svg>
+    </div>
+  );
+}
 
 export default function ReflexPage() {
   const navGetStartedLink = (
-    <Link href="/docs" className={`${home.ctaPrimary} ${home.homeNavAction}`}>
+    <a href={reflexCloudHref('nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
       Get Started
-    </Link>
+    </a>
   );
   const mobileGetStartedLink = (
-    <Link href="/docs" className={`${home.ctaPrimary} ${home.homeNavAction}`}>
+    <a href={reflexCloudHref('mobile_nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
       Get Started
-    </Link>
+    </a>
   );
 
   return (
@@ -137,71 +153,20 @@ export default function ReflexPage() {
               Capture what works across AI coding sessions and turn it into shared team knowledge.
             </p>
             <div className={s.ctaRow}>
-              <Link href="/docs" className={s.ctaPrimary}>
+              <a href={reflexCloudHref('hero')} className={s.ctaPrimary}>
                 Get Started
                 <ArrowRight aria-hidden="true" size={17} strokeWidth={2} />
-              </Link>
+              </a>
               <Link href="#capture" className={s.ctaSecondary}>
                 See how it works
               </Link>
             </div>
           </div>
-
-          <div className={s.usageVisual} aria-label="Reflex team usage insights">
-            <div className={s.usageHeader}>
-              <div>
-                <span>Team relay</span>
-                <strong>Session intelligence</strong>
-              </div>
-              <span className={s.usagePill}>14 runs</span>
-            </div>
-
-            <div className={s.usageBars}>
-              {heroUsageRows.map((row) => (
-                <div className={s.usageRow} key={row.label}>
-                  <div className={s.usageRowMeta}>
-                    <span>{row.label}</span>
-                    <strong>{row.value}</strong>
-                  </div>
-                  <div className={s.usageTrack}>
-                    <span style={{ width: `${row.width}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className={s.insightTiles}>
-              {heroInsightTiles.map((tile) => (
-                <article
-                  className={`${s.insightTile} ${tile.tone === 'orange' ? s.insightTileOrange : s.insightTileBlue}`}
-                  key={tile.title}
-                >
-                  <svg className={s.insightWave} viewBox="0 0 280 120" preserveAspectRatio="none" aria-hidden="true">
-                    <path d="M-16 72C30 36 58 110 102 72S168 34 214 72 258 110 296 72" />
-                    <path d="M-16 92C30 56 58 130 102 92S168 54 214 92 258 130 296 92" />
-                  </svg>
-                  <span>{tile.eyebrow}</span>
-                  <strong>{tile.title}</strong>
-                  <p>{tile.body}</p>
-                  <em>{tile.metric}</em>
-                </article>
-              ))}
-            </div>
-          </div>
         </section>
 
-        <section className={s.contextBand} aria-label="What Reflex observes">
-          <div>
-            <span>Across Claude Code, Codex, OpenCode, and the rest of your agent stack.</span>
-          </div>
-          <div className={s.bandMetrics}>
-            <strong>Anonymous by default</strong>
-            <strong>Opt out anytime</strong>
-            <strong>Codebase-aware</strong>
-          </div>
-        </section>
+        <WaveBreak />
 
-        <section className={s.captureSection} id="capture">
+        <section className={`${s.captureSection} ${s.sectionBand} ${s.bandCapture}`} id="capture">
           <div className={s.sectionIntro}>
             <h2>Capture the work around the code.</h2>
             <p>
@@ -229,7 +194,9 @@ export default function ReflexPage() {
           </div>
         </section>
 
-        <section className={s.learnSection}>
+        <WaveBreak tone="orange" />
+
+        <section className={`${s.learnSection} ${s.sectionBand} ${s.bandLearn}`}>
           <div className={s.sectionIntro}>
             <h2>Turn repeated behavior into team standards.</h2>
             <p>
@@ -252,19 +219,31 @@ export default function ReflexPage() {
           </div>
         </section>
 
-        <section className={s.visualProof}>
+        <section className={`${s.visualProof} ${s.sectionBand} ${s.bandProof}`}>
           <div className={s.assetFrame}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/brand-kit/media/easy-to-build-the-right-context.png"
-              alt="Agent Relay context tools showing real-time events, webhooks, and search"
-              width={2048}
-              height={1152}
-              loading="lazy"
-            />
+            <div className={s.skillMemoryVisual} aria-label="Learned skills file tree">
+              <div className={s.skillMemoryGrid}>
+                <div className={s.skillTreePane}>
+                  <div className={s.treeRoot}>agentrelay-learning/</div>
+                  <ol className={s.fileTree}>
+                    {learnedSkillFiles.map((file) => (
+                      <li className={s.fileTreeItem} key={file.path}>
+                        <span className={s.filePath}>{file.path}</span>
+                        <span className={s.fileMeta}>{file.meta}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+                <div className={s.skillSignalPane}>
+                  <span>promoted from sessions</span>
+                  {learnedSignals.map((signal) => (
+                    <p key={signal}>{signal}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
           <div className={s.assetCopy}>
-            <Sparkles aria-hidden="true" size={24} strokeWidth={1.8} />
             <h2>Every session becomes better context for the next one.</h2>
             <p>
               Reflex builds on Agent Relay's event stream, search, and team messaging layer. The result is a
@@ -273,29 +252,53 @@ export default function ReflexPage() {
           </div>
         </section>
 
-        <section className={s.planSection}>
+        <WaveBreak />
+
+        <section className={`${s.planSection} ${s.sectionBand} ${s.bandPlan}`}>
           <div className={s.planCopy}>
-            <BookOpenCheck aria-hidden="true" size={26} strokeWidth={1.8} />
             <h2>Ask how your team usually solves the problem.</h2>
             <p>
               Plans should come from learned truths in your own repository, not generic internet advice or a
               teammate's memory.
             </p>
           </div>
-          <div className={s.promptPanel}>
-            <div className={s.promptQuestion}>How do we usually build React forms?</div>
-            <div className={s.promptAnswer}>
-              <p>Looking at the last 14 React forms shipped in this repository, engineers typically:</p>
-              <ol>
-                {planSteps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ol>
+          <div className={s.promptPanel} aria-label="Reflex terminal answer for React form planning">
+            <div className={s.terminalHeader}>
+              <div className={s.terminalChrome} aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </div>
+              <span className={s.terminalTitle}>reflex.memory</span>
+              <span className={s.terminalState}>team history</span>
+            </div>
+            <div className={s.terminalBody}>
+              <div className={`${s.terminalLine} ${s.terminalCommand}`}>
+                <span className={s.terminalPrompt}>$</span>
+                <span>How do we usually build React forms?</span>
+                <span className={s.terminalCursor} aria-hidden="true" />
+              </div>
+              <div className={`${s.terminalLine} ${s.terminalSearch}`}>
+                <span className={s.terminalPrompt}>&gt;</span>
+                <span>Searching the last 14 shipped React forms</span>
+              </div>
+              <div className={s.terminalAnswer}>
+                <p>Engineers typically:</p>
+                <ol>
+                  {planSteps.map((step) => (
+                    <li key={step}>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className={s.pairSection}>
+        <WaveBreak tone="orange" />
+
+        <section className={`${s.pairSection} ${s.sectionBand} ${s.bandPair}`}>
           <div className={s.sectionIntro}>
             <h2>Pair with the history of your team.</h2>
             <p>
@@ -317,9 +320,8 @@ export default function ReflexPage() {
           </div>
         </section>
 
-        <section className={s.managerSection}>
+        <section className={`${s.managerSection} ${s.sectionBand} ${s.bandManager}`}>
           <div className={s.managerHead}>
-            <ChartNoAxesCombined aria-hidden="true" size={28} strokeWidth={1.8} />
             <h2>Make your team better with the sessions you already pay for.</h2>
             <p>
               Reflex helps engineering leaders see whether agent usage is compounding into standards, savings,
@@ -335,15 +337,15 @@ export default function ReflexPage() {
           </div>
         </section>
 
-        <section className={s.finalCta}>
+        <section className={`${s.finalCta} ${s.sectionBand} ${s.bandFinal}`}>
           <div>
             <MessagesSquare aria-hidden="true" size={26} strokeWidth={1.8} />
             <h2>Bring every useful discovery back to the team.</h2>
           </div>
-          <Link href="/docs" className={s.ctaPrimary}>
+          <a href={reflexCloudHref('final_cta')} className={s.ctaPrimary}>
             Get Started
             <ArrowRight aria-hidden="true" size={17} strokeWidth={2} />
-          </Link>
+          </a>
         </section>
       </main>
 

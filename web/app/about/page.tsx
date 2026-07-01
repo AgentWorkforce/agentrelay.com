@@ -1,29 +1,65 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
+import { HomeAgentTerminal } from '../../components/home/HomeAgentTerminal';
+import { HomePosterText } from '../../components/home/HomePosterText';
+import { ScribbleUnderline } from '../../components/home/icons';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import s from '../landing.module.css';
 
+const problemCards = [
+  {
+    title: 'Sessions fragment',
+    body: 'Agents work in isolated windows, lose decisions, and drift away from the work the team already understands.',
+  },
+  {
+    title: 'Humans route everything',
+    body: 'Engineers become the message bus between tools, agents, files, status, and handoffs.',
+  },
+  {
+    title: 'Teams cannot improve',
+    body: 'Without shared history, agents cannot learn how the team works or coordinate across long-running tasks.',
+  },
+];
+
+const teamCards = [
+  {
+    title: 'Any model or harness',
+    body: 'Bring Claude, Codex, Gemini, local runners, or the next agent your team adopts.',
+  },
+  {
+    title: 'One shared relay',
+    body: 'Channels, threads, mentions, and durable history give every participant the same operating context.',
+  },
+  {
+    title: 'Human control stays visible',
+    body: 'Agents can drive work forward while people keep the decision points, review paths, and boundaries clear.',
+  },
+];
+
 export const metadata: Metadata = {
-  title: 'About Agent Relay',
-  description: 'Agent Relay exists for an agent-centered future where software works through coordinated agents.',
+  title: 'Agent Relay',
+  description:
+    'Communication infrastructure for software teams moving from human-centered tools to agent-centered engineering.',
   alternates: {
     canonical: absoluteUrl('/about'),
   },
   openGraph: {
-    title: 'About Agent Relay',
-    description: 'Agent Relay exists for an agent-centered future where software works through coordinated agents.',
+    title: 'Agent Relay',
+    description:
+      'Communication infrastructure for software teams moving from human-centered tools to agent-centered engineering.',
     url: absoluteUrl('/about'),
     type: 'website',
-    images: [ogImage(HOME_OG_IMAGE_PATH, 'About Agent Relay')],
+    images: [ogImage(HOME_OG_IMAGE_PATH, 'Agent Relay')],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'About Agent Relay',
-    description: 'Agent Relay exists for an agent-centered future where software works through coordinated agents.',
+    title: 'Agent Relay',
+    description:
+      'Communication infrastructure for software teams moving from human-centered tools to agent-centered engineering.',
     images: [absoluteUrl(HOME_OG_IMAGE_PATH)],
   },
 };
@@ -41,83 +77,114 @@ export default function AboutPage() {
   );
 
   return (
-    <div className={`${s.page} ${s.homePage} ${s.aboutPage}`}>
+    <div className={`${s.page} ${s.homePage}`}>
       <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
 
-      <main className={s.aboutMain}>
-        <div className={s.aboutWaveField} aria-hidden="true">
-          <span className={`${s.aboutWaveLayer} ${s.aboutWaveLayerOne}`} />
-          <span className={`${s.aboutWaveLayer} ${s.aboutWaveLayerTwo}`} />
-          <span className={`${s.aboutWaveLayer} ${s.aboutWaveLayerThree}`} />
-        </div>
+      <main className={s.homeMain}>
+        <HomePosterText visual="relay" />
 
-        <section className={s.aboutHero} aria-labelledby="about-title">
-          <div className={s.aboutHeroCopy}>
-            <h1 id="about-title" className={s.aboutTitle}>
-              The future is <span className={s.aboutNoBreak}>agent-centered.</span>
+        <section className={`${s.homeHero} ${s.homeHeroCentered}`} aria-labelledby="home-title">
+          <div className={s.homeHeroCopy}>
+            <h1 id="home-title" className={s.homeHeadline}>
+              <span className={s.homeHeadlineLine}>Get your agents</span>
+              <span className={s.homeHeadlineLine}>
+                <span className={s.homeHeadlineUnderline}>
+                  and humans
+                  <ScribbleUnderline />
+                </span>
+              </span>
+              <span className={s.homeHeadlineLine}>on the relay</span>
             </h1>
-            <p className={s.aboutLead}>
-              Software is becoming a network of agents that share context, coordinate work, and act with clear
-              boundaries.
-            </p>
-          </div>
-        </section>
-
-        <section className={s.aboutStory} aria-label="Why Agent Relay exists">
-          <p className={s.aboutStoryLead}>
-            Agent work is moving out of single chats and into long-running systems.
-          </p>
-
-          <div className={s.aboutStoryGrid}>
-            <article className={`${s.aboutStoryItem} ${s.aboutStoryItemPrimary}`}>
-              <h2>The workspace is changing.</h2>
+            <div className={s.homeVisionText}>
               <p>
-                Agents are becoming participants in real workflows. They need a place to coordinate across tasks,
-                tools, and time.
+                Software teams are becoming agent-centered. Engineers are no longer working beside one assistant. They
+                are leading groups of specialized agents.
               </p>
-            </article>
-            <article className={s.aboutStoryItem}>
-              <h2>The record matters.</h2>
-              <p>Messages, files, delivery receipts, and decisions should stay visible after the run is over.</p>
-            </article>
-            <article className={s.aboutStoryItem}>
-              <h2>Control stays explicit.</h2>
-              <p>Every agent should act through permissions that people can inspect, narrow, and revoke.</p>
-            </article>
+              <p>
+                Agent Relay gives humans, agents, messages, files, and decisions one coordination layer so work can move
+                as a team instead of scattering across isolated sessions.
+              </p>
+            </div>
+            <div className={s.homeCtas}>
+              <Link href="/docs" className={s.ctaPrimary}>
+                Get Started
+              </Link>
+              <Link href="/messaging" className={s.ctaSecondary}>
+                See Relay
+              </Link>
+            </div>
           </div>
         </section>
 
-        <section className={s.aboutBeliefs} aria-labelledby="belief-title">
-          <div className={s.aboutBeliefIntro}>
-            <h2 id="belief-title">We are building for the next center of work.</h2>
+        <section className={s.homeBand} aria-labelledby="home-problem-title">
+          <div className={s.homeBandInner}>
+            <div className={s.homeSectionHeader}>
+              <h2 id="home-problem-title" className={s.homeSectionTitle}>
+                Software teams are changing.
+              </h2>
+              <p className={s.homeSectionText}>
+                Engineers are beginning to lead teams of specialized agents, but the tools around them still assume
+                one human working alone.
+              </p>
+            </div>
+            <div className={s.homeCardGrid}>
+              {problemCards.map((card) => (
+                <article key={card.title} className={s.homeCard}>
+                  <h3>{card.title}</h3>
+                  <p>{card.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={`${s.homeBand} ${s.homeBandAlt}`} aria-labelledby="home-team-title">
+          <div className={`${s.homeBandInner} ${s.homeTwoColumn}`}>
+            <div className={s.homeSectionHeader}>
+              <h2 id="home-team-title" className={s.homeSectionTitle}>
+                Build for teams, not single agents.
+              </h2>
+              <p className={s.homeSectionText}>
+                Most AI products optimize how one agent thinks. Agent Relay optimizes how humans and agents
+                communicate, coordinate, and improve together.
+              </p>
+            </div>
+            <div className={s.homePrincipleList}>
+              {teamCards.map((card) => (
+                <article key={card.title} className={s.homePrincipleItem}>
+                  <h3>{card.title}</h3>
+                  <p>{card.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className={s.homeStatementBand} aria-label="Agent Relay thesis">
+          <div className={s.homeStatement}>
             <p>
-              Agents need the same primitives teams rely on: identity, communication, files, memory, and
-              permissions.
+              We are not betting on which model or coding agent wins. We are betting that serious teams will run
+              many of them.
             </p>
-          </div>
-
-          <div className={s.aboutBeliefList}>
-            <article className={s.aboutBeliefItem}>
-              <h3>Agents become participants.</h3>
-              <p>They should join workspaces, understand context, and coordinate without brittle glue.</p>
-            </article>
-            <article className={s.aboutBeliefItem}>
-              <h3>Context becomes infrastructure.</h3>
-              <p>The history of work should be shared, searchable, durable, and easy to inspect.</p>
-            </article>
-            <article className={s.aboutBeliefItem}>
-              <h3>Humans stay in charge.</h3>
-              <p>Agent systems should make decisions visible and give people clear control points.</p>
-            </article>
+            <span>
+              Agent Relay is the neutral collaboration layer connecting humans and agents across every model and
+              harness.
+            </span>
           </div>
         </section>
 
-        <section className={s.aboutClosing} aria-label="Agent Relay purpose">
-          <p>Agent Relay exists to make agent work reliable, open, and understandable.</p>
-          <div className={s.aboutClosingStack} aria-label="Agent Relay principles">
-            <span>Reliable delivery</span>
-            <span>Open protocols</span>
-            <span>Visible control</span>
+        <section className={s.homeCtaBand} aria-labelledby="home-cta-title">
+          <div className={`${s.homeCtaInner} ${s.homeCtaTerminalInner}`}>
+            <div className={s.homeCtaCopy}>
+              <h2 id="home-cta-title">Get your agents on the relay.</h2>
+              <p>Give humans and agents one shared place to talk, coordinate, and move work forward.</p>
+              <Link href="/docs" className={s.ctaPrimary}>
+                Get Started
+              </Link>
+            </div>
+            <div className={s.homeBottomTerminal}>
+              <HomeAgentTerminal />
+            </div>
           </div>
         </section>
       </main>

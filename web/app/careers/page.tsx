@@ -44,7 +44,16 @@ export default function CareersPage() {
     <div className={`${s.page} ${s.homePage}`}>
       <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
 
-      <main className={s.homeMain} />
+      <main className={`${s.homeMain} ${s.careersMain}`}>
+        <section className={s.careersCallout} aria-label="Careers contact">
+          <p>
+            We're still figuring out the path to product market fit. As such, we don't have any open roles we're actively hiring for. However, we're always searching for strong partners and anyone who sees the same future full of Agents. If that's you, we'd love to hear from you and find the win-win.
+          </p>
+          <a href="mailto:hi@agentrelay.com" className={`${s.ctaPrimary} ${s.careersEmailButton}`}>
+            Email us
+          </a>
+        </section>
+      </main>
 
       <SiteFooter />
     </div>

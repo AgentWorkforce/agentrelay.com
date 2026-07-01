@@ -1,4 +1,6 @@
 import s from '../../app/landing.module.css';
+import { HomeAgentTerminal } from './HomeAgentTerminal';
+import { HomeHumanRelayVisual } from './HomeHumanRelayVisual';
 
 // Edit these lines to change the homepage poster copy.
 // const HOME_POSTER_LINES = ['STOP', 'AGENT', 'CHAOS'];
@@ -9,7 +11,13 @@ const HOME_POSTER_LINE_START = 236;
 const HOME_POSTER_LINE_HEIGHT = 194;
 const HOME_POSTER_SHADOW_STEP_SIZE = 2.3;
 
-export function HomePosterText({ lines = HOME_POSTER_LINES }: { lines?: string[] }) {
+export function HomePosterText({
+  lines = HOME_POSTER_LINES,
+  visual = 'terminal',
+}: {
+  lines?: string[];
+  visual?: 'terminal' | 'relay' | 'none';
+}) {
   const title = lines.join(' ');
 
   return (
@@ -55,6 +63,16 @@ export function HomePosterText({ lines = HOME_POSTER_LINES }: { lines?: string[]
           ))}
         </g>
       </svg>
+      {visual === 'terminal' && (
+        <div className={s.homePosterTerminal}>
+          <HomeAgentTerminal />
+        </div>
+      )}
+      {visual === 'relay' && (
+        <div className={s.homePosterRelayVisual}>
+          <HomeHumanRelayVisual />
+        </div>
+      )}
     </section>
   );
 }

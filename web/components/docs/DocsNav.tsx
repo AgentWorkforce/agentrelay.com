@@ -35,7 +35,13 @@ import { RiLayout5Line } from 'react-icons/ri';
 import { SiClaude, SiPython, SiTypescript } from 'react-icons/si';
 
 import { docsNav, legacyDocsNav } from '../../lib/docs-nav';
-import { getDocsVersionForPath, legacyDocsBasePath, v8DocsBasePath } from '../../lib/docs-versions';
+import {
+  currentDocsVersion,
+  docsVersions,
+  getDocsVersionForPath,
+  legacyDocsBasePath,
+  v8DocsBasePath,
+} from '../../lib/docs-versions';
 import { getProductSectionForPath, productBasePath, productSections } from '../../lib/product-docs-nav';
 import { DocsVersionSelect } from './DocsVersionSelect';
 import { FolderOpen as FolderOpenIcon, Repeat } from 'lucide-react';
@@ -49,14 +55,16 @@ const productSectionIcons: Record<string, NavIcon> = {
   loop: Repeat,
 };
 
+const currentRelayDocsVersion = docsVersions.find((version) => version.id === currentDocsVersion)?.shortLabel;
+
 const docsProductOptions = [
   {
     id: null,
     label: 'Relay',
-    tagline: 'Messaging and orchestration for AI agents.',
+    tagline: 'Messaging',
     href: '/docs/introduction',
-    Icon: Network,
-    version: undefined,
+    Icon: Mail,
+    version: currentRelayDocsVersion,
   },
   ...productSections.map((section) => ({
     id: section.id,
@@ -245,26 +253,37 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
   );
 }
 
-function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
+export function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
   const activeProduct =
     docsProductOptions.find((option) => option.id === activeId) ?? docsProductOptions[0];
   const ActiveIcon = activeProduct.Icon;
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const closeSwitcher = () => {
+    if (detailsRef.current) {
+      detailsRef.current.open = false;
+    }
+  };
+  const closeSwitcherAfterNavigationStarts = () => {
+    window.setTimeout(closeSwitcher, 0);
+  };
 
   return (
     <div className={styles.productHeader}>
-      <details className={styles.productSwitcher}>
+      <details ref={detailsRef} className={styles.productSwitcher}>
         <summary className={styles.productSwitcherSummary}>
           <span className={styles.productSwitcherCurrent}>
             <ActiveIcon className={styles.productHeaderIcon} aria-hidden="true" />
             <span className={styles.productSwitcherText}>
-              <span className={styles.productSwitcherLabel}>{activeProduct.label}</span>
+              <span className={styles.productSwitcherTitleRow}>
+                <span className={styles.productSwitcherLabel}>{activeProduct.label}</span>
+                {activeProduct.version && (
+                  <span className={styles.productHeaderVersion}>v{activeProduct.version}</span>
+                )}
+              </span>
               <span className={styles.productHeaderTagline}>{activeProduct.tagline}</span>
             </span>
           </span>
           <span className={styles.productSwitcherMeta}>
-            {activeProduct.version && (
-              <span className={styles.productHeaderVersion}>v{activeProduct.version}</span>
-            )}
             <ChevronDown className={styles.productSwitcherChevron} aria-hidden="true" />
           </span>
         </summary>
@@ -272,6 +291,30 @@ function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
           {docsProductOptions.map((option) => {
             const OptionIcon = option.Icon;
             const isActive = option.id === activeId;
+            const isComingSoon = option.id === 'loop';
+            const optionContent = (
+              <>
+                <OptionIcon className={styles.productSwitcherOptionIcon} aria-hidden="true" />
+                <span className={styles.productSwitcherOptionText}>
+                  <span className={styles.productSwitcherOptionTitleRow}>
+                    <span className={styles.productSwitcherOptionLabel}>{option.label}</span>
+                    {isComingSoon && <span className={styles.productSwitcherOptionBadge}>Coming soon</span>}
+                  </span>
+                  <span className={styles.productSwitcherOptionTagline}>{option.tagline}</span>
+                </span>
+              </>
+            );
+            if (isComingSoon) {
+              return (
+                <div
+                  key={option.id}
+                  className={`${styles.productSwitcherOption} ${styles.productSwitcherOptionDisabled}`}
+                  aria-disabled="true"
+                >
+                  {optionContent}
+                </div>
+              );
+            }
             return (
               <Link
                 key={option.id ?? 'relay'}
@@ -279,12 +322,9 @@ function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
                 className={`${styles.productSwitcherOption} ${
                   isActive ? styles.productSwitcherOptionActive : ''
                 }`}
+                onClick={closeSwitcherAfterNavigationStarts}
               >
-                <OptionIcon className={styles.productSwitcherOptionIcon} aria-hidden="true" />
-                <span className={styles.productSwitcherOptionText}>
-                  <span>{option.label}</span>
-                  <span>{option.tagline}</span>
-                </span>
+                {optionContent}
               </Link>
             );
           })}
