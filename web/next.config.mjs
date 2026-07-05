@@ -45,13 +45,22 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // In-person event banner QR code → Airtable signup form. Temporary
+      // In-person event banner QR code → homepage, tagged so the traffic is
+      // attributable to the physical banner at the current event. Temporary
       // (not permanent) so /banner can be repointed at the next event without
-      // browsers having cached a permanent redirect.
+      // browsers having cached a permanent redirect. Current event:
+      // AI Engineer World's Fair.
+      //
+      // The destination is an absolute URL on purpose. A relative root-path
+      // destination ('/?utm_...') 500s under our OpenNext/Cloudflare runtime:
+      // its URL parser treats the empty path segment of '/?...' as the whole
+      // string and feeds '/?...' to path-to-regexp, which throws "Unexpected
+      // MODIFIER" on the bare '?'. Using the absolute form routes through the
+      // external-URL branch, which splits the path and query correctly.
       {
         source: '/banner',
         destination:
-          'https://airtable.com/appc7B31aJRNN5e7C/pagbWLtcl8uDrKT8H/form?prefill_Company=recMG2qouUGyCdGJ6',
+          'https://agentrelay.com/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
         permanent: false,
       },
       // In-person event QR card → the relay GitHub repo, tagged like /banner
