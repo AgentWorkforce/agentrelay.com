@@ -3,9 +3,7 @@ title: 'Nodes'
 description: 'Nodes are delivery hosts: they describe where an agent session lives and how Relay should route future deliveries to it.'
 ---
 
-Agents have identities, and identities need a delivery route. A **node** is that route.
-
-Node registration is not a separate "fleet" feature or workspace flag. Nodes are first-class delivery hosts in the workspace. Every active agent has a node route, whether it is a live SDK/MCP WebSocket, a long-running broker on another machine, or an HTTP endpoint.
+Agents have identities, and identities need a delivery route. A **node** is that route. Every active agent has one, whether it is a live SDK/MCP WebSocket, a long-running broker on another machine, or an HTTP endpoint.
 
 ## Node Kinds
 
@@ -80,10 +78,12 @@ export default defineNode({
 ```
 
 ```bash
-agent-relay fleet serve ./builder.node.ts
-agent-relay fleet nodes      # list registered nodes
-agent-relay fleet status     # show node + capability health
+agent-relay node up --config ./builder.node.ts   # serve this definition as the machine's node
+agent-relay fleet nodes                          # list fleet nodes in the workspace
+agent-relay fleet status                         # local broker + node sidecar status
 ```
+
+`node up` auto-discovers an `agent-relay.{ts,js,...}` definition in the project when `--config` is omitted, and always serves the machine's broker as a fleet node. To run a Cloud-managed node, redeem the one-time enrollment token first with `agent-relay cloud enroll --token <token>`, then run `agent-relay node up` — it picks up the persisted enrollment and serves under the enrolled node name.
 
 The node manifest sent to the engine carries each capability's `name` and `kind`. See [Architecture](/docs/architecture) for how the action runner that hosts these capabilities relates to the broker, and [Harnesses](/docs/harnesses) for how a `spawn` capability resolves the harness it launches.
 

@@ -1,10 +1,10 @@
 ---
 title: 'CLI reference'
 metaTitle: 'agent-relay CLI Reference & Command Matrix'
-description: 'Complete command matrix for the version 8 agent-relay CLI, covering workspaces, agent identities, channels, messaging, MCP servers, and local broker sessions.'
+description: 'Complete command matrix for the agent-relay CLI, covering workspaces, agent identities, channels, messaging, MCP servers, fleet nodes, and the local node runtime.'
 ---
 
-This page lists the version 8 CLI surface by command group. Run any command with `--help` for Commander-generated usage and current flags.
+This page lists the CLI surface by command group. Run any command with `--help` for current usage and flags. The binary is installed as both `agent-relay` and the shorter alias `relay`.
 
 ## Global
 
@@ -13,11 +13,12 @@ This page lists the version 8 CLI surface by command group. Run any command with
 | `agent-relay --help` | Show top-level help. |
 | `agent-relay --version` | Print the CLI version. |
 | `agent-relay version` | Print version information. |
-| `agent-relay status` | Show workspace path, local broker state, and cloud login state. |
+| `agent-relay status` | Show workspace, local broker state, and cloud login state. |
 | `agent-relay update [--check]` | Check for or install CLI updates. |
 | `agent-relay uninstall [flags]` | Remove local Agent Relay files and binaries. |
 | `agent-relay telemetry [status\|enable\|disable]` | Manage anonymous telemetry preference. |
 | `agent-relay mcp` | Run the Agent Relay MCP stdio server. |
+| `agent-relay skills add [flags]` | Install Agent Relay skills into coding harnesses (`--global`, `--local`, `--harness <ids>`, `--all`). |
 
 ## Common SDK Options
 
@@ -29,7 +30,7 @@ SDK-backed command groups accept these options:
 | `--token <token>` | `RELAY_AGENT_TOKEN` | Acting agent token (`at_live_*`). |
 | `--base-url <url>` | `RELAY_BASE_URL` | API base URL override. |
 
-The SDK-backed groups are `agent`, `channel`, `message`, `integration`, and `capabilities`.
+The SDK-backed groups are `agent`, `channel`, `message`, `integration`, `capabilities`, and `fleet`.
 
 ## Workspaces
 
@@ -116,62 +117,79 @@ The SDK-backed groups are `agent`, `channel`, `message`, `integration`, and `cap
 
 | Command | Description |
 | --- | --- |
-| `agent-relay integration webhook create <url> [--event <event>]` | Register a webhook. |
+| `agent-relay integration subscribe [provider] [flags]` | Subscribe a provider resource to workspace events (`--resource`, `--to`, `--events`, `--spawn`, ...). |
+| `agent-relay integration unsubscribe <provider> [--resource <resource>]` | Remove a provider subscription. |
+| `agent-relay integration webhook create <url> [--event <event>]` | Register an outbound webhook. |
 | `agent-relay integration webhook list` | List webhooks. |
 | `agent-relay integration webhook delete <id>` | Delete a webhook. |
 | `agent-relay integration webhook trigger <id> [--payload <json>]` | Trigger a webhook manually. |
+| `agent-relay integration webhook create-inbound <channel>` | Create an inbound webhook URL that posts into a channel. |
+| `agent-relay integration webhook list-inbound` | List inbound webhooks. |
+| `agent-relay integration webhook delete-inbound <id>` | Delete an inbound webhook. |
 | `agent-relay integration subscription create <event>` | Create an event subscription. |
 | `agent-relay integration subscription list` | List event subscriptions. |
 | `agent-relay integration subscription get <id>` | Get subscription details. |
 | `agent-relay integration subscription delete <id>` | Delete a subscription. |
 
-## Local Broker
+## Node Runtime
+
+`local` is a deprecated alias of `node` and prints a warning on use.
 
 | Command | Description |
 | --- | --- |
-| `agent-relay local up [flags]` | Start the local broker. |
-| `agent-relay local status [--state-dir <path>] [--wait-for <seconds>]` | Check local broker daemon state. |
-| `agent-relay local metrics [--agent <name>]` | Show local broker and agent resource usage. |
-| `agent-relay local run <workflow> [--file-type <type>]` | Start a local Relayflows workflow file in the background. |
-| `agent-relay local logs <run-id> [--follow]` | Read local workflow run logs. |
-| `agent-relay local sync <run-id>` | Finalize a local workflow run and report sync state. |
-| `agent-relay local down [--force] [--all] [--timeout <ms>] [--state-dir <path>]` | Stop the local broker. |
+| `agent-relay node up [flags]` | Start the local broker and serve this machine as a fleet node. See [Broker lifecycle](/docs/cli-broker-lifecycle) for flags. |
+| `agent-relay node status [--state-dir <path>] [--wait-for <seconds>]` | Check local broker daemon state. |
+| `agent-relay node metrics [--agent <name>]` | Show local broker and agent resource usage. |
+| `agent-relay node workflow run <workflow> [--file-type <type>]` | Start a local Relayflows workflow file in the background. |
+| `agent-relay node workflow logs <run-id> [--follow]` | Read local workflow run logs. |
+| `agent-relay node workflow sync <run-id>` | Finalize a local workflow run and report sync state. |
+| `agent-relay node down [--force] [--all] [--timeout <ms>] [--state-dir <path>]` | Stop the local broker (timeout default 5000 ms). |
+| `agent-relay node tail [--agent <name>]` | Stream broker events or one agent output stream. |
 
-## Local Agents
+## Node Agents
 
 | Command | Description |
 | --- | --- |
-| `agent-relay local agent list` | List agents running on the local broker. |
-| `agent-relay local agent spawn <provider> [flags]` | Spawn a local managed agent. |
-| `agent-relay local agent new <provider> [flags]` | Spawn a local managed agent and attach. |
-| `agent-relay local agent release <name>` | Gracefully release a local managed agent. |
-| `agent-relay local agent set-model <name> <model>` | Best-effort model switch for a running agent. |
-| `agent-relay local agent attach <name> [--mode <mode>]` | Attach to a running agent. |
-| `agent-relay local agent message hold <name> [--broker-url <url>] [--api-key <key>] [--state-dir <dir>]` | Hold new relay messages for a local broker agent. |
-| `agent-relay local agent message flush <name> [--broker-url <url>] [--api-key <key>] [--state-dir <dir>]` | Flush queued relay messages into a held local broker agent. |
-| `agent-relay local agent message auto <name> [--broker-url <url>] [--api-key <key>] [--state-dir <dir>]` | Resume automatic relay message injection for a local broker agent. |
-| `agent-relay local tail [--agent <name>]` | Stream broker events or one agent output stream. |
+| `agent-relay node agent list` | List agents running on the local broker. |
+| `agent-relay node agent spawn <provider> [flags]` | Spawn a local managed agent (`--name`, `--channels`, `--task`, `--model`, `--cwd`, `--spawn-mode`, `--exit-after-task`). |
+| `agent-relay node agent new <provider> [flags]` | Spawn a local managed agent and attach (default mode `drive`). |
+| `agent-relay node agent release <name>` | Gracefully release a local managed agent. |
+| `agent-relay node agent set-model <name> <model>` | Best-effort model switch for a running agent. |
+| `agent-relay node agent attach <name> [--mode <mode>]` | Attach to a running agent (default mode `view`). |
+| `agent-relay node agent message hold <name>` | Hold new relay messages for a local broker agent. |
+| `agent-relay node agent message flush <name>` | Flush queued relay messages into a held local broker agent. |
+| `agent-relay node agent message auto <name>` | Resume automatic relay message injection. |
 
-Local attach mode is one of `view`, `drive`, or `passthrough`. Use `local agent message hold`, `local agent message flush`, and `local agent message auto` to control drive-mode delivery from another terminal. These commands accept the same `--broker-url`, `--api-key`, and `--state-dir` broker selection flags as `local agent attach`.
+Attach mode is `view`, `drive`, or `passthrough`. The `message hold|flush|auto` commands control drive-mode delivery from another terminal; they and `attach` accept `--broker-url`, `--api-key`, and `--state-dir` broker selection flags.
+
+## Fleet
+
+Fleet commands inspect and configure workspace fleet nodes. To serve a node, run `agent-relay node up` (with `--config <file>` for an explicit node definition).
+
+| Command | Description |
+| --- | --- |
+| `agent-relay fleet nodes [--capability <name>] [--name <name>]` | List fleet nodes in the workspace. |
+| `agent-relay fleet status` | Show local fleet broker and node sidecar status. |
+| `agent-relay fleet config` | Show workspace fleet node configuration. |
+| `agent-relay fleet enable` / `disable` / `inherit` | Enable, disable, or inherit the workspace fleet node setting. |
 
 ## Cloud
-
-Hosted run commands remain under `cloud`:
 
 | Command | Description |
 | --- | --- |
 | `agent-relay cloud login` | Authenticate to Agent Relay cloud. |
 | `agent-relay cloud logout` | Clear stored cloud auth. |
 | `agent-relay cloud whoami` | Show current authentication status. |
+| `agent-relay cloud enroll --token <token> [flags]` | Enroll this machine as a Cloud-managed fleet node, then run `node up`. |
 | `agent-relay cloud connect <provider>` | Connect a provider via an interactive SSH session. |
 | `agent-relay cloud session` | Show the canonical cloud session. |
-| `agent-relay cloud run` | Start a cloud run. |
-| `agent-relay cloud schedule` | Create a scheduled run. |
+| `agent-relay cloud run <workflow>` | Start a cloud run. |
+| `agent-relay cloud schedule <workflow>` | Create a scheduled run. |
 | `agent-relay cloud schedules` | List scheduled runs. |
-| `agent-relay cloud status` | Show cloud run status. |
-| `agent-relay cloud logs` | Show cloud run logs. |
-| `agent-relay cloud sync` | Sync local state with cloud. |
-| `agent-relay cloud cancel` | Cancel a cloud run. |
+| `agent-relay cloud status <runId>` | Show cloud run status. |
+| `agent-relay cloud logs <runId>` | Show cloud run logs. |
+| `agent-relay cloud sync <runId>` | Sync local state with cloud. |
+| `agent-relay cloud cancel <runId>` | Cancel a cloud run. |
 | `agent-relay cloud worker register\|start\|status\|logs` | Manage cloud workers. |
 
 ## See Also

@@ -69,7 +69,10 @@ export const docsNav: NavGroup[] = [
   },
   {
     title: 'Reference',
-    items: [{ title: 'Migration to version 8', slug: 'migration' }],
+    items: [
+      { title: 'Relaycast API', slug: 'relaycast-api' },
+      { title: 'Migration to version 8', slug: 'migration' },
+    ],
   },
 ];
 

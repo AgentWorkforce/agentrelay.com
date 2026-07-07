@@ -3,7 +3,7 @@ title: 'Harness Driver Package'
 description: 'Use the optional harness driver package when Agent Relay needs to manage session lifecycle, logs, readiness, and driver-provided actions.'
 ---
 
-Core Agent Relay does not need to own spawning. It owns messaging, delivery contracts, actions, and events.
+Core Agent Relay owns messaging, delivery contracts, actions, and events — not spawning.
 
 `@agent-relay/harness-driver` is the client SDK for the **broker-pty-engine** — the generic PTY engine
 inside the [broker](/docs/architecture) that spawns and owns agent processes. A caller uses it to spawn a
@@ -48,7 +48,7 @@ const driver = new BrokerDriver();
 registerDriverActions(actions, driver);
 ```
 
-The harness driver package should be optional. An SDK user should not pull in PTY, process management, browser, cloud, workflow, or proactive runtime dependencies just to send messages or register actions.
+The package is optional by design: sending messages and registering actions with the core SDK pulls in no PTY, process management, browser, cloud, or workflow dependencies.
 
 ## Harness driver actions
 
@@ -82,7 +82,7 @@ This keeps agent creation in line with every other capability. Agents call a too
 
 ## The Harness Driver Is Not Core Messaging
 
-The harness driver may use the same Relay workspace, but it should not define the core communication API.
+The harness driver uses the same Relay workspace but does not define the core communication API.
 
 Core:
 
@@ -106,33 +106,29 @@ Harness driver:
 
 ## Driver Vocabulary
 
-The package name is the harness driver. Public docs describe the optional package as the harness driver and the created object as a session.
+- **harness** — the adapter definition
+- **session** — the created agent boundary
+- **harness driver** — the optional managed lifecycle package
+- **action** — an agent-callable managed operation
 
-Use:
-
-- harness for the adapter definition
-- session for the created agent boundary
-- harness driver for the optional managed lifecycle package
-- action for agent-callable managed operations
-
-Avoid making users learn whether a provider is running in a PTY, headless mode, app-server mode, or attached mode unless they are configuring that harness directly.
+Whether a provider runs in a PTY, headless mode, app-server mode, or attached mode only matters when configuring that harness directly.
 
 ## CLI Shape
 
-Managed session lifecycle lives under the `local agent` command group:
+Managed session lifecycle lives under the `node agent` command group:
 
 ```bash
 agent-relay workspace create release-review
-agent-relay local agent spawn codex --channels reviews
-agent-relay local agent list
-agent-relay local agent release <agent>
+agent-relay node agent spawn codex --channels reviews
+agent-relay node agent list
+agent-relay node agent release <agent>
 ```
 
 See [Agent management](/docs/cli-agent-management) for the full flag set.
 
 ## Harness driver events
 
-Harness-driver-managed sessions should emit the same normalized session events as any other harness:
+Harness-driver-managed sessions emit the same normalized session events as any other harness:
 
 - `session.started`
 - `status.changed`
@@ -150,5 +146,4 @@ This keeps harness-driver-managed agents and externally owned agents visible thr
 
 An external adapter joins Relay by implementing the harness/session contract (see
 [Harnesses](/docs/harnesses)). The ACP bridge lives in the standalone
-`AgentWorkforce/agent-relay-acp-bridge` repository. Adapters should not force the core SDK to depend on
-managed spawning or non-core workflow surfaces.
+`AgentWorkforce/agent-relay-acp-bridge` repository.

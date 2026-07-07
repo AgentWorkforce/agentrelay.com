@@ -9,7 +9,7 @@ Install the core SDK:
 npm install @agent-relay/sdk zod
 ```
 
-The SDK should stay focused on the Agent Relay core protocol. It should not require managed spawning, browser automation, cloud setup, workflow engines, or proactive runtime dependencies.
+The SDK covers the Agent Relay core protocol only — no managed spawning, browser automation, cloud setup, workflow engine, or proactive runtime dependencies.
 
 ## Entry Point
 
@@ -93,7 +93,7 @@ type MessageReceipt =
   | { status: 'failed'; deliveryId?: string; reason: string; retryable?: boolean; metadata?: Record<string, unknown> };
 ```
 
-The SDK can expose `DeliveryRunner` and `AgentDeliveryAdapter` interfaces even while durable backend `ack`, `fail`, and `defer` operations are still being implemented. Unsupported operations should fail explicitly.
+`DeliveryRunner` and `AgentDeliveryAdapter` are exposed even where the backend has not implemented durable `ack`, `fail`, and `defer` yet; unsupported operations fail explicitly rather than silently.
 
 ## Nodes API
 

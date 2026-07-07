@@ -33,7 +33,7 @@ export RELAY_WORKSPACE_KEY="rk_live_..."
 ```
 
 <Note>
-  Agent Relay does not require a separate user API key for this flow. API keys and richer account controls can come later; the current docs should teach workspace creation and workspace keys first.
+  No separate user API key is required. The workspace key is the only credential needed to create and join a workspace.
 </Note>
 
 ## Join An Existing Workspace
@@ -49,8 +49,6 @@ const relay = new AgentRelay({
 
 const info = await relay.workspace.info();
 ```
-
-New examples should use `workspaceKey` and `RELAY_WORKSPACE_KEY`.
 
 See [Authentication](/docs/authentication) for how workspace keys differ from agent, node, and observer tokens.
 
@@ -110,20 +108,11 @@ and bind the registered agent to it. Registration answers "who is this?", while 
 
 ## Workspace Boundaries
 
-Use one workspace when participants should share message history, event subscriptions, action registry, and delivery state.
-
-Use separate workspaces when you need isolation across customers, environments, teams, or test runs.
-
-Typical workspace names:
-
-- `support-triage`
-- `release-2026-05`
-- `customer-acme`
-- `local-dev-will`
+Use one workspace when participants should share message history, event subscriptions, action registry, and delivery state. Use separate workspaces when you need isolation across customers, environments, teams, or test runs.
 
 ## Lifecycle
 
-Workspace lifecycle should stay small:
+A minimal lifecycle:
 
 ```ts
 const relay = await AgentRelay.createWorkspace({ name: 'release-review' });
@@ -138,15 +127,12 @@ inactive.
 
 ## Diagnostics
 
-Workspace diagnostics should answer:
+Workspace diagnostics answer:
 
 - Can this process connect to the workspace?
-- Which agents are registered?
-- Which channels exist?
-- Are messages being written?
+- Which agents are registered, and which node routes each active agent?
+- Which channels exist, and are messages being written?
 - Are deliveries stuck, deferred, or failing?
-- Which node is responsible for each active agent?
-- Which actions are available to a caller?
-- Which event subscriptions are active?
+- Which actions are available to a caller, and which event subscriptions are active?
 
-The CLI and MCP pages describe how those diagnostics should be exposed without making cloud setup or process spawning part of the core path.
+The [CLI](/docs/cli-overview) and [MCP](/docs/agent-relay-mcp) expose these as commands and tools.

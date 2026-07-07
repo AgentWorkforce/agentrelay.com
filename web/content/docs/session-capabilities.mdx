@@ -246,7 +246,7 @@ type AgentSessionEvent =
 
 ## Capability Negotiation
 
-When Relay registers a session, it should use capabilities to decide:
+When Relay registers a session, it uses capabilities to decide:
 
 - whether the session can receive the message content type
 - which delivery modes are valid
@@ -255,4 +255,4 @@ When Relay registers a session, it should use capabilities to decide:
 - which event predicates can be satisfied by live session observations
 - whether release, pause, resume, fork, or snapshot operations are available
 
-Capability errors should be explicit and structured. They should not become silent message loss.
+Capability errors are explicit and structured — never silent message loss.

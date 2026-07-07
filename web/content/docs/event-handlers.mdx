@@ -27,11 +27,6 @@ unsubscribe();
 
 See [Events](/docs/events) for the canonical event vocabulary and the full event-object and envelope schemas.
 
-## Why Events Matter
-
-Agent coordination fails when every participant has to remember to poll an inbox. Events let your app
-react at the moment something changes.
-
 Use listeners to:
 
 - notify an agent when another agent becomes idle
@@ -201,7 +196,6 @@ Handlers should be idempotent. A workspace may replay events after reconnect or 
 
 ## Safety
 
-Harnesses should redact secrets before events leave the session boundary. The adapter closest to the raw
-terminal, transcript, file, or tool output should avoid emitting credentials in the first place. Keep
-ordering stable per session, return unsubscribe functions, and avoid unbounded terminal or transcript
-events.
+Redact secrets before events leave the session boundary — the adapter closest to the raw terminal,
+transcript, file, or tool output is the right place to strip credentials. Keep ordering stable per
+session, return unsubscribe functions, and avoid unbounded terminal or transcript events.

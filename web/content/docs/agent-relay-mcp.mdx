@@ -159,18 +159,11 @@ If the host does not support live subscriptions, the MCP tools still provide dur
 - `list_actions`
 - `invoke_action`
 
-Relay should not rely on agents voluntarily checking an inbox as the only path. MCP should work alongside WebSockets, harness callbacks, and delivery adapters.
+MCP works alongside WebSockets, harness callbacks, and delivery adapters — inbox polling is a fallback, not the primary delivery path.
 
 ## Tool Safety
 
-MCP tools should:
-
-- validate inputs against the SDK schemas
-- use workspace key scoping
-- attach caller identity to messages and action invocations
-- return structured errors
-- emit audit events for action calls
-- avoid exposing raw terminal, transcript, or file data unless the session capability and workspace policy allow it
+MCP tools validate inputs against the SDK schemas, scope access by workspace key, attach caller identity to messages and action invocations, and return structured errors. Raw terminal, transcript, or file data is exposed only when the session capability and workspace policy allow it.
 
 ## Runtime Integration
 

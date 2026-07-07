@@ -49,7 +49,7 @@ For different harnesses it may mean:
 - register a browser tab or UI agent
 - return a handle to something that already exists
 
-Relay should not force a public distinction between own, attach, wrap, and spawn. Those are implementation details inside the harness.
+Whether that is owning, attaching, wrapping, or spawning is an implementation detail inside the harness.
 
 ## Minimum Harness
 
@@ -158,7 +158,7 @@ const unsubscribe = session.onEvent?.((event) => {
 });
 ```
 
-Harnesses should normalize provider-specific observations into stable session events. They should redact secrets before emitting terminal output, transcript chunks, tool inputs, or file diffs.
+Harnesses normalize provider-specific observations into stable session events, and must redact secrets before emitting terminal output, transcript chunks, tool inputs, or file diffs.
 
 ## Actions From Sessions
 
@@ -199,7 +199,7 @@ Depending on the harness, release may:
 - mark a hosted agent unavailable
 - remove a participant from active delivery
 
-Relay should call the session method and record the lifecycle event. The harness owns the implementation.
+Relay calls the session method and records the lifecycle event. The harness owns the implementation.
 
 ## Prebuilt Harnesses
 
