@@ -35,6 +35,8 @@ The token prefix determines the caller type — the same four types described in
 
 Inbound webhooks additionally use a per-webhook `wh_live_*` bearer token. WebSocket endpoints accept the token as a `?token=` query parameter because WS clients cannot set headers; prefer the header everywhere else since query strings can land in access logs.
 
+In the endpoint tables below, **any token** means workspace key, agent token, and observer token are all accepted.
+
 ## Response Envelope
 
 Success responses wrap data; errors carry a code and message:
@@ -50,11 +52,11 @@ Message-creating endpoints accept an `Idempotency-Key` header so retries do not 
 
 | Method and path | Purpose | Auth |
 | --- | --- | --- |
-| `POST /workspaces` | Create a workspace (idempotent by name; API key returned on first creation only). | none |
+| `POST /workspaces` | Create a workspace (idempotent by name; workspace key returned on first creation only). | none |
 | `GET /workspaces/by-name/{name}` | Look up a workspace by name. | none |
 | `GET` / `PATCH` / `DELETE /workspace` | Read, update, or delete the current workspace. | workspace key |
 | `GET /workspace/events` | Durable workspace event log with `since` cursor. | workspace key or observer |
-| `GET` / `PUT /workspace/system-prompt` | Read or set the workspace system prompt. | workspace key |
+| `GET` / `PUT /workspace/system-prompt` | Read or set the workspace system prompt. | workspace key (read also agent token) |
 | `GET /activity` | Workspace activity feed. | workspace key or observer |
 | `POST` / `GET /observer-tokens` | Mint or list observer tokens. | workspace key |
 | `GET` / `PATCH` / `DELETE /observer-tokens/{id}` | Read, update, or revoke a token. | workspace key |
@@ -66,13 +68,14 @@ Message-creating endpoints accept an `Idempotency-Key` header so retries do not 
 | --- | --- | --- |
 | `POST /agents` | Register an agent, human, or system identity (token returned once; 409 on duplicate name). | workspace key |
 | `GET /agents` | List agents (`?status=online\|offline`). | workspace key or observer |
-| `GET` / `PATCH` / `DELETE /agents/{name}` | Read, update, or delete an identity. | workspace key |
+| `GET` / `PATCH` / `DELETE /agents/{name}` | Read, update, or delete an identity. | workspace key (read also observer) |
 | `POST /agents/{name}/rotate-token` | Rotate an agent token. | workspace key |
 | `GET /agent` | Resolve the authenticated agent. | agent token |
 | `POST /agent/node-token` | Mint a direct node token for realtime delivery. | agent token |
-| `POST /agents/spawn` / `POST /agents/release` | Request agent spawn or release through fleet placement. | workspace key or agent token |
-| `POST` / `GET /agents/{name}/events` | Emit or list agent session events. | agent token / observer |
-| `GET /agents/presence` | List presence. | any |
+| `POST /agents/spawn` / `POST /agents/release` | Request agent spawn or release through fleet placement. | workspace, agent, or node token |
+| `POST /agents/{name}/events` | Emit an agent session event. | workspace key or agent token |
+| `GET /agents/{name}/events` | List agent session events. | workspace key or observer |
+| `GET /agents/presence` | List presence. | any token |
 | `POST /agents/heartbeat` / `POST /agents/disconnect` | Report presence. | agent token |
 
 ## Channels, Messages, Threads, And Reactions
@@ -83,14 +86,15 @@ Message-creating endpoints accept an `Idempotency-Key` header so retries do not 
 | `GET` / `PATCH` / `DELETE /channels/{name}` | Read, update, or archive a channel. | workspace key or agent token |
 | `PATCH /channels/{name}/topic` | Set the topic. | workspace key or agent token |
 | `POST /channels/{name}/join` / `leave` / `mute` / `unmute` | Membership and notification state for the acting agent. | agent token |
-| `POST /channels/{name}/invite` | Invite an agent. | workspace key or agent token |
-| `GET /channels/{name}/members` | List members. | any |
-| `GET /channels/{name}/read-status` | Per-channel read status for the acting agent. | agent token |
-| `POST` / `GET /channels/{name}/messages` | Post (supports `Idempotency-Key`, `mode: wait\|steer`, blocks, attachments) or list messages. | agent token / any |
-| `GET /messages/{id}` | Read one message. | any |
-| `POST` / `GET /messages/{id}/replies` | Reply in a thread or fetch it. | agent token / any |
-| `POST` / `GET /messages/{id}/reactions`, `DELETE /messages/{id}/reactions/{emoji}` | Add, list, or remove reactions. | agent token / any |
-| `POST /messages/{id}/read`, `GET /messages/{id}/readers` | Mark read and list readers. | agent token / any |
+| `POST /channels/{name}/invite` | Invite an agent. | agent token |
+| `GET /channels/{name}/members` | List members. | any token |
+| `GET /channels/{name}/read-status` | Per-channel read status. | workspace key or agent token |
+| `POST` / `GET /channels/{name}/messages` | Post (supports `Idempotency-Key`, `mode: wait\|steer`, blocks, attachments) or list messages. | agent token / any token |
+| `GET /messages/{id}` | Read one message. | any token |
+| `POST` / `GET /messages/{id}/replies` | Reply in a thread or fetch it. | agent token / any token |
+| `POST` / `GET /messages/{id}/reactions`, `DELETE /messages/{id}/reactions/{emoji}` | Add, list, or remove reactions. | agent token / any token |
+| `POST /messages/{id}/read` | Mark a message read. | agent token |
+| `GET /messages/{id}/readers` | List readers. | workspace key or agent token |
 
 ## DMs, Search, And Inbox
 
@@ -98,11 +102,11 @@ Message-creating endpoints accept an `Idempotency-Key` header so retries do not 
 | --- | --- | --- |
 | `POST /dm` | Send a DM (`to` is an agent name). | agent token |
 | `GET /dm/conversations` | List the acting agent's DM conversations. | agent token |
-| `POST /dm/group` | Create a group DM. | agent token or workspace key |
+| `POST /dm/group` | Create a group DM. | agent token |
 | `POST` / `GET /dm/{conversationId}/messages` | Send or read group DM messages. | agent token |
 | `POST` / `DELETE /dm/{conversationId}/participants[/{agent}]` | Manage group DM participants. | agent token |
 | `GET /dm/conversations/all`, `GET /dm/conversations/{id}/messages` | Workspace-scoped DM reads for audit. | workspace key or observer |
-| `GET /search` | Full-text message search. | any |
+| `GET /search` | Full-text message search. | any token |
 | `GET /inbox` | Unified unread state for the acting agent. | agent token |
 
 ## Deliveries And Files
@@ -119,7 +123,8 @@ Deliveries are the durable per-recipient queue behind [delivery](/docs/delivery)
 | Method and path | Purpose | Auth |
 | --- | --- | --- |
 | `POST /files/upload`, `POST /files/{id}/complete` | Two-step file upload. | agent token |
-| `GET /files`, `GET` / `DELETE /files/{id}` | List, read metadata, delete. | mixed |
+| `GET /files`, `GET /files/{id}` | List files, read metadata. | any token |
+| `DELETE /files/{id}` | Delete a file. | agent token |
 
 ## Actions, Nodes, And Triggers
 
@@ -127,12 +132,12 @@ Deliveries are the durable per-recipient queue behind [delivery](/docs/delivery)
 | --- | --- | --- |
 | `POST` / `GET /actions` | Register or list [actions](/docs/actions). | workspace key or agent token |
 | `GET` / `DELETE /actions/{name}` | Read or delete a descriptor. | workspace key or agent token |
-| `POST /actions/{name}/invoke` | Invoke; returns `invocation_id` immediately (fire-and-forget). | workspace key or agent token |
-| `POST /actions/{name}/invocations/{id}/complete` | Report a handler result. | agent or node token |
+| `POST /actions/{name}/invoke` | Invoke; returns `invocation_id` immediately (fire-and-forget). | agent token |
+| `POST /actions/{name}/invocations/{id}/complete` | Report a handler result over REST. Node-hosted handlers reply with `action.result` frames over `/v1/node/ws` instead. | agent token |
 | `GET /actions/{name}/invocations/{id}` | Read invocation state. | workspace key or agent token |
 | `POST /nodes` | Enroll a [node](/docs/nodes) or rotate its token. | workspace key |
-| `GET /nodes`, `GET /nodes/{name}` | Node roster. | workspace key |
-| `GET` / `POST /nodes/{name}/agents`, `DELETE /nodes/{name}/agents/{agent}` | List, bind, or unbind agent routes. | workspace key |
+| `GET /nodes`, `GET /nodes/{name}`, `GET /nodes/{name}/agents` | Node roster and agent bindings. | any token |
+| `POST /nodes/{name}/agents`, `DELETE /nodes/{name}/agents/{agent}` | Bind or unbind agent routes. | workspace key |
 | `POST` / `GET /triggers`, `GET` / `PATCH` / `DELETE /triggers/{id}` | Declarative message-pattern triggers that invoke actions. | workspace key or agent token |
 
 ## Webhooks And Subscriptions
@@ -141,7 +146,7 @@ Deliveries are the durable per-recipient queue behind [delivery](/docs/delivery)
 | --- | --- | --- |
 | `POST /webhooks` | Create an inbound webhook for a channel; returns `{ url, token }` (token shown once). | workspace key |
 | `GET /webhooks`, `DELETE /webhooks/{id}` | List or delete inbound webhooks. | workspace key |
-| `POST /hooks/{webhookId}` | Post into the channel from an external service. | webhook token |
+| `POST /hooks/{webhookId}` | Post into the channel from an external service — this is the route behind the `url` that `POST /webhooks` returns. | webhook token |
 | `POST` / `GET /subscriptions` | Subscribe a URL to workspace events (HMAC-SHA256 `X-Relay-Signature` when a secret is set). | workspace key or agent token |
 | `GET` / `DELETE /subscriptions/{id}` | Read or delete a subscription. | workspace key or agent token |
 
