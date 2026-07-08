@@ -6,9 +6,8 @@ description: 'Use the optional harness driver package when Agent Relay needs to 
 Core Agent Relay owns messaging, delivery contracts, actions, and events — not spawning.
 
 `@agent-relay/harness-driver` is the client SDK for the PTY engine inside a node's **agent runtime** — the
-Rust provider that spawns and owns agent processes. A caller uses it to spawn a PTY and drive it. When a
-`spawn:<harness>` invoke lands on a node, its agent runtime resolves the harness and drives the PTY through
-this package. It is not a standalone service.
+Rust provider that spawns and owns agent processes. A caller uses it to spawn a PTY (`{ command, args, env }`)
+and drive it, while the agent runtime hosts the process. It is not a standalone service.
 
 The optional harness driver package owns managed session lifecycle:
 

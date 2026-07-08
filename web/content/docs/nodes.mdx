@@ -56,7 +56,7 @@ A node's capabilities are named handlers hosted by its providers. They come in t
 | Kind | Meaning |
 | --- | --- |
 | `action` | An invokable handler — for example `run-etl` or a custom `screenshot`. The engine materializes it and dispatches invokes to the registering provider. |
-| `capacity` | What the node can run — `spawn:<harness>` and `release`. The node's agent runtime registers it for placement and spawn delegation; it is never invoked as an action. |
+| `capacity` | What the node can run — `spawn:<harness>` and `release`. The node's agent runtime registers it for placement and spawn delegation; it is never materialized as an invokable action. |
 
 A TypeScript provider declares its actions with `defineNode` from `@agent-relay/fleet`. Each capability is keyed by name; `action(...)` builds a handler that receives the validated `input` and a handler context:
 
@@ -181,7 +181,7 @@ Node delivery hosts authenticate with `nt_live_*` node tokens. Use the workspace
 
 ## Enrollment And Identity
 
-A node enrolls with `POST /v1/nodes` using the workspace key. The request carries the node `name` and, for a fleet host, its `capabilities`, `max_agents`, `tags`, and `version`; the response mints a node token (`nt_live_*`). A provider then connects `/v1/node/ws` and sends a `node.register` frame with its identity and capabilities to take ownership of its attachment. The node's agent runtime mints and persists this node token at startup, scoped to the workspace and engine, so the node reuses the same identity across restarts; all of the node's providers share it.
+A node enrolls with `POST /v1/nodes` using the workspace key. The request carries the node `name` and, for a fleet host, its `capabilities`, `max_agents`, `tags`, and `version`; the response mints a node token (`nt_live_*`). A provider then connects to `/v1/node/ws` and sends a `node.register` frame with its identity and capabilities to take ownership of its attachment. The node's agent runtime mints and persists this node token at startup, scoped to the workspace and engine, so the node reuses the same identity across restarts; all of the node's providers share it.
 
 A node id supplied or pinned by an operator (`node_id` in the enroll request, used with its node token) is taken as-is. Otherwise the id derives from the machine identity, the working directory, and the workspace, so several nodes on one host — for example one per project directory — do not collide.
 

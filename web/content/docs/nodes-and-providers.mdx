@@ -17,7 +17,7 @@ directly to the engine with the node's token and registers what it offers.
 | --- | --- |
 | **Node** | An enrolled context in a workspace — a project directory or an application. The unit others target: "invoke `run-etl` on `data-pipeline`." Multiple nodes per machine. |
 | **Provider** | A process attached to a node. It connects directly to the engine, registers a subset of the node's capabilities, and executes their invokes. |
-| **Capability** | A named action with a handler hosted by a provider. Always node-scoped. |
+| **Capability** | A named unit a provider registers with the engine — an action with a handler, or `spawn`/`release` capacity. Always node-scoped. |
 | **Machine** | An attribute on the node record, used for grouping fleet views and as an input to placement. Never a capability scope. |
 
 Node identity is derived from the machine, the working directory, and the workspace, so the same
@@ -31,7 +31,7 @@ Providers register two kinds of capability.
 
 - The node's **agent runtime** (a Rust provider) runs agents. It registers **capacity** — which
   harnesses it can spawn (`spawn:claude`, `spawn:codex`) and how many. Capacity feeds placement
-  and spawn delegation; it is never invoked as an action.
+  and spawn delegation; it is never materialized as an invokable action.
 - **Capability providers** — written in TypeScript, Python, or Swift — register **actions**: named
   handlers like `run-etl` or `screenshot` that anything in the workspace can invoke. The engine
   materializes an action and dispatches its invokes to the registering provider.
@@ -121,7 +121,7 @@ async def spawn_claude(input, ctx):
     agent = input["agent"]
     agent["cli"] = f"claude --permission-mode plan {agent.get('args', '')}"
     result = await ctx.spawn_agent(agent)  # delegates to the node's agent runtime
-    await ctx.relay.send_message(to="ops", text=f"spawned {result['name']}")
+    await ctx.send_message(to="ops", text=f"spawned {result['name']}")
     return result
 ```
 
