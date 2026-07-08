@@ -5,11 +5,10 @@ description: 'Use the optional harness driver package when Agent Relay needs to 
 
 Core Agent Relay owns messaging, delivery contracts, actions, and events — not spawning.
 
-`@agent-relay/harness-driver` is the client SDK for the **broker-pty-engine** — the generic PTY engine
-inside the [broker](/docs/architecture) that spawns and owns agent processes. A caller uses it to spawn a
-PTY and drive it. It is used **inside an action runner**: when a node's `spawn` capability fires, the action
-runner resolves the harness that capability declares and calls the harness driver to start it, while the
-broker-pty-engine hosts the PTY. It is not a standalone service.
+`@agent-relay/harness-driver` is the client SDK for the PTY engine inside a node's **agent runtime** — the
+Rust provider that spawns and owns agent processes. A caller uses it to spawn a PTY and drive it. When a
+`spawn:<harness>` invoke lands on a node, its agent runtime resolves the harness and drives the PTY through
+this package. It is not a standalone service.
 
 The optional harness driver package owns managed session lifecycle:
 
@@ -40,8 +39,8 @@ import { BrokerDriver, registerDriverActions } from '@agent-relay/harness-driver
 const actions = new ActionRegistry();
 const relay = await AgentRelay.createWorkspace({ name: 'release-review', actions });
 
-// The driver owns the managed harness boundary: broker startup, PTY/headless
-// spawn, release, and status.
+// The driver owns the managed harness boundary: agent-runtime startup,
+// PTY/headless spawn, release, and status.
 const driver = new BrokerDriver();
 
 // Expose that lifecycle as actions (agent.create, agent.release, agent.status).
@@ -76,7 +75,7 @@ relay.addListener(relay.action('agent.create').failed(), (event) => {
 
 Pass `{ actionPrefix }` to `registerDriverActions` to namespace the actions, and
 provide any `AgentDriver` implementation; `BrokerDriver` is the built-in one that
-manages a local broker.
+manages a local node's agent runtime.
 
 This keeps agent creation in line with every other capability. Agents call a tool; the harness driver owns the implementation and reports the result through `action.completed`.
 

@@ -8,7 +8,9 @@ validated result, and a signal that the work is done. Actions provide both. The 
 action whose **input schema is the worker's typed result shape**, assigns the task over messaging, and
 advances the pipeline from the typed listener predicates on the handle returned by an agent client's
 `registerAction(...)`. Register on an agent client (not the workspace `relay`): the handler agent's
-identity is what exposes the action as an MCP tool that workers can call.
+identity is what exposes the action as an MCP tool that workers can call. Registration and invocation are
+one model regardless of where the handler runs — an agent connection here, or a
+[node provider](/docs/nodes-and-providers) that hosts a capability on a machine.
 
 ## The shape of the pattern
 
@@ -133,4 +135,8 @@ When the crew winds down, `scores.unregister()` removes the action.
 
 <BannerLink href="/docs/event-handlers" icon="docs">
   See Event handlers for everything addListener can subscribe to.
+</BannerLink>
+
+<BannerLink href="/docs/nodes-and-providers" icon="docs">
+  See Nodes and providers to host the same capabilities on a machine.
 </BannerLink>
