@@ -22,7 +22,7 @@ directly to the engine with the node's token and registers what it offers.
 
 Node identity is derived from the machine, the working directory, and the workspace, so the same
 directory stays distinct across workspaces and several nodes coexist on one machine. All providers
-on a node share the node's `nt_live_` token; each declares its own identity — a stable `name` and
+on a node share the node's `nt_live_*` token; each declares its own identity — a stable `name` and
 a per-connection `instance_id` — when it connects.
 
 ## Capacity and actions
