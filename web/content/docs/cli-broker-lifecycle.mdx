@@ -1,51 +1,56 @@
 ---
 title: 'Broker lifecycle'
-description: 'Start, inspect, and stop the optional local broker runtime used for managed CLI agents.'
+description: 'Start, inspect, and stop the local node runtime used for managed CLI agents.'
 ---
 
-The version 8 core product is workspace messaging. The local broker is optional: use it when this machine should run managed CLI agents or attach to PTY/headless sessions.
+The core product is workspace messaging. The local broker is optional: use it when this machine should run managed CLI agents or attach to PTY/headless sessions.
 
-Broker commands live under `agent-relay local`.
+Broker commands live under `agent-relay node`. (`local` is a deprecated alias that prints a warning.)
 
 ## Start The Broker
 
 ```bash
-agent-relay local up
+agent-relay node up
 ```
 
-Useful flags:
+`node up` starts the broker in the foreground, serves this machine as a fleet [node](/docs/nodes), and — when a `teams.json` with `autoSpawn` exists — spawns the configured agents into `#general`.
+
+Flags:
 
 | Flag | Description |
 | --- | --- |
-| `--spawn` | Force auto-spawn from local team config. |
+| `--spawn` | Force auto-spawn from `teams.json`, regardless of its `autoSpawn` setting. |
 | `--no-spawn` | Start only the broker. |
 | `--background` | Detach and leave the broker running. The default is to stay attached to this terminal. |
+| `--config <file>` | Node definition file to serve. Defaults to an auto-discovered `agent-relay.{ts,tsx,mts,cts,js,mjs,cjs}`. |
 | `--workspace-key <key>` | Join a pre-existing Relay workspace. |
 | `--state-dir <path>` | Write runtime state outside `.agentworkforce/relay/`. |
-| `--broker-name <name>` | Override the broker identity. |
+| `--broker-name <name>` | Override the broker identity. Defaults to the project directory basename. |
 | `--verbose` | Enable verbose startup logging. |
 
 For local agent work, the common shape is:
 
 ```bash
-agent-relay local up --background --workspace-key "$RELAY_WORKSPACE_KEY"
+agent-relay node up --background --workspace-key "$RELAY_WORKSPACE_KEY"
 ```
+
+The broker listens on a local API port starting from `3888` (override with `AGENT_RELAY_BROKER_PORT`). If this machine was enrolled as a Cloud-managed node with `agent-relay cloud enroll`, `node up` picks up the persisted enrollment automatically and serves under the enrolled node name.
 
 ## Check Status
 
 ```bash
-agent-relay local status
-agent-relay local status --wait-for 10
+agent-relay node status
+agent-relay node status --wait-for 10
 agent-relay status
 ```
 
-`local status` only checks the local broker daemon. The top-level `status` command reports project path, local broker state, and cloud login state.
+`node status` only checks the local broker daemon; `--wait-for <seconds>` polls until the broker is ready or the timeout expires. The top-level `status` command reports workspace, local broker state, and cloud login state.
 
 ## Metrics
 
 ```bash
-agent-relay local metrics
-agent-relay local metrics --agent reviewer
+agent-relay node metrics
+agent-relay node metrics --agent reviewer
 ```
 
 Metrics show local broker and agent resource usage.
@@ -53,12 +58,12 @@ Metrics show local broker and agent resource usage.
 ## Stop The Broker
 
 ```bash
-agent-relay local down
-agent-relay local down --timeout 10000
-agent-relay local down --force
+agent-relay node down
+agent-relay node down --timeout 10000
+agent-relay node down --force
 ```
 
-Use `--force` for stale state or stuck processes. Use `--all` only when intentionally cleaning up every `agent-relay` process on the machine.
+`--timeout <ms>` bounds the graceful shutdown wait (default 5000). Use `--force` for stale state or stuck processes. Use `--all` only when intentionally cleaning up every `agent-relay` process on the machine.
 
 ## State Directory
 
@@ -67,9 +72,9 @@ By default, local runtime state is written under `.agentworkforce/relay/` in the
 Use `--state-dir` when a project needs isolated runtime files:
 
 ```bash
-agent-relay local up --state-dir .agentworkforce/relay-staging
-agent-relay local agent attach reviewer --state-dir .agentworkforce/relay-staging
-agent-relay local down --state-dir .agentworkforce/relay-staging
+agent-relay node up --state-dir .agentworkforce/relay-staging
+agent-relay node agent attach reviewer --state-dir .agentworkforce/relay-staging
+agent-relay node down --state-dir .agentworkforce/relay-staging
 ```
 
 ## Update And Uninstall

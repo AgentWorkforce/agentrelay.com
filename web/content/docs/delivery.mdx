@@ -5,7 +5,7 @@ description: 'Delivery is the contract that gets durable Relay messages into age
 
 Messaging writes a durable record. Delivery gets that record into a session.
 
-Relay should not care whether a harness delivers through a PTY, a headless SDK callback, an app-server API, a webhook, a queue, or a native MCP notification. Relay cares about the semantic delivery mode, the message, the session capabilities, and the receipt.
+Relay does not care whether a harness delivers through a PTY, a headless SDK callback, an app-server API, a webhook, a queue, or a native MCP notification. It cares about the semantic delivery mode, the message, the session capabilities, and the receipt.
 
 Delivery is routed through [nodes](/docs/nodes). Direct SDK and MCP clients use implicit `direct_ws` nodes, broker-controlled workers use `fleet_ws` nodes, and service endpoints can use `http_push` nodes. The node binding for an agent decides which adapter receives future delivery work.
 
@@ -26,7 +26,7 @@ The workspace stream at `/v1/ws` is **observer-only**. It feeds dashboards and a
 
 ## Minimum Contract
 
-Every session on Relay must be able to receive a message and be released.
+Every session must be able to receive a message and be released.
 
 ```ts
 type AgentSession = {
@@ -61,7 +61,7 @@ type DeliveryMode =
 | `on-idle` | Deliver when the session reports idle, waiting, blocked, or another configured safe state. |
 | `manual` | Hold delivery until a caller or harness explicitly flushes pending work. |
 
-The old question of "interrupt or not" is encapsulated by the delivery mode. `immediate` is the interrupting mode. The other modes are boundary-aware.
+`immediate` is the interrupting mode. The other modes are boundary-aware.
 
 ## Delivery Context
 
@@ -226,7 +226,7 @@ must run the HTTP push redrive sweep so due retries are dispatched after transie
 
 ## Reliability Rules
 
-Harnesses and adapters should:
+Harnesses and adapters must:
 
 - Treat delivery ids as idempotency keys.
 - Preserve event ordering per session.

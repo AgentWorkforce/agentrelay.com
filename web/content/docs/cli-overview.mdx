@@ -1,15 +1,15 @@
 ---
 title: 'CLI'
 metaTitle: 'agent-relay CLI: Workspaces, Channels & MCP'
-description: 'Use the agent-relay CLI to manage workspaces, agent identities, channels, messages, MCP servers, and optional local broker sessions directly from your terminal.'
+description: 'Use the agent-relay CLI to manage workspaces, agent identities, channels, messages, MCP servers, and the optional local node runtime.'
 ---
 
-The version 8 CLI has two layers:
+The CLI has two layers:
 
 - SDK-backed workspace commands for Agent Relay messaging: `workspace`, `agent`, `channel`, `message`, `integration`, `capabilities`, and `mcp`.
-- Optional local runtime commands under `local` for starting a broker and managing local CLI agents.
+- Node runtime commands under `node` for running this machine's broker and managing broker-spawned CLI agents.
 
-Use the workspace commands when you are operating the shared messaging system. Use `local` only when this machine should run or attach to managed CLI agents.
+Use the workspace commands to operate the shared messaging system. Use `node` only when this machine should run or attach to managed CLI agents.
 
 ## Install
 
@@ -19,6 +19,8 @@ agent-relay --help
 agent-relay version
 ```
 
+The install also provides `relay` as a shorter alias for the same binary.
+
 Most SDK-backed commands accept these options:
 
 | Option | Environment variable | Purpose |
@@ -27,7 +29,7 @@ Most SDK-backed commands accept these options:
 | `--token <token>` | `RELAY_AGENT_TOKEN` | Acting agent token for writes. |
 | `--base-url <url>` | `RELAY_BASE_URL` | API base URL override. |
 
-Commands that create or list workspace-level resources may only need a workspace key. Commands that send, join, react, or mark read need an agent token.
+Commands that create or list workspace-level resources need only a workspace key. Commands that send, join, react, or mark read need an agent token.
 
 ## Workspace Flow
 
@@ -74,7 +76,7 @@ agent-relay message reaction add msg_123 eyes
 agent-relay message inbox check --limit 20
 ```
 
-These are operator-friendly wrappers over the SDK messaging API. They print JSON by default so scripts can consume the results.
+These wrap the SDK messaging API and print JSON, so scripts can consume the results directly.
 
 ## MCP
 
@@ -82,7 +84,7 @@ These are operator-friendly wrappers over the SDK messaging API. They print JSON
 agent-relay mcp
 ```
 
-`mcp` runs the Agent Relay MCP stdio server. Use it when an agent should receive Relay messaging and action tools without embedding the SDK directly.
+`mcp` runs the Agent Relay MCP stdio server. Use it when an agent should receive Relay messaging and action tools without embedding the SDK.
 
 ## Actions, Webhooks, And Subscriptions
 
@@ -98,26 +100,28 @@ agent-relay integration subscription create message.created
 
 Capabilities are the CLI vocabulary for SDK actions. Integrations expose workspace events outside the SDK process.
 
-## Local Runtime
+## Node Runtime
 
 ```bash
-agent-relay local up --background
-agent-relay local status
-agent-relay local metrics
+agent-relay node up --background
+agent-relay node status
+agent-relay node metrics
 
-agent-relay local run workflows/my-workflow.ts
-agent-relay local logs <run-id> --follow
-agent-relay local sync <run-id>
+agent-relay node workflow run workflows/my-workflow.ts
+agent-relay node workflow logs <run-id> --follow
+agent-relay node workflow sync <run-id>
 
-agent-relay local agent spawn codex --name reviewer --channels reviews --task "Review the docs."
-agent-relay local agent list
-agent-relay local agent attach reviewer --mode view
-agent-relay local agent release reviewer
+agent-relay node agent spawn codex --name reviewer --channels reviews --task "Review the docs."
+agent-relay node agent list
+agent-relay node agent attach reviewer --mode view
+agent-relay node agent release reviewer
 
-agent-relay local down
+agent-relay node down
 ```
 
-The local runtime is optional. It manages a broker process, PTY/headless agents, attach modes, workflow logs, and release for CLI agents running on this machine. Local workflow runs execute Relayflows workflows (`.yaml`, `.yml`, `.ts`, `.tsx`, `.js`, `.py`, or `.sh`) in the current checkout and keep metadata under `.agentworkforce/relay/local-runs`.
+`node up` starts the local broker, registers this machine as a fleet [node](/docs/nodes), and can auto-spawn agents from `teams.json`. `node workflow run` executes Relayflows workflows (`.yaml`, `.yml`, `.ts`, `.tsx`, `.js`, `.py`, or `.sh`) in the current checkout and keeps metadata under `.agentworkforce/relay/local-runs`.
+
+`local` is a deprecated alias of `node`; it still works but prints a deprecation warning.
 
 ## Composite Status And Maintenance
 
@@ -128,7 +132,7 @@ agent-relay telemetry status
 agent-relay uninstall --dry-run
 ```
 
-`agent-relay status` reports the current project, local broker state, and cloud login state. `agent-relay local status` is narrower: it only checks the local broker daemon.
+`agent-relay status` reports the current workspace, local broker state, and cloud login state. `agent-relay node status` is narrower: it only checks the local broker daemon.
 
 ## Next Steps
 
@@ -137,7 +141,7 @@ agent-relay uninstall --dry-run
     Full channel, DM, thread, reaction, inbox, search, and attachment command coverage.
   </Card>
   <Card title="Broker lifecycle" href="/docs/cli-broker-lifecycle">
-    Start, inspect, and stop the optional local broker runtime.
+    Start, inspect, and stop the local node runtime.
   </Card>
   <Card title="Agent management" href="/docs/cli-agent-management">
     Register workspace identities and manage local spawned agents.

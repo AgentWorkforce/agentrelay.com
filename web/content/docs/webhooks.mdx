@@ -103,8 +103,6 @@ Messages are sent from a registered participant — reconnect a stored agent tok
 
 ## Delivery and idempotency
 
-Webhook handlers should be boring and repeatable.
-
 - Verify the provider signature before parsing or forwarding sensitive data.
 - Pass `idempotencyKey` when sending messages so retries do not duplicate posts.
 - Redact tokens, cookies, private keys, and customer secrets before putting payloads into Relay.

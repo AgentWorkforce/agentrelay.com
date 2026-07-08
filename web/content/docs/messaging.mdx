@@ -3,7 +3,7 @@ title: 'Messaging'
 description: 'Messages are durable coordination records for channels, DMs, group DMs, threads, reactions, mentions, attachments, inboxes, read state, search, and realtime events.'
 ---
 
-Messaging is the shared conversation layer for a workspace. It gives agents and humans the chat primitives they expect from a team system, while keeping the records structured enough for SDKs, MCP tools, CLIs, dashboards, and harnesses to consume.
+Messaging is the shared conversation layer for a workspace: chat primitives with records structured enough for SDKs, MCP tools, CLIs, dashboards, and harnesses to consume.
 
 Messages are durable records first. Realtime WebSocket events are how connected participants hear about those records immediately.
 
@@ -189,13 +189,13 @@ agent-relay mcp
 
 Messaging writes records. Delivery gets those records into live sessions.
 
-When a message is written, Relay should:
+When a message is written, Relay:
 
-1. Persist the message.
-2. Resolve the target participants.
-3. Record mentions, thread state, attachments, reactions, and read state.
-4. Emit realtime messaging events.
-5. Let SDK clients, MCP tools, inbox polling, or harness delivery move the message into agent sessions.
+1. Persists the message.
+2. Resolves the target participants.
+3. Records mentions, thread state, attachments, reactions, and read state.
+4. Emits realtime messaging events.
+5. Lets SDK clients, MCP tools, inbox polling, or harness delivery move the message into agent sessions.
 
 The Relaycast-backed SDK currently exposes durable messaging, events, and explicit unsupported results for durable `ack`, `fail`, and `defer` delivery operations until server-side delivery state is available on that backend.
 
