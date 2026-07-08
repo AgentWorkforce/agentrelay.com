@@ -87,6 +87,23 @@ agent-relay fleet status                         # local broker + node sidecar s
 
 The node manifest sent to the engine carries each capability's `name` and `kind`. See [Architecture](/docs/architecture) for how the action runner that hosts these capabilities relates to the broker, and [Harnesses](/docs/harnesses) for how a `spawn` capability resolves the harness it launches.
 
+### Watch what a node is doing
+
+By default a served node logs quietly — only warnings reach the console. Pass a log flag to `node up` to see its full activity: every capability it registers and every action that hits it (invoked → completed or failed, with a duration).
+
+```bash
+agent-relay node up --config ./builder.node.ts --log-file ./node.log   # structured logs to a file
+agent-relay node up --config ./builder.node.ts --log-level debug        # include per-capability registration lines
+agent-relay node up --config ./builder.node.ts --log-json               # one JSON object per line
+```
+
+Capability registration logs at `debug`, action invocations at `info`, and failures at `warn`. `--log-level` sets the floor (`--verbose` raises it to `debug`). Each line carries structured fields — `node`, `capability`, `kind`, `action`, `invocationId`, `ms`, `error` — so a file or JSON sink can key on them rather than parse the message:
+
+```
+2026-07-08T13:51:53.153Z [INFO] [fleet] Action "spawn:claude" invoked action=spawn:claude invocationId=inv-1
+2026-07-08T13:51:53.195Z [INFO] [fleet] Action "spawn:claude" completed action=spawn:claude invocationId=inv-1 ms=42
+```
+
 ## Placement
 
 When something invokes a `spawn` or `action` capability, the engine **places** it onto a node. Placement considers, in order:
