@@ -87,6 +87,24 @@ agent-relay fleet status                         # local broker + node sidecar s
 
 The node manifest sent to the engine carries each capability's `name` and `kind`. See [Architecture](/docs/architecture) for how the action runner that hosts these capabilities relates to the broker, and [Harnesses](/docs/harnesses) for how a `spawn` capability resolves the harness it launches.
 
+### Watch what a node is doing
+
+By default a served node logs quietly — only warnings reach the console. Pass a log flag to `node up` to see its activity: every capability it registers and every action that hits it (invoked → completed or failed, with a duration).
+
+```bash
+agent-relay node up --config ./builder.node.ts --log-file ./node.log                    # actions → a file
+agent-relay node up --config ./builder.node.ts --log-file ./node.log --log-level debug   # + capability registration
+agent-relay node up --config ./builder.node.ts --log-json                               # one JSON object per line
+```
+
+Capability registration logs at `debug`, action invocations at `info`, and failures at `warn`. `--log-level` sets the floor (default `info`) — so `--log-file`/`--log-json` alone capture actions but **not** the `debug` capability-registration lines; add `--log-level debug` (or `--verbose`) for those. Each line carries structured fields keyed to its event, so a file or JSON sink can filter rather than parse the message: an action line has `node`, `action`, `kind`, `invocationId`, and `ms` (a failure adds `error`); a capability-registration line has `node`, `capability`, and `kind`.
+
+```
+2026-07-08T13:51:53.140Z [DEBUG] [fleet] Capability "spawn:claude" registered node=builder capability=spawn:claude kind=spawn
+2026-07-08T13:51:53.153Z [INFO] [fleet] Action "spawn:claude" invoked node=builder action=spawn:claude kind=spawn invocationId=inv-1
+2026-07-08T13:51:53.195Z [INFO] [fleet] Action "spawn:claude" completed node=builder action=spawn:claude kind=spawn invocationId=inv-1 ms=42
+```
+
 ## Placement
 
 When something invokes a `spawn` or `action` capability, the engine **places** it onto a node. Placement considers, in order:

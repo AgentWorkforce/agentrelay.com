@@ -26,7 +26,12 @@ Flags:
 | `--workspace-key <key>` | Join a pre-existing Relay workspace. |
 | `--state-dir <path>` | Write runtime state outside `.agentworkforce/relay/`. |
 | `--broker-name <name>` | Override the broker identity. Defaults to the project directory basename. |
-| `--verbose` | Enable verbose startup logging. |
+| `--verbose` | Enable verbose startup logging (raises the node log level to `debug`). |
+| `--log-file <path>` | Write structured node logs — each capability registered and every action invoked/completed — to a file. |
+| `--log-level <level>` | Node log verbosity: `debug` \| `info` \| `warn` \| `error` (default `info`). |
+| `--log-json` | Emit node logs as JSON lines instead of text. |
+
+The `--log-*` flags govern the fleet node this broker serves; see [Nodes → Watch what a node is doing](/docs/nodes#watch-what-a-node-is-doing). Without one, the node stays quiet and surfaces only warnings.
 
 For local agent work, the common shape is:
 
