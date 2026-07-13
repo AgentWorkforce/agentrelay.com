@@ -1,137 +1,120 @@
 ---
-title: 'Architecture: nodes, the broker, and action runners'
-description: 'How Agent Relay routes reliable delivery through nodes, what the broker stack on a machine owns, and the vocabulary for brokers, the broker-pty-engine, the harness driver, and action runners.'
+title: 'Architecture: nodes, providers, and the agent runtime'
+description: 'How Agent Relay routes reliable delivery through nodes, how providers attach to a node and connect directly to the engine, and the vocabulary for nodes, providers, capacity, and the agent runtime.'
 ---
 
 Agent Relay separates _what_ a message means from _where_ it is delivered. Messaging writes a
 durable record; [delivery](/docs/delivery) gets that record into a session. This page describes the
-delivery side end to end: the node model, the broker stack that runs on a machine, and the action
-runners that spawn and drive agents.
+delivery side end to end: the node and provider model, the agent runtime that hosts sessions on a
+machine, and how spawn flows through the engine.
 
-## Everything is a node
+## The engine is the hub
 
-A **node** is a delivery endpoint connected to the engine over `/v1/node/ws`. Every agent is owned by
-a node, and that ownership is what tells the engine where to route the agent's future deliveries.
+A **node** is an enrolled context in a workspace — usually a project directory, sometimes an
+application. **Providers** attach to a node: each is a process that connects directly to the engine
+over `/v1/node/ws`, shares the node's token, and registers a subset of the node's capabilities. The
+engine is the only hub; there is no local one.
 
-Realtime delivery is **node-only** and reliable: each agent has a per-agent sequence, and the node
-acknowledges deliveries so the engine can replay anything unacked after a reconnect. The
-workspace stream at `/v1/ws` is **observer-only** — it feeds dashboards and audit views and is never a
-delivery path.
+Realtime delivery is **node-only** and reliable: each agent has a per-agent sequence, and the
+provider that owns an agent acknowledges deliveries so the engine can replay anything unacked after a
+reconnect. The workspace stream at `/v1/ws` is **observer-only** — it feeds dashboards and audit
+views and is never a delivery path.
 
-A node has a **role**:
+## Providers on a node
 
-| Role | Meaning |
-| --- | --- |
-| `broker` | A node that hosts many agents. One broker process is the machine's node. |
-| `direct` | A single self-connected agent — a "node of one." |
-
-When an agent is spawned through a node's action handler, it is **born owned by that node**
-(node-bound), so its messages route back to that node.
-
-<Note>
-  The node roles here — `broker` and `direct` — are the delivery-ownership model. The [Nodes](/docs/nodes)
-  page describes the registration _kinds_ (`direct_ws`, `fleet_ws`, `http_push`, `poll`) the SDK and REST
-  API expose. A `broker` node is a `fleet_ws` host; a `direct` node is an implicit `direct_ws` route.
-</Note>
-
-## The broker stack
-
-One broker stack runs per machine. It is the machine's node, and it is the only thing that talks to
-the engine.
+A node's abilities are split across its providers, each connecting to the engine on its own:
 
 ```text
-                  /v1/node/ws
-   engine  ◄──────────────────────►  broker  (role: broker — the machine's node)
-                                     │  • engine transport
-                                     │    (node + agent registration,
-                                     │     delivery routing, acks)
-                                     │  • broker-pty-engine
-                                     │
-                                     │   ◄── @agent-relay/harness-driver (SDK) ──┐
-                                     ▼                                           │
-                              broker-pty-engine                            action runner
-                              (spawns/owns PTYs)                  (TS / Swift / Python handlers)
+engine (cast.agentrelay.com)
+ ├─ /v1/node/ws ← agent runtime (Rust)      — spawn:*, release, agent delivery
+ ├─ /v1/node/ws ← capability provider (TS)  — project agent-relay.ts actions
+ ├─ /v1/node/ws ← capability provider (py)  — project agent-relay.py actions
+ └─ /v1/node/ws ← app provider (Swift)      — its own node
 ```
 
-**broker** — the process that is the machine's node (role `broker`). It is the **only** component that
-talks to the engine. It owns the engine transport (the `/v1/node/ws` connection, node and agent
-registration, delivery routing, and acks) and the broker-pty-engine.
+**agent runtime** — the Rust provider that spawns and owns agent processes (PTYs). It registers the
+node's **capacity** (`spawn:<harness>`, `release`) and the agents it hosts, receives `deliver` frames
+for those agents, and heartbeats its own load. It owns a generic PTY engine that reads, writes,
+injects deliveries into, and tears down agent processes; it is harness-agnostic, with no per-CLI logic
+baked in.
 
-**broker-pty-engine** — the broker's internal generic PTY engine. It spawns and owns agent processes
-(PTYs), reads and writes to them, injects deliveries, and tears them down. It is harness-agnostic: no
-per-CLI logic is baked in.
+**capability provider** — a process in TypeScript, Python, or Swift that registers **actions**: named
+handlers the engine dispatches to it. A capability that needs to spawn an agent calls the engine's
+placement through `ctx.spawnAgent`, which lands on an agent runtime — it never tunnels through a local
+process.
 
-**@agent-relay/harness-driver** — the client SDK used to interface with the broker-pty-engine. A caller
-uses it to spawn a PTY (`{ command, args, env }`) and drive it. It is used **inside** action runners; it
-is not a standalone component.
+**@agent-relay/harness-driver** — the client SDK for the agent runtime's PTY engine, used to spawn a
+PTY (`{ command, args, env }`) and drive it.
 
-**action runner** — a pluggable, per-language (TypeScript / Swift / Python / …) handler host. It
-registers and runs **actions** (`spawn:claude`, `release`, or custom). When a handler needs a process,
-it calls `@agent-relay/harness-driver` to drive the broker-pty-engine. An action runner talks **only to
-the broker — never directly to the engine.**
+## Capabilities, capacity, and placement
 
-## Actions, capabilities, and placement
+Providers register two kinds of capability. An **action** is an invokable handler; the engine
+materializes it and dispatches invokes to the registering provider. **Capacity** — `spawn:<harness>`
+and `release` — is what the node can run; the agent runtime registers it for placement and delegation,
+and it is never materialized as an action.
 
-Spawning, releasing, and custom agent-to-agent RPC are all **actions**, invoked over the node
-connection. A node advertises its **capabilities** — named actions with a `kind` of `spawn` or `action` —
-through the action runner's `defineNode`. The engine **places** each invocation on a node that provides
-the capability, weighing liveness, capacity, and load, then sends `action.invoke` to that node. The action
-runner handles it and replies `action.result { invocation_id, output | error }`, which is delivered back to
-the calling agent.
-
-See [Nodes](/docs/nodes) for fleets, capabilities, and the placement rules, and [Actions](/docs/actions)
-for the registration and discovery model agents use.
+Invocation is node-addressed: `POST /v1/nodes/:node/actions/:name/invoke` resolves the capability to
+its provider and sends `action.invoke` down that socket. The provider replies
+`action.result { invocation_id, output | error }`, delivered back to the calling agent as the
+action's completion. See [Nodes and providers](/docs/nodes-and-providers) for the model and
+[Nodes](/docs/nodes) for placement and the node API.
 
 ## Delivery flow
 
 A message travels from the engine to an agent's session like this:
 
-1. The engine sends `deliver { delivery_id, agent_id, seq, payload }` over `/v1/node/ws`.
-2. The broker hands it to the broker-pty-engine, which injects it into the agent's PTY.
-3. The broker acks with `delivery.ack { agent, up_to_seq }`.
+1. The engine sends `deliver { delivery_id, agent_id, seq, payload }` over `/v1/node/ws` to the
+   provider that owns the agent — its agent runtime.
+2. The agent runtime injects it into the agent's PTY.
+3. The runtime acks with `delivery.ack { agent, up_to_seq }`.
 
 Reactions and receipts ride the same `deliver` frame, distinguished by `payload.type`
 (`message.reacted` / `message.read`).
 
 ## Spawn flow
 
-Spawning an agent runs through the action path. The request carries the capability (the harness or `cli`),
-a `name`, an optional `target_node`, and optional `harnessConfig` — not a raw command to run:
+Spawning an agent runs through capacity. The request carries the harness or `cli`, a `name`, an
+optional `target_node`, and optional `harnessConfig` — not a raw command to run:
 
-1. The engine **places** the spawn on an eligible node and sends `action.invoke(spawn:…)`.
-2. The broker dispatches it to the action runner.
-3. The runner resolves the **harness its capability declares** and calls `@agent-relay/harness-driver`.
-4. The broker-pty-engine spawns the PTY and hosts it.
-5. The agent registers **through** the node, so it is born bound to that node (`via_node`), and the broker
+1. The engine **places** the spawn on a node whose agent runtime advertises the harness and sends
+   `action.invoke(spawn:…)`.
+2. The agent runtime resolves the harness and spawns the PTY.
+3. The new agent registers **through** the node, so it is born bound to that node, and the runtime
    replies `action.result`.
 
-Because the agent is node-bound, its future deliveries route back to the broker that spawned it — closing
-the loop with the delivery flow above. A spawn carrying a session id resumes the agent on its origin node.
-**Release** is invoking the `release` action on the owning node.
+Because the agent is node-bound, its future deliveries route back to the agent runtime that spawned
+it — closing the loop with the delivery flow above. A spawn carrying a session id resumes the agent on
+its origin node. **Release** invokes the `release` capacity on the owning node.
+
+A provider can register an action named `spawn:<harness>` that **shadows** native capacity: the engine
+routes spawn invokes for that harness to the handler, which mutates the spec and delegates via
+`ctx.spawnAgent`. The delegation addresses capacity directly, so a shadow never re-enters itself, and
+while it is registered the native capacity is reachable only through it.
 
 ## Vocabulary
 
 | Term | Meaning |
 | --- | --- |
-| node | an engine delivery endpoint (`role: broker` or `direct`) |
-| broker | the machine's node (role `broker`): engine transport + broker-pty-engine; the only thing that talks to the engine |
-| broker-pty-engine | the broker's internal generic PTY engine (owns/drives PTYs) |
-| @agent-relay/harness-driver | client SDK to the broker-pty-engine, used inside action runners |
-| action runner | pluggable per-language handler host; runs actions; talks only to the broker |
-| invoke | calling an action |
-| action | a named capability (`spawn:claude`, `release`, custom) |
+| node | an enrolled context in a workspace (a project directory or an application) |
+| provider | a process attached to a node that connects directly to the engine and registers capabilities |
+| agent runtime | the Rust provider that owns PTYs and registers the node's spawn/release capacity |
+| capability provider | a per-language provider that registers invokable actions |
+| @agent-relay/harness-driver | client SDK for the agent runtime's PTY engine |
+| capacity | what a node can run (`spawn:<harness>`, `release`); feeds placement, never invoked |
+| action | an invokable capability with a handler hosted by a provider |
+| invoke | calling an action (`POST /v1/nodes/:node/actions/:name/invoke`) |
 
 <CardGroup cols={2}>
+  <Card title="Nodes and providers" href="/docs/nodes-and-providers">
+    The node, provider, and capability model, with onboarding.
+  </Card>
   <Card title="Nodes" href="/docs/nodes">
-    Node kinds, registration, and the binding API the SDK and REST exposes.
+    Provider registration, placement, delivery kinds, and the node API.
   </Card>
   <Card title="Delivery" href="/docs/delivery">
     Durable delivery records, receipts, retries, and delivery modes.
   </Card>
-  <Card title="Actions" href="/docs/actions">
-    Registering, discovering, and invoking typed actions over MCP.
-  </Card>
   <Card title="Harness driver package" href="/docs/harness-driver">
-    The optional package that drives managed session lifecycle.
+    The client SDK that drives the agent runtime's PTY engine.
   </Card>
 </CardGroup>

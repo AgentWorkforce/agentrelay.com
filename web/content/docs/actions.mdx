@@ -155,23 +155,28 @@ taskManager.registerAction({
 });
 ```
 
-## Node actions: spawn and release
+## Node actions and capacity
 
-The same action model places work onto [nodes](/docs/nodes). A node advertises **capabilities** — named
-actions with a `kind` of `spawn` or `action` — and the engine routes an invocation to a node that provides
-the capability. Spawning and releasing an agent are both actions:
+The same action model places work onto [nodes](/docs/nodes-and-providers). Providers attach to a node and
+register two kinds of capability: an **action** is an invokable handler the engine dispatches to the
+registering provider; **capacity** is what the node can run — `spawn:<harness>` and `release`, registered by
+the node's agent runtime and used for placement and delegation. Invocation is node-addressed —
+`POST /v1/nodes/:node/actions/:name/invoke` routes to the provider that registered the action.
 
-- **Spawn** invokes the `spawn` (or `spawn:<harness>`) capability with input such as the harness/`cli`, a
-  `name`, an optional `target_node`, and optional `harnessConfig`. The engine places it on an eligible node,
-  which runs the harness its capability declares and registers the new agent through the node — so the agent
-  is born bound to that node and its messages route back there.
-- **Release** invokes the `release` action on the node that owns the agent.
+Spawning and releasing an agent run on capacity:
 
-At the node-protocol layer these flow as `action.invoke` to the chosen node and `action.result
-{ invocation_id, output | error }` back. That result is delivered to the calling agent as the
-`action.completed` (or `action.failed`) event described above, so from the SDK both surfaces are the same
-fire-and-forget action. See [Architecture](/docs/architecture) for the full spawn flow and
-[Nodes](/docs/nodes) for placement, targeting, and capability declaration.
+- **Spawn** places an agent on a node whose agent runtime advertises the requested harness (`spawn:claude`),
+  with input such as the `cli`, a `name`, an optional `target_node`, and optional `harnessConfig`. The
+  runtime starts the harness and registers the new agent through the node, so the agent is born bound to that
+  node and its messages route back there.
+- **Release** ends an agent on the node that owns it.
+
+These flow as `action.invoke` to the chosen node and `action.result { invocation_id, output | error }` back,
+delivered to the calling agent as the `action.completed` (or `action.failed`) event above — so from the SDK
+a node action and an in-process action are the same fire-and-forget shape. A provider can register an action
+named `spawn:<harness>` to **wrap** native spawn, mutating the command, environment, or working directory
+before delegating to the agent runtime. See [Nodes and providers](/docs/nodes-and-providers) for capacity,
+invocation, and shadowing, and [Architecture](/docs/architecture) for the full spawn flow.
 
 ## MCP tool generation
 

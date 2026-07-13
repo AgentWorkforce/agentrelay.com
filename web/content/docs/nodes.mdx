@@ -3,29 +3,31 @@ title: 'Nodes'
 description: 'Nodes are delivery hosts: they describe where an agent session lives and how Relay should route future deliveries to it.'
 ---
 
-Agents have identities, and identities need a delivery route. A **node** is that route. Every active agent has one, whether it is a live SDK/MCP WebSocket, a long-running broker on another machine, or an HTTP endpoint.
+A **node** is an enrolled context in a workspace — usually a project directory, sometimes an application. One machine can host several nodes. Agents and capabilities live on a node, and **providers** attach to it, connect directly to the engine, and register what the node offers.
+
+Every active agent still has a delivery route: a live SDK/MCP WebSocket, a node's agent runtime on another machine, or an HTTP endpoint.
 
 ## Node Kinds
 
 | Kind | Use it for |
 | --- | --- |
 | `direct_ws` | An implicit one-agent route for an SDK, MCP, or browser client connected directly to Relay. |
-| `fleet_ws` | A broker-controlled WebSocket node that can host multiple agents, advertise capabilities, and receive deliveries over `/v1/node/ws`. |
+| `fleet_ws` | A node whose providers connect over `/v1/node/ws` to host agents and advertise capabilities. |
 | `http_push` | An external HTTP receiver. Relay pushes future deliveries for bound agents to the configured URL. |
 | `poll` | A registered host for integrations that pull work instead of keeping a live socket. |
 
 Direct registrations create or refresh their own `direct_ws` node automatically. You do not create one by hand.
 
-## Node Roles
+## Providers
 
-Every node also has a **role** that captures how many agents it owns:
+A node's abilities come from its **providers** — processes that attach to the node, share its token, and connect directly to the engine. Each declares its own identity: a stable `name` and a per-connection `instance_id`.
 
-| Role | Meaning |
+| Provider | What it registers |
 | --- | --- |
-| `broker` | A node that hosts many agents. The machine's broker is a `broker` node; it accepts capabilities and a non-trivial `max_agents`. |
-| `direct` | A single self-connected agent — a node of one. A direct registration's implicit node is a `direct` node and binds at most one agent. |
+| agent runtime | The node's spawn/release **capacity** and the agents it hosts. A single Rust provider that owns PTYs and reports a non-trivial `max_agents`. |
+| capability provider | Invokable **actions** — named handlers written in TypeScript, Python, or Swift. |
 
-Role follows kind: a `fleet_ws` (WebSocket) node, or any node declaring `max_agents` greater than 1, is a `broker`; a one-agent route is `direct`. See [Architecture](/docs/architecture) for how the broker role connects to delivery routing.
+A node is online when at least one provider is connected. A single SDK/MCP client that hosts only itself is a node of one. See [Architecture](/docs/architecture) for how providers connect to delivery routing.
 
 ## Registering Agents
 
@@ -45,32 +47,27 @@ await assistant.sendMessage({
 
 That direct registration returns a live agent client and binds the identity to an implicit `direct_ws` node. If a node-hosted runtime later binds the same agent to another node, future deliveries follow that binding. Unbinding from an explicit node falls back to a direct route when one exists.
 
-Node brokers register their hosted agents through the node protocol. App servers and webhook-style agents usually register the identity first, then bind it to an `http_push` node.
+A node's agent runtime registers its hosted agents through the node protocol. App servers and webhook-style agents usually register the identity first, then bind it to an `http_push` node.
 
-## Fleets And Capabilities
+## Capabilities
 
-A **fleet** is the set of nodes in a workspace that advertise capabilities. A node declares what it can do as a list of named **capabilities**, and the engine uses that roster to place spawns and actions.
-
-A capability has a **kind**:
+A node's capabilities are named handlers hosted by its providers. They come in two kinds:
 
 | Kind | Meaning |
 | --- | --- |
-| `spawn` | Launches an agent on the node, for example `spawn:claude` or `spawn:codex`. The capability declares the harness it runs. |
-| `action` | Runs a handler function on the node, for example a custom `echo` or `work` action. |
+| `action` | An invokable handler — for example `run-etl` or a custom `screenshot`. The engine materializes it and dispatches invokes to the registering provider. |
+| `capacity` | What the node can run — `spawn:<harness>` and `release`. The node's agent runtime registers it for placement and spawn delegation; it is never materialized as an invokable action. |
 
-Capabilities are declared with `defineNode` from `@agent-relay/fleet` and served as a long-lived node. Each capability is keyed by name; `spawn(...)` builds a spawner and `action(...)` builds a handler:
+A TypeScript provider declares its actions with `defineNode` from `@agent-relay/fleet`. Each capability is keyed by name; `action(...)` builds a handler that receives the validated `input` and a handler context:
 
-```ts file="builder.node.ts"
-import { defineNode, action, spawn } from '@agent-relay/fleet';
+```ts file="agent-relay.ts"
+import { defineNode, action } from '@agent-relay/fleet';
 import { z } from 'zod';
 
 export default defineNode({
   name: 'builder',
-  maxAgents: 8,
   capabilities: {
-    'spawn:claude': spawn({ harness: 'claude' }),
-    'spawn:codex': spawn({ harness: 'codex' }),
-    'run:test': action({ input: z.object({ suite: z.string() }) }, async ({ input }) => {
+    'run:test': action({ input: z.object({ suite: z.string() }) }, async (input, ctx) => {
       return { ok: true, suite: input.suite };
     }),
   },
@@ -78,14 +75,14 @@ export default defineNode({
 ```
 
 ```bash
-agent-relay node up --config ./builder.node.ts   # serve this definition as the machine's node
-agent-relay fleet nodes                          # list fleet nodes in the workspace
-agent-relay fleet status                         # local broker + node sidecar status
+agent-relay node up --config ./builder.node.ts   # serve this definition on the machine's node
+agent-relay fleet nodes                          # list fleet nodes with per-provider liveness
+agent-relay fleet status                         # node and capability health from provider attachment
 ```
 
-`node up` auto-discovers an `agent-relay.{ts,js,...}` definition in the project when `--config` is omitted, and always serves the machine's broker as a fleet node. To run a Cloud-managed node, redeem the one-time enrollment token first with `agent-relay cloud enroll --token <token>`, then run `agent-relay node up` — it picks up the persisted enrollment and serves under the enrolled node name.
+`node up` auto-discovers an `agent-relay.{ts,js,...}` definition in the project when `--config` is omitted, and serves this context's node and its providers. To run a Cloud-managed node, redeem the one-time enrollment token first with `agent-relay cloud enroll --token <token>`, then run `agent-relay node up` — it picks up the persisted enrollment and serves under the enrolled node name.
 
-The node manifest sent to the engine carries each capability's `name` and `kind`. See [Architecture](/docs/architecture) for how the action runner that hosts these capabilities relates to the broker, and [Harnesses](/docs/harnesses) for how a `spawn` capability resolves the harness it launches.
+An action name is unique within a node; a duplicate is rejected at registration, so the provider fails loudly at startup. To wrap the node's native spawn, register an action named `spawn:<harness>` — it shadows that capacity and delegates through `ctx.spawnAgent`. See [Nodes and providers](/docs/nodes-and-providers) for capacity and shadowing, and [Harnesses](/docs/harnesses) for how a spawn resolves the harness it launches.
 
 ### Watch what a node is doing
 
@@ -107,24 +104,24 @@ Capability registration logs at `debug`, action invocations at `info`, and failu
 
 ## Placement
 
-When something invokes a `spawn` or `action` capability, the engine **places** it onto a node. Placement considers, in order:
+An action is node-addressed: `POST /v1/nodes/:node/actions/:name/invoke` resolves the capability to the provider that registered it and dispatches down that socket. Spawning uses **placement**: when a spawn is invoked without a target, the engine chooses a node whose agent runtime advertises the capacity. Placement considers, in order:
 
-1. **Capability** — the node must advertise the requested capability (`spawn:claude`, `run:test`, …).
-2. **Liveness** — the node must be `online`, have `handlers_live: true`, and have sent a heartbeat within the liveness TTL (45 seconds).
-3. **Capacity** — `active_agents` plus reserved agents must be below `max_agents` (a `max_agents` of `0` means unbounded).
-4. **Least-loaded** — eligible nodes are ordered by reported `load`, then `active_agents`, then name, and the first is chosen.
+1. **Capacity** — the node's agent runtime must advertise the requested `spawn:<harness>`.
+2. **Liveness** — the provider must be `online`, still list the capability in its heartbeat, and have heartbeated within the liveness TTL (45 seconds).
+3. **Load** — `active_agents` plus reserved agents must be below the provider's `max_agents` (a `max_agents` of `0` means unbounded).
+4. **Least-loaded** — eligible providers are ordered by reported `load`, then `active_agents`, then name, and the first is chosen.
 
 ### Targeted Placement
 
-Pass `target_node` to pin the call to a named node. The node must advertise the capability, or the call fails with `capability_mismatch` (409); a node that is unavailable for a retry or cannot reserve capacity fails with `handler_unavailable` (503). A target of `self` routes to the caller's own node — the node that currently owns the calling agent.
+Pass `target_node` to pin the spawn to a named node. Its agent runtime must advertise the capacity, or the call fails with `capability_mismatch` (409); a node that is unavailable for a retry or cannot reserve capacity fails with `handler_unavailable` (503). A target of `self` routes to the caller's own node — the node that currently owns the calling agent.
 
 ### Untargeted Placement
 
-With no target, the engine picks the least-loaded eligible node. If no live node advertises the capability, the call fails with `handler_unavailable`; a known-but-mismatched target fails with `capability_mismatch`.
+With no target, the engine picks the least-loaded eligible node. If no live node advertises the capacity, the call fails with `handler_unavailable`; a known-but-mismatched target fails with `capability_mismatch`.
 
 ## Heartbeat And Roster
 
-Each node heartbeats a roster snapshot to the engine so its placement view stays fresh. A heartbeat reports the node's current `load`, `active_agents`, and `handlers_live`, and may also re-send the node's `name`, `capabilities`, `max_agents`, and `version` so the engine can refresh the node descriptor without waiting for a fresh registration. The engine stamps receipt time server-side as the single source of truth for liveness; a node that stops heartbeating past the TTL drops out of placement.
+Each provider heartbeats a roster snapshot to the engine so its placement view stays fresh. A heartbeat reports the provider's current `load`, `active_agents`, and the capabilities it still holds live, and may also re-send its `name`, `capabilities`, `max_agents`, and `version` so the engine can refresh the descriptor without waiting for a fresh registration. The engine stamps receipt time server-side as the single source of truth for liveness; a provider that stops heartbeating past the TTL drops its capabilities out of placement.
 
 ## HTTP Push Node
 
@@ -195,14 +192,16 @@ The REST API uses the same resources with snake_case fields:
 - `GET /v1/nodes/:name/agents`
 - `POST /v1/nodes/:name/agents`
 - `DELETE /v1/nodes/:name/agents/:agent_name`
+- `POST /v1/nodes/:node/actions/:name/invoke`
+- `DELETE /v1/nodes/:node/providers/:name`
 
-Node delivery hosts authenticate with `nt_live_*` node tokens. Use the workspace key to create and manage nodes; use the node token only from the delivery host that owns the route. See [Authentication](/docs/authentication) for how node tokens differ from agent and observer tokens.
+Node delivery hosts authenticate with `nt_live_*` node tokens. Use the workspace key to create and manage nodes, and the node token from a provider that owns the route; a node-addressed invoke (`POST /v1/nodes/:node/actions/:name/invoke`) uses an agent token, and `DELETE /v1/nodes/:node/providers/:name` retires a provider's attachment and persisted capabilities. See [Authentication](/docs/authentication) for how node tokens differ from agent and observer tokens.
 
 ## Enrollment And Identity
 
-A node enrolls with `POST /v1/nodes` using the workspace key. The request carries the node `name` and, for a fleet host, its `capabilities`, `max_agents`, `tags`, and `version`; the response mints a node token (`nt_live_*`). The host then connects `/v1/node/ws` and sends a `node.register` frame with its capabilities to take ownership of its route. A broker mints and persists this node token at startup, scoped to the workspace and engine, so it reuses the same identity across restarts.
+A node enrolls with `POST /v1/nodes` using the workspace key. The request carries the node `name` and, for a fleet host, its `capabilities`, `max_agents`, `tags`, and `version`; the response mints a node token (`nt_live_*`). A provider then connects to `/v1/node/ws` and sends a `node.register` frame with its identity and capabilities to take ownership of its attachment. The node's agent runtime mints and persists this node token at startup, scoped to the workspace and engine, so the node reuses the same identity across restarts; all of the node's providers share it.
 
-A node id supplied or pinned by an operator (`node_id` in the enroll request, used with its node token) is taken as-is. Otherwise a broker derives a stable id from the machine identity plus its working directory, so several brokers on one host — for example one per project directory — do not collide.
+A node id supplied or pinned by an operator (`node_id` in the enroll request, used with its node token) is taken as-is. Otherwise the id derives from the machine identity, the working directory, and the workspace, so several nodes on one host — for example one per project directory — do not collide.
 
 ## Presence And Context
 
@@ -212,7 +211,7 @@ Workspace observers see node presence events as `node.online`, `node.heartbeat`,
 
 <CardGroup cols={2}>
   <Card title="Architecture" href="/docs/architecture">
-    The broker stack, action runners, and how spawn flows through placement.
+    The provider topology, the agent runtime, and how spawn flows through the engine.
   </Card>
   <Card title="Delivery" href="/docs/delivery">
     Node-only delivery, per-agent sequencing, acks, and receipts.

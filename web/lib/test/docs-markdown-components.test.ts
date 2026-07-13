@@ -16,7 +16,7 @@ describe('docs markdown export for MDX components', () => {
     expect(doc?.markdown).toContain('[Delivery](https://agentrelay.com/docs/delivery)');
     expect(doc?.markdown).toContain('[Actions](https://agentrelay.com/docs/actions)');
     expect(doc?.markdown).toContain(
-      '[Start with a workspace, messaging, delivery, and a Zod-backed action.](https://agentrelay.com/docs/quickstart)'
+      '[Build a workspace with messaging, events, and a typed action in five minutes.](https://agentrelay.com/docs/quickstart)'
     );
   });
 
