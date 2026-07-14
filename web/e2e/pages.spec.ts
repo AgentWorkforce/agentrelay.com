@@ -1,11 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { readdirSync, readFileSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+import { allAgentSlugs } from '../lib/agents';
 import { getAllDocSlugs, getAllLegacyDocSlugs } from '../lib/docs-nav';
 
-const appDir = path.resolve(process.cwd(), 'app');
-const contentDir = path.resolve(process.cwd(), 'content');
+const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const appDir = path.join(webDir, 'app');
+const contentDir = path.join(webDir, 'content');
 
 function filesIn(dir: string, filename: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -28,11 +31,6 @@ function staticPageRoutes(): string[] {
     .map((route) => (route ? `/${route}` : '/'));
 }
 
-function agentSlugs(): string[] {
-  const source = readFileSync(path.resolve(process.cwd(), 'lib/agents.ts'), 'utf8');
-  return [...source.matchAll(/slug: '([^']+)'/g)].map((match) => match[1]);
-}
-
 function pageRoutes(): string[] {
   const currentDocs = getAllDocSlugs();
   const legacyDocs = getAllLegacyDocSlugs();
@@ -42,7 +40,7 @@ function pageRoutes(): string[] {
 
   const dynamicRoutes = [
     ...mdxSlugs(path.join(contentDir, 'blog')).map((slug) => `/blog/${slug}`),
-    ...agentSlugs().map((slug) => `/agents/${slug}`),
+    ...allAgentSlugs().map((slug) => `/agents/${slug}`),
     ...[...new Set([...currentDocs, ...legacyDocs])].map((slug) => `/docs/${slug}`),
     ...legacyDocs.map((slug) => `/docs/7.1.1/${slug}`),
     ...currentDocs.map((slug) => `/docs/8.0.0/${slug}`),
