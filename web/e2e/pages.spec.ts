@@ -1,0 +1,76 @@
+import { expect, test } from '@playwright/test';
+import { readdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { allAgentSlugs } from '../lib/agents';
+import { getAllDocSlugs, getAllLegacyDocSlugs } from '../lib/docs-nav';
+
+const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const appDir = path.join(webDir, 'app');
+const contentDir = path.join(webDir, 'content');
+
+function filesIn(dir: string, filename: string): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = path.join(dir, entry.name);
+    if (entry.isDirectory()) return filesIn(absolutePath, filename);
+    return entry.name === filename ? [absolutePath] : [];
+  });
+}
+
+function mdxSlugs(dir: string): string[] {
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.mdx'))
+    .map((entry) => entry.name.slice(0, -4));
+}
+
+function staticPageRoutes(): string[] {
+  return filesIn(appDir, 'page.tsx')
+    .map((file) => path.relative(appDir, path.dirname(file)))
+    .filter((route) => !route.includes('['))
+    .map((route) => (route ? `/${route}` : '/'));
+}
+
+function pageRoutes(): string[] {
+  const currentDocs = getAllDocSlugs();
+  const legacyDocs = getAllLegacyDocSlugs();
+  const productDocs = ['agents', 'file', 'loop'].flatMap((product) =>
+    mdxSlugs(path.join(contentDir, `docs/${product}`)).map((slug) => `/docs/${product}/${slug}`),
+  );
+
+  const dynamicRoutes = [
+    ...mdxSlugs(path.join(contentDir, 'blog')).map((slug) => `/blog/${slug}`),
+    ...allAgentSlugs().map((slug) => `/agents/${slug}`),
+    ...[...new Set([...currentDocs, ...legacyDocs])].map((slug) => `/docs/${slug}`),
+    ...legacyDocs.map((slug) => `/docs/7.1.1/${slug}`),
+    ...currentDocs.map((slug) => `/docs/8.0.0/${slug}`),
+    ...legacyDocs.map((slug) => `/docs/pre-v8/${slug}`),
+    ...productDocs,
+    '/openclaw/skill/invite/rk_live_smoke_test',
+  ];
+
+  return [...new Set([...staticPageRoutes(), ...dynamicRoutes])].sort();
+}
+
+test.describe.configure({ mode: 'parallel' });
+
+for (const route of pageRoutes()) {
+  test(`${route} renders visible page content`, async ({ page }) => {
+    const pageErrors: Error[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error));
+
+    const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('load');
+    // Let initial hydration and mount effects surface errors before asserting.
+    await page.waitForTimeout(100);
+
+    expect(response, 'navigation should return an HTTP response').not.toBeNull();
+    expect(response!.status(), 'page should not return an HTTP error').toBeLessThan(400);
+    const body = page.locator('body');
+    await expect(body).toBeVisible();
+    expect((await body.innerText()).trim().length, 'page should render meaningful visible text').toBeGreaterThan(100);
+    await expect(page).toHaveTitle(/\S+/);
+    await expect(page.locator('body')).not.toContainText('Application error');
+    expect(pageErrors, 'page should hydrate without uncaught browser errors').toEqual([]);
+  });
+}
