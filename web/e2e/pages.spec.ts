@@ -60,6 +60,9 @@ for (const route of pageRoutes()) {
     page.on('pageerror', (error) => pageErrors.push(error));
 
     const response = await page.goto(route, { waitUntil: 'domcontentloaded' });
+    await page.waitForLoadState('load');
+    // Let initial hydration and mount effects surface errors before asserting.
+    await page.waitForTimeout(100);
 
     expect(response, 'navigation should return an HTTP response').not.toBeNull();
     expect(response!.status(), 'page should not return an HTTP error').toBeLessThan(400);
