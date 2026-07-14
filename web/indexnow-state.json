@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 59,
+  "count": 60,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -43,6 +43,7 @@
     "https://agentrelay.com/docs/messaging",
     "https://agentrelay.com/docs/migration",
     "https://agentrelay.com/docs/nodes",
+    "https://agentrelay.com/docs/nodes-and-providers",
     "https://agentrelay.com/docs/orchestrating-with-actions",
     "https://agentrelay.com/docs/quickstart",
     "https://agentrelay.com/docs/reference-cli",
