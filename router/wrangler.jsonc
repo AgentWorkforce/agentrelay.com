@@ -25,7 +25,7 @@
   // rate-limit-counters).
   "kv_namespaces": [
     { "binding": "ROUTER_CONFIG", "id": "e73a3fc0c2514460bdd3afae463e5234" },
-    { "binding": "RATE_LIMIT_COUNTERS", "id": "40c2049dd4ce40f4b8f8143d53075731" }
+    { "binding": "RATE_LIMIT_COUNTERS", "id": "23a9f84e0e824e1b87161a31133270aa" }
   ],
 
   // Replay/traffic recorder corpus (14-day lifecycle, owned by cloud).
