@@ -87,9 +87,9 @@ export function getVanityRedirect(hostname: string, pathname: string): string | 
     return undefined;
   }
 
-  const normalizedPathname = pathname.length > 1
+  const normalizedPathname = (pathname.length > 1
     ? pathname.replace(/\/$/, "")
-    : pathname;
+    : pathname).toLowerCase();
   return VANITY_REDIRECTS.get(normalizedPathname);
 }
 
@@ -327,7 +327,11 @@ export default {
 
     const vanityRedirect = getVanityRedirect(url.hostname, url.pathname);
     if (vanityRedirect) {
-      return Response.redirect(vanityRedirect, 302);
+      const redirectUrl = new URL(vanityRedirect);
+      url.searchParams.forEach((value, key) => {
+        redirectUrl.searchParams.set(key, value);
+      });
+      return Response.redirect(redirectUrl.toString(), 302);
     }
 
     // Per-key rate limiting runs BEFORE any worker routing so a runaway
