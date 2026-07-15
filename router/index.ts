@@ -31,6 +31,11 @@ const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
+const VANITY_REDIRECTS = new Map<string, string>([
+  ["/meet-with-will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
+  ["/meet-with-khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
+  ["/virtual-office", "https://meet.google.com/ijx-gpfb-brt"],
+]);
 
 // Header set by webhook-worker's queue consumer
 // (`packages/webhook-worker/src/queue-consumer.ts`'s `buildForwardHeaders`) on
@@ -75,6 +80,17 @@ function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean 
 
 function isCloudPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
+}
+
+export function getVanityRedirect(hostname: string, pathname: string): string | undefined {
+  if (hostname !== PRIMARY_HOST) {
+    return undefined;
+  }
+
+  const normalizedPathname = pathname.length > 1
+    ? pathname.replace(/\/$/, "")
+    : pathname;
+  return VANITY_REDIRECTS.get(normalizedPathname);
 }
 
 // True only for the exact paths the webhook worker knows how to handle. Used
@@ -308,6 +324,11 @@ function buildWebhookWorkerRequest(
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    const vanityRedirect = getVanityRedirect(url.hostname, url.pathname);
+    if (vanityRedirect) {
+      return Response.redirect(vanityRedirect, 302);
+    }
 
     // Per-key rate limiting runs BEFORE any worker routing so a runaway
     // workspace gets bounded everywhere — including webhook ingress and
