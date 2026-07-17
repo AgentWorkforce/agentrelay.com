@@ -4,7 +4,9 @@ import worker, { getVanityRedirect } from "../index.js";
 
 const redirects = [
   ["/meet-with-will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
+  ["/will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
   ["/meet-with-khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
+  ["/khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
   ["/virtual-office", "https://meet.google.com/ijx-gpfb-brt"],
 ] as const;
 
@@ -28,7 +30,7 @@ describe("router vanity redirects", () => {
     );
 
     expect(response.status).toBe(302);
-    expect(response.headers.get("location")).toBe(destination);
+    expect(response.headers.get("location")).toBe(`${destination}?utm_source=test`);
     expect(cloudWebWorker.fetch).not.toHaveBeenCalled();
   });
 

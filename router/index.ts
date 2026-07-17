@@ -33,7 +33,9 @@ const CLOUD_PATH_PREFIX = "/cloud";
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 const VANITY_REDIRECTS = new Map<string, string>([
   ["/meet-with-will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
+  ["/will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
   ["/meet-with-khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
+  ["/khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
   ["/virtual-office", "https://meet.google.com/ijx-gpfb-brt"],
 ]);
 
