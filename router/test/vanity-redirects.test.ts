@@ -1,12 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
-import worker, { getVanityRedirect } from "../index.js";
+import worker, {
+  getVanityRedirect,
+  KHALIQ_CALENDAR_URL,
+  WILL_CALENDAR_URL,
+} from "../index.js";
 
 const redirects = [
-  ["/meet-with-will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
-  ["/will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
-  ["/meet-with-khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
-  ["/khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
+  ["/meet-with-will", WILL_CALENDAR_URL],
+  ["/will", WILL_CALENDAR_URL],
+  ["/meet-with-khaliq", KHALIQ_CALENDAR_URL],
+  ["/khaliq", KHALIQ_CALENDAR_URL],
   ["/virtual-office", "https://meet.google.com/ijx-gpfb-brt"],
 ] as const;
 
