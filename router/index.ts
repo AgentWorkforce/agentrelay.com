@@ -31,10 +31,15 @@ const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
+export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
+export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
+const VIRTUAL_OFFICE_URL = "https://meet.google.com/ijx-gpfb-brt";
 const VANITY_REDIRECTS = new Map<string, string>([
-  ["/meet-with-will", "https://calendar.app.google/RqLuQyT3dYe5e2YdA"],
-  ["/meet-with-khaliq", "https://calendly.com/khaliq-agent-relay/30min"],
-  ["/virtual-office", "https://meet.google.com/ijx-gpfb-brt"],
+  ["/meet-with-will", WILL_CALENDAR_URL],
+  ["/will", WILL_CALENDAR_URL],
+  ["/meet-with-khaliq", KHALIQ_CALENDAR_URL],
+  ["/khaliq", KHALIQ_CALENDAR_URL],
+  ["/virtual-office", VIRTUAL_OFFICE_URL],
 ]);
 
 // Header set by webhook-worker's queue consumer
