@@ -258,6 +258,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'cloudflare-monitor',
     personaId: 'cloudflare-monitor',
+    personaFile: 'persona.json',
     dir: 'cloudflare-monitor',
     name: 'Cloudflare Monitor',
     tagline: 'Watches Cloudflare usage and spend before infrastructure costs surprise your team.',
@@ -289,6 +290,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'daytona-monitor',
     personaId: 'daytona-monitor',
+    personaFile: 'persona.json',
     dir: 'daytona-monitor',
     name: 'Daytona Monitor',
     tagline: 'Flags quota pressure, broken sandboxes, and costly stale environments.',
@@ -301,7 +303,7 @@ export const AGENTS: Agent[] = [
       'Reports allocation jumps without mutating Daytona resources.',
     ],
     trigger: {
-      kind: 'schedule',
+      kind: 'event',
       summary: 'Hourly and on sandbox changes',
       detail: '0 * * * * · sandbox.created · sandbox.state.updated',
     },
@@ -314,6 +316,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'gcp-watcher',
     personaId: 'gcp-watcher',
+    personaFile: 'persona.json',
     dir: 'gcp-watcher',
     name: 'GCP Watcher',
     tagline: 'Keeps watch over Cloud Run health, monitoring incidents, and cloud spend.',
@@ -339,6 +342,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'neon-monitor',
     personaId: 'neon-monitor',
+    personaFile: 'persona.json',
     dir: 'neon-monitor',
     name: 'Neon Monitor',
     tagline: 'Catches database failures, compute thrash, and runaway Neon spend early.',
@@ -364,6 +368,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'inbox-buddy',
     personaId: 'inbox-buddy',
+    personaFile: 'persona.json',
     dir: 'inbox-buddy',
     name: 'Inbox Buddy',
     tagline: 'A conversational Gmail assistant that remembers what you were discussing.',
@@ -389,6 +394,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'joke-bot',
     personaId: 'joke-bot',
+    personaFile: 'persona.json',
     dir: 'joke-bot',
     name: 'Joke Bot',
     tagline: 'Delivers quick jokes, callback humor, and a daily laugh wherever you chat.',
@@ -414,6 +420,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'linear-slack',
     personaId: 'linear-slack',
+    personaFile: 'persona.json',
     dir: 'linear-slack',
     name: 'Linear Slack',
     tagline: 'Lets your team inspect and organize the Linear board from Slack.',
