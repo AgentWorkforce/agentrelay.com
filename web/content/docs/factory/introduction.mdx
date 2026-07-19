@@ -55,39 +55,9 @@ Factory sits on top of [Relayfile](/docs/file), so the surfaces it reads and wri
 
 ## Watching it work
 
-Factory reports to the Agent Relay dashboard by default. You get a live view of every instance and every run without wiring up anything.
-
-**Factory instances** — which instances are running and whether they're online by heartbeat, with current workload: active, queued, and tracked runs. Cloud receipt time drives liveness, so an instance that stops reporting goes offline rather than looking healthy forever. Alongside it, recent operational activity: instances starting and stopping, failures, and anomalies.
-
-**Run detail** — open any run for its status, phase, owning instance, and last activity. The run context tells you the issue, repository, recipe, and pull request. Below that, a progress timeline of ordered, deduplicated events — run started, agents planned and spawned with their role and invocation id, clarifications raised and answered, pull requests published and merged, writebacks applied.
-
-A run is `queued`, `running`, `waiting`, `blocked`, `succeeded`, `failed`, or `cancelled`. Phases are finer-grained — `dispatching`, `publishing`, `writeback-applied`, `waiting-for-human`, and so on — so you can tell a run that's thinking from one that's waiting on you.
+Factory reports to the Agent Relay dashboard by default: every instance, every run, and a progress timeline of what each agent did — with a trace id correlating a run's whole life, and a closed privacy contract that has nowhere to put your prompts or source code. See [Observability](/docs/factory/observability).
 
 It also reports where you already are: lifecycle updates on the Linear issue, or GitHub comments plus `factory:in-progress` and `factory:human-review` labels, and a threaded Slack status per issue with your stakeholders mentioned when an agent needs a decision.
-
-### Trace correlation
-
-Every run-scoped event carries the same `traceId`, derived deterministically from the run's durable id, so the whole life of a run correlates under one identifier — and stays the same across Factory restarts. It's W3C-valid by shape, but it is a correlation identifier, not an exported span: Factory does not currently create or export OpenTelemetry spans.
-
-The timeline isn't only a UI. Runs and their full event streams, trace ids included, are readable over the API:
-
-```text
-GET /api/v1/workspaces/{workspaceId}/factory/runs
-GET /api/v1/workspaces/{workspaceId}/factory/runs/{runId}
-```
-
-### What is never sent
-
-The event contract is a deliberately narrow set of operational attributes, not a log bag. Task text, prompts, issue descriptions, messages, file paths, URLs, command lines, stack traces, and raw error messages have no representable field — they can't be sent because there is nowhere to put them. Failures surface as diagnostic codes.
-
-Events persist to a local outbox before delivery, so a dropped connection delays reporting rather than losing it. Set `reporting.enabled` to `false` if the dashboard isn't part of your deployment.
-
-### From the command line
-
-```bash
-factory status        # current state as JSON
-factory loop-status   # loop liveness from the heartbeat file
-```
 
 ## Start here
 
@@ -98,7 +68,7 @@ factory loop-status   # loop liveness from the heartbeat file
   <Card title="Safety scope" href="/docs/factory/safety-scope">
     The gate that decides what Factory may touch.
   </Card>
-  <Card title="CLI" href="/docs/factory/cli">
-    Run it once, run it as a daemon, operate it.
+  <Card title="Observability" href="/docs/factory/observability">
+    Live instances, runs, and trace correlation.
   </Card>
 </CardGroup>

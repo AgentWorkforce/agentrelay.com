@@ -184,7 +184,10 @@ export const factorySection: ProductDocSection = {
     },
     {
       title: 'Run',
-      items: [{ title: 'CLI', slug: 'cli' }],
+      items: [
+        { title: 'CLI', slug: 'cli' },
+        { title: 'Observability', slug: 'observability' },
+      ],
     },
   ],
 };
