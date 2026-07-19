@@ -203,103 +203,243 @@
   }
 }
 
-/* ── Gallery grid ── */
+/* ── Gallery list ── */
 
 .gallery {
-  max-width: 1280px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 24px 40px 96px;
 }
 
-.grid {
+/* Column headers. Mirrors the .rowLink grid; hidden once the row stacks. */
+.listHead {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 190px 20px;
+  gap: 20px;
+  align-items: center;
+  padding: 0 18px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-subtle, var(--fg-muted));
 }
 
-.col {
-  display: flex;
-}
-
-.card {
-  display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  width: 100%;
-  border-radius: 18px;
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   border: 1px solid var(--line);
+  border-radius: 14px;
   background: var(--card-bg);
   overflow: hidden;
-  text-decoration: none;
-  color: inherit;
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 4%, transparent);
-  transition:
-    border-color 0.2s,
-    box-shadow 0.2s,
-    transform 0.2s;
 }
 
-.card:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 14px 36px color-mix(in srgb, var(--primary) 12%, transparent);
-  transform: translateY(-3px);
-}
-
-.cardMedia {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  width: 100%;
-  overflow: hidden;
-  border-bottom: 1px solid var(--line);
-}
-
-.cardMedia img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.row {
   display: block;
 }
 
-.cardBody {
+.row + .row {
+  border-top: 1px solid var(--line);
+}
+
+.rowLink {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px 20px;
+  gap: 20px;
+  align-items: center;
+  padding: 13px 18px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+
+.rowLink:hover {
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.rowMain {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 20px 22px 22px;
-  flex: 1;
+  gap: 3px;
+  min-width: 0;
 }
 
-.cardName {
+.rowName {
   font-family: var(--font-heading), sans-serif;
-  font-size: 1.18rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--fg);
-  margin: 0;
 }
 
-.cardTagline {
-  font-size: 0.94rem;
-  line-height: 1.55;
+.rowTagline {
+  font-size: 0.86rem;
+  line-height: 1.45;
   color: var(--fg-muted);
-  margin: 0;
-  flex: 1;
-}
-
-.cardFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 4px;
-}
-
-.cardArrow {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Occupies a permanently reserved line under the tagline, so fading it in on
+   hover/focus neither shifts the row nor hides the description. */
+.rowTrigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--fg-muted);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.rowLink:hover .rowTrigger,
+.rowLink:focus-visible .rowTrigger {
+  opacity: 1;
+}
+
+.rowTriggerText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* No hover on touch — keep the trigger visible rather than unreachable. */
+@media (hover: none) {
+  .rowTrigger {
+    opacity: 1;
+  }
+}
+
+.kindSchedule,
+.kindEvent {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.kindSchedule {
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  background: color-mix(in srgb, var(--primary) 9%, transparent);
+  color: var(--primary);
+}
+
+.kindEvent {
+  border: 1px solid color-mix(in srgb, var(--fg-muted) 26%, transparent);
+  background: color-mix(in srgb, var(--fg-muted) 9%, transparent);
+  color: var(--fg-muted);
+}
+
+.rowLogos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Provider marks are drawn for light surfaces and several are solid black
+   (github, granola, notion), so they get their own light chip rather than
+   sitting directly on the row — otherwise they vanish in dark mode.
+   Height-constrained with auto width so wordmarks keep their aspect ratio. */
+.rowLogo {
+  height: 16px;
+  width: auto;
+  max-width: 64px;
+  object-fit: contain;
+  display: block;
+  box-sizing: content-box;
+  padding: 3px 5px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+.rowArrow {
+  justify-self: end;
+  font-size: 0.95rem;
+  color: var(--fg-muted);
+  transition: transform 0.15s, color 0.15s;
+}
+
+.rowLink:hover .rowArrow {
+  color: var(--primary);
+  transform: translateX(2px);
+}
+
+@media (max-width: 900px) {
+  .gallery {
+    padding: 24px 20px 72px;
+  }
+
+  .listHead {
+    display: none;
+  }
+
+  .rowLink {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'main arrow'
+      'logos arrow';
+    gap: 10px 16px;
+    align-items: start;
+    padding: 16px 18px;
+  }
+
+  .rowMain {
+    grid-area: main;
+  }
+
+  .rowLogos {
+    grid-area: logos;
+  }
+
+  .rowArrow {
+    grid-area: arrow;
+    align-self: center;
+  }
+}
+
 /* ── Integration / meta chips ── */
+
+/* Labeled provider chip used on the detail page — mark plus name, where
+   there's room to spell it out. */
+.logoChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px 4px 5px;
+  border-radius: 100px;
+  border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
+  background: color-mix(in srgb, var(--primary) 7%, transparent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Same light chip as the gallery marks — several provider logos are solid
+   black and would disappear on the dark surface. */
+.logoChipIcon {
+  height: 14px;
+  width: auto;
+  max-width: 52px;
+  object-fit: contain;
+  display: block;
+  box-sizing: content-box;
+  padding: 3px 4px;
+  border-radius: 100px;
+  background: #fff;
+}
+
+/* A chip with no logo loses the icon's left inset, so even it back out. */
+.logoChip:not(:has(img)) {
+  padding-left: 11px;
+}
 
 .chips {
   display: flex;

@@ -199,9 +199,11 @@ export const AGENTS: Agent[] = [
       summary: 'Twice a day · 9am & 5pm ET',
       detail: '0 9,17 * * *',
     },
-    integrations: ['slack', 'hacker-news'],
+    // slack and telegram are both optional transports gated by
+    // enabledByInput (SLACK_CHANNEL / TELEGRAM_CHAT) — set either or both.
+    integrations: ['slack', 'telegram', 'hacker-news'],
     runtime: 'Claude · claude-haiku-4-5',
-    inputs: ['TOPICS', 'SLACK_CHANNEL'],
+    inputs: ['TOPICS', 'SLACK_CHANNEL', 'TELEGRAM_CHAT'],
     accent: '#c1674b',
     hasCustomArt: true,
   },
@@ -249,9 +251,11 @@ export const AGENTS: Agent[] = [
       summary: 'Every day · 10am ET',
       detail: '0 10 * * *',
     },
-    integrations: ['spotify', 'slack'],
+    // Delivery over Slack DM, Telegram, or both — each optional and gated by
+    // enabledByInput (SLACK_USER / TELEGRAM_CHAT).
+    integrations: ['spotify', 'slack', 'telegram'],
     runtime: 'Default harness',
-    inputs: ['SLACK_USER', 'SPOTIFY_TOKEN'],
+    inputs: ['SLACK_USER', 'TELEGRAM_CHAT', 'SPOTIFY_TOKEN'],
     accent: '#1db954',
     hasCustomArt: true,
   },
@@ -608,6 +612,32 @@ export function allAgentSlugs(): string[] {
 // /agents page routes (every /agents* path would 403 from S3).
 export function agentAsset(slug: string, asset: 'banner' | 'card' | 'card-sm'): string {
   return `/agent-art/${slug}/${asset}.png`;
+}
+
+/**
+ * Provider logos vendored from Nango's template logos by
+ * scripts/sync-integration-logos.sh — the same source pear resolves icons from.
+ * Nango has no logo for every provider we support (it answers 200 with its app
+ * shell for unknown slugs), so this maps only the ones that resolve to a real
+ * image. Anything absent renders as a text chip instead; re-run the sync script
+ * after adding an integration and add it here only if a file lands.
+ */
+const INTEGRATION_LOGO_FILES: Partial<Record<Integration, string>> = {
+  cloudflare: 'cloudflare.svg',
+  github: 'github.svg',
+  'google-mail': 'google-mail.svg',
+  granola: 'granola.png',
+  linear: 'linear.svg',
+  notion: 'notion.svg',
+  slack: 'slack.svg',
+  spotify: 'spotify.svg',
+  telegram: 'telegram.svg',
+};
+
+/** Logo URL for an integration, or undefined when no vendored logo exists. */
+export function integrationLogo(integration: Integration): string | undefined {
+  const file = INTEGRATION_LOGO_FILES[integration];
+  return file ? `/integration-logos/${file}` : undefined;
 }
 
 function agentRepo(agent: Agent): string {

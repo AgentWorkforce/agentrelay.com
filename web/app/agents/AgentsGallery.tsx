@@ -4,9 +4,9 @@ import Link from 'next/link';
 import { Box, Database, Zap } from 'lucide-react';
 
 import { FadeIn } from '../../components/FadeIn';
-import { AgentArt } from '../../components/agents/AgentArt';
 import { BuildYourOwn } from '../../components/agents/BuildYourOwn';
-import { AGENTS, INTEGRATION_LABELS } from '../../lib/agents';
+import { IntegrationLogos } from '../../components/agents/IntegrationLogos';
+import { AGENTS } from '../../lib/agents';
 import s from './agents.module.css';
 
 const CAPABILITIES = [
@@ -89,31 +89,45 @@ export function AgentsGallery() {
       </div>
 
       <div className={s.gallery}>
-        <div className={s.grid}>
-          {AGENTS.map((agent, i) => (
-            <FadeIn key={agent.slug} direction="up" delay={(i % 3) * 60} className={s.col}>
-              <Link href={`/agents/${agent.slug}`} className={s.card}>
-                <div className={s.cardMedia}>
-                  <AgentArt agent={agent} variant="card-sm" alt={`${agent.name} card`} />
-                </div>
-                <div className={s.cardBody}>
-                  <h2 className={s.cardName}>{agent.name}</h2>
-                  <p className={s.cardTagline}>{agent.tagline}</p>
-                  <div className={s.chips}>
-                    {agent.integrations.map((integration) => (
-                      <span key={integration} className={s.chip}>
-                        {INTEGRATION_LABELS[integration]}
-                      </span>
-                    ))}
-                  </div>
-                  <div className={s.cardFooter}>
-                    <span className={s.cardArrow}>View agent →</span>
-                  </div>
-                </div>
-              </Link>
-            </FadeIn>
-          ))}
+        <div className={s.listHead} aria-hidden="true">
+          <span>Agent</span>
+          <span>Integrations</span>
         </div>
+        <ul className={s.list}>
+          {AGENTS.map((agent, i) => (
+            <li key={agent.slug} className={s.row}>
+              <FadeIn direction="up" delay={Math.min(i, 6) * 40}>
+                <Link href={`/agents/${agent.slug}`} className={s.rowLink}>
+                  <span className={s.rowMain}>
+                    <span className={s.rowName}>{agent.name}</span>
+                    <span className={s.rowTagline}>{agent.tagline}</span>
+                    {/* Its own reserved line, so revealing it on hover/focus
+                        never shifts the row or hides the tagline. */}
+                    <span className={s.rowTrigger}>
+                      <span
+                        className={agent.trigger.kind === 'schedule' ? s.kindSchedule : s.kindEvent}
+                      >
+                        {agent.trigger.kind}
+                      </span>
+                      <span className={s.rowTriggerText}>{agent.trigger.summary}</span>
+                    </span>
+                  </span>
+
+                  <IntegrationLogos
+                    integrations={agent.integrations}
+                    className={s.rowLogos}
+                    logoClassName={s.rowLogo}
+                    chipClassName={s.chip}
+                  />
+
+                  <span className={s.rowArrow} aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              </FadeIn>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <BuildYourOwn />

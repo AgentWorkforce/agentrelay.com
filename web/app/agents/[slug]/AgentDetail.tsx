@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { FadeIn } from '../../../components/FadeIn';
 import { AgentArt } from '../../../components/agents/AgentArt';
 import { ForkAgentButton } from '../../../components/agents/ForkAgentButton';
-import { INTEGRATION_LABELS, sourceUrl, type Agent } from '../../../lib/agents';
+import { IntegrationLogos } from '../../../components/agents/IntegrationLogos';
+import { sourceUrl, type Agent } from '../../../lib/agents';
 import s from '../agents.module.css';
 
 export function AgentDetail({ agent }: { agent: Agent }) {
@@ -42,13 +43,13 @@ export function AgentDetail({ agent }: { agent: Agent }) {
               </a>
             </div>
             <p className={s.detailTagline}>{agent.tagline}</p>
-            <div className={s.chips}>
-              {agent.integrations.map((integration) => (
-                <span key={integration} className={s.chip}>
-                  {INTEGRATION_LABELS[integration]}
-                </span>
-              ))}
-            </div>
+            <IntegrationLogos
+              integrations={agent.integrations}
+              withLabel
+              className={s.chips}
+              chipClassName={s.logoChip}
+              logoClassName={s.logoChipIcon}
+            />
           </div>
         </FadeIn>
 
@@ -98,13 +99,13 @@ export function AgentDetail({ agent }: { agent: Agent }) {
               </div>
               <div className={s.metaRow}>
                 <span className={s.metaLabel}>Integrations</span>
-                <div className={s.chips}>
-                  {agent.integrations.map((integration) => (
-                    <span key={integration} className={s.chip}>
-                      {INTEGRATION_LABELS[integration]}
-                    </span>
-                  ))}
-                </div>
+                <IntegrationLogos
+                  integrations={agent.integrations}
+                  withLabel
+                  className={s.chips}
+                  chipClassName={s.logoChip}
+                  logoClassName={s.logoChipIcon}
+                />
               </div>
               {agent.inputs.length > 0 && (
                 <div className={s.metaRow}>
