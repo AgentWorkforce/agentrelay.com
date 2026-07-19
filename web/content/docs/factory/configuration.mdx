@@ -50,6 +50,8 @@ The explicit form spells it out:
 
 Routing is tried by label, then project, then keyword rules, then `default`. `~` expands; named forms like `~alice` are rejected.
 
+For readiness-label separation, execution-shape labels, and multi-repository examples, see [Issue labels and repository routing](/docs/factory/issue-routing).
+
 ## Issue source
 
 `issueSource` is `linear` or `github`. Leave it out and Factory probes: Linear wins if `/linear/issues` is connected, otherwise GitHub-native. See [Safety scope](/docs/factory/safety-scope) for how an issue enters under each.
