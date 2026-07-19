@@ -1,11 +1,89 @@
 ---
 title: 'Agents'
-description: 'Proactive workers that watch the systems your team already uses, decide when action is needed, and report back through Relay.'
+description: 'Proactive workers that watch the systems your team already uses, decide when action is needed, and report back.'
 ---
 
-Agents turn Relay from a coordination layer into an operating system for work. They can watch channels, files, provider events, schedules, and pull requests, then take a bounded action without waiting for someone to paste context into a chat box.
+Relay agents are your team of proactive agents. Built on top of [file](/docs/file) they can react to any signal and take action. That signal can be any third party event, a schedule, or a message from another agent.
 
-The important part is not autonomy for its own sake. A useful agent has a small job, clear inputs, visible output, and a human-friendly trail of what it did.
+A relay agent is specialized and focused agent that has a task or a few small tasks and that it does very well. They are completely customizable
+and live in your codebase and deployable by a simple CLI command or a one click deploy on the web. You can deploy several
+relay agents and each agent on the relay can communicate with each other enabling as complex of workflows as you want with
+full traceability and control in straightforward and concise TypeScript code.
+
+## A whole agent
+
+This is [`granola-prospect`](https://github.com/AgentWorkforce/agents/tree/main/granola). A meeting recording syncs in; it decides whether the call contained a real feature ask, files a Linear issue, and hands the implementation to a coding agent that opens the PR.
+
+The persona declares what it can reach:
+
+```ts
+export default definePersona({
+  id: 'granola-prospect',
+  description: 'Detects prospect calls, files a Linear issue with the ask, and opens a PR implementing it.',
+  cloud: true,
+  useSubscription: true,
+  integrations: {
+    granola: {},
+    linear: { scope: { issues: '/linear/issues/**', teams: '/linear/teams/**' } },
+    github: { scope: { repo: 'your-org/your-repo' } }
+  },
+  harness: 'claude',
+  model: 'claude-sonnet-4-6',
+  systemPrompt: 'Turn prospect asks from meeting transcripts into a Linear issue and a small implementing PR.',
+  harnessSettings: { reasoning: 'high', timeoutSeconds: 1800, sandboxMode: 'workspace-write' },
+  onEvent: './agent.ts'
+});
+```
+
+And the handler decides what to do:
+
+```ts
+export default defineAgent({
+  triggers: { granola: [{ on: 'file.created' }] },
+  handler: async (ctx, event) => {
+    const notePath = readNotePath((await event.expand('full')).data);
+    const transcript = await readNote(ctx, notePath);
+    if (!transcript) return;
+
+    // The judgment call: was this a prospect asking for something?
+    const ask = await classify(ctx, transcript);
+    if (!ask.isProspect) return;
+
+    const linear = relayClient('linear');
+    const issue = await linear.write('issues', {}, {
+      teamId: await resolveTeamId(ctx),
+      title: ask.title,
+      description: ask.summary
+    });
+
+    // Hand the actual work to a coding agent. The repo is already checked out.
+    const run = await ctx.harness.run({
+      cwd: ctx.sandbox.cwd,
+      prompt: `A prospect asked for the following. Implement it, then open a pull request.
+        Put the PR URL on the last line.\n\n${ask.summary}`
+    });
+
+    const prUrl = run.output.match(/https?:\/\/\S*\/pull\/\d+/g)?.pop();
+    if (prUrl) {
+      await linear.write('comments', { issueId: issue.receipt?.id }, { body: `:rocket: ${prUrl}` });
+    }
+  }
+});
+```
+
+`classify` is a model call, not a rule:
+
+```ts
+const ask = await ctx.llm.complete(`
+  Read this meeting transcript. Decide if it is a sales/prospect call where the
+  prospect asked for a feature or change. Reply with JSON only:
+  {"isProspect": boolean, "title": "short issue title", "summary": "what they asked for"}
+
+  ${transcript.slice(0, 8000)}
+`, { maxTokens: 400 });
+```
+
+The agent makes decisions based on the inputs and allows the code to lean but accomplish complicated functionality.
 
 ## What an agent needs
 
@@ -14,19 +92,17 @@ The important part is not autonomy for its own sake. A useful agent has a small 
 - **A policy**: what the agent may read, write, spend, and deploy.
 - **A reporting path**: where the agent posts progress, findings, and handoffs.
 
-Relay gives that work a shared substrate: messages for coordination, Relayfile for provider-backed state, and profiles for repeatable behavior.
-
 ## Start here
 
 <CardGroup cols={3}>
   <Card title="Quickstart" href="/docs/agents/quickstart">
-    Launch a small repo-review agent and see how it reports through Relay.
-  </Card>
-  <Card title="Agent patterns" href="/docs/agents/patterns">
-    Pick the shape that matches the job: reviewer, monitor, triager, or worker pair.
+    Get an agent from the gallery running in one click.
   </Card>
   <Card title="Build your own" href="/docs/agents/build">
-    Define the trigger, behavior, permissions, and handoff path for a custom agent.
+    Author a cloud persona: `persona.json` for wiring, `agent.ts` for behavior.
+  </Card>
+  <Card title="CLI" href="/docs/agents/cli">
+    Deploy, test locally, trigger, read logs, and tear down.
   </Card>
 </CardGroup>
 
