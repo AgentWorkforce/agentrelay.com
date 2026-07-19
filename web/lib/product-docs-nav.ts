@@ -160,7 +160,40 @@ export const agentsSection: ProductDocSection = {
   ],
 };
 
-export const productSections: ProductDocSection[] = [fileSection, agentsSection, loopSection];
+export const factorySection: ProductDocSection = {
+  id: 'factory',
+  label: 'Factory',
+  tagline: 'Turns tracker issues into reviewed pull requests.',
+  repo: 'AgentWorkforce/factory',
+  version: '0.1.20',
+  nav: [
+    {
+      title: 'Start',
+      items: [
+        { title: 'Introduction', slug: 'introduction' },
+        { title: 'Quickstart', slug: 'quickstart' },
+      ],
+    },
+    {
+      title: 'Configure',
+      items: [
+        { title: 'Safety scope', slug: 'safety-scope' },
+        { title: 'Configuration', slug: 'configuration' },
+      ],
+    },
+    {
+      title: 'Run',
+      items: [{ title: 'CLI', slug: 'cli' }],
+    },
+  ],
+};
+
+export const productSections: ProductDocSection[] = [
+  fileSection,
+  agentsSection,
+  factorySection,
+  loopSection,
+];
 
 export function getProductSection(id: string): ProductDocSection | null {
   return productSections.find((section) => section.id === id) ?? null;

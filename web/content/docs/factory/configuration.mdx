@@ -1,0 +1,29 @@
+---
+title: 'Configuration'
+description: 'factory.config.json — repo routing, issue source, models, states, and writeback.'
+---
+
+{/* One page for the config file. Resist documenting every field — link the
+    schema for the long tail and cover the ones people actually set. */}
+
+## Repo routing
+
+{/* The compact form (org + names + cloneRoot) vs the explicit form
+    (byLabel / byProject / keywordRules / default). Label → repo → clone path. */}
+
+## Issue source
+
+{/* linear | github, and what changes between them. */}
+
+## Models and roles
+
+{/* implementer / reviewer / triage / babysitter, and which CLI backs each. */}
+
+## Linear states
+
+{/* Semantic roles (readyForAgent, agentImplementing, humanReview, done) and how
+    they resolve to real states. Per-team overrides. */}
+
+## Writeback
+
+{/* Where status goes: Linear, Slack, GitHub comments and labels. */}

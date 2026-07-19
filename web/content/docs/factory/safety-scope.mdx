@@ -1,0 +1,22 @@
+---
+title: 'Safety scope'
+description: 'The opt-in gate that decides which issues Factory is allowed to touch.'
+---
+
+{/* This is its own page because it is the thing that makes Factory safe to
+    turn on, and the first thing a reader should understand before running it.
+    Three gates, all must pass: title prefix, label, team key.
+    Also worth stating here: mergePolicy defaults to `never`. */}
+
+## The three gates
+
+{/* requireTitlePrefix · requireLabel · requireTeamKey — what each defaults to
+    and why you'd change it. Note the default prefix is the e2e one. */}
+
+## Nothing merges by itself
+
+{/* mergePolicy: never (default) vs on-green-with-review. */}
+
+## Terminal state
+
+{/* human-review (default) vs done — where an issue lands when Factory is finished. */}

@@ -14,6 +14,7 @@ import { absoluteUrl } from './site';
 export type { NavItem, NavGroup, ProductDocSection } from './product-docs-nav';
 export {
   agentsSection,
+  factorySection,
   fileSection,
   loopSection,
   productSections,

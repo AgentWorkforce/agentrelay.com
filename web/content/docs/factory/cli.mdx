@@ -1,0 +1,41 @@
+---
+title: 'CLI'
+description: 'Run Factory once, run it as a daemon, and operate it.'
+---
+
+{/* Mirror the shape of the agents CLI page: grouped commands, short prose,
+    flags only where they change behavior. */}
+
+## Run
+
+```bash
+factory run-once            # one discover → triage → dispatch cycle
+factory start --mode live   # the daemon
+```
+
+{/* Global flags: --config, --dry-run, --backend internal|relay */}
+
+## Single issue
+
+```bash
+factory triage <KEY>
+factory dispatch <KEY>
+factory babysit <PR>
+```
+
+## Operate
+
+```bash
+factory status
+factory loop / loop-status / kill-loop
+factory reap-orphans
+factory canary <KEY>
+```
+
+{/* What loop/heartbeat is for, and what canary asserts. */}
+
+## Nodes
+
+{/* Enrolling a machine and running it as an execution node — enough to explain
+    the internal vs relay backend distinction. Could become its own page if it
+    grows. */}
