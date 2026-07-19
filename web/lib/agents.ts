@@ -7,9 +7,15 @@
 // gradient + monogram fallback (see hasCustomArt).
 
 export type Integration =
+  | 'cloudflare'
+  | 'daytona'
+  | 'gcp'
   | 'github'
+  | 'google-mail'
   | 'linear'
+  | 'neon'
   | 'slack'
+  | 'telegram'
   | 'notion'
   | 'spotify'
   | 'granola'
@@ -57,9 +63,15 @@ export interface AgentTrigger {
 }
 
 export const INTEGRATION_LABELS: Record<Integration, string> = {
+  cloudflare: 'Cloudflare',
+  daytona: 'Daytona',
+  gcp: 'Google Cloud',
   github: 'GitHub',
+  'google-mail': 'Gmail',
   linear: 'Linear',
+  neon: 'Neon',
   slack: 'Slack',
+  telegram: 'Telegram',
   notion: 'Notion',
   spotify: 'Spotify',
   granola: 'Granola',
@@ -242,6 +254,194 @@ export const AGENTS: Agent[] = [
     inputs: ['SLACK_USER', 'SPOTIFY_TOKEN'],
     accent: '#1db954',
     hasCustomArt: true,
+  },
+  {
+    slug: 'cloudflare-monitor',
+    personaId: 'cloudflare-monitor',
+    personaFile: 'persona.json',
+    dir: 'cloudflare-monitor',
+    name: 'Cloudflare Monitor',
+    tagline: 'Watches Cloudflare usage and spend before infrastructure costs surprise your team.',
+    description:
+      'Monitors D1 rows, R2 storage and operations, queue throughput, and Worker error rates from Cloudflare usage feeds. It posts a Slack alert only when a configured threshold is exceeded and can answer questions about current infrastructure usage.',
+    highlights: [
+      'Sweeps D1, R2, Queues, and Workers usage every two hours.',
+      'Alerts on usage spikes, queue backlogs, retry rates, and Worker errors.',
+      'Dedupes unchanged conditions with workspace memory.',
+      'Never mutates Cloudflare resources.',
+    ],
+    trigger: {
+      kind: 'schedule',
+      summary: 'Every 2 hours',
+      detail: '0 */2 * * * · UTC',
+    },
+    integrations: ['cloudflare', 'slack'],
+    runtime: 'OpenCode · deepseek-v4-flash-free',
+    inputs: [
+      'SLACK_CHANNEL',
+      'D1_ROWS_READ_THRESHOLD',
+      'D1_ROWS_WRITTEN_THRESHOLD',
+      'R2_STORAGE_GB_THRESHOLD',
+      'QUEUE_UNACKED_THRESHOLD',
+    ],
+    accent: '#f6821f',
+    hasCustomArt: false,
+  },
+  {
+    slug: 'daytona-monitor',
+    personaId: 'daytona-monitor',
+    personaFile: 'persona.json',
+    dir: 'daytona-monitor',
+    name: 'Daytona Monitor',
+    tagline: 'Flags quota pressure, broken sandboxes, and costly stale environments.',
+    description:
+      'Watches Daytona organization quotas and sandbox allocations, then posts a Slack alert when capacity nears its limit or a sandbox needs attention. It remembers prior alerts to avoid repeating unchanged conditions and never starts, stops, or deletes sandboxes.',
+    highlights: [
+      'Checks CPU, memory, and disk quota usage every hour.',
+      'Flags sandboxes in ERROR and long-running stale environments.',
+      'Reacts to sandbox creation and state changes.',
+      'Reports allocation jumps without mutating Daytona resources.',
+    ],
+    trigger: {
+      kind: 'event',
+      summary: 'Hourly and on sandbox changes',
+      detail: '0 * * * * · sandbox.created · sandbox.state.updated',
+    },
+    integrations: ['daytona', 'slack'],
+    runtime: 'OpenCode · deepseek-v4-flash-free',
+    inputs: ['SLACK_CHANNEL', 'DAYTONA_ORG_ID', 'QUOTA_ALERT_PCT', 'STALE_HOURS'],
+    accent: '#4785ff',
+    hasCustomArt: false,
+  },
+  {
+    slug: 'gcp-watcher',
+    personaId: 'gcp-watcher',
+    personaFile: 'persona.json',
+    dir: 'gcp-watcher',
+    name: 'GCP Watcher',
+    tagline: 'Keeps watch over Cloud Run health, monitoring incidents, and cloud spend.',
+    description:
+      'Reads your Google Cloud state from Relayfile to monitor Cloud Run readiness, open Monitoring incidents, and current-period billing. It reacts to incident changes in real time, runs an hourly safety sweep, and posts only changed alerts to Slack.',
+    highlights: [
+      'Flags Cloud Run revisions that are not ready.',
+      'Reacts immediately when Monitoring incidents open or close.',
+      'Alerts when current-period spend crosses your threshold.',
+      'Provides a read-only view that never mutates GCP.',
+    ],
+    trigger: {
+      kind: 'event',
+      summary: 'On GCP incidents + hourly sweep',
+      detail: 'monitoring.incident.* · 0 * * * *',
+    },
+    integrations: ['gcp', 'slack'],
+    runtime: 'OpenCode · deepseek-v4-flash-free',
+    inputs: ['SLACK_CHANNEL', 'GCP_PROJECT_ID', 'BILLING_ALERT_USD'],
+    accent: '#4285f4',
+    hasCustomArt: false,
+  },
+  {
+    slug: 'neon-monitor',
+    personaId: 'neon-monitor',
+    personaFile: 'persona.json',
+    dir: 'neon-monitor',
+    name: 'Neon Monitor',
+    tagline: 'Catches database failures, compute thrash, and runaway Neon spend early.',
+    description:
+      'Monitors Neon operations, compute endpoints, advisor issues, consumption, and spending limits from live Relayfile data. It reacts to health changes immediately, runs a full sweep every two hours, and sends deduplicated Slack alerts without mutating Neon.',
+    highlights: [
+      'Alerts on failed database operations and unhealthy endpoint transitions.',
+      'Surfaces ERROR and WARN advisor issues.',
+      'Detects high compute consumption without a spending limit.',
+      'Answers questions about current Neon state from its relay inbox.',
+    ],
+    trigger: {
+      kind: 'event',
+      summary: 'On Neon deltas + every 2 hours',
+      detail: 'operation.failed · endpoint.state_changed · advisor.issue_raised · 0 */2 * * *',
+    },
+    integrations: ['neon', 'slack'],
+    runtime: 'OpenCode · deepseek-v4-flash-free',
+    inputs: ['SLACK_CHANNEL', 'NEON_ORG_ID', 'FAILED_OPS_THRESHOLD', 'WAKING_ENDPOINTS_THRESHOLD'],
+    accent: '#00e599',
+    hasCustomArt: false,
+  },
+  {
+    slug: 'inbox-buddy',
+    personaId: 'inbox-buddy',
+    personaFile: 'persona.json',
+    dir: 'inbox-buddy',
+    name: 'Inbox Buddy',
+    tagline: 'A conversational Gmail assistant that remembers what you were discussing.',
+    description:
+      'Answers questions about recent Gmail threads in Slack, Telegram, or both. It reasons over complete email conversations, remembers earlier turns, and always replies on the transport where the question was asked.',
+    highlights: [
+      'Reads full Gmail threads instead of isolated messages.',
+      'Maintains multi-turn context for follow-up questions.',
+      'Supports Slack and Telegram from one configurable persona.',
+      'Keeps human chat separate from the agent-to-agent relay inbox.',
+    ],
+    trigger: {
+      kind: 'event',
+      summary: 'On Slack mentions or Telegram messages',
+      detail: 'message.created (@mention) · telegram.message',
+    },
+    integrations: ['google-mail', 'slack', 'telegram'],
+    runtime: 'Claude · claude-sonnet-4-6',
+    inputs: ['SLACK_CHANNEL', 'TELEGRAM_CHAT'],
+    accent: '#ea4335',
+    hasCustomArt: false,
+  },
+  {
+    slug: 'joke-bot',
+    personaId: 'joke-bot',
+    personaFile: 'persona.json',
+    dir: 'joke-bot',
+    name: 'Joke Bot',
+    tagline: 'Delivers quick jokes, callback humor, and a daily laugh wherever you chat.',
+    description:
+      'A lightweight conversational agent for Slack, Telegram, or both that replies with short pop-culture and current-events jokes. It remembers recent turns for callback humor and posts a daily joke to every configured transport.',
+    highlights: [
+      'Replies on the same Slack or Telegram transport that received the message.',
+      'Uses conversation memory to build follow-up jokes and callbacks.',
+      'Posts a joke of the day at 4pm UTC.',
+      'Runs without external data dependencies.',
+    ],
+    trigger: {
+      kind: 'event',
+      summary: 'On messages + daily at 4pm UTC',
+      detail: 'message.created (@mention) · telegram.message · 0 16 * * *',
+    },
+    integrations: ['slack', 'telegram'],
+    runtime: 'Claude · claude-haiku-4-5',
+    inputs: ['SLACK_CHANNEL', 'TELEGRAM_CHAT'],
+    accent: '#f5a623',
+    hasCustomArt: false,
+  },
+  {
+    slug: 'linear-slack',
+    personaId: 'linear-slack',
+    personaFile: 'persona.json',
+    dir: 'linear-slack',
+    name: 'Linear Slack',
+    tagline: 'Lets your team inspect and organize the Linear board from Slack.',
+    description:
+      'A conversational Linear board assistant that runs in a sandbox with the Linear VFS mounted. It navigates issues, projects, and teams on demand, answers in a dedicated Slack channel, and performs explicitly requested board updates through verified Linear actions.',
+    highlights: [
+      'Answers questions about open issues, projects, teams, and board state.',
+      'Reads only the mounted Linear files needed for each question.',
+      'Creates issues and comments only when explicitly asked.',
+      'Keeps multi-turn Slack thread context in workspace memory.',
+    ],
+    trigger: {
+      kind: 'event',
+      summary: 'On a mention in its Slack channel',
+      detail: 'message.created · @mention',
+    },
+    integrations: ['linear', 'slack'],
+    runtime: 'Claude · claude-sonnet-4-6',
+    inputs: ['SLACK_CHANNEL'],
+    accent: '#5e6ad2',
+    hasCustomArt: false,
   },
 ];
 
