@@ -81,6 +81,11 @@ const nextConfig = {
       { source: '/relaycast/:path*', destination: '/primitives#message', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
+      // The agents docs lost these two pages: 'Deploy and operate' became the
+      // CLI reference, and 'Agent patterns' was dropped without a successor
+      // (the build guide is the nearest thing that still covers agent shape).
+      { source: '/docs/agents/deploy', destination: '/docs/agents/cli', permanent: true },
+      { source: '/docs/agents/patterns', destination: '/docs/agents/build', permanent: true },
     ];
   },
 };
