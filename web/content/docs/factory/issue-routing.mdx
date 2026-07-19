@@ -45,11 +45,10 @@ An ordinary repository mention or link in the issue title or body does **not** a
 
 ## Cloud and Factory example
 
-This configuration uses `factory` only for readiness and gives the Factory repository the collision-free route label `factory-repo`. The top-level `cloneRoot` derives `~/Projects/AgentWorkforce/cloud` and `~/Projects/AgentWorkforce/factory` from the mapped repository names.
+This configuration uses `factory` only for readiness and gives the Factory repository the collision-free route label `factory-repo`. The top-level `cloneRoot` derives `~/Projects/AgentWorkforce/cloud` and `~/Projects/AgentWorkforce/factory` from the mapped repository names. `workspaceId` is omitted here because it's optional — Factory resolves your active workspace automatically; add it only to pin a workspace other than that one.
 
 ```json file="factory.config.json"
 {
-  "workspaceId": "your-workspace-id",
   "issueSource": "github",
   "safety": {
     "requireLabel": "factory"
