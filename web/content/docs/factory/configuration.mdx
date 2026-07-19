@@ -6,6 +6,22 @@ description: 'factory.config.json — repo routing, issue source, models, states
 {/* One page for the config file. Resist documenting every field — link the
     schema for the long tail and cover the ones people actually set. */}
 
+## Use the skill
+
+Don't hand-write the config from memory — install the skill and let your coding agent author and validate it:
+
+```bash
+# with prpm
+npx prpm install @agent-relay/factory-config
+
+# with skills.sh
+npx skills add https://github.com/agentworkforce/skills --skill factory-config
+```
+
+{/* Then ask it to "create a factory config for <repo>". The skill covers repo
+    routing, Linear states and teams, GitHub issue ingestion, Slack, babysitter
+    mode, and where the Relayflows dispatch wiring boundary sits. */}
+
 ## Repo routing
 
 {/* The compact form (org + names + cloneRoot) vs the explicit form
