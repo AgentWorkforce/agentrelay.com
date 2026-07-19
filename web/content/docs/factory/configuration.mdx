@@ -1,0 +1,116 @@
+---
+title: 'Configuration'
+description: 'factory.config.json — repo routing, issue source, models, states, and writeback.'
+---
+
+One JSON file, passed with `--config`. It's validated at load time, so an invalid config fails fast with a field-level error rather than misbehaving at runtime.
+
+## Use the skill
+
+Don't hand-write the config from memory — install the skill and let your coding agent author and validate it:
+
+```bash
+# with prpm
+npx prpm install @agent-relay/factory-config
+
+# with skills.sh
+npx skills add https://github.com/agentworkforce/skills --skill factory-config
+```
+
+It covers repo routing, Linear states and teams, GitHub issue ingestion, Slack, and babysitter mode.
+
+## Repo routing
+
+How an issue becomes a repo and a working directory. The compact form derives everything:
+
+```json
+{
+  "repos": {
+    "org": "your-org",
+    "names": ["your-repo"],
+    "default": "your-org/your-repo"
+  }
+}
+```
+
+With exactly one name and no clone paths, Factory infers the checkout from the git top-level and verifies it against the GitHub remote. A missing or mismatched remote is a config error, not a silent dispatch into the wrong directory.
+
+The explicit form spells it out:
+
+```json
+{
+  "repos": {
+    "byLabel": { "pear": "AgentWorkforce/pear" },
+    "keywordRules": [{ "pattern": "billing", "repo": "AgentWorkforce/cloud" }],
+    "clonePaths": { "AgentWorkforce/pear": "~/code/pear" },
+    "default": "AgentWorkforce/pear"
+  }
+}
+```
+
+Routing is tried by label, then project, then keyword rules, then `default`. `~` expands; named forms like `~alice` are rejected.
+
+## Issue source
+
+`issueSource` is `linear` or `github`. Leave it out and Factory probes: Linear wins if `/linear/issues` is connected, otherwise GitHub-native. See [Safety scope](/docs/factory/safety-scope) for how an issue enters under each.
+
+## Models and roles
+
+Per-role model overrides, and which CLI backs each role:
+
+```json
+{
+  "models": { "implementer": "sonnet", "reviewer": "sonnet", "triage": "sonnet" },
+  "agentCapabilities": { "implementer": "spawn:codex", "reviewer": "spawn:claude" },
+  "triage": { "maxImplementers": 2 }
+}
+```
+
+Up to six implementers. Roles are `implementer`, `reviewer`, `triage`, and `babysitter`.
+
+## Babysitter
+
+Off by default. Turn it on and a dedicated agent shepherds each PR to green:
+
+```json
+{ "babysitter": { "enabled": true } }
+```
+
+## Linear states
+
+Factory works in semantic roles — `readyForAgent`, `agentImplementing`, `inPlanning`, `humanReview`, `done` — and resolves them to your real states at startup. Map them by name:
+
+```json
+{ "linear": { "states": { "readyForAgent": "Ready for Agent" } } }
+```
+
+`linear.statesByTeam` overrides per team. Pinning raw UUIDs is a last resort.
+
+## Writeback
+
+Where status shows up. Set a Slack channel for threaded status and questions — the channel name, ID, or mounted directory all work:
+
+```json
+{
+  "slack": {
+    "channel": "factory",
+    "stakeholderUserIds": ["U123456"]
+  }
+}
+```
+
+`stakeholderUserIds` are mentioned when an agent needs a human decision. On GitHub-native runs, lifecycle updates are written as issue comments plus `factory:in-progress` and `factory:human-review` labels.
+
+## Cloud reporting
+
+Progress reporting to the Agent Relay dashboard is on by default — see [Observability](/docs/factory/observability). Turn it off only when the dashboard isn't part of your deployment:
+
+```json
+{ "reporting": { "enabled": false } }
+```
+
+Events are persisted to a local outbox before delivery, so this is about whether you want the dashboard at all, not about reliability.
+
+<Note>
+  Reporting is also skipped when `workspaceId` doesn't match the workspace your Cloud session is signed in to. It warns and carries on rather than failing the run — so if the dashboard stays empty, check that first.
+</Note>

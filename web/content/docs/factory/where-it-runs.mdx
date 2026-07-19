@@ -1,0 +1,60 @@
+---
+title: 'Where it runs'
+description: 'You run the control plane. Agents run wherever you have checkouts — your machine or a hosted fleet.'
+---
+
+Factory splits into two halves: the **control plane** that decides what to work on, and the **agents** that do the work in a real checkout. The control plane is yours. Where the agents run is a choice.
+
+## Local agents
+
+```bash
+factory start --mode live          # --backend internal is the default
+```
+
+The control plane and every agent run on one machine, against the checkouts in your `clonePaths`. It reuses a relay broker already running for your workspace and starts one if there isn't. This is the whole loop on one box — the simplest thing that works.
+
+## Remote agents on a fleet
+
+```bash
+factory start --mode live --backend relay
+```
+
+The control plane still runs on your machine, but agents are placed onto fleet nodes through the hosted engine. Placement picks a live node advertising the capability the work needs; the node runs the agent in its own mapped checkout; the orchestrator detects exits by reconciling its tracked agents against the engine roster.
+
+Use this when the work shouldn't run on a laptop — bigger checkouts, longer builds, machines that stay up.
+
+### Bringing a node online
+
+Mint an enrollment token from the Fleet page in the dashboard, then, on the machine:
+
+```bash
+# once per machine — redeem the token for durable node credentials
+agent-relay cloud enroll --token ocl_node_enr_…
+
+# each boot
+agent-relay node up
+```
+
+`agent-relay node up` auto-discovers an `agent-relay.ts` in the working directory, which just re-exports the node definition:
+
+```ts
+export { default } from '@agent-relay/factory/node';
+```
+
+The node reads `factory.node.json` for its `workspaceId`, capabilities, and the `clonePaths` map naming the checkouts it services. Each mapped repo is advertised as a `repo:<label>` tag so repo-scoped work routes to a node that actually has it. Spawns for unadvertised paths are refused.
+
+Nodes can run any of the supported harnesses — claude, codex, gemini, cursor, droid, opencode, grok, aider.
+
+## One control plane per workspace
+
+Run **one** Factory control-plane host per workspace, with as many execution nodes as you like. Multiple Factory processes on that host are fenced through a shared lock.
+
+Active/active control planes on different hosts are intentionally unsupported: separate local state files can't provide a truthful cross-host fence, so two hosts would both believe they own the same work.
+
+## What runs in Cloud today
+
+For now cloud is where Factory **reports**, not where it runs. [Observability](/docs/factory/observability) — instances, runs, and timelines — plus fleet node enrollment and placement.
+
+There is no hosted Factory that runs the loop for you yet: the control plane is something you run, on a machine you choose.
+
+Running on the cloud is coming soon.

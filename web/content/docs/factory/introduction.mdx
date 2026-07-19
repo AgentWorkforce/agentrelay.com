@@ -1,0 +1,74 @@
+---
+title: 'Factory'
+description: 'Turns tracker issues into reviewed pull requests — discover, triage, dispatch, review, merge gate.'
+---
+
+The Agent Relay factory is an autonomous multi agent factory which integrates
+with any surface you want.
+
+It runs the loop a human normally babysits. An issue is marked ready, and Factory picks it up, decides how to tackle it, puts implementers and a reviewer on it, opens a pull request, shepherds that PR until it is green, and moves the issue on. You stay in the loop where it matters and out of it where it doesn't.
+
+## The loop
+
+1. **Discover** — poll or subscribe for issues that are ready and in scope.
+2. **Triage** — decide the repo, the shape of the work, and how many agents it needs.
+3. **Dispatch** — put implementers and a reviewer on it, in real checkouts.
+4. **Review** — agents review each other's work before a human sees it.
+5. **Merge gate** — the PR must be green and reviewed. Nothing merges by itself.
+6. **Transition** — move the issue to human review, or to done.
+
+Every stage is gated by the [safety scope](/docs/factory/safety-scope). Factory only touches work you have explicitly marked for it.
+
+## Triage decides the shape
+
+Triage is the interesting step. Before any agent is spawned, Factory works out what the issue actually needs:
+
+- **Which repo** — from labels, project, or keyword rules.
+- **How big** — `single` for one implementer, `workflow` for a defined sequence, `team` for several agents across repos.
+- **Who** — how many implementers (up to six), which reviewer, which model per role.
+
+It tries a cheap heuristic pass first and only escalates to a model when the heuristic comes back thin or low-confidence, then merges the two. Most issues never need the expensive path.
+
+If triage can't route an issue confidently, it says so rather than guessing.
+
+## Escalation
+
+Agents ask instead of inventing. When an agent hits a decision it shouldn't make alone — an ambiguous requirement, a missing credential, a product call — it parks the work and posts to the issue thread, mentioning the stakeholders you configured. The thread is where the answer goes back in.
+
+Nothing silently stalls: a stuck run surfaces rather than quietly failing.
+
+## Babysitting
+
+Opening a PR is not the same as landing one. With babysitter mode on, a dedicated agent stays with each pull request and shepherds it: responding to review comments, resolving conflicts, and re-running until CI is green. When it's genuinely ready, the issue moves to human review.
+
+You can also point it at an existing PR without turning the mode on:
+
+```bash
+factory babysit <PR>
+```
+
+Final review and merge always stay with a human.
+
+## Multi surface
+
+Factory sits on top of [Relayfile](/docs/file), so the surfaces it reads and writes are the [full integration catalog](/docs/file/integrations) — issues from Linear or GitHub, status to Slack, and anything else an adapter covers. Point it at the surfaces your team already uses.
+
+## Watching it work
+
+Factory reports to the Agent Relay dashboard by default: every instance, every run, and a progress timeline of what each agent did — with a trace id correlating a run's whole life, and a closed privacy contract that has nowhere to put your prompts or source code. See [Observability](/docs/factory/observability).
+
+It also reports where you already are: lifecycle updates on the Linear issue, or GitHub comments plus `factory:in-progress` and `factory:human-review` labels, and a threaded Slack status per issue with your stakeholders mentioned when an agent needs a decision.
+
+## Start here
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="/docs/factory/quickstart">
+    Run one issue end to end, dry-run first.
+  </Card>
+  <Card title="Safety scope" href="/docs/factory/safety-scope">
+    The gate that decides what Factory may touch.
+  </Card>
+  <Card title="Observability" href="/docs/factory/observability">
+    Live instances, runs, and trace correlation.
+  </Card>
+</CardGroup>

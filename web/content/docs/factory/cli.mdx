@@ -1,0 +1,52 @@
+---
+title: 'CLI'
+description: 'Run Factory once, run it as a daemon, and operate it.'
+---
+
+Global options work anywhere in the args: `--config <path>`, `--dry-run`, `--backend <internal|relay>`, `--agent-exit-timeout <ms>`.
+
+## Run
+
+```bash
+factory run-once              # one discover → triage → dispatch cycle, then exit
+factory loop                  # a bounded multi-iteration loop, then exit
+factory start --mode live     # long-lived daemon — the production entrypoint
+```
+
+Add `--dry-run` to `run-once` to discover and triage while writing nothing and spawning nothing.
+
+## One issue at a time
+
+```bash
+factory triage <KEY>       # triage and print the decision, change nothing
+factory dispatch <KEY>     # triage + dispatch, honors --dry-run
+factory babysit <PR>       # shepherd an existing open PR
+```
+
+`triage` is the one to reach for when you're wondering why an issue was routed the way it was — it prints the decision without acting on it.
+
+`babysit` is opt-in on its own and doesn't need `babysitter.enabled`. It takes a number (using `repos.default`) or a full PR URL, rejects closed, merged, and draft PRs, and always leaves final review and merge to a human.
+
+## Operate
+
+```bash
+factory status         # current status as JSON
+factory loop-status    # is the loop alive
+factory kill-loop      # stop it
+factory reap-orphans   # clean up stale factory-owned agents
+factory close-probe    # probe or close a PR for an issue
+```
+
+## Canary
+
+```bash
+factory canary <KEY>
+```
+
+The regression detector for upstream sync drift. Point it at a standing "Ready for Agent" issue: if a synced issue stops carrying enough state to be dispatchable, a known-good issue flips from dispatch-ready to skipped and this catches it. Prints `{ok,issue,status,reason}` and exits non-zero with the skip reason.
+
+`scripts/factory-canary.sh` wraps it for cron or launchd, bounds a hung run, and posts a Slack alert on failure.
+
+## Backends
+
+`--backend internal` runs agents on this machine; `--backend relay` places them on fleet nodes through the hosted engine. See [Where it runs](/docs/factory/where-it-runs).

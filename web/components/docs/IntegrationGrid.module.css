@@ -1,0 +1,78 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin: 24px 0 8px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.groupTitle {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card-bg);
+}
+
+/* Provider marks are drawn for light surfaces and several are solid black, so
+   they get their own light chip rather than sitting on the dark card. */
+.mark {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+  overflow: hidden;
+}
+
+.mark img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  display: block;
+}
+
+.monogram {
+  font-family: var(--font-heading), sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0b0e14;
+}
+
+.name {
+  font-size: 0.86rem;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

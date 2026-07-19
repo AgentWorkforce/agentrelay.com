@@ -5,6 +5,7 @@ import { Card } from './Card';
 import { CardGroup } from './CardGroup';
 import { CodeGroup } from './CodeGroup';
 import { HighlightedPre } from './HighlightedCode';
+import { IntegrationGrid } from './IntegrationGrid';
 import { LegacySpawnOptionsTable } from './LegacySpawnOptionsTable';
 import { Note } from './Note';
 import { Warning } from './Warning';
@@ -38,6 +39,7 @@ export const mdxComponents = {
   BannerLink,
   Note,
   Warning,
+  IntegrationGrid,
   SpawnOptionsTable: LegacySpawnOptionsTable,
   pre: HighlightedPre,
   h2: HeadingWithId(2),

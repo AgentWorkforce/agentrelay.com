@@ -1,24 +1,24 @@
 #!/usr/bin/env bash
 #
 # Vendor the integration provider logos into public/integration-logos/ so the
-# /agents gallery and agent detail pages serve them as static assets instead of
-# hotlinking Nango on every render.
+# /agents gallery and the Relayfile integrations page serve them as static
+# assets instead of hotlinking Nango on every render.
 #
 # Source of truth: Nango's template logos, the same convention pear uses to
 # resolve a provider icon (see pear/src/main/integrations.ts nangoTemplateLogoUrl).
 #
-# Two things this script has to defend against:
+# Three things this script has to defend against:
 #
 #   1. Nango answers 200 with its SPA HTML shell for slugs it has no logo for,
 #      so a status check is not enough — we sniff the body for an SVG root and
-#      skip anything else. As of this writing daytona, gcp, hacker-news, neon,
-#      and npm have no logo and intentionally fall through to a text chip in
-#      the UI (see INTEGRATION_LOGO_FILES in lib/agents.ts).
-#   2. granola's logo is a ~525KB SVG wrapping a base64 PNG — absurd for a 16px
+#      skip anything else. Providers with no logo fall through to a text chip
+#      in the UI; nothing here needs to change when that happens.
+#   2. Our provider id is not always Nango's slug (gmail → google-mail, x →
+#      twitter, teams → microsoft-teams, …). Those are mapped in NANGO_SLUG.
+#   3. granola's logo is a ~525KB SVG wrapping a base64 PNG — absurd for a 16px
 #      mark — so it is unwrapped and downscaled to a small PNG instead.
 #
-# Re-running is safe and idempotent. After adding an integration, run this and
-# then add it to INTEGRATION_LOGO_FILES only if a file actually lands here.
+# Re-running is safe and idempotent.
 #
 # NOTE: destination is public/integration-logos, NOT public/integrations —
 # top-level public/ folders become CloudFront → S3 behaviors under SST/OpenNext
@@ -35,39 +35,48 @@ BASE="https://app.nango.dev/images/template-logos"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-# Every provider in the `Integration` union in lib/agents.ts. Slugs that Nango
-# has no logo for are listed anyway so the skip is visible in the output.
+# Every relayfile adapter (packages/* in AgentWorkforce/relayfile-adapters),
+# plus the extra providers the agents gallery references.
 SLUGS=(
-  cloudflare
-  daytona
-  gcp
-  github
-  google-mail
-  granola
-  hacker-news
-  linear
-  neon
-  notion
-  npm
-  slack
-  spotify
-  telegram
+  airtable asana azure-blob box calendly clickup cloudflare confluence daytona
+  docker-hub dropbox fathom gcp gcs github gitlab gmail google-calendar
+  google-drive granola hacker-news hubspot intercom jira linear mailgun mixpanel
+  neon notion npm onedrive pipedrive postgres recall reddit redis s3 salesforce
+  segment sendgrid sharepoint shopify slack spotify stripe teams telegram x
+  zendesk
 )
+
+# provider id -> Nango template-logo slug, where they differ.
+nango_slug() {
+  case "$1" in
+    azure-blob) echo 'azure-blob-storage' ;;
+    gmail)      echo 'google-mail' ;;
+    onedrive)   echo 'one-drive' ;;
+    recall)     echo 'recall-ai' ;;
+    sharepoint) echo 'sharepoint-online' ;;
+    teams)      echo 'microsoft-teams' ;;
+    x)          echo 'twitter' ;;
+    *)          echo "$1" ;;
+  esac
+}
 
 mkdir -p "$DEST"
 echo "Syncing integration logos from $BASE -> $DEST"
+missing=()
 
 for slug in "${SLUGS[@]}"; do
+  remote="$(nango_slug "$slug")"
   raw="$TMP/$slug.svg"
 
-  if ! curl -sfL "$BASE/$slug.svg" -o "$raw"; then
-    echo "  skip $slug (fetch failed)"
+  if ! curl -sfL "$BASE/$remote.svg" -o "$raw"; then
+    missing+=("$slug")
+    rm -f "$DEST/$slug.svg"
     continue
   fi
 
   # Nango serves its app shell for unknown slugs — only keep real SVGs.
   if ! head -c 512 "$raw" | grep -qi '<svg\|<?xml'; then
-    echo "  skip $slug (no logo at source)"
+    missing+=("$slug")
     rm -f "$DEST/$slug.svg"
     continue
   fi
@@ -95,4 +104,8 @@ PY
   echo "  $slug.svg"
 done
 
+if [ ${#missing[@]} -gt 0 ]; then
+  echo
+  echo "No logo at source (these render as text chips): ${missing[*]}"
+fi
 echo "Done."

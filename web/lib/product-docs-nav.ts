@@ -37,7 +37,7 @@ export const fileSection: ProductDocSection = {
   label: 'Relayfile',
   tagline: 'The event layer for AI agents.',
   repo: 'AgentWorkforce/relayfile',
-  version: '0.10.12',
+  version: '0.10.31',
   nav: [
     {
       title: 'Start',
@@ -77,6 +77,7 @@ export const fileSection: ProductDocSection = {
     {
       title: 'Architecture',
       items: [
+        { title: 'Integrations', slug: 'integrations' },
         { title: 'Adapters & providers', slug: 'adapters-and-providers' },
         { title: 'How Relayfile compares', slug: 'comparison' },
       ],
@@ -160,7 +161,44 @@ export const agentsSection: ProductDocSection = {
   ],
 };
 
-export const productSections: ProductDocSection[] = [fileSection, agentsSection, loopSection];
+export const factorySection: ProductDocSection = {
+  id: 'factory',
+  label: 'Factory',
+  tagline: 'Turns tracker issues into reviewed pull requests.',
+  repo: 'AgentWorkforce/factory',
+  version: '0.1.34',
+  nav: [
+    {
+      title: 'Start',
+      items: [
+        { title: 'Introduction', slug: 'introduction' },
+        { title: 'Quickstart', slug: 'quickstart' },
+      ],
+    },
+    {
+      title: 'Configure',
+      items: [
+        { title: 'Safety scope', slug: 'safety-scope' },
+        { title: 'Configuration', slug: 'configuration' },
+      ],
+    },
+    {
+      title: 'Run',
+      items: [
+        { title: 'CLI', slug: 'cli' },
+        { title: 'Where it runs', slug: 'where-it-runs' },
+        { title: 'Observability', slug: 'observability' },
+      ],
+    },
+  ],
+};
+
+export const productSections: ProductDocSection[] = [
+  fileSection,
+  agentsSection,
+  factorySection,
+  loopSection,
+];
 
 export function getProductSection(id: string): ProductDocSection | null {
   return productSections.find((section) => section.id === id) ?? null;

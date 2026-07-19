@@ -11,7 +11,7 @@ export interface DocsVersion {
 // The current docs are served at the bare `/docs` path.
 // v7.1.1 is archived under `/docs/7.1.1` and reachable from the version dropdown.
 export const docsVersions: DocsVersion[] = [
-  { id: 'v8', label: 'v9.1.8 (latest)', shortLabel: '9.1.8' },
+  { id: 'v8', label: 'v10.6.5 (latest)', shortLabel: '10.6.5' },
   { id: 'v7.1.1', label: 'v7.1.1', shortLabel: 'v7.1.1' },
 ];
 

@@ -1,0 +1,82 @@
+---
+title: 'Observability'
+description: 'Every instance and every run, live in the dashboard — with trace correlation and a closed privacy contract.'
+---
+
+Factory reports to the Agent Relay dashboard by default. You get a live view of every instance and every run without wiring up anything.
+
+## Instances
+
+Which instances are running and whether they're online by heartbeat, with current workload: active, queued, and tracked runs.
+
+Cloud receipt time drives liveness — an instance that stops reporting goes offline rather than looking healthy forever. Alongside it, recent operational activity: instances starting and stopping, failures, and anomalies, each with the diagnostic code, component, and operation.
+
+## Runs
+
+Open any run for its status, phase, owning instance, and last activity. The run context tells you the issue, repository, recipe, and pull request.
+
+Below that, a progress timeline of ordered, deduplicated events: the run starting, agents planned and spawned with their role and invocation id, clarifications raised and answered, pull requests published and merged, writebacks applied.
+
+### Status and phase
+
+A run's **status** is one of seven:
+
+`queued` · `running` · `waiting` · `blocked` · `succeeded` · `failed` · `cancelled`
+
+Its **phase** is finer-grained — `dispatching`, `publishing`, `writeback-applied`, `waiting-for-human`, and so on. Together they tell you the difference between a run that's thinking and one that's waiting on you.
+
+## Trace correlation
+
+Every run-scoped event carries the same `traceId`, derived deterministically from the run's durable id. The whole life of a run correlates under one identifier, and it stays the same across Factory restarts — a replacement process picks up the same trace.
+
+It's W3C-valid by shape, but today it is a correlation identifier, not an exported span. Factory does not currently create or export OpenTelemetry spans, and does not invent span ids.
+
+<Note>
+  OTLP export is planned: short spans around dispatch, spawn, writeback, publish, and release, exported through the standard `OTEL_EXPORTER_OTLP_ENDPOINT` contract to a collector of your choice. The trace id you see today is designed to survive that change — the same run keeps the same trace.
+</Note>
+
+## Read it over the API
+
+The timeline isn't only a UI:
+
+```text
+GET /api/v1/workspaces/{workspaceId}/factory/runs
+GET /api/v1/workspaces/{workspaceId}/factory/runs/{runId}
+```
+
+The list takes `limit`, `status`, and `before`. The detail returns the run plus its full event stream, trace ids included.
+
+## What is never sent
+
+The event contract is a closed allowlist of operational attributes, not a log bag. Task text, prompts, issue descriptions, agent messages, Slack content, stdout and stderr, diffs, source code, credentials, file paths, command lines, hostnames, and raw exception stacks have **no representable field**. They can't leak because there is nowhere to put them.
+
+That posture is enforced rather than advised:
+
+- Failures surface as diagnostic codes — `errorCode`, `errorClass`, `retryable` — never as raw messages.
+- Free-text exit reasons are mapped to a closed enum. Anything unrecognized collapses to `other` rather than being forwarded.
+- An instance name is operator-chosen and explicitly not derived from your hostname.
+
+What is stored tenant-side is the operational spine: issue key, repository, recipe, and pull request.
+
+## Delivery
+
+Events persist to a local outbox before delivery, so a dropped connection delays reporting rather than losing it. Delivery is batched and retried with backoff, and every operation is non-fatal by design — observability never changes Factory's control flow.
+
+If the outbox fills, it compacts and keeps the critical events.
+
+## Turning it off
+
+```json
+{ "reporting": { "enabled": false } }
+```
+
+<Note>
+  Reporting is also skipped when `workspaceId` doesn't match the workspace your Cloud session is signed in to. It warns and carries on rather than failing the run — so if the dashboard stays empty, check that first.
+</Note>
+
+## From the command line
+
+```bash
+factory status        # current state as JSON
+factory loop-status   # loop liveness from the heartbeat file
+```
