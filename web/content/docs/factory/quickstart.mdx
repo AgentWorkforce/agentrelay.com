@@ -8,7 +8,7 @@ Follow these in order. Steps 1–4 touch nothing; the first real dispatch is ste
 ## 1. Install
 
 ```bash
-npm install @agent-relay/factory
+npm install -g @agent-relay/factory
 ```
 
 Factory talks to a relay broker through the `agent-relay` sidecar. Install and sign in to that separately — it's a peer, not a dependency.
@@ -59,10 +59,10 @@ factory run-once --config ./factory.config.json --dry-run
 
 ```bash
 # one discovery → dispatch cycle, then exit
-factory run-once --config ./factory.config.json
+factory run-once
 
 # or run continuously — the production form
-factory start --mode live --config ./factory.config.json
+factory start
 ```
 
 ## Next
