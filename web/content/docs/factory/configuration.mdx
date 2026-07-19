@@ -100,3 +100,13 @@ Where status shows up. Set a Slack channel for threaded status and questions —
 ```
 
 `stakeholderUserIds` are mentioned when an agent needs a human decision. On GitHub-native runs, lifecycle updates are written as issue comments plus `factory:in-progress` and `factory:human-review` labels.
+
+## Cloud reporting
+
+Progress reporting to the Agent Relay dashboard is on by default — see [Watching it work](/docs/factory/introduction#watching-it-work). Turn it off only when the dashboard isn't part of your deployment:
+
+```json
+{ "reporting": { "enabled": false } }
+```
+
+Events are persisted to a local outbox before delivery, so this is about whether you want the dashboard at all, not about reliability.
