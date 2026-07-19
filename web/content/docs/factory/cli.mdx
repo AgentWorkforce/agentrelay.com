@@ -49,19 +49,4 @@ The regression detector for upstream sync drift. Point it at a standing "Ready f
 
 ## Backends
 
-`--backend internal` reuses a relay broker already running for your workspace, and starts one if none is. `--backend relay` dispatches onto fleet nodes through the hosted engine.
-
-To run a machine as an execution node, enroll it once and start it per boot:
-
-```bash
-agent-relay cloud enroll --token ocl_node_enr_…
-agent-relay node up --config agent-relay.ts
-```
-
-Where `agent-relay.ts` re-exports the factory node definition:
-
-```ts
-export { default } from '@agent-relay/factory/node';
-```
-
-One control-plane host per workspace, plus as many execution nodes as you want. Active/active control planes are not supported.
+`--backend internal` runs agents on this machine; `--backend relay` places them on fleet nodes through the hosted engine. See [Where it runs](/docs/factory/where-it-runs).

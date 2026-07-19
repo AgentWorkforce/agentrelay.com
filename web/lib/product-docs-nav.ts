@@ -166,7 +166,7 @@ export const factorySection: ProductDocSection = {
   label: 'Factory',
   tagline: 'Turns tracker issues into reviewed pull requests.',
   repo: 'AgentWorkforce/factory',
-  version: '0.1.20',
+  version: '0.1.34',
   nav: [
     {
       title: 'Start',
@@ -186,6 +186,7 @@ export const factorySection: ProductDocSection = {
       title: 'Run',
       items: [
         { title: 'CLI', slug: 'cli' },
+        { title: 'Where it runs', slug: 'where-it-runs' },
         { title: 'Observability', slug: 'observability' },
       ],
     },
