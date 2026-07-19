@@ -1,0 +1,18 @@
+---
+title: 'Integrations'
+description: 'Every provider Relayfile ships an adapter for — and why adding another is cheap.'
+---
+
+Relayfile mounts a provider as files. Every integration below becomes a directory an agent can read, write, and watch: `/slack/channels/...`, `/linear/issues/...`, `/github/pulls/...`. Same shape for all of them, so an agent that works against one works against the rest.
+
+<IntegrationGrid />
+
+## Adding one is cheap
+
+We don't hand-build every connection. Relayfile sits on top of [Nango](https://nango.dev) and [Composio](https://composio.dev), which between them already broker auth and sync for thousands of APIs. An adapter's job is the small part: map a provider's resources onto a file tree, declare its triggers, and describe how writes flow back.
+
+That means the list above is what we've shipped, not what's possible. If your provider is in Nango's or Composio's catalog, wiring it up is an adapter, not an integration project.
+
+<BannerLink href="/docs/file/adapters-and-providers" icon="bot">
+  How an adapter maps a provider onto the file tree.
+</BannerLink>

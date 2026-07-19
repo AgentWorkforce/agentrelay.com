@@ -1,36 +1,77 @@
 ---
 title: 'Quickstart'
-description: 'Run one issue through Factory end to end, in dry-run first.'
+description: 'Six steps from nothing to Factory opening its first pull request.'
 ---
 
-{/* Keep this to the shortest path that produces a real PR. Suggested spine:
-    1. install / point at a repo
-    2. a minimal factory.config.json
-    3. `factory run-once --dry-run`
-    4. `factory run-once` for real
-    Everything else belongs on Configuration. */}
+Follow these in order. Steps 1–4 touch nothing; the first real dispatch is step 6.
 
-## 1. Configure
-
-{/* Minimal factory.config.json — the smallest thing that works. */}
-
-## 2. Dry run
+## 1. Install
 
 ```bash
-npx @agent-relay/factory run-once --dry-run
+npm install @agent-relay/factory
 ```
 
-## 3. Run it
+Factory talks to a relay broker through the `agent-relay` sidecar. Install and sign in to that separately — it's a peer, not a dependency.
 
-{/* What a real run does and where the output shows up (PR, Linear, Slack). */}
+## 2. Connect GitHub to your relay workspace
+
+Give it push access to the repos you want worked on. Factory publishes branches and opens PRs through that workspace connection — a local `gh` login is **not** required.
+
+## 3. Write a config
+
+`factory.config.json`. A repo route is the only thing you truly need:
+
+```json
+{
+  "repos": {
+    "byLabel": { "pear": "AgentWorkforce/pear" },
+    "clonePaths": { "AgentWorkforce/pear": "/path/to/your/pear/checkout" },
+    "default": "AgentWorkforce/pear"
+  }
+}
+```
+
+`byLabel` maps an issue label to a repo. `clonePaths` tells the agent where that repo lives locally, so it has somewhere to make changes. Add `workspaceId` only to pin a workspace other than your active one.
+
+For a GitHub-only setup, add `"issueSource": "github"` — or leave it out and Factory picks GitHub automatically when `/linear/issues` isn't connected.
+
+<Note>
+  Don't hand-write this. `npx prpm install @agent-relay/factory-config` and let your coding agent author it — see [Configuration](/docs/factory/configuration).
+</Note>
+
+## 4. Mark an issue for Factory
+
+Nothing is picked up until it passes the [safety scope](/docs/factory/safety-scope). By default that means the title starts with the configured prefix, it carries the `factory` label, and it belongs to the configured team.
+
+## 5. Dry run
+
+Discovers and triages, writes nothing, spawns nothing:
+
+```bash
+factory run-once --config ./factory.config.json --dry-run
+```
+
+<Note>
+  Pulled some issues but dispatched none? That's the safety gate working. The issues are real but outside your scope.
+</Note>
+
+## 6. Let it work
+
+```bash
+# one discovery → dispatch cycle, then exit
+factory run-once --config ./factory.config.json
+
+# or run continuously — the production form
+factory start --mode live --config ./factory.config.json
+```
 
 ## Next
 
 <CardGroup cols={2}>
   <Card title="Safety scope" href="/docs/factory/safety-scope">
-    {/* one line */}
+    Widen what Factory is allowed to touch, deliberately.
   </Card>
   <Card title="Configuration" href="/docs/factory/configuration">
-    {/* one line */}
+    Repo routing, models per role, states, and writeback.
   </Card>
 </CardGroup>

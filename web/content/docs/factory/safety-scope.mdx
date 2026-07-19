@@ -3,20 +3,47 @@ title: 'Safety scope'
 description: 'The opt-in gate that decides which issues Factory is allowed to touch.'
 ---
 
-{/* This is its own page because it is the thing that makes Factory safe to
-    turn on, and the first thing a reader should understand before running it.
-    Three gates, all must pass: title prefix, label, team key.
-    Also worth stating here: mergePolicy defaults to `never`. */}
+Factory only works on issues you have explicitly marked for it. Everything else is ignored — not queued, not deferred, ignored.
+
+Read this before running it for real. The gate is the main guardrail, so loosen it deliberately.
 
 ## The three gates
 
-{/* requireTitlePrefix · requireLabel · requireTeamKey — what each defaults to
-    and why you'd change it. Note the default prefix is the e2e one. */}
+All must pass:
+
+| Gate | Default | What it checks |
+| --- | --- | --- |
+| `safety.requireTitlePrefix` | `[factory-e2e]` | Issue title starts with this |
+| `safety.requireLabel` | `factory` | Issue carries this label |
+| `safety.requireTeamKey` | `AR` | Issue belongs to this team |
+
+<Note>
+  `[factory-e2e]` is reserved for Factory's own self-test soak — those PRs auto-close. For real work you want to keep, set the prefix to `[factory]`.
+</Note>
+
+## How an issue enters
+
+Depends on your `issueSource`:
+
+| Source | What you do |
+| --- | --- |
+| **Linear** | Title it `[factory] <task>`, set the team and a repo label, move it to **Ready for Agent** |
+| **GitHub native** | Add the readiness label (`factory`) and a repo route label to an open issue |
+| **GitHub mirror** | Add `factory` to a GitHub issue — it's mirrored into a `[factory]` Linear issue, then dispatched through the Linear flow |
+
+Pulled issues but dispatched none? That's the gate doing its job.
 
 ## Nothing merges by itself
 
-{/* mergePolicy: never (default) vs on-green-with-review. */}
+`mergePolicy` is `never` by default. Factory opens real pull requests and stops there.
 
-## Terminal state
+Set `on-green-with-review` and it will merge — but only once CI is green *and* the PR has been reviewed. Even with babysitter mode shepherding a PR to green, final review and merge stay with a human.
 
-{/* human-review (default) vs done — where an issue lands when Factory is finished. */}
+## Where issues land
+
+`terminalState` decides where an issue goes when Factory is finished:
+
+- `human-review` (default) — someone signs off.
+- `done` — Factory closes it out.
+
+Start with `human-review`. Move to `done` per-team once you trust the output.

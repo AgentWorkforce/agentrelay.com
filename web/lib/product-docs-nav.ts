@@ -77,6 +77,7 @@ export const fileSection: ProductDocSection = {
     {
       title: 'Architecture',
       items: [
+        { title: 'Integrations', slug: 'integrations' },
         { title: 'Adapters & providers', slug: 'adapters-and-providers' },
         { title: 'How Relayfile compares', slug: 'comparison' },
       ],
