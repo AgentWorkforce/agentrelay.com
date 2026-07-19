@@ -31,6 +31,8 @@ It tries a cheap heuristic pass first and only escalates to a model when the heu
 
 If triage can't route an issue confidently, it says so rather than guessing.
 
+See [Issue labels and repository routing](/docs/factory/issue-routing) for the explicit `agent:single`, `agent:team`, and `agent:workflow` shapes and cross-repository dispatch.
+
 ## Escalation
 
 Agents ask instead of inventing. When an agent hits a decision it shouldn't make alone — an ambiguous requirement, a missing credential, a product call — it parks the work and posts to the issue thread, mentioning the stakeholders you configured. The thread is where the answer goes back in.

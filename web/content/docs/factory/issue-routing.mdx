@@ -1,0 +1,143 @@
+---
+title: 'Issue labels and repository routing'
+description: 'Choose Factory readiness, repository routes, and execution shape for single- and multi-repository issues.'
+---
+
+Factory labels do three different jobs: opt an issue in, select repositories, and choose the execution shape. Keep those jobs separate so a readiness label cannot accidentally become a repository route.
+
+## Readiness is not routing
+
+| Job | Configuration or label | Effect |
+| --- | --- | --- |
+| **Readiness** | `safety.requireLabel` | Opts an issue into Factory's safety scope. Teams commonly use `factory` or `factory-ready`. |
+| **Repository routing** | A label configured in `repos.byLabel` | Adds that mapped repository and its checkout to the dispatch routes. |
+| **Execution shape** | `agent:single`, `agent:team`, or `agent:workflow` | Chooses how Factory turns the resolved routes into agents. |
+
+Readiness and routing labels are matched case-insensitively. `safety.requireLabel` does not itself supply a repository target; repository targets come from the routing configuration.
+
+<Warning>
+  Avoid label collisions. If `safety.requireLabel` is `factory`, do not also use `factory` as the route label for the Factory repository. Use a distinct routing label such as `factory-repo`.
+</Warning>
+
+For a GitHub-native issue, Factory removes the configured readiness label and its lifecycle labels before resolving repository labels. For Linear, the configured title prefix or readiness label admits the issue, while the configured team remains a separate safety boundary. See [Safety scope](/docs/factory/safety-scope) for the complete intake rules.
+
+## Execution-shape labels
+
+Factory recognizes these labels without regard to case or surrounding whitespace:
+
+| Label | Agents Factory dispatches |
+| --- | --- |
+| `agent:single` | One implementer in the first mapped repository, plus a reviewer in that same first route. Additional mapped routes are not dispatched. |
+| `agent:team` | One implementer per mapped repository, within the configured and product limits, plus one reviewer on the first route. |
+| `agent:workflow` | One `workflow:run` agent, with the mapped routes passed as workflow inputs. It replaces the implementer/reviewer flow. |
+
+Add at most one execution-shape label to an issue. These explicit labels implement the behavior named `triage-shape-labels` in Factory's feature manifest. Team fan-out is the `triage-team-scope` behavior.
+
+Without an explicit execution-shape label, two or more mapped repository labels infer `team` scope. A single mapped repository normally produces `single` scope; triage can also infer team scope from multiple implementation surfaces described in the issue.
+
+The first mapped repository is significant: it receives the reviewer for `single` and `team`, and it is the primary route for `workflow`.
+
+## Routes come from configuration, not prose
+
+`repos.byLabel` is the explicit label-to-repository map. For example, `cloud` can route to `AgentWorkforce/cloud`, while `factory-repo` routes to `AgentWorkforce/factory`. Routing-label lookup is case-insensitive, and multiple labels that map to the same repository are deduplicated.
+
+An ordinary repository mention or link in the issue title or body does **not** add a repository route. To include another repository, add one of its configured routing labels. You can deliberately configure `repos.keywordRules` to match title or body text, but a link alone has no automatic cross-repository meaning.
+
+## Cloud and Factory example
+
+This configuration uses `factory` only for readiness and gives the Factory repository the collision-free route label `factory-repo`. The top-level `cloneRoot` derives `~/Projects/AgentWorkforce/cloud` and `~/Projects/AgentWorkforce/factory` from the mapped repository names.
+
+```json file="factory.config.json"
+{
+  "workspaceId": "your-workspace-id",
+  "issueSource": "github",
+  "safety": {
+    "requireLabel": "factory"
+  },
+  "repos": {
+    "byLabel": {
+      "cloud": "AgentWorkforce/cloud",
+      "factory-repo": "AgentWorkforce/factory"
+    },
+    "default": "AgentWorkforce/cloud"
+  },
+  "cloneRoot": "~/Projects/AgentWorkforce",
+  "triage": {
+    "maxImplementers": 2
+  }
+}
+```
+
+On a GitHub issue, add these labels:
+
+```text
+factory
+cloud
+factory-repo
+agent:team
+```
+
+`factory` opts the issue in. `cloud` and `factory-repo` create two routes. `agent:team` makes the choice explicit, so Factory starts one implementer in each repository and places the reviewer on the first route, `AgentWorkforce/cloud`.
+
+If checkout directory names do not match repository names, replace `cloneRoot` with explicit top-level paths:
+
+```json
+{
+  "clonePaths": {
+    "AgentWorkforce/cloud": "~/code/agent-relay-cloud",
+    "AgentWorkforce/factory": "~/code/agent-relay-factory"
+  }
+}
+```
+
+## Implementer and route limits
+
+`triage.maxImplementers` is an integer from 1 through 6 and defaults to 2. It bounds the number of implementers assigned to team-shaped work.
+
+Label-derived team dispatch currently has an additional product limit of **four repository routes**. The effective team route limit is therefore:
+
+```text
+min(triage.maxImplementers, 4)
+```
+
+If a team-shaped issue has more mapped repositories than that effective limit, Factory refuses the dispatch and reports the offending labels; it does not silently omit repositories. Raising `triage.maxImplementers` above 4 does not increase the current repository-route fan-out limit.
+
+## Daemon directory and agent checkouts
+
+The directory where you launch `factory start` belongs to the Factory control plane. It is where the default `./factory.config.json` is resolved and where the daemon establishes its local integration context.
+
+Each spawned agent gets a separate working directory from the repository route's resolved `cloneRoot` or `clonePaths` entry. Factory may derive an isolated worktree from that checkout for an implementation run. Starting the daemon inside one repository does not make that directory the checkout for every agent, and agents routed to another repository do not edit the daemon's working directory.
+
+This distinction matters most in a multi-repository deployment: the daemon can run from one operator directory while the Cloud implementer, Factory implementer, and reviewer each receive the checkout selected for their route. With the relay backend, the execution node supplies the corresponding node-local checkout.
+
+## Preview, dispatch, and run continuously
+
+The command shapes are:
+
+```text
+factory dispatch <number|mounted-path> --dry-run
+factory dispatch <number|mounted-path>
+factory start --mode live
+```
+
+Replace the placeholder with a positive issue number or an absolute issue path in the mounted workspace. For example:
+
+```bash
+# Preview one GitHub issue without writes or agent spawns.
+factory dispatch 31 --dry-run
+
+# Dispatch that issue for real.
+factory dispatch 31
+
+# A mounted issue path is also accepted.
+factory dispatch /github/repos/AgentWorkforce/cloud/issues/31/meta.json --dry-run
+
+# Run the production daemon continuously.
+factory start --mode live
+```
+
+`factory dispatch` does **not** accept an issue URL as its issue argument. A URL such as `https://github.com/AgentWorkforce/cloud/issues/31` must be resolved to its number or mounted path first. The URL support on `factory babysit` is for pull requests and does not apply to issue dispatch.
+
+## Canonical behavior reference
+
+These docs describe Factory v0.1.34. The [Factory v0.1.34 README](https://github.com/AgentWorkforce/factory/blob/v0.1.34/README.md) is the canonical operator reference. For implementation-level detail, see the tagged [triage heuristics](https://github.com/AgentWorkforce/factory/blob/v0.1.34/src/triage/heuristic.ts), [configuration schema](https://github.com/AgentWorkforce/factory/blob/v0.1.34/src/config/schema.ts), and [feature manifest](https://github.com/AgentWorkforce/factory/blob/v0.1.34/.agentworkforce/features/manifest.yaml).

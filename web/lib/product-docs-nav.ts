@@ -179,6 +179,7 @@ export const factorySection: ProductDocSection = {
       title: 'Configure',
       items: [
         { title: 'Safety scope', slug: 'safety-scope' },
+        { title: 'Issue labels & routing', slug: 'issue-routing' },
         { title: 'Configuration', slug: 'configuration' },
       ],
     },
