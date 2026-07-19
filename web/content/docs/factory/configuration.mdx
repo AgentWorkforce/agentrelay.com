@@ -110,3 +110,7 @@ Progress reporting to the Agent Relay dashboard is on by default — see [Watchi
 ```
 
 Events are persisted to a local outbox before delivery, so this is about whether you want the dashboard at all, not about reliability.
+
+<Note>
+  Reporting is also skipped when `workspaceId` doesn't match the workspace your Cloud session is signed in to. It warns and carries on rather than failing the run — so if the dashboard stays empty, check that first.
+</Note>

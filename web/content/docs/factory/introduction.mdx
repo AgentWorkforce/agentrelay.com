@@ -57,15 +57,24 @@ Factory sits on top of [Relayfile](/docs/file), so the surfaces it reads and wri
 
 Factory reports to the Agent Relay dashboard by default. You get a live view of every instance and every run without wiring up anything.
 
-**Factory instances** — which instances are running, whether they're online by heartbeat, and their current workload: active, queued, and tracked runs, plus unowned workers and telemetry backlog. Alongside it, recent operational activity: instance started and stopped, failures, and anomalies.
+**Factory instances** — which instances are running and whether they're online by heartbeat, with current workload: active, queued, and tracked runs. Cloud receipt time drives liveness, so an instance that stops reporting goes offline rather than looking healthy forever. Alongside it, recent operational activity: instances starting and stopping, failures, and anomalies.
 
 **Run detail** — open any run for its status, phase, owning instance, and last activity. The run context tells you the issue, repository, recipe, and pull request. Below that, a progress timeline of ordered, deduplicated events — run started, agents planned and spawned with their role and invocation id, clarifications raised and answered, pull requests published and merged, writebacks applied.
+
+A run is `queued`, `running`, `waiting`, `blocked`, `succeeded`, `failed`, or `cancelled`. Phases are finer-grained — `dispatching`, `publishing`, `writeback-applied`, `waiting-for-human`, and so on — so you can tell a run that's thinking from one that's waiting on you.
 
 It also reports where you already are: lifecycle updates on the Linear issue, or GitHub comments plus `factory:in-progress` and `factory:human-review` labels, and a threaded Slack status per issue with your stakeholders mentioned when an agent needs a decision.
 
 ### Trace correlation
 
-Every run-scoped event carries the same `traceId`, derived deterministically from the run's durable id, so the whole life of a run correlates under one identifier. It's W3C-valid by shape — but it is a correlation identifier, not an exported span. Factory does not currently create or export OpenTelemetry spans.
+Every run-scoped event carries the same `traceId`, derived deterministically from the run's durable id, so the whole life of a run correlates under one identifier — and stays the same across Factory restarts. It's W3C-valid by shape, but it is a correlation identifier, not an exported span: Factory does not currently create or export OpenTelemetry spans.
+
+The timeline isn't only a UI. Runs and their full event streams, trace ids included, are readable over the API:
+
+```text
+GET /api/v1/workspaces/{workspaceId}/factory/runs
+GET /api/v1/workspaces/{workspaceId}/factory/runs/{runId}
+```
 
 ### What is never sent
 
