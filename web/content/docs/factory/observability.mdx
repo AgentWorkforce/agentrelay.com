@@ -29,7 +29,11 @@ Its **phase** is finer-grained — `dispatching`, `publishing`, `writeback-appli
 
 Every run-scoped event carries the same `traceId`, derived deterministically from the run's durable id. The whole life of a run correlates under one identifier, and it stays the same across Factory restarts — a replacement process picks up the same trace.
 
-It's W3C-valid by shape, but it is a correlation identifier, not an exported span. Factory does not currently create or export OpenTelemetry spans, and does not invent span ids.
+It's W3C-valid by shape, but today it is a correlation identifier, not an exported span. Factory does not currently create or export OpenTelemetry spans, and does not invent span ids.
+
+<Note>
+  OTLP export is planned: short spans around dispatch, spawn, writeback, publish, and release, exported through the standard `OTEL_EXPORTER_OTLP_ENDPOINT` contract to a collector of your choice. The trace id you see today is designed to survive that change — the same run keeps the same trace.
+</Note>
 
 ## Read it over the API
 
