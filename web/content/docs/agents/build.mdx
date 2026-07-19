@@ -1,47 +1,99 @@
 ---
 title: 'Build your own'
-description: 'Define a custom agent by making the trigger, context, permissions, and handoff path explicit.'
+description: 'Author a cloud persona: persona.json for deploy wiring, agent.ts for behavior.'
 ---
 
-Start with the contract. The implementation can change, but the contract keeps the agent understandable.
-
-## Define the job
-
-Write the job in one sentence:
+Start with the job in one sentence:
 
 ```text
 When <trigger> happens, inspect <context>, take <bounded action>, and report <where>.
 ```
 
-If the sentence needs a paragraph, split the agent into smaller agents.
+If that needs a paragraph, split it into smaller agents.
 
-## Give it a persona
+## Use the skill
 
-The persona is not a brand voice. It is the operating policy:
+Don't hand-write the shape from memory — it moves. Install the skill and let your coding agent do the authoring:
 
-- What the agent optimizes for
-- What it must never do without approval
-- Which files, tools, providers, and channels it can use
-- What a good final report looks like
+```bash
+# with prpm
+npx prpm install @agent-relay/creating-cloud-persona
+
+# with skills.sh
+npx skills add https://github.com/agentworkforce/skills --skill creating-cloud-persona
+```
+
+Then ask it to "create a cloud persona for &lt;job&gt;". The skill covers the current persona shape, the event model, integration scopes and adapter config, inputs, memory, sandbox modes, and the production traps that break deploys.
+
+The rest of this page is what the skill encodes — worth reading so you can tell whether what it wrote is right.
+
+## The two files
+
+A cloud persona is always a pair:
+
+- **`persona.json`** — deploy and runtime wiring: the integrations it requires and their scopes, inputs, model and harness, memory, sandbox mode, and the system prompt that defines its role.
+- **`agent.ts`** — the behavior. `defineAgent(...)` declares the triggers, schedules, and watch rules; the handler branches on `event.type` and does the work.
+
+Wakeups are declarative, behavior is imperative. Every provider your `agent.ts` listens on must also be declared in `persona.json` — an undeclared integration never mounts, and its triggers never fire.
+
+## Complexity stays declarative
+
+Complex agents aren't more code — they're more declarations. The [`review`](https://github.com/AgentWorkforce/agents/tree/main/review) agent reviews PRs, pushes fixes, and merges on approval. Its entire wakeup surface:
+
+```ts
+export default defineAgent({
+  triggers: {
+    github: [
+      { on: 'pull_request.opened' },
+      { on: 'pull_request.synchronize' },
+      { on: 'pull_request_review.submitted' },
+      { on: 'pull_request_review_comment.created' },
+      { on: 'check_run.completed' },
+      { on: 'issue_comment.created' }
+    ],
+    slack: [{ on: 'message.created', paths: ['/slack/channels/${SLACK_CHANNEL}/**'] }]
+  },
+  handler: async (ctx, event) => {
+    const data = (await event.expand('full')).data;
+    if (event.type.startsWith('slack.')) return handleSlackMergeRequest(ctx, data);
+    // ...route the github events
+  }
+});
+```
+
+Seven event sources across two providers, and `event` is fully narrowed to exactly those types — an unhandled case is a type error, not a 3am surprise.
+
+The heavy lifting delegates to a coding harness in one call:
+
+```ts
+const run = await ctx.harness.run({ cwd: ctx.sandbox.cwd, prompt: reviewHarnessPrompt(pr) });
+```
+
+The PR's repo is already materialized at `ctx.sandbox.cwd`; the agent edits files there and cloud commits and pushes after the harness exits. No git, no `gh`, no checkout logic in your code.
 
 ## Keep context structured
 
-Prefer durable references over pasted prose:
+Prefer durable references over pasted prose: Relay channels and threads, Relayfile paths, PR URLs and commit SHAs, Linear issue IDs. Structured context lets the agent resume, verify, and explain itself.
 
-- Relay channels and threads for coordination
-- Relayfile paths for provider-backed records
-- GitHub PR URLs and commit SHAs for code review
-- Linear issue IDs for product work
+## Verify before deploying
 
-Structured context lets the agent resume, verify, and explain itself without reconstructing the world from a prompt.
+```bash
+npx agentworkforce persona compile ./my-agent/persona.ts   # if typed
+npx agentworkforce invoke ./my-agent/persona.json --schedule daily
+npx agentworkforce deploy ./my-agent/persona.json --mode cloud --dry-run
+```
 
-## Build from the repo
+`invoke` runs the handler locally against a fixture or a named schedule and prints a run record. The dry-run validates the deploy without side effects.
+
+<Note>
+  Every command takes the `persona.json` **file**, not the directory — a directory path fails with `EISDIR`. If you author a typed `persona.ts`, `persona compile` writes the JSON next to it.
+</Note>
 
 <CardGroup cols={2}>
   <Card title="Agents repo" href="https://github.com/AgentWorkforce/agents">
-    Fork the examples and keep your agent's persona, trigger, and implementation together.
+    Fork the examples — persona, trigger, and implementation live together.
   </Card>
-  <Card title="Relay docs" href="/docs/introduction">
-    Use Relay for the messaging, workspace, and handoff layer.
+  <Card title="CLI" href="/docs/agents/cli">
+    Ship it, then keep it observable.
   </Card>
 </CardGroup>

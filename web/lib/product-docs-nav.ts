@@ -151,14 +151,11 @@ export const agentsSection: ProductDocSection = {
     },
     {
       title: 'Design',
-      items: [
-        { title: 'Agent patterns', slug: 'patterns' },
-        { title: 'Build your own', slug: 'build' },
-      ],
+      items: [{ title: 'Build your own', slug: 'build' }],
     },
     {
       title: 'Run',
-      items: [{ title: 'Deploy and operate', slug: 'deploy' }],
+      items: [{ title: 'CLI', slug: 'cli' }],
     },
   ],
 };

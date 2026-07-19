@@ -1,0 +1,63 @@
+---
+title: 'CLI'
+description: 'The agentworkforce command surface — deploy, run locally, trigger, inspect, and tear down.'
+---
+
+Everything an agent needs after it's written. Anything in the [gallery](/agents) can also be deployed from the web with **Launch agent** — same result, no terminal.
+
+```bash
+npx agentworkforce login      # browser OAuth, writes the workspace token
+npx agentworkforce logout
+```
+
+## Deploy
+
+```bash
+npx agentworkforce deploy <persona.json> [flags]
+```
+
+| Flag | What it does |
+| --- | --- |
+| `--mode dev \| sandbox \| cloud` | Local run, Daytona sandbox, or managed cloud. |
+| `--dry-run` | Validate with no side effects. Prints integration and schedule counts. |
+| `--on-exists update` | Redeploy over an existing persona. **Default is `cancel`** — a silent no-op. |
+| `--input KEY=value` | Override a declared input. Repeatable. |
+| `--reconnect <provider>` | Force a fresh provider connect. |
+| `--no-connect` | Fail instead of prompting for an unconnected provider. |
+| `--workspace <name>` | Target a specific workspace. |
+| `--detach` | Background the runner. |
+| `--bundle-out <dir>` | Write the deploy bundle to disk. |
+
+Deploy opens a connect flow for any declared provider that isn't connected. An unconnected provider means its triggers never fire.
+
+## Run and test locally
+
+```bash
+npx agentworkforce agent <persona>                        # interactive local session
+npx agentworkforce invoke <persona.json> --schedule daily # fire a named schedule
+npx agentworkforce invoke <persona.json> --fixture ev.json
+npx agentworkforce invoke <persona.json> --scaffold slack.message.created
+npx agentworkforce local-surface <persona.json>           # real webhooks, local handler
+```
+
+`invoke` emits a run record. `--reads fixtures|live` and `--model stub|fixture|live` control how much of the real world it touches; `--case <file>` runs a YAML case with assertions.
+
+## Operate
+
+```bash
+npx agentworkforce deployments list                # what's running
+npx agentworkforce deployments logs <agent>        # --tail defaults to 50
+npx agentworkforce trigger <agent>                 # fire an active agent now
+npx agentworkforce runs export <runId>             # replay fixture for a cloud run
+npx agentworkforce destroy <persona|agent-uuid>    # cancel schedules, mark destroyed
+```
+
+`deployments list` accepts `--status`, `--persona <slug>`, and `--json`. `deployments logs` with no agent lists the available workspace log files.
+
+## Promote slowly
+
+Start report-only and graduate one permission at a time: comment, label, open a PR, merge, deploy. An unattended agent should leave enough in Relay that a teammate can answer why it woke up, what it inspected, what it changed, and what needs review.
+
+<BannerLink href="/docs/agents/build" icon="bot">
+  Tighten the persona contract before increasing autonomy.
+</BannerLink>
