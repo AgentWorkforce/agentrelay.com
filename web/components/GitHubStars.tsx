@@ -41,8 +41,8 @@ async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | nul
 
 /**
  * Docs header badge that follows the active section: Relayfile under
- * `/docs/file`, Relayloop under `/docs/loop`, Agent Relay elsewhere. Fetches
- * every section's star count on the server, then the client picks by path.
+ * `/docs/file`, Relayloop under `/docs/loop`, Agent Relay elsewhere. The
+ * client loads only the active repo's count, so the docs route stays static.
  */
 export async function DocsGitHubStarsBadgeServer() {
   const targets: { id: string | null; repo: string; label: string }[] = [
@@ -54,12 +54,11 @@ export async function DocsGitHubStarsBadgeServer() {
     })),
   ];
 
-  const counts = await Promise.all(targets.map((t) => getGitHubStars(t.repo)));
-  const repos: DocsStarRepo[] = targets.map((t, i) => ({
+  const repos: DocsStarRepo[] = targets.map((t) => ({
     id: t.id,
+    repo: t.repo,
     href: `https://github.com/${t.repo}`,
     label: t.label,
-    count: counts[i],
   }));
 
   return <DocsGitHubStarsBadge repos={repos} />;

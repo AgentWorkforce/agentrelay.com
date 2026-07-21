@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import { getProductSectionForPath } from '../lib/product-docs-nav';
@@ -8,10 +9,42 @@ import s from './github-stars.module.css';
 export type DocsStarRepo = {
   /** Product section id (`file`, `loop`) or `null` for the default Agent Relay repo. */
   id: string | null;
+  repo: string;
   href: string;
   label: string;
-  count: string | null;
 };
+
+type StarCacheEntry = { count: string; expiresAt: number };
+
+const STAR_CACHE_PREFIX = 'agentrelay:github-stars:';
+const STAR_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function formatStarCount(stars: number): string {
+  return stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : String(stars);
+}
+
+function getCachedStarCount(repo: string): string | null {
+  try {
+    const cached = localStorage.getItem(`${STAR_CACHE_PREFIX}${repo}`);
+    if (!cached) return null;
+
+    const entry = JSON.parse(cached) as StarCacheEntry;
+    return entry.expiresAt > Date.now() ? entry.count : null;
+  } catch {
+    return null;
+  }
+}
+
+function cacheStarCount(repo: string, count: string) {
+  try {
+    localStorage.setItem(
+      `${STAR_CACHE_PREFIX}${repo}`,
+      JSON.stringify({ count, expiresAt: Date.now() + STAR_CACHE_TTL_MS } satisfies StarCacheEntry)
+    );
+  } catch {
+    // Storage can be unavailable in private browsing; the badge still works.
+  }
+}
 
 function GithubIcon() {
   return (
@@ -24,14 +57,46 @@ function GithubIcon() {
 /**
  * GitHub stars badge that targets the repo for the docs section currently being
  * viewed: Relayfile under `/docs/file`, Relayloop under `/docs/loop`, and Agent
- * Relay everywhere else. Star counts are fetched on the server and handed in;
- * this component just picks the right one for the active path.
+ * Relay everywhere else. It loads the active repo's count directly from
+ * GitHub and keeps it in browser storage for an hour, so docs rendering never
+ * depends on a server-side refresh.
  */
 export function DocsGitHubStarsBadge({ repos }: { repos: DocsStarRepo[] }) {
   const pathname = usePathname() ?? '/docs';
   const section = getProductSectionForPath(pathname);
   const entry =
     repos.find((r) => r.id === (section?.id ?? null)) ?? repos.find((r) => r.id === null) ?? repos[0];
+  const [count, setCount] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!entry) return;
+
+    const cached = getCachedStarCount(entry.repo);
+    if (cached) {
+      setCount(cached);
+      return;
+    }
+
+    const controller = new AbortController();
+    void fetch(`https://api.github.com/repos/${entry.repo}`, {
+      headers: { Accept: 'application/vnd.github+json' },
+      cache: 'force-cache',
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const data = (await response.json()) as { stargazers_count?: number };
+        return typeof data.stargazers_count === 'number' ? formatStarCount(data.stargazers_count) : null;
+      })
+      .then((nextCount) => {
+        if (!nextCount) return;
+        cacheStarCount(entry.repo, nextCount);
+        setCount(nextCount);
+      })
+      .catch(() => {});
+
+    return () => controller.abort();
+  }, [entry]);
 
   if (!entry) return null;
 
@@ -42,16 +107,16 @@ export function DocsGitHubStarsBadge({ repos }: { repos: DocsStarRepo[] }) {
       rel="noopener noreferrer"
       className={s.badge}
       aria-label={
-        entry.count
-          ? `View ${entry.label} on GitHub (${entry.count} stars)`
+        count
+          ? `View ${entry.label} on GitHub (${count} stars)`
           : `View ${entry.label} on GitHub`
       }
     >
       <GithubIcon />
-      {entry.count ? (
+      {count ? (
         <span className={s.meta}>
           <span className={s.divider} />
-          <span className={s.count}>{entry.count}</span>
+          <span className={s.count}>{count}</span>
         </span>
       ) : null}
     </a>

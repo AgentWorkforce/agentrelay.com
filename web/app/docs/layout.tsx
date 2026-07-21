@@ -10,6 +10,12 @@ import styles from '../../components/docs/docs.module.css';
 import { getSearchIndex } from '../../lib/docs';
 import { productBasePath, productSections, getProductSearchIndex } from '../../lib/product-docs';
 
+// Docs are deployed as pre-rendered assets. The Cloudflare incremental cache
+// configured for this site is intentionally read-only, so allowing Next's
+// default hourly revalidation would eventually send a stale docs request down
+// a regeneration path that cannot be persisted.
+export const revalidate = false;
+
 const searchIndex = getSearchIndex();
 const productScopes = productSections.map((section) => ({
   id: section.id,
