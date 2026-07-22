@@ -38,10 +38,10 @@ Use this role when the agent should:
 
 Important distinction: lifecycle control — starting the broker, spawning,
 listing, tailing, attaching, releasing — goes through the `agent-relay node ...`
-CLI. Messaging goes through the relay MCP (`agent-relay mcp`), which
-auto-registers the orchestrating session as `orchestrator` when a workspace key
-is present; a plain shell sends with a registered agent token instead, while
-channel reads need no token.
+CLI. Messaging goes through the relay MCP (`agent-relay mcp`) after the session
+registers itself once with the `register_agent` tool (messaging tools error
+with "Not registered" until it does); a plain shell sends with a registered
+agent token instead, while channel reads need no token.
 
 ### Spawned or registered participant
 
