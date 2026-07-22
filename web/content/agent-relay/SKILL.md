@@ -29,17 +29,19 @@ https://github.com/AgentWorkforce/skills/blob/main/skills/orchestrating-agent-re
 
 Use this role when the agent should:
 
-- start the broker with `agent-relay local up`
+- start the broker with `agent-relay node up`
 - create or reuse a workspace
 - spawn workers
 - send follow-up instructions through local attach or registered Relay messages
 - read terminal output, logs, and lifecycle state
 - release workers when the run is accepted
 
-Important distinction: the orchestrator is not usually a registered Agent Relay
-participant. It should use the `agent-relay local ...` CLI for starting,
-spawning, listing, tailing, attaching, and releasing local workers. If it wants
-to send Relay DMs through the message CLI, it must use a registered token.
+Important distinction: lifecycle control — starting the broker, spawning,
+listing, tailing, attaching, releasing — goes through the `agent-relay node ...`
+CLI. Messaging goes through the relay MCP (`agent-relay mcp`), which
+auto-registers the orchestrating session as `orchestrator` when a workspace key
+is present; a plain shell sends with a registered agent token instead, while
+channel reads need no token.
 
 ### Spawned or registered participant
 
@@ -69,33 +71,33 @@ and `join_channel`.
 1. Start Relay from the project root:
 
    ```bash
-   agent-relay local up --verbose
-   agent-relay local status --wait-for 10
+   agent-relay node up --background --verbose
+   agent-relay node status --wait-for 10
    ```
 
 2. Spawn a lead or worker:
 
    ```bash
-   agent-relay local agent spawn claude --name Lead --task "Use https://agentrelay.com/skill. Start the workspace, coordinate workers, and report progress."
+   agent-relay node agent spawn claude --name Lead --task "Use https://agentrelay.com/skill. Start the workspace, coordinate workers, and report progress."
    ```
 
 3. Watch output from the lead:
 
    ```bash
-   agent-relay local tail --agent Lead
+   agent-relay node tail --agent Lead
    ```
 
 4. Send follow-up instructions through an interactive attach:
 
    ```bash
-   agent-relay local agent attach Lead --mode drive
+   agent-relay node agent attach Lead --mode drive
    ```
 
 5. List and inspect workers:
 
    ```bash
-   agent-relay local agent list
-   agent-relay local tail --agent Lead
+   agent-relay node agent list
+   agent-relay node tail --agent Lead
    ```
 
 ## Prompt for a Lead Agent
@@ -107,9 +109,9 @@ You are the orchestrator. Use the orchestrating-agent-relay role:
 - start or verify the relay broker
 - spawn the workers needed for the task
 - tell each worker to use the using-agent-relay role
-- read worker output with agent-relay local tail --agent <name>
-- monitor liveness with agent-relay local agent list
-- send follow-up instructions with agent-relay local agent attach <name> --mode drive
+- read worker output with agent-relay node tail --agent <name>
+- monitor liveness with agent-relay node agent list
+- send follow-up instructions with agent-relay node agent attach <name> --mode drive
 - keep workers alive through review/fix loops
 - release workers only after final acceptance
 
