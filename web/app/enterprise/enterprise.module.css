@@ -10,7 +10,10 @@
   --enterprise-accent: #74b8e2;
   min-height: 100vh;
   overflow-x: clip;
-  background: var(--enterprise-bg);
+  background:
+    linear-gradient(180deg, #14344a 0%, #102b3e 54rem, #0d2638 72rem)
+      top / 100% 72rem no-repeat,
+    var(--enterprise-bg);
   color: var(--enterprise-text);
 }
 
@@ -21,7 +24,7 @@
   align-items: center;
   padding: 96px 40px 72px;
   border-bottom: 1px solid var(--enterprise-line);
-  background: linear-gradient(180deg, #14344a 0%, #102b3e 58%, #0d2638 100%);
+  background: transparent;
 }
 
 .heroGrid {
