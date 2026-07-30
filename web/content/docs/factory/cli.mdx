@@ -5,6 +5,20 @@ description: 'Run Factory once, run it as a daemon, and operate it.'
 
 Global options work anywhere in the args: `--config <path>`, `--dry-run`, `--backend <internal|relay>`, `--agent-exit-timeout <ms>`.
 
+## Initialize a checkout
+
+```bash
+factory init                         # derive owner/repo from git origin
+factory init owner/repo               # use an explicit repository
+factory init --workspace <id>         # select a non-active Relay workspace
+```
+
+Init is the recommended path for a single GitHub repository. It verifies the
+local `agent-relay` and `relayfile` prerequisites, starts the workspace mount,
+checks that GitHub has synced the repository, and creates a GitHub-native
+`factory.config.json`. It does not dispatch agents or write to GitHub, and it
+refuses to overwrite an existing config.
+
 ## Run
 
 ```bash
