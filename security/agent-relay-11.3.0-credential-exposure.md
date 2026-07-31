@@ -298,3 +298,17 @@ Count: 4
   workspace key in an agent transcript. If runtime confirmation becomes
   necessary, escalate for synthetic credentials in an isolated,
   non-transcribed environment.
+
+## Retirement condition
+
+This website mitigation is temporary. Do not retire it merely because the
+fix is present in relay source or on relay's default branch. Retire it only
+after npm `latest` resolves to a published Agent Relay release that has
+been explicitly confirmed to contain `3c5046a6`.
+
+The person who confirms that published release owns the follow-up that
+removes the interim warnings from the seven docs pages, removes the
+11.3.0-specific gate from the hosted skill, and updates this report with
+the confirmed release and retirement date. Preserve the enumeration above
+as the historical record of the exposure; do not delete this file when
+the mitigation is retired.
