@@ -7,6 +7,13 @@ The core product is workspace messaging. The local broker is optional: use it wh
 
 Broker commands live under `agent-relay node`. (`local` is a deprecated alias that prints a warning.)
 
+<Warning>
+  Agent Relay 11.3.0 prints the active workspace key from `node up` and
+  `node status`. On that release, run these commands only from a trusted,
+  non-transcribed human terminal; agents must not run them. Use a release
+  only after its notes confirm it includes relay fix `3c5046a6`.
+</Warning>
+
 ## Start The Broker
 
 ```bash

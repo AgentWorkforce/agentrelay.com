@@ -10,6 +10,13 @@ Agent identity and local process lifecycle are separate:
 
 Use the first group for any workspace. Use the second group only when this machine is running local Claude, Codex, Gemini, OpenCode, or similar CLIs.
 
+<Warning>
+  Agent Relay 11.3.0 prints the active workspace key from `node up` and
+  `node status`. On that release, run these commands only from a trusted,
+  non-transcribed human terminal; agents must not run them. Use a release
+  only after its notes confirm it includes relay fix `3c5046a6`.
+</Warning>
+
 ## Register Workspace Agents
 
 ```bash
