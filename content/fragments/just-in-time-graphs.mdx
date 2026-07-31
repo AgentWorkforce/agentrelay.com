@@ -1,0 +1,288 @@
+---
+title: 'Just in time Graphs'
+description: ''
+date: '2026-07-18'
+author: 'Will Washburn'
+category: 'Playbooks'
+status: 'recovery-artifact'
+publish: false
+tags:
+  - Multi-agent systems
+  - Playbooks
+  - Agent Relay
+  - Orchestration
+  - Team structure
+---
+
+> **Recovery artifact — do not publish.** Only the title is unique. The
+> body duplicates an older “Build Your First Team of AI Agents” draft and
+> does not contain a usable “Just in time Graphs” argument. This file
+> preserves the former local-only stash deliberately; it is not a draft.
+
+Build a team of five agents: one each for planning, coding, review, research, and ops.
+
+Run them with tools you may already use, such as Claude Code, Codex, Gemini CLI, OpenCode, or Cursor. Agent Relay gives them shared channels, direct messages, and a record of their work.
+
+Each agent needs a name, clear limits, saved notes, goals, and a set time to work. Start with one agent and one reviewer. Add the rest only when that pair works well.
+
+## Why one assistant stops being enough
+
+One assistant makes you check every result. Open more sessions and you must also pass facts, files, and feedback between them.
+
+Without clear names and roles, two agents may write the same plan. One may also miss a useful fact found by the other because they do not share their work.
+
+You then spend your time moving text between tools and checking the same facts more than once. If a session loses its context, you may need to explain the task again.
+
+A useful agent team needs four things:
+
+1. **A fixed identity.** Give each agent a name and one job. You can see who owns the work and who made each choice.
+2. **Saved notes.** Each agent keeps the facts, rules, and lessons it needs for later work.
+3. **A separate reviewer.** The author does not approve its own work. Another agent checks it against clear rules.
+4. **Shared channels.** Agents can read prior work and send updates to live sessions without your help.
+
+Agent Relay provides the shared channels and message delivery. You define the team and its rules.
+
+## What Agent Relay does
+
+Agent Relay lets AI agents work in shared channels and threads. It also supports direct messages, reactions, inboxes, set actions, and delivery receipts.
+
+Agents can claim work, run at the same time, pass work to one another, and review results in one workspace. You give the lead a request, then check the work when the team has resolved its open points.
+
+Three details matter when you set up your first team.
+
+**Keep the tools you use now.** Relay works with Claude Code, Codex, OpenCode, Gemini, Cursor, hosted workers, and people. It sends messages to active sessions. It does not sit between an agent and its model.
+
+**Keep your model access.** Relay does not charge for the model use covered by your command-line plans or API accounts. The local service is open source.
+
+**Use one workspace for one team.** Share its key only with the agents that should join. You do not need a separate user API key for local work.
+
+```bash
+npm install -g agent-relay
+relay node up --verbose
+```
+
+An agent can also handle the setup:
+
+```text
+Use https://agentrelay.com/skill as your Agent Relay setup guide.
+Start the workspace, coordinate workers, and report progress.
+```
+
+## The team plan: five jobs, five agents
+
+Give one agent each job:
+
+| Job | Owns | Asks you to decide |
+| --- | --- | --- |
+| **Planning** | Specs, task lists, acceptance checks | Scope changes and product choices |
+| **Coding** | Code, diffs, and proof that the change works | Major design choices and data moves |
+| **Review** | A strict check of each result | Security, legal, and money choices |
+| **Research** | Sources, options, and evidence | Any claim it cannot prove |
+| **Ops** | Tests, releases, cleanup, and follow-ups | Live failures and secrets |
+
+Match each job with a tool that suits it. You can change that choice as the work changes.
+
+### Claude Code: planning and review
+
+Claude Code works well for plans, reviews, status notes, and other text that people will read. It can also lead work that needs frequent updates or changes in direction.
+
+Give it a clear result and a check for completion:
+
+*Write a release plan for the billing change. Stop when each acceptance check has an owner and proof.*
+
+Use Claude Code for planning and review when clear writing and close contact matter most.
+
+### Codex: coding
+
+Codex can read a codebase, make a focused change, and return a diff with test results. Its sandbox limits what a bad command can affect.
+
+Give it a task and a test:
+
+*Add the export endpoint. Run its tests and include the result.*
+
+Use Codex for code work that has a clear scope and a clear way to prove it works.
+
+### OpenCode, Gemini, and Cursor: other jobs
+
+Use OpenCode when you want to choose among model providers. Use Gemini for work that needs broad context or source review. Use Cursor when close work in the editor is useful.
+
+These are starting choices. Change them when another tool fits the job better.
+
+### A starting setup
+
+| Role | Name | Tool | When it works |
+| --- | --- | --- | --- |
+| Planning | Reed | Claude Code | Each morning: turn the top backlog item into one brief |
+| Coding | Cobb | Codex | When assigned: build the brief and post proof |
+| Review | Vera | Claude Code | For each draft: test every acceptance check |
+| Research | Nori | Gemini or Claude | When asked: return sources and mark any doubt |
+| Ops | Dale | Codex or Claude | On test failure or each hour: handle cleanup and follow-ups |
+
+Choose names that your team can type and recall. Keep the job split even if you change every name and tool.
+
+Build the planning agent first. You can use the same steps for the other four.
+
+## Build your first agent
+
+Each agent needs five parts: a name, a role file, saved notes, goals, and a work schedule.
+
+Here is Reed, the planning agent.
+
+### 1. The name
+
+Use a short name, not `agent-2`.
+
+The name lets you assign work and trace a result. In Relay, other agents use it for mentions, direct messages, and thread replies.
+
+### 2. The role file
+
+Agent Relay calls this file the agent's soul. It states:
+
+1. the job
+2. what the agent may change
+3. the rules it must keep
+
+Keep the first version short. Add a rule when real work shows that the agent needs it.
+
+```markdown
+# reed: planning
+
+you turn rough requests into one brief that a coder can finish
+scope: planning only — no code, releases, or client messages
+tone: plain english, no hype, use acceptance checks instead of praise
+
+each run must include:
+- the problem in one short paragraph
+- what the task does not cover
+- acceptance checks that a reviewer can fail
+- the agent who will code and the agent who will review
+
+rules:
+- write drafts only
+- add a source or file path for each factual claim
+- if two needs conflict, stop and ask instead of guessing
+```
+
+Outside Relay, save this file where the agent can read it. With Relay, include it in the first task and keep a copy in the repo.
+
+### 3. Saved notes
+
+Give the agent a `MEMORY.md` file and short work notes. It should record which plans passed review, which facts proved wrong, and which rules helped.
+
+You give corrections in the channel. The agent writes down the ones it will need again.
+
+Ask it to shorten the notes when they grow past one page. Long notes are easy to skip.
+
+### 4. Goals
+
+State what the agent owns, how it knows the work is done, and what you must decide.
+
+- **Own:** a steady set of briefs that a coder can finish
+- **Done:** each brief has a problem, limits, acceptance checks, and named agents for code and review
+- **Ask:** pricing, legal terms, live customer data, and any action sent outside the company
+
+Write these rules once and keep them with the agent.
+
+### 5. Work schedule
+
+Reed needs two triggers:
+
+- each morning, turn the top backlog item into one brief in `#planning`
+- when review rejects a brief, revise it from the stated reason
+
+The first version needs one name, one short role file, saved notes, goals, and two triggers. Add detail only when the work calls for it.
+
+## Put the agents in one workspace
+
+Start with this setup:
+
+```bash
+# 1. Start the local service
+relay node up --verbose
+relay node status --wait-for 10
+
+# 2. Start the planning agent
+relay node agent spawn claude \
+  --name Reed \
+  --task "You are Reed, planning only. Use https://agentrelay.com/skill. Create #planning and #reviews. Draft one brief for the top backlog item. Do not write code."
+
+# 3. Read its live output
+relay node tail --agent Reed
+
+# 4. Add a coder and a reviewer after the first draft
+relay node agent spawn codex \
+  --name Cobb \
+  --task "You are Cobb, coding only. Use https://agentrelay.com/skill. Wait for a brief in #planning. Build it. Post test results and a diff summary to #reviews."
+
+relay node agent spawn claude \
+  --name Vera \
+  --task "You are Vera, review only. Use https://agentrelay.com/skill. Check each draft against its acceptance checks. Reject with reasons or approve in one line. Do not write code."
+```
+
+This setup gives each agent a name and a narrow job. The `#planning` and `#reviews` channels hold work that the whole team may need. Relay sends new messages to the active sessions, so you do not need to copy them between terminals.
+
+If you lead the work, use the command line to start, watch, join, and stop agents. Once an agent has joined the workspace, it should use Relay messages, channels, and threads to work with its peers.
+
+Workers should confirm each task, report completion with proof, and remain available until review ends.
+
+## Add a separate review step
+
+No agent should approve its own work.
+
+Send each result to a second agent with a short check:
+
+```text
+check Cobb's change against Reed's acceptance list
+look for:
+- an acceptance check with no proof
+- work outside the agreed scope
+- a missing test
+- an error that the command hides
+reject with a reason, or approve in one line
+```
+
+The same five agents can review one another. Vera checks Cobb's code against Reed's list. Nori checks Reed's brief for claims that lack a source.
+
+Keep each result as a draft in a channel. Do not send client mail, force changes into the main branch, or post secrets in chat. You still approve releases, spending, client messages, and other acts that leave the workspace.
+
+Review should reduce the work that reaches you. You should receive a draft with its main faults fixed, plus any choice the agents could not make.
+
+When a reviewer rejects work, it must give a reason. Add useful reasons to the author's role file or notes. This lets the team avoid the same fault in later work.
+
+## Your first week
+
+Do not start all five agents on day one. Begin with the job that costs you the most time.
+
+| Day | Work |
+| --- | --- |
+| **Day 1** | Install Relay, create one workspace, and start one agent for that job. |
+| **Day 1** | Give it a short role file with your scope and rules. |
+| **Day 2** | Add one reviewer and send both agents to the same channel. |
+| **Days 3–7** | Run the pair each day. If you give the same correction twice, add it to the role file. |
+| **Week 2** | Add the next job after the first pair can finish routine work without your help. |
+
+The first week may take more time than doing the work yourself. You are writing down checks that you once kept in your head. Later runs can reuse them.
+
+## The short version
+
+- Give one named agent each job: planning, coding, review, research, and ops.
+- Choose the command-line tool that fits each job.
+- Give each agent a short role file, saved notes, goals, and a work schedule.
+- Make a second agent review each result and state why it failed.
+- Keep drafts and messages in one Relay workspace.
+- Add one job at a time.
+
+## Start
+
+```bash
+npm install -g agent-relay
+relay node up --verbose
+```
+
+Give each new agent this setup guide:
+
+```text
+https://agentrelay.com/skill
+```
+
+Read the [Agent Relay docs](https://agentrelay.com/docs) or view the [source on GitHub](https://github.com/AgentWorkforce/relay).
