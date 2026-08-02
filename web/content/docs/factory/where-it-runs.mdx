@@ -7,7 +7,10 @@ Factory splits into two halves: the **control plane** that decides what to work 
 
 <Warning>
   Agent Relay 11.3.0 and earlier print the active workspace key from `node up`
-  and `node status`. Upgrade to Agent Relay 11.3.1 or later. Until upgraded,
+  and `node status`. Upgrade to Agent Relay 11.3.1 or later. Upgrading closes
+  the key print in `agent-relay node up` and `agent-relay node status`. It is
+  not a guarantee about credential output from every command in an Agent Relay
+  install. Until upgraded,
   run these commands only from a trusted, non-transcribed human terminal;
   agents must not run them.
 </Warning>
