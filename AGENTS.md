@@ -21,11 +21,11 @@ These rules are repository law for every agent session in this checkout.
   `env -u GITHUB_TOKEN -u GH_TOKEN /opt/homebrew/bin/gh <command>` for the
   concrete GitHub operation; escalate if credential scope itself must be
   inspected.
-- Agent Relay 11.3.0 prints the active workspace key from
+- Agent Relay 11.3.0 and earlier print the active workspace key from
   `agent-relay node up` and `agent-relay node status`. Do not run either
   command in an agent or other transcribed session. A human may run them
-  from a trusted, non-transcribed terminal, or use a release confirmed to
-  include relay fix `3c5046a6`.
+  from a trusted, non-transcribed terminal; otherwise upgrade to Agent
+  Relay 11.3.1 or later, which masks the key.
 
 ## Session lifecycle
 

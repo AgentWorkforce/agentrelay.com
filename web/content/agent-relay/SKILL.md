@@ -15,19 +15,19 @@ https://agentrelay.com/skill
 
 Give that URL to a human driver, a lead agent, or a newly spawned agent when you want them to orient themselves without a long custom prompt.
 
-## Security Gate for Agent Relay 11.3.0
+## Version-Conditional Security Gate
 
-Agent Relay 11.3.0 prints the active workspace key when
-`agent-relay node up` or `agent-relay node status` runs. An agent must not
-run either command inside a transcribed session on that release. Ask a
-human driver to run them from a trusted, non-transcribed terminal, or use
-a release whose notes confirm it includes relay fix `3c5046a6`.
+On Agent Relay 11.3.0 and earlier, `agent-relay node up` and
+`agent-relay node status` print the active workspace key. Agent Relay
+11.3.1 masks it. If you are on 11.3.0 or earlier, upgrade to 11.3.1 or
+later, or ask a human driver to run those commands from a trusted,
+non-transcribed terminal.
 
 The commands remain the correct way to start and inspect a node. The gate
 is about the vulnerable release's output, not a replacement workflow. The
 human-only quick start below is retained so an operator has the exact
 commands; do not copy its first two command lines into an agent prompt
-while 11.3.0 is installed.
+while 11.3.0 or earlier is installed.
 
 ## Choose the Right Skill
 
@@ -120,7 +120,7 @@ and `join_channel`.
 Use https://agentrelay.com/skill as your Agent Relay onboarding reference.
 
 You are the orchestrator. Use the orchestrating-agent-relay role:
-- have a human driver start or verify the relay broker when Agent Relay 11.3.0 is installed
+- have a human driver start or verify the relay broker when Agent Relay 11.3.0 or earlier is installed
 - spawn the workers needed for the task
 - tell each worker to use the using-agent-relay role
 - read worker output with agent-relay node tail --agent <name>

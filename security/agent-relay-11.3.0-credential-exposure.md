@@ -9,14 +9,15 @@ below are the pre-mitigation positions in that snapshot.
 
 Agent Relay 11.3.0 prints the active workspace key when
 `agent-relay node up` or `agent-relay node status` runs. Relay commit
-`3c5046a6` masks the key and removes the credential-bearing observer URL,
-but that fix was not in npm `latest` when this exposure was recorded.
+`2d911c1b5` masks the key and removes the credential-bearing observer URL.
+That fix shipped in Agent Relay 11.3.1; it was not in npm `latest` when
+this exposure was recorded.
 
 The documented commands are legitimate product operations. The defect is
 the released CLI's output, so deleting the commands from user
 documentation would conceal normal product use rather than fix the root
 cause. The primary fix is a human-cut Agent Relay release containing
-`3c5046a6`.
+`2d911c1b5`, first shipped as Agent Relay 11.3.1.
 
 The hosted skill is sharper than the human docs: it can direct an agent to
 run the affected commands inside a transcribed session, placing a live key
@@ -290,7 +291,7 @@ Count: 4
 ## Release and mitigation boundary
 
 - Root cause: released CLI output in Agent Relay 11.3.0.
-- Root fix: relay commit `3c5046a6`.
+- Root fix: relay commit `2d911c1b5`, shipped in Agent Relay 11.3.1.
 - Release authority: humans only.
 - Interim website mitigation: prepared warnings plus a stricter hosted-skill
   gate; do not publish without `cmo` approval.
@@ -301,14 +302,21 @@ Count: 4
 
 ## Retirement condition
 
-This website mitigation is temporary. Do not retire it merely because the
-fix is present in relay source or on relay's default branch. Retire it only
-after npm `latest` resolves to a published Agent Relay release that has
-been explicitly confirmed to contain `3c5046a6`.
+Publishing Agent Relay 11.3.1 ended the defect in that release; it did not
+upgrade consumers that remain on 11.3.0 or earlier. Do not retire this
+mitigation merely because the fix is present in relay source, on relay's
+default branch, or in npm `latest`.
 
-The person who confirms that published release owns the follow-up that
-removes the interim warnings from the seven docs pages, removes the
-11.3.0-specific gate from the hosted skill, and updates this report with
-the confirmed release and retirement date. Preserve the enumeration above
-as the historical record of the exposure; do not delete this file when
-the mitigation is retired.
+Remove the version-conditional warnings only when 11.3.0 installs are no
+longer plausible. Until then, the hosted skill must keep directing affected
+consumers to upgrade to 11.3.1 or later or to use a trusted,
+non-transcribed human terminal. The hosted gate earns a longer lifetime
+than prominent human-doc callouts because it directs an agent at the
+moment of acting, inside a session that may be transcribed, without the
+human judgment the warning assumes.
+
+The person who confirms that 11.3.0 installs are no longer plausible owns
+the follow-up that removes the version-conditional warnings and records
+the retirement date here. Preserve the enumeration above as the historical
+record of the exposure; do not delete this file when the mitigation is
+retired.
