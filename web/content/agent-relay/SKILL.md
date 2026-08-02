@@ -19,9 +19,10 @@ Give that URL to a human driver, a lead agent, or a newly spawned agent when you
 
 On Agent Relay 11.3.0 and earlier, `agent-relay node up` and
 `agent-relay node status` print the active workspace key. Agent Relay
-11.3.1 masks it. If you are on 11.3.0 or earlier, upgrade to 11.3.1 or
-later, or ask a human driver to run those commands from a trusted,
-non-transcribed terminal.
+11.3.1 masks it in these two commands; it is not a guarantee about
+credential output from every command in the installed dependency tree. If
+you are on 11.3.0 or earlier, upgrade to 11.3.1 or later, or ask a human
+driver to run those commands from a trusted, non-transcribed terminal.
 
 The commands remain the correct way to start and inspect a node. The gate
 is about the vulnerable release's output, not a replacement workflow. The
@@ -43,7 +44,7 @@ https://github.com/AgentWorkforce/skills/blob/main/skills/orchestrating-agent-re
 
 Use this role when the agent should:
 
-- coordinate broker startup with a human driver
+- coordinate broker startup with a human driver when Agent Relay 11.3.0 or earlier is installed
 - create or reuse a workspace
 - spawn workers
 - send follow-up instructions through local attach or registered Relay messages

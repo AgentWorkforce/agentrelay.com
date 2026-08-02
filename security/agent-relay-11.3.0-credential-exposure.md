@@ -11,7 +11,9 @@ Agent Relay 11.3.0 and earlier print the active workspace key when
 `agent-relay node up` or `agent-relay node status` runs. Relay commit
 `2d911c1b5` masks the key and removes the credential-bearing observer URL.
 That fix shipped in Agent Relay 11.3.1; it was not in npm `latest` when
-this exposure was recorded.
+this exposure was recorded. Agent Relay 11.3.1 closes the two-command defect
+documented here; it is not a guarantee about credential output from every
+command in the installed dependency tree.
 
 The documented commands are legitimate product operations. The defect is
 the released CLI's output, so deleting the commands from user

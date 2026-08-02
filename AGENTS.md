@@ -1,6 +1,5 @@
 # Agent operating rules
 
-Read `CLAUDE.md` for the resident lead role and content-pipeline process.
 These rules are repository law for every agent session in this checkout.
 
 ## Safety and authority
@@ -17,15 +16,19 @@ These rules are repository law for every agent session in this checkout.
 - Only humans cut releases. Any earlier agent release permission is void,
   not paused.
 - Never execute a command that prints or may print a credential in an
-  agent transcript. In particular, do not run `gh auth status`. Use
+  agent transcript. Never pass `--show-token` to `gh auth status`; that flag
+  deliberately exposes the credential. The bare command is not the
+  credential-printing hazard the old rule treated it as. Use
   `env -u GITHUB_TOKEN -u GH_TOKEN /opt/homebrew/bin/gh <command>` for the
-  concrete GitHub operation; escalate if credential scope itself must be
-  inspected.
+  concrete GitHub operation; escalate if unmasked credential scope itself
+  must be inspected.
 - Agent Relay 11.3.0 and earlier print the active workspace key from
   `agent-relay node up` and `agent-relay node status`. Do not run either
   command in an agent or other transcribed session. A human may run them
   from a trusted, non-transcribed terminal; otherwise upgrade to Agent
-  Relay 11.3.1 or later, which masks the key.
+  Relay 11.3.1 or later, which masks the key in these two commands. That
+  version is not a guarantee about credential output from every command in
+  the installed dependency tree.
 
 ## Session lifecycle
 
