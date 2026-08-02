@@ -7,7 +7,7 @@ below are the pre-mitigation positions in that snapshot.
 
 ## Summary
 
-Agent Relay 11.3.0 prints the active workspace key when
+Agent Relay 11.3.0 and earlier print the active workspace key when
 `agent-relay node up` or `agent-relay node status` runs. Relay commit
 `2d911c1b5` masks the key and removes the credential-bearing observer URL.
 That fix shipped in Agent Relay 11.3.1; it was not in npm `latest` when
