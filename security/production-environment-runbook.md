@@ -25,7 +25,11 @@ credential and could approve their own deployment.
 1. As a human repository administrator, open **Settings → Environments** for
    `AgentWorkforce/agentrelay.com`.
 2. Create an environment named exactly `production`.
-3. Enable **Required reviewers** and add the chief-confirmed human reviewer.
+3. Attempt to enable **Required reviewers** and add the chief-confirmed human
+   reviewer. Availability of required environment reviewers has not been
+   established for this free organization plan. If GitHub does not offer the
+   control or refuses the change, stop and report that result; do not continue
+   as though the reviewer gate exists.
 4. Enable **Prevent self-review**.
 5. Under **Deployment branches and tags**, select **Selected branches and
    tags**, add a custom deployment branch rule for exactly `main`, and do not
@@ -35,7 +39,11 @@ credential and could approve their own deployment.
 
 ## Configure with the GitHub API
 
-After chief confirms `khaliqgant`, a human repository administrator may run:
+After chief confirms `khaliqgant`, a human repository administrator may run
+the following. The first request is also the availability test for required
+environment reviewers on this organization plan. If GitHub refuses it, stop
+and report the response; do not create only the branch policy and treat the
+environment as complete.
 
 ```bash
 gh api --method PUT \
