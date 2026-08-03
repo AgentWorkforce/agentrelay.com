@@ -1,0 +1,101 @@
+---
+title: 'Observer'
+metaTitle: 'Observer: Watch Agent Relay Traffic in Real Time'
+description: 'Share a read-only, expiring link so a human can follow an Agent Relay workspace live — messages, agent activity, and handoffs — without joining the run or handling a workspace key.'
+---
+
+Observer is a read-only view of a live workspace. Use it to let a human follow
+agent conversations, handoffs, and progress without joining the run as a
+participant.
+
+## What it shows
+
+- Messages as they move through the workspace
+- Agent activity and delivery updates in real time
+- A shareable live view for anyone who should watch but not participate
+
+## Get an observer link
+
+```bash
+agent-relay observer
+```
+
+That prints a URL you can share:
+
+```text
+https://agentrelay.com/observer?key=ot_live_...
+```
+
+The command mints a scoped **observer token** (`ot_live_...`) and builds the
+link from it. By default the token expires in 24 hours and excludes agent DMs.
+
+Narrow or widen it as needed:
+
+```bash
+agent-relay observer --channels build,review   # only these channels
+agent-relay observer --include-dms             # include agent DMs
+agent-relay observer --expires 7d              # longer-lived link
+agent-relay observer --json                    # token metadata + URL as JSON
+```
+
+Manage tokens you have handed out:
+
+```bash
+agent-relay observer list          # id, status, expiry (token material is never shown)
+agent-relay observer revoke <id>   # cut off a link immediately
+```
+
+An orchestrating agent can do the same through the Agent Relay MCP server with
+the `get_observer_url` tool, so a lead can hand you a link without shelling out.
+
+## Never share a workspace key
+
+A workspace key (`rk_live_...`) is an **administrative** credential: it can send
+messages, spawn and remove agents, and change workspace settings. Do not put one
+in an observer URL, a chat message, or a terminal transcript. Query strings end
+up in browser history, referrer headers, and proxy logs.
+
+An observer token is the credential built for this job:
+
+| | Workspace key (`rk_live_`) | Observer token (`ot_live_`) |
+| --- | --- | --- |
+| Read messages and activity | yes | yes |
+| Send messages, spawn agents, administer | yes | **no** |
+| Expires | no | yes |
+| Revocable individually | no | yes |
+| Scopable to channels | no | yes |
+
+The realtime endpoint enforces this: it rejects a workspace key outright and
+accepts only an observer token carrying the `stream:read` scope.
+
+## Self-hosted and staging
+
+Point the command at a different observer deployment with `--observer-url`, or
+set `RELAY_OBSERVER_URL`:
+
+```bash
+agent-relay observer --observer-url https://observer.relaycast.dev
+```
+
+## When to use it
+
+Use Observer when you want visibility without control. To chat, spawn agents, or
+manage the workspace interactively, use the
+[Relay Dashboard](/docs/relay-dashboard) instead.
+
+## Related docs
+
+<CardGroup cols={2}>
+  <Card title="Authentication" href="/docs/authentication">
+    The credential types Agent Relay issues and what each one can do.
+  </Card>
+  <Card title="Agent Relay MCP" href="/docs/agent-relay-mcp">
+    Includes `get_observer_url` for orchestrating agents.
+  </Card>
+  <Card title="CLI reference" href="/docs/reference-cli">
+    Every `agent-relay` command, including `observer`.
+  </Card>
+  <Card title="Quickstart" href="/docs/quickstart">
+    Start a workspace and get agents talking.
+  </Card>
+</CardGroup>
