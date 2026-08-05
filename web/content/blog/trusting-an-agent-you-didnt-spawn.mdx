@@ -12,71 +12,33 @@ tags:
   - Multi-agent systems
 ---
 
-We spent a few weeks building a demo with the Ratify Protocol team, and the whole thing came down to a question I couldn't answer cleanly before we started.
+## Agent Relay Thesis
+We're building the real-time communication layer with Agent Relay and the agents we're using and within our own domain. They are agents on our local computer, in our sandboxes
+and on our machines. We firmly believe that the future is multi-agent and the number of agents on the internet will far outweigh the number of humans. Naturally those
+agents will need a trusted way to communicate. My company's agent should be able to communicate with your company's agent. Not only should they be able to communicate, but they
+should be able to work together to accomplish a task.
 
-An agent shows up at your system. It says it's working on behalf of another company, and it needs to update three files in your repo. How do you check that?
+## Collaboration Opportunity - Not my bike?!
+When we came across the Ratify Protocol team we immediately saw an opportunity. The Ratify Protocol is a spec for delegated authority. The idea is that an agent carries proof of what it's allowed to do, and a stranger can verify that proof without calling anybody. Think about it this way.
+If a kid you never met walks up to you and says, "your mom said I'm allowed to borrow your bike", how can you trust this? You could call your mom and if you can't reach her then there is no good way to be sure. What if there was a permission slip
+that the kid had that you know is real just by looking at it and you know with absolute certainty that your mom gave this kid authority to use this bike because this permission slip is certifiable evidence of permission from your mom.
 
-Right now, if I'm being honest, the answer is mostly vibes. You trust it because it came through a channel you trust. Or it's holding an API key somebody issued eight months ago that nobody has looked at since. That's fine while everything lives inside one company. It falls apart the second agents start handing work to each other across company lines, because "our logs say it was fine" isn't something the other side can verify.
+This is part one of the spike that we set out to achieve with the Ratify Protocol team. We built two fake companies, each with their own agents, which were plain vanilla Claude and Codex instances. We then set up six separate scenarios, four of which were designed to
+make the agent get away with something it shouldn't have. What we were able to prove is that within milliseconds each advance was rejected and for a specific reason that we could point at and verify.
 
-So we tried to build the thing that would actually let them check.
+## The Setup
+Getting the two systems to work in tandem took some groundwork: we had to map each of our respective permissions and capabilities and figure out where there was
+synergy and where we had to make some adjustments to get our systems to agree. During this discovery we were able to identify changes that needed to be made in the Ratify SDK and their side
+was super quick and responsive to make adjustments to move things forward.
 
-## The setup
+## It Fell Short?
+We used Relay to put two agents in a shared workspace and leveraged our SDK and with the Ratify SDK we could prove an agent was allowed to write files in general, but what we couldn't prove was that the agent was allowed to write files in that specific repo. We realized that during this spike
+that we needed the permission slip to name the file and the folder and not just the action. At first we just checked the folder ourselves in our code, but their team rightly caught that and pointed out this wasn't truly stopping writes to that file from any process on the machine. After proving this via a real test, we validated they were right and moved the check down to the operating system where the kernel enforces it.
 
-Ratify Protocol is a spec for delegated authority. The idea is that an agent carries proof of what it's allowed to do, and a stranger can verify that proof without calling anybody.
+## The Next Phase
+The Ratify team adjusts their SDK so the permission slip names the actual repo and file path and not just the action. We re-run the entire end to end flow and then we run a full end to end demo but this time from two separate Relay deployments, run by two different companies. This will pass real work across a network letting agents work together over Agent Relay where there is no trust but we rely on the Ratify Protocol
+to verifiably know that each agent is acting within their previously allowed permission set.
 
-We built two fake companies to test it. Northwind Robotics holds the keys and hands out authority. Borealis Systems receives the work and decides whether to actually run it. Two separate Node processes, two separate repos, no shared code and no shared filesystem. The only things crossing between them are a message and a proof.
+Stay tuned for that demo! If you would like to read the technical note from the Ratify Protocol team check their [posting](https://ratifyprotocol.com/writing/agent-relay-phase1-technical-note).
 
-The agents were plain Claude Code and Codex sessions. We didn't fork them or patch them, which matters more than it sounds. Agent Relay held the keys in middleware and did the signing and checking around the outside. That means none of this requires every agent runtime to grow its own security model, which would be a nightmare.
 
-Then we spent a while trying to break it.
-
-## What actually worked
-
-Six scenarios, and the ones that should fail did fail.
-
-An agent with valid, in-scope authority got its work accepted. An agent handing off to another agent could narrow what it passed along but couldn't widen it, so you can't delegate more than you were given. Asking for more than you were granted got denied. Expired authority got denied. And when authority was revoked upstream, the downstream handoff went invalid after the fact, without the two sides talking to each other at all.
-
-Every denial came back explicit and fail-closed. `scope_denied`, `expired`, `revoked`. The verifier never shrugged and let something through.
-
-The speed surprised me a little. Around 7ms to verify a one-hop chain, about 10ms for two hops, roughly 3ms to check a session token on a continuing conversation. All of it offline, so the receiving side never has to phone home. I care about that number a lot, because if checking trust costs you 400ms every hop, nobody's going to turn it on.
-
-## Getting our words to line up
-
-Before any of the fun stuff worked, we had to map what Agent Relay lets an agent do onto Ratify's vocabulary of permissions. This part was tedious and I think it's the most useful thing we learned.
-
-We had 41 capabilities. Ten of them mapped over cleanly. Four mapped to something broader on their side. The other 27 needed custom, application-specific scopes because Ratify had no concept for them. Going the other direction, 45 of Ratify's 54 standard permissions meant nothing at all in our platform.
-
-Neither side did anything wrong there. That's just what two systems look like the first time they try to share a vocabulary. But it's real work, and anybody telling you cross-company agent permissions are a solved plumbing problem hasn't sat down and done the mapping.
-
-We also turned up four gaps in Ratify's SDKs while we were in there. All four shipped as fixes in their alpha.15 release, which was a nice turnaround.
-
-## The part we got wrong
-
-Here's the bit I actually want to write about.
-
-Ratify could prove an agent was authorized to write files. It couldn't prove the agent was authorized to write files *in this specific repo*. You could bind the operation cryptographically, but there was no way to bind the thing the operation applies to.
-
-So in the demo we carried the requested path in the task payload and enforced the repository boundary ourselves, in our own code, after verification. Good enough for a spike. Then we wrote a sentence in the technical note saying we'd "enforced repository confinement locally," and that sentence was wrong.
-
-Checking a file path in application code doesn't stop something else on the same machine that already has write access to the same directory. It's the wrong layer. Their team pushed on this, we built a proof of concept to see if they were right, and they were. We now rest that boundary on OS-level process isolation instead, with two separate uids, and we stood the attack up in CI with a control case that proves the test can actually fail. The path checking is still there, but as a second layer, not the layer.
-
-I would have shipped that sentence. That's the whole argument for doing this with somebody else in the room instead of grading your own homework.
-
-## What this doesn't prove
-
-Phase 1 showed delegated authority can cross a handoff between two independent systems, narrow correctly on the way, and fail closed. I haven't seen anybody else do that end to end with unmodified agent runtimes, though I could easily be wrong about that.
-
-Plenty it didn't show, and I'd rather write the list down than let a demo video imply otherwise:
-
-- No cryptographic binding of authority to a specific repo or path. That's the open one.
-- Nothing about production filesystem confinement or how any of this behaves under real concurrency.
-- Nothing about federation between separate Agent Relay deployments. Both sides of this demo shared one workspace, so no traffic actually crossed a network trust boundary.
-- It's a spike, not a product feature. There's nothing here you can switch on.
-
-## Where it goes
-
-Ratify's alpha.16 adds resource binding, so authority names the thing it applies to and can only get narrower as it's passed along. We're validating against it now, then re-running the scenarios with the resource-bound and confinement cases included.
-
-After that we want to do the demo we actually care about, in public. Two independent Agent Relay deployments, run by two different parties, handing real work back and forth, where neither side has to take the other's word for anything.
-
-The full technical note with the benchmarks, the scope mapping, and the parts we corrected is [on Ratify's site](https://ratifyprotocol.com/writing/agent-relay-phase1-technical-note). If you're building something where agents cross between companies, I'd like to compare notes, because I'm not convinced we've got the shape of this right yet.
