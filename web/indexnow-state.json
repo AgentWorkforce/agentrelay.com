@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 69,
+  "count": 70,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -29,6 +29,7 @@
     "https://agentrelay.com/blog/the-agent-centered-world-is-almost-here",
     "https://agentrelay.com/brand",
     "https://agentrelay.com/brand/theme",
+    "https://agentrelay.com/chief",
     "https://agentrelay.com/company",
     "https://agentrelay.com/docs/actions",
     "https://agentrelay.com/docs/agent-relay-mcp",
