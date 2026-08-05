@@ -1149,3 +1149,269 @@ export function BlogVariant({
     </Frame>
   );
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Variant: RELAYFILE — left copy column + the workspace tree window pinned into
+// the bottom-right corner.
+//
+// Same composition as the landing and Pear cards (left copy, a panel bled off
+// the right + bottom edges) but the panel is a synthetic Relayfile mount: the
+// "relayfile workspace" window from the /file hero, showing provider directories
+// and files with the WATCH/WRITE/READ activity labels from the hero's rail.
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Colors for a tree row's trailing activity label. */
+const ACTIVITY_COLOR = {
+  read: PALETTE.primary,
+  write: PALETTE.green,
+  watch: PALETTE.primaryHover,
+} as const;
+
+type TreeRow = {
+  label: string;
+  /** Directories render a folder glyph and brighter text. */
+  dir?: boolean;
+  /** Nested one level under the preceding directory. */
+  indent?: boolean;
+  activity?: keyof typeof ACTIVITY_COLOR;
+};
+
+/**
+ * The workspace tree shown on the card: a provider mount with the deterministic
+ * digest at the top, mirroring the paths used across the /file page copy.
+ */
+const RELAYFILE_TREE: TreeRow[] = [
+  { label: 'LAYOUT.md' },
+  { label: 'digests', dir: true },
+  { label: 'yesterday.md', indent: true, activity: 'read' },
+  { label: 'linear/issues', dir: true },
+  { label: 'AGE-12.json', indent: true, activity: 'write' },
+  { label: 'github/prs', dir: true, activity: 'watch' },
+  { label: '4821.json', indent: true },
+  { label: 'notion/pages', dir: true },
+  { label: 'roadmap.md', indent: true },
+];
+
+function FolderGlyph({ size = 22 }: { size?: number }): ReactElement {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ display: 'flex' }}>
+      <path
+        d="M3 6.6C3 5.7 3.7 5 4.6 5h4.1l2 2.2h8.7c.9 0 1.6.7 1.6 1.6v9.6c0 .9-.7 1.6-1.6 1.6H4.6c-.9 0-1.6-.7-1.6-1.6z"
+        fill={PALETTE.primary}
+        fillOpacity="0.85"
+      />
+    </svg>
+  );
+}
+
+function FileGlyph({ size = 22 }: { size?: number }): ReactElement {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ display: 'flex' }}>
+      <path d="M6 3.6h7.2L19 9.4v11c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1V4.6c0-.6.4-1 1-1z" fill={PALETTE.faint} />
+      <path d="M13.2 3.6 19 9.4h-5.8z" fill={PALETTE.fg} fillOpacity="0.55" />
+    </svg>
+  );
+}
+
+/**
+ * The "relayfile workspace" window. Anchored to its cropping wrapper's top-left
+ * and rendered slightly larger than it, so the card bleeds off the canvas's
+ * right + bottom edges and the tree reads as continuing below the fold.
+ */
+function WorkspacePanel({ headingFamily, scale = 1 }: { headingFamily: string; scale?: number }): ReactElement {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        width: 640 * scale,
+        height: 600 * scale,
+        background: PALETTE.surface,
+        border: `2px solid ${PALETTE.line}`,
+        borderRadius: `${18 * scale}px 0 0 0`,
+        overflow: 'hidden',
+        boxShadow: '-18px 18px 48px rgba(0,0,0,0.5)',
+      }}
+    >
+      {/* Title bar: traffic lights + the window title from the live hero. */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14 * scale,
+          height: 52 * scale,
+          flexShrink: 0,
+          padding: `0 ${24 * scale}px`,
+          borderBottom: `1px solid ${PALETTE.line}`,
+          background: 'rgba(116,184,226,0.05)',
+        }}
+      >
+        <div style={{ display: 'flex', gap: 7 * scale }}>
+          <div style={{ display: 'flex', width: 11 * scale, height: 11 * scale, borderRadius: 999, background: '#ff5f57' }} />
+          <div style={{ display: 'flex', width: 11 * scale, height: 11 * scale, borderRadius: 999, background: '#febc2e' }} />
+          <div style={{ display: 'flex', width: 11 * scale, height: 11 * scale, borderRadius: 999, background: PALETTE.green }} />
+        </div>
+        <span
+          style={{
+            display: 'flex',
+            fontFamily: headingFamily,
+            fontSize: 17 * scale,
+            fontWeight: 700,
+            letterSpacing: '-0.01em',
+            color: PALETTE.muted,
+          }}
+        >
+          relayfile workspace
+        </span>
+      </div>
+
+      {/* The mounted tree. */}
+      <div style={{ display: 'flex', flexDirection: 'column', padding: `${18 * scale}px 0` }}>
+        {RELAYFILE_TREE.map((row) => (
+          <div
+            key={row.label}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12 * scale,
+              height: 55 * scale,
+              flexShrink: 0,
+              padding: `0 ${26 * scale}px 0 ${(row.indent ? 62 : 26) * scale}px`,
+            }}
+          >
+            {row.dir ? <FolderGlyph size={22 * scale} /> : <FileGlyph size={22 * scale} />}
+            <span
+              style={{
+                display: 'flex',
+                fontSize: 21 * scale,
+                fontWeight: row.dir ? 500 : 400,
+                color: row.dir ? PALETTE.fg : PALETTE.muted,
+              }}
+            >
+              {row.dir ? `${row.label}/` : row.label}
+            </span>
+            {row.activity ? (
+              <span
+                style={{
+                  display: 'flex',
+                  marginLeft: 'auto',
+                  padding: `${4 * scale}px ${10 * scale}px`,
+                  borderRadius: 6 * scale,
+                  background: 'rgba(116,184,226,0.10)',
+                  fontSize: 14 * scale,
+                  fontWeight: 500,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: ACTIVITY_COLOR[row.activity],
+                }}
+              >
+                {row.activity}
+              </span>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function RelayfileVariant({
+  headingFamily,
+  bodyFamily,
+}: {
+  headingFamily: string;
+  bodyFamily: string;
+}): ReactElement {
+  return (
+    <Frame bodyFamily={bodyFamily}>
+      <SwoopLines top={430} opacity={0.16} />
+
+      {/* LEFT: copy, mirroring the /file hero badge, headline, and subtitle. */}
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          width: 620,
+          flexShrink: 0,
+          padding: '0 0 0 80px',
+          position: 'relative',
+        }}
+      >
+        <div style={{ display: 'flex', marginBottom: 34 }}>
+          <BrandLockup scale={1.25} />
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignSelf: 'flex-start',
+            padding: '7px 15px',
+            borderRadius: 999,
+            background: 'rgba(116,184,226,0.12)',
+            border: `1px solid ${PALETTE.line}`,
+            color: PALETTE.primaryHover,
+            fontSize: 15,
+            fontWeight: 500,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            marginBottom: 22,
+          }}
+        >
+          Integration filesystem
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            fontFamily: headingFamily,
+            fontWeight: 800,
+            fontSize: 60,
+            lineHeight: 1.0,
+            letterSpacing: '-0.04em',
+            color: PALETTE.fg,
+          }}
+        >
+          <span style={{ display: 'flex', fontWeight: 800 }}>Relayfile</span>
+          <span style={{ display: 'flex', fontWeight: 800 }}>
+            <span style={{ display: 'flex', fontWeight: 800 }}>gives agents&nbsp;</span>
+            <span style={{ display: 'flex', fontWeight: 800, color: PALETTE.primary }}>files</span>
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 22,
+            lineHeight: 1.5,
+            color: PALETTE.muted,
+            marginTop: 24,
+            maxWidth: 490,
+          }}
+        >
+          Mount Linear, GitHub, Notion, Slack, and your own systems as a realtime filesystem that agents can
+          read, write, and watch.
+        </div>
+      </div>
+
+      {/* RIGHT: the workspace window bled off the right + bottom edges. */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          right: 0,
+          bottom: 0,
+          width: 578,
+          height: 540,
+          overflow: 'hidden',
+        }}
+      >
+        <WorkspacePanel headingFamily={headingFamily} scale={0.92} />
+      </div>
+    </Frame>
+  );
+}
