@@ -24,21 +24,26 @@ If a kid you never met walks up to you and says, "your mom said I'm allowed to b
 that the kid had that you know is real just by looking at it and you know with absolute certainty that your mom gave this kid authority to use this bike because this permission slip is certifiable evidence of permission from your mom.
 
 This is part one of the spike that we set out to achieve with the Ratify Protocol team. We built two fake companies, each with their own agents, which were plain vanilla Claude and Codex instances. We then set up six separate scenarios, four of which were designed to
-make the agent get away with something it shouldn't have. What we were able to prove is that within milliseconds each advance was rejected and for a specific reason that we could point at and verify.
+make the agent get away with something it shouldn't have. What we were able to prove is that within milliseconds each attempt was rejected, and for a specific reason that we could point at and verify.
 
 ## The Setup
-Getting the two systems to work in tandem took some groundwork: we had to map each of our respective permissions and capabilities and figure out where there was
-synergy and where we had to make some adjustments to get our systems to agree. During this discovery we were able to identify changes that needed to be made in the Ratify SDK and their side
-was super quick and responsive to make adjustments to move things forward.
+Getting the two systems to work in tandem took some groundwork. We had to line up our permissions and capabilities against theirs and figure out where they already
+matched and where we had to bend to agree. That exercise turned up a handful of changes the Ratify SDK needed, and their team was super quick about making them.
 
 ## It Fell Short?
-We used Relay to put two agents in a shared workspace and leveraged our SDK and with the Ratify SDK we could prove an agent was allowed to write files in general, but what we couldn't prove was that the agent was allowed to write files in that specific repo. We realized that during this spike
-that we needed the permission slip to name the file and the folder and not just the action. At first we just checked the folder ourselves in our code, but their team rightly caught that and pointed out this wasn't truly stopping writes to that file from any process on the machine. After proving this via a real test, we validated they were right and moved the check down to the operating system where the kernel enforces it.
+We used Relay to put two agents in a shared workspace, and between our SDK and theirs we could prove an agent was allowed to write files. What we couldn't prove was
+that it was allowed to write files in that specific repo. The permission slip needed to name the folder and the file, not just the action.
+
+At first we just checked the folder ourselves, programmatically, on our side. Their team rightly caught that and pointed out it wasn't actually stopping writes from
+any other process on the machine, and that it missed edge cases besides. We proved it with a real test, agreed they were right, and moved the check down to the
+operating system where the kernel enforces it.
 
 ## The Next Phase
-The Ratify team adjusts their SDK so the permission slip names the actual repo and file path and not just the action. We re-run the entire end to end flow and then we run a full end to end demo but this time from two separate Relay deployments, run by two different companies. This will pass real work across a network letting agents work together over Agent Relay where there is no trust but we rely on the Ratify Protocol
-to verifiably know that each agent is acting within their previously allowed permission set.
+For the real world demo the Ratify team will adjust their SDK so the permission slip names the actual repo and file path, not just the action. We'll test the whole
+end to end flow again, then run it for real from two separate Relay deployments belonging to two different companies. That pushes real work across a network, with
+agents collaborating over Agent Relay and no trust between them, while the Ratify Protocol tells each side that the other is acting inside the permissions it was
+actually given.
 
-Stay tuned for that demo! If you would like to read the technical note from the Ratify Protocol team check their [posting](https://ratifyprotocol.com/writing/agent-relay-phase1-technical-note).
+That demo is the one I actually care about. If you would like to read the technical note from the Ratify Protocol team check their [posting](https://ratifyprotocol.com/writing/agent-relay-phase1-technical-note).
 
 
