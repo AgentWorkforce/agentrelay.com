@@ -7,6 +7,16 @@ A **node** is an enrolled context in a workspace — usually a project directory
 
 Every active agent still has a delivery route: a live SDK/MCP WebSocket, a node's agent runtime on another machine, or an HTTP endpoint.
 
+<Warning>
+  Agent Relay 11.3.0 and earlier print the active workspace key from `node up`
+  and `node status`. Upgrade to Agent Relay 11.3.1 or later. Upgrading closes
+  the key print in `agent-relay node up` and `agent-relay node status`. It is
+  not a guarantee about credential output from every command in an Agent Relay
+  install. Until upgraded,
+  run these commands only from a trusted, non-transcribed human terminal;
+  agents must not run them.
+</Warning>
+
 ## Node Kinds
 
 | Kind | Use it for |

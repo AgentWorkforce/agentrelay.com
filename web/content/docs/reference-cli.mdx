@@ -135,6 +135,16 @@ The SDK-backed groups are `agent`, `channel`, `message`, `integration`, `capabil
 
 `local` is a deprecated alias of `node` and prints a warning on use.
 
+<Warning>
+  Agent Relay 11.3.0 and earlier print the active workspace key from `node up`
+  and `node status`. Upgrade to Agent Relay 11.3.1 or later. Upgrading closes
+  the key print in `agent-relay node up` and `agent-relay node status`. It is
+  not a guarantee about credential output from every command in an Agent Relay
+  install. Until upgraded,
+  run these commands only from a trusted, non-transcribed human terminal;
+  agents must not run them.
+</Warning>
+
 | Command | Description |
 | --- | --- |
 | `agent-relay node up [flags]` | Start the local broker and serve this machine as a fleet node. See [Broker lifecycle](/docs/cli-broker-lifecycle) for flags. |
