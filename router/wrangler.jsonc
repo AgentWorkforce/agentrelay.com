@@ -15,7 +15,10 @@
   // binding — SST names the webhook Worker with a random hash suffix, so it
   // isn't bindable by a stable script name.)
   "services": [
-    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" },
+    // relayfile-cloud worker — routes allowlisted Nango ingest webhooks when
+    // WEBHOOK_ORIGIN flag is "relayfile-cloud". Dormant until flag is set.
+    { "binding": "RELAYFILE_CLOUD_WORKER", "service": "relayfile-cloud" }
   ],
 
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
@@ -41,7 +44,10 @@
     // is cloud-owned and the script name carries a random hash suffix, so it
     // would change if cloud recreates that Worker — re-copy it from the live
     // router's WEBHOOK_WORKER_ORIGIN if webhook routing ever 5xxs.
-    "WEBHOOK_WORKER_ORIGIN": "https://incoming-webhooks.agentrelay.com"
+    "WEBHOOK_WORKER_ORIGIN": "https://incoming-webhooks.agentrelay.com",
+    // Fallback URL when RELAYFILE_CLOUD_WORKER service binding is absent.
+    // Dormant: only used when WEBHOOK_ORIGIN flag is "relayfile-cloud".
+    "RELAYFILE_CLOUD_ORIGIN": "https://file.agentrelay.com"
   },
 
   // The apex front door. Cloud's prod AgentRelayRouter must have released the
