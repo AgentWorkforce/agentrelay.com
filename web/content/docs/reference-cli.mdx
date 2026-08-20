@@ -63,8 +63,11 @@ Mint a read-only link so a human can follow a workspace live. See
 | `--observer-url <url>` | Observer dashboard URL (`RELAY_OBSERVER_URL`). Defaults to `https://agentrelay.com/observer`. |
 | `--json` | Print the token metadata and URL as JSON. |
 
-All three accept `--workspace-key` and `--base-url`. The minted token is
-read-only and expiring — never build an observer URL from a workspace key.
+All three accept `--workspace-key` and `--base-url`. `observer` is not one of
+the SDK-backed groups above — it declares those two flags itself and takes no
+`--token`, because minting an observer token requires the workspace key; an
+agent token cannot do it. The minted token is read-only and expiring — never
+build an observer URL from a workspace key.
 
 ## Agents
 
