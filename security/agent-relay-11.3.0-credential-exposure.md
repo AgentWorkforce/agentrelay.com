@@ -290,6 +290,29 @@ Count: 4
    | `agent-relay cloud enroll --token <token> [flags]` | Enroll this machine as a Cloud-managed fleet node, then run `node up`. |
    ```
 
+## Verifying the affected boundary
+
+Do not verify this from the relay CHANGELOG — as of 2026-08-21 it is wrong.
+The masking entry ("CLI output masks credentials: `node up` / `node status`
+print the workspace key as `rk_live_…xxxx`") is filed under
+`## [11.3.0] - 2026-07-30`, which would imply 11.3.0 is already patched and
+that the warnings in this mitigation are unnecessary.
+
+The release tags disprove that:
+
+```bash
+git merge-base --is-ancestor 2d911c1b v11.3.0   # non-zero — 11.3.0 does NOT contain the fix
+git merge-base --is-ancestor 2d911c1b v11.3.1   # zero     — 11.3.1 does
+```
+
+`2d911c1b` is dated 2026-07-29 and 11.3.0 was cut 2026-07-30, which is
+probably how the entry landed under the wrong heading. Tag ancestry is
+authoritative; the changelog is a secondary record and is currently
+mis-filed. Correcting it belongs in the relay repo, and until it is
+corrected a reader who checks the changelog will conclude these warnings are
+stale. Anyone reviewing this mitigation should re-run the two commands above
+rather than trusting either document.
+
 ## Release and mitigation boundary
 
 - Root cause: released CLI output in Agent Relay 11.3.0.
@@ -301,6 +324,12 @@ Count: 4
   workspace key in an agent transcript. If runtime confirmation becomes
   necessary, escalate for synthetic credentials in an isolated,
   non-transcribed environment.
+- Related, now resolved: the credential-bearing observer URL this defect also
+  printed has a supported replacement. Agent Relay 11.8.1 adds
+  `agent-relay observer` and the `get_observer_url` MCP tool, which mint a
+  scoped, read-only, expiring `ot_live_` token and build the link from that.
+  The docs page is `/docs/observer`. Guidance that previously had to say
+  "omit the observer link" can now point at a working, safe path.
 
 ## Retirement condition
 
@@ -308,6 +337,10 @@ Publishing Agent Relay 11.3.1 ended the defect in that release; it did not
 upgrade consumers that remain on 11.3.0 or earlier. Do not retire this
 mitigation merely because the fix is present in relay source, on relay's
 default branch, or in npm `latest`.
+
+As of 2026-08-21, Agent Relay 11.3.1 has been published for three weeks and
+the current release is 11.8.x. That is not long enough to treat 11.3.0-and-
+earlier installs as implausible, so the mitigation still stands.
 
 Remove the version-conditional warnings only when 11.3.0 installs are no
 longer plausible. Until then, the hosted skill must keep directing affected
