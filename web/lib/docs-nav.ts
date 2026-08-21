@@ -56,6 +56,7 @@ export const docsNav: NavGroup[] = [
     items: [
       { title: 'TypeScript SDK', slug: 'typescript-sdk' },
       { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
+      { title: 'Observer', slug: 'observer' },
     ],
   },
   {
