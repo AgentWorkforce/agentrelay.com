@@ -19,7 +19,7 @@ Construct a client with a base URL and a token (a string, or a callable that ret
 from relayfile import RelayFileClient
 
 client = RelayFileClient(
-    "https://api.relayfile.dev",
+    "https://file.agentrelay.com",
     lambda: os.environ["RELAYFILE_TOKEN"],
 )
 ```
@@ -63,7 +63,7 @@ except RevisionConflictError:
 ```python
 from relayfile import AsyncRelayFileClient
 
-async with AsyncRelayFileClient("https://api.relayfile.dev", token) as client:
+async with AsyncRelayFileClient("https://file.agentrelay.com", token) as client:
     page = await client.read_file("rw_123", "/linear/issues/AGE-12__fix-login-bug.json")
 ```
 

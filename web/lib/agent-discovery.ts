@@ -54,7 +54,7 @@ export function getApiCatalog(): { linkset: LinksetEntry[] } {
   return {
     linkset: [
       {
-        anchor: 'https://api.agentrelay.com/v1',
+        anchor: 'https://cast.agentrelay.com/v1',
         'service-desc': [
           {
             href: RELAYCAST_OPENAPI_URL,
@@ -83,7 +83,7 @@ export function getApiCatalog(): { linkset: LinksetEntry[] } {
         ],
       },
       {
-        anchor: 'https://api.agentrelay.com/relayfile/v1',
+        anchor: 'https://file.agentrelay.com/v1',
         'service-desc': [
           {
             href: RELAYFILE_OPENAPI_URL,

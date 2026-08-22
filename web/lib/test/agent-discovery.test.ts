@@ -22,7 +22,11 @@ describe('api-catalog', () => {
   it('links each API to an OpenAPI description and human docs', () => {
     const { linkset } = getApiCatalog();
 
-    expect(linkset.length).toBeGreaterThan(0);
+    // Anchors must be API hosts that actually exist — api.agentrelay.com does not.
+    expect(linkset.map((e) => e.anchor)).toEqual([
+      'https://cast.agentrelay.com/v1',
+      'https://file.agentrelay.com/v1',
+    ]);
     for (const entry of linkset) {
       expect(entry.anchor).toMatch(/^https:\/\//);
       expect(entry['service-desc']?.[0]?.href).toMatch(/^https:\/\//);

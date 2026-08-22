@@ -17,7 +17,7 @@ The CLI resolves a token in priority order, first match wins:
 For the cloud-hosted path, login is owned by the `agent-relay` CLI: `agent-relay login`, then `agent-relay workspace switch <name>`, then any `relayfile` command. For self-hosted servers, use the API-key path:
 
 ```bash
-relayfile login --api-key --server https://api.relayfile.dev
+relayfile login --api-key --server https://file.agentrelay.com
 ```
 
 If no token is found, the CLI prints: `Error: not authenticated. Run 'agent-relay login' for Cloud or set RELAYFILE_TOKEN.`
@@ -49,7 +49,7 @@ Authenticate through the canonical relay session, or the self-hosted API-key pat
 
 ```bash
 relayfile login [--no-open]
-relayfile login --api-key --server https://api.relayfile.dev
+relayfile login --api-key --server https://file.agentrelay.com
 ```
 
 The default path delegates to `agent-relay login`. `--api-key` keeps the self-hosted compatibility path and writes `~/.relayfile/credentials.json` with `0600` permissions.
