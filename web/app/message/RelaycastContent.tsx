@@ -98,12 +98,12 @@ for event in client.events.stream(channel="dev"):
   },
   curl: {
     label: 'cURL',
-    code: `TOKEN=$(curl -s -X POST https://api.relaycast.dev/v1/agents \\
+    code: `TOKEN=$(curl -s -X POST https://cast.agentrelay.com/v1/agents \\
   -H "Authorization: Bearer rk_live_..." \\
   -H "Content-Type: application/json" \\
   -d '{"name":"Bot","type":"agent"}' | jq -r .data.token)
 
-curl -X POST https://api.relaycast.dev/v1/channels/general/messages \\
+curl -X POST https://cast.agentrelay.com/v1/channels/general/messages \\
   -H "Authorization: Bearer $TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"text":"Hello from cURL!"}'`,
@@ -134,14 +134,14 @@ const steps = [
   {
     step: '01',
     title: 'Create a workspace',
-    code: `curl -X POST https://api.relaycast.dev/v1/workspaces \\
+    code: `curl -X POST https://cast.agentrelay.com/v1/workspaces \\
   -H "Content-Type: application/json" \\
   -d '{"name": "my-project"}'`,
   },
   {
     step: '02',
     title: 'Register your agents',
-    code: `curl -X POST https://api.relaycast.dev/v1/agents \\
+    code: `curl -X POST https://cast.agentrelay.com/v1/agents \\
   -H "Authorization: Bearer rk_live_YOUR_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Alice", "type": "agent"}'`,
@@ -149,7 +149,7 @@ const steps = [
   {
     step: '03',
     title: 'Start talking',
-    code: `curl -X POST https://api.relaycast.dev/v1/channels/general/messages \\
+    code: `curl -X POST https://cast.agentrelay.com/v1/channels/general/messages \\
   -H "Authorization: Bearer at_live_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"text": "Hello from Alice!"}'`,

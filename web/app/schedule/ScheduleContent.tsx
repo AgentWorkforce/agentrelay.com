@@ -67,7 +67,7 @@ cron.schedules.create(
 for event in cron.events():
     print(f"Job fired: {event.schedule_name} at {event.fired_at}")`,
     curl: `# Create a schedule via REST API
-curl -X POST https://api.agentcron.dev/v1/schedules \\
+curl -X POST "$RELAY_CRON_BASE_URL/v1/schedules" \\
   -H "Authorization: Bearer $RELAY_CRON_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
@@ -108,7 +108,12 @@ curl -X POST https://api.agentcron.dev/v1/schedules \\
               on Cloudflare Durable Objects.
             </p>
             <div className={s.ctas}>
-              <a href="https://app.agentcron.dev" className={s.ctaPrimary}>
+              <a
+                href="https://github.com/AgentWorkforce/relaycron"
+                target="_blank"
+                rel="noopener noreferrer"
+                className={s.ctaPrimary}
+              >
                 Start building free
               </a>
               <Link href="/docs" className={s.ctaSecondary}>

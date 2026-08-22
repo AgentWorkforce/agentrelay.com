@@ -69,7 +69,7 @@ const whyCards = [
 const getStartedSteps = [
   {
     title: 'Create an identity',
-    code: `curl -X POST https://api.relayauth.dev/v1/identities \\
+    code: `curl -X POST "$RELAYAUTH_BASE_URL/v1/identities" \\
   -H "content-type: application/json" \\
   -d '{
     "name": "billing-bot",
@@ -80,7 +80,7 @@ const getStartedSteps = [
   },
   {
     title: 'Issue a token',
-    code: `curl -X POST https://api.relayauth.dev/v1/tokens \\
+    code: `curl -X POST "$RELAYAUTH_BASE_URL/v1/tokens" \\
   -H "content-type: application/json" \\
   -d '{
     "identity_id": "agent_8x2k",
@@ -90,7 +90,7 @@ const getStartedSteps = [
   },
   {
     title: 'Verify at the edge',
-    code: `curl https://api.relayauth.dev/.well-known/jwks.json
+    code: `curl "$RELAYAUTH_BASE_URL/.well-known/jwks.json"
 
 # Then validate locally and enforce:
 # stripe:orders:read`,
@@ -150,7 +150,7 @@ auth.authorize(
     token=token["access_token"],
     scope="stripe:orders:read",
 )`,
-  curl: `curl -X POST https://api.relayauth.dev/v1/identities \\
+  curl: `curl -X POST "$RELAYAUTH_BASE_URL/v1/identities" \\
   -H "authorization: Bearer $RELAYAUTH_API_KEY" \\
   -H "content-type: application/json" \\
   -d '{
@@ -160,7 +160,7 @@ auth.authorize(
     "sponsor_id": "user_jane"
   }'
 
-curl -X POST https://api.relayauth.dev/v1/tokens \\
+curl -X POST "$RELAYAUTH_BASE_URL/v1/tokens" \\
   -H "authorization: Bearer $RELAYAUTH_API_KEY" \\
   -H "content-type: application/json" \\
   -d '{
@@ -169,7 +169,7 @@ curl -X POST https://api.relayauth.dev/v1/tokens \\
     "ttl": "1h"
   }'
 
-curl https://api.relayauth.dev/.well-known/jwks.json`,
+curl "$RELAYAUTH_BASE_URL/.well-known/jwks.json"`,
 };
 
 function highlight(code: string, tab: SdkTab) {

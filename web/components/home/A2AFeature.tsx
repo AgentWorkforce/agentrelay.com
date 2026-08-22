@@ -30,7 +30,7 @@ const AGENT_CARD_TOKENS: ReadonlyArray<{ text: string; kind?: TokenKind }> = [
   { text: ',\n  ' },
   { text: '"url"', kind: 'var' },
   { text: ': ' },
-  { text: '"https://relay.dev/a2a/scout"', kind: 'str' },
+  { text: '"https://cast.agentrelay.com/a2a/scout"', kind: 'str' },
   { text: ',\n  ' },
   { text: '"capabilities"', kind: 'var' },
   { text: ': { ' },
