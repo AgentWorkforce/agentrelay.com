@@ -33,8 +33,10 @@ npx relayfile@latest
 No invite code, copied token, prior account, or separately installed `agent-relay` CLI is required. Use the explicit form for another provider or workspace:
 
 ```bash
-relayfile setup --provider notion --workspace my-project --local-dir ./relayfile-mount
+npx relayfile@latest setup --provider notion --workspace my-project --local-dir ./relayfile-mount
 ```
+
+The bare command passes its GitHub/current-directory/`./relayfile-mount` values directly and does not prompt for them. The table below applies to an explicit `relayfile setup`: if one of its first three flags is omitted, the wizard prompts and offers the shown value where applicable.
 
 | Flag | Default | Description |
 |---|---|---|

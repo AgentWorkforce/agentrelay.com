@@ -45,14 +45,15 @@ Once mounted, the interface is the filesystem you already know:
 
 ```bash
 # read
-cat ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+cat ./relayfile-mount/github/repos/acme/api/pulls/42/metadata.json
 
-# patch back to the provider by writing the canonical path
-echo '{"state":"In Review"}' \
-  > ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+# post a pull-request review by writing the canonical path
+cat > ./relayfile-mount/github/repos/acme/api/pulls/42/reviews/review.json <<'EOF'
+{"body":"Looks good to me.","event":"COMMENT"}
+EOF
 
-# find across providers
-grep -rl '"state":"Todo"' ./relayfile-mount/linear/issues/
+# find pull requests across connected repositories
+find ./relayfile-mount/github/repos -path '*/pulls/*/metadata.json'
 ```
 
 See [Reads and writes](/docs/file/reads-and-writes) for the full PATCH / CREATE / DELETE model.
