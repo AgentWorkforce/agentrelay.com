@@ -1,23 +1,21 @@
 ---
 title: 'Relayfile Cloud'
-description: 'Hosted Agent Relay runs the workspace, scoped auth, Nango OAuth, sync workers, and writeback workers — connect provider-backed files with one token.'
+description: 'Hosted Agent Relay runs the workspace, scoped auth, Nango OAuth, sync workers, and writeback workers — connect provider-backed files with one command.'
 ---
 
-If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running any infrastructure, use Hosted Agent Relay. Agent Relay Cloud runs the workspace, the Relayfile API, scoped auth, Nango OAuth, provider sync workers, and writeback workers for you. Your agents connect with a single token; there's no integration runtime on your machine.
+If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running any infrastructure, use Hosted Agent Relay. Agent Relay Cloud runs the workspace, the Relayfile API, scoped auth, Nango OAuth, provider sync workers, and writeback workers for you. There is no integration runtime or token configuration on your machine.
 
 ## The setup flow
 
-`relayfile setup` is the human and agent-guided entry point. It connects to `agentrelay.com`, creates or joins a cloud workspace, completes provider auth, waits for sync, and mounts the resulting files:
+From the project where your agent will work:
 
 ```bash
-relayfile setup \
-  --provider notion \
-  --workspace my-agent \
-  --local-dir ./relayfile-mount \
-  --no-open
+npx relayfile@latest
 ```
 
-`--no-open` prints the hosted login and connect URLs instead of opening a browser, which is what you want inside agents and headless environments. The local directory is just the agent's file interface — the integration stack is hosted. Re-running with the same workspace name reuses the workspace, refreshes the session, and only opens a new connect flow when the requested provider isn't already connected.
+Relayfile completes Google sign-in, automatically creates the account and workspace without an invite code, connects GitHub, and mounts at `./relayfile-mount`. The local directory is just the agent's file interface — the integration stack is hosted. Re-running the same command reuses the workspace, refreshes the session, and skips provider connection when GitHub is already connected.
+
+Use `npx relayfile@latest setup --provider notion --workspace my-agent --local-dir ./relayfile-mount` for another provider or explicit names. `--no-open` prints hosted login and connect URLs instead of opening a browser.
 
 After setup, hand the agent the mount path and it reads and writes under `$RELAYFILE_LOCAL_DIR/<provider>/...` instead of calling provider APIs directly:
 
