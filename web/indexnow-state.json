@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 72,
+  "count": 73,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -26,6 +26,7 @@
     "https://agentrelay.com/blog/just-give-the-agent-files",
     "https://agentrelay.com/blog/let-them-cook-multi-agent-orchestration",
     "https://agentrelay.com/blog/six-workflow-patterns-agent-relay",
+    "https://agentrelay.com/blog/someone-elses-agent-in-your-repo",
     "https://agentrelay.com/blog/the-agent-centered-world-is-almost-here",
     "https://agentrelay.com/blog/trusting-an-agent-you-didnt-spawn",
     "https://agentrelay.com/brand",
