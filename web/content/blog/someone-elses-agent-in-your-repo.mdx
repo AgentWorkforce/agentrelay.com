@@ -14,9 +14,9 @@ tags:
 
 Sometime sooner than we probably all think, someone is going to ask you to let their agent into your systems. Maybe a vendor, or a contractor or some new product that you want to use.
 
-What would that look like with the technical capabilities that exist today? Likely an API key, Github App, or service account.
+What would that look like with the technical capabilities that exist today? Likely an API key, GitHub App, or service account.
 
-That type of access for an agent isn't actually sufficient. An agent with an API key for example doesn't know where it should and shouldn't be in a codebase, by default doesn't leave an auditable trail or what it did and if you want to stop it midway and rotate the credentials it is very difficult. At scale this will become a blocker.
+That type of access for an agent isn't actually sufficient. An agent with an API key for example doesn't know where it should and shouldn't be in a codebase, by default doesn't leave an auditable trail of what it did and if you want to stop it midway and rotate the credentials it is very difficult. At scale this will become a blocker.
 
 We think there is a better way to accomplish this so we set out to build and then run it in the wild.
 
@@ -26,15 +26,15 @@ If you read [phase one](/blog/trusting-an-agent-you-didnt-spawn) you'll remember
 
 This is that, live, but between two companies.
 
-The Ratify Protocol team issued a permission slip to my agent running on Agent Relay and that named their repo and one folder inside it. My agent cooked, opened a pull request, and then the Ratify team merged it.
+The Ratify Protocol team issued a permission slip to my agent running on Agent Relay. The slip named their repo and one folder inside it. My agent cooked, opened a pull request, and then the Ratify team merged it.
 
 There are a few things from that which are different from an API key. Our side couldn't overclaim what was stated on the permission slip. When my agent passed authority down to a worker of its own, the worker was under even tighter reins and less time to accomplish what it needed to do.
 
-Then the Ratify team revoked the certificate mid-run from their machine in Seattle while my agent still had over three hours on it. Seconds later my agent when trying to do the same commands didn't succeed because of the revocation.
+Then the Ratify team revoked the certificate mid-run from their machine in Seattle while my agent still had over three hours on it. Seconds later my agent tried the same commands again and they didn't go through, because of the revocation.
 
-This is the way it should be: a foreign agent when allowed can cook in your repo but if you suddenly want to revoke permission that same agent is blocked immediately.
+This is the way it should be: a foreign agent when allowed can cook in your repo but if you suddenly want to revoke permission that same agent is blocked within seconds.
 
-Every certificate, both revocations, and the signed receipts are [in the harness repo](https://github.com/identities-ai/ratify-agent-relay-harness).
+Every certificate, every revocation, and the signed receipts are public. The Ratify team's half is [in their harness repo](https://github.com/identities-ai/ratify-agent-relay-harness), along with the reproduction you can run yourself. Ours is [in ours](https://github.com/AgentWorkforce/ratify-agent-relay-evidence), including the exact container image our deployment was running.
 
 ## How the agents actually talked
 
