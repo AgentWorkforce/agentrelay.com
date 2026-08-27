@@ -14,7 +14,7 @@ The CLI resolves a token in priority order, first match wins:
 3. the canonical relay cloud session (cloud-hosted interactive use)
 4. `~/.relayfile/credentials.json` (self-hosted / API-key compatibility)
 
-For the cloud-hosted path, login is owned by the `agent-relay` CLI: `agent-relay login`, then `agent-relay workspace switch <name>`, then any `relayfile` command. For self-hosted servers, use the API-key path:
+The clean-machine Cloud path is simply `npx relayfile@latest`. Setup establishes the canonical shared Cloud session itself when one does not exist; other Agent Relay tools can reuse it. For self-hosted servers, use the API-key path:
 
 ```bash
 relayfile login --api-key --server https://api.relayfile.dev
@@ -24,11 +24,19 @@ If no token is found, the CLI prints: `Error: not authenticated. Run 'agent-rela
 
 ## `relayfile setup`
 
-The low-friction Cloud setup path for humans and agent-guided onboarding. It ensures you're logged in, creates or joins a Cloud workspace, requests a hosted connect session for the chosen provider, waits until it reports ready, and starts the mount loop.
+The low-friction Cloud setup path for humans and agent-guided onboarding. With no arguments, it signs the user up, names the workspace after the current directory, selects GitHub, mounts at `./relayfile-mount`, and starts the sync loop:
 
 ```bash
-relayfile setup --provider notion --workspace my-project --local-dir ./relayfile-mount
+npx relayfile@latest
 ```
+
+No invite code, copied token, prior account, or separately installed `agent-relay` CLI is required. Use the explicit form for another provider or workspace:
+
+```bash
+npx relayfile@latest setup --provider notion --workspace my-project --local-dir ./relayfile-mount
+```
+
+The bare command passes its GitHub/current-directory/`./relayfile-mount` values directly and does not prompt for them. The table below applies to an explicit `relayfile setup`: if one of its first three flags is omitted, the wizard prompts and offers the shown value where applicable.
 
 | Flag | Default | Description |
 |---|---|---|
