@@ -31,11 +31,59 @@ const nextConfig = {
 
     return config;
   },
+  async headers() {
+    // Machine-readable surfaces an agent may fetch from another origin (or from
+    // a browser-based agent). Without CORS these are unreadable to anything that
+    // isn't a server-side crawler.
+    const agentReadable = [
+      '/llms.txt',
+      '/llms-full.txt',
+      '/llm.txt',
+      '/agents.md',
+      '/skill.md',
+      '/feed.xml',
+      '/sitemap.xml',
+      '/robots.txt',
+      '/docs/llms.txt',
+      '/docs/markdown.md',
+      '/docs/markdown/:path*',
+      '/docs/agents/markdown/:path*',
+      '/docs/factory/markdown/:path*',
+      '/docs/file/markdown/:path*',
+      '/docs/loop/markdown/:path*',
+      '/docs/:slug([^/]+\\.md)',
+      '/.well-known/:path*',
+    ];
+
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'X-Content-Type-Options', value: 'nosniff' }],
+      },
+      ...agentReadable.map((source) => ({
+        source,
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD' },
+        ],
+      })),
+      {
+        // The internal path the /.well-known rewrite targets; keep it out of
+        // indexes so the canonical dot-prefixed URL is the only one advertised.
+        source: '/well-known/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+    ];
+  },
   async rewrites() {
     return {
       afterFiles: [
         // Conventional llms.txt path under /docs resolves to the root route.
         { source: '/docs/llms.txt', destination: '/llms.txt' },
+        // The App Router skips dot-prefixed directories, so the /.well-known
+        // documents are implemented under app/well-known/ and surfaced here at
+        // their canonical paths.
+        { source: '/.well-known/:path*', destination: '/well-known/:path*' },
         // Append .md to any docs URL to get its markdown mirror. afterFiles
         // runs after static routes (so /docs/markdown.md is untouched) but
         // before the /docs/[slug] dynamic page.

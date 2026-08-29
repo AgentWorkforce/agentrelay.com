@@ -4,10 +4,13 @@ import { SearchPreviewAnimation } from '../../app/SearchPreviewAnimation';
 import s from '../../app/landing.module.css';
 import { WaveDivider } from './icons';
 
-const WEBHOOK_SNIPPET = `curl -X POST \\
-  https://api.agentrelay.com/v1/webhooks \\
+// relay.webhooks.createInbound() mints the URL and token per webhook, so there
+// is no fixed path to show here — the payload shape and bearer auth are what
+// the snippet is illustrating. See content/docs/webhooks.mdx.
+const WEBHOOK_SNIPPET = `curl -X POST "$RELAY_INBOUND_WEBHOOK_URL" \\
+  -H "Authorization: Bearer $RELAY_WEBHOOK_TOKEN" \\
   -H "Content-Type: application/json" \\
-  -d '{"channel":"#alerts","text":"Deploy finished"}'`;
+  -d '{"message":"Deploy finished","author":"github-actions[bot]"}'`;
 
 /**
  * The "build the right context" band: real-time events, webhooks, and search.
