@@ -1171,27 +1171,65 @@
 }
 
 .a2aCard {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: baseline;
-  gap: 6px 16px;
   margin: 6px 0 0;
-  padding: 18px 22px;
   width: 100%;
   max-width: 520px;
   text-align: left;
   border: 1px solid var(--rule);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   background: var(--card);
+  overflow: hidden;
+}
+
+.a2aCardHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 22px;
+  border-bottom: 1px solid var(--rule);
+  background: rgba(28, 21, 18, 0.025);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.a2aCardDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px 3px 3px 0;
+  background: var(--moss);
+}
+
+.a2aCardName {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.a2aCardKind {
+  margin-left: auto;
+  color: var(--ink-3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.a2aFields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 18px 22px;
 }
 
 .a2aKey {
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--ember);
 }
 
 .a2aValue {
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 0.875rem;
   color: var(--ink-2);
@@ -1469,6 +1507,13 @@
     white-space: normal;
   }
 
+  /* The meta wraps to two lines here, so a centred mark would float opposite
+     the meta instead of the name it belongs to. Pin it to the name's line. */
+  .hubMark {
+    align-self: start;
+    margin-top: 1px;
+  }
+
   .capsHead {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;
@@ -1534,7 +1579,10 @@
   }
 
   /* The command is the CTA on a phone, so it wraps to two rows rather than
-     truncating: the full command on top, the copy affordance under it. */
+     truncating: the full command on top, the copy affordance under it. The
+     action sits in the text column, not across both, so it starts on the
+     command's own left edge — a right-aligned pill would read as an orphan
+     floating in the empty half of the row. */
   .command {
     display: grid;
     width: 100%;
@@ -1542,10 +1590,10 @@
     grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       'prompt text'
-      'action action';
+      '.      action';
     align-items: start;
-    row-gap: 10px;
-    padding: 14px 14px 12px 16px;
+    row-gap: 8px;
+    padding: 13px 14px 12px 16px;
   }
 
   .commandPrompt {
@@ -1562,7 +1610,7 @@
 
   .commandAction {
     grid-area: action;
-    justify-self: end;
+    justify-self: start;
   }
 
   .sdkActions {

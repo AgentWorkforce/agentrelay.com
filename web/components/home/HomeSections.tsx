@@ -410,12 +410,22 @@ export function A2ASection() {
           Every Relay agent publishes an Agent Card, so any A2A client can discover it and call it. Tasks,
           messages and streaming updates map onto channels and threads with no glue of yours in between.
         </p>
-        <p className={s.a2aCard}>
-          <span className={s.a2aKey}>url</span>
-          <span className={s.a2aValue}>https://cast.agentrelay.com/a2a/scout</span>
-          <span className={s.a2aKey}>skills</span>
-          <span className={s.a2aValue}>triage · routing · streaming</span>
-        </p>
+        {/* The copy says every agent *publishes an Agent Card*, so the artifact
+            is that card rather than a generic bordered box: a titled surface
+            with the same head/body split as the SDK code panel. */}
+        <figure className={s.a2aCard}>
+          <figcaption className={s.a2aCardHead}>
+            <span className={s.a2aCardDot} aria-hidden="true" />
+            <span className={s.a2aCardName}>scout</span>
+            <span className={s.a2aCardKind}>Agent Card</span>
+          </figcaption>
+          <dl className={s.a2aFields}>
+            <dt className={s.a2aKey}>url</dt>
+            <dd className={s.a2aValue}>https://cast.agentrelay.com/a2a/scout</dd>
+            <dt className={s.a2aKey}>skills</dt>
+            <dd className={s.a2aValue}>triage · routing · streaming</dd>
+          </dl>
+        </figure>
       </div>
     </section>
   );
