@@ -66,9 +66,13 @@ export function WaitlistForm() {
 
   return (
     <form className={s.form} onSubmit={handleSubmit}>
+      <label className={s.label} htmlFor="waitlist-email">
+        Email address
+      </label>
       <input
+        id="waitlist-email"
         type="email"
-        placeholder="Email address"
+        placeholder="you@company.com"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         required

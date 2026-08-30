@@ -1,7 +1,7 @@
 .footer {
   background: var(--footer-bg);
   color: var(--footer-fg);
-  padding: 64px 40px 32px;
+  padding: 72px 40px 28px;
   transition: background 0.3s ease;
 }
 
@@ -11,26 +11,30 @@
   gap: 48px;
   max-width: 1280px;
   margin: 0 auto;
-  padding-bottom: 48px;
+  padding-bottom: 40px;
   border-bottom: 1px solid var(--footer-line);
 }
 
 .brand {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
+/* The logo is a link, so it gets a comfortable target of its own rather than
+   being exactly as tall as the wordmark. */
 .logo {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
+  width: fit-content;
   text-decoration: none;
   color: var(--footer-fg);
 }
 
 .logo svg {
-  height: 22px;
+  height: 26px;
   width: auto;
   color: var(--footer-fg);
 }
@@ -41,7 +45,7 @@
 }
 
 .tagline {
-  font-size: 0.88rem;
+  font-size: 0.9375rem;
   color: var(--footer-muted);
   line-height: 1.5;
   max-width: 28ch;
@@ -51,42 +55,52 @@
 .columns {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 32px;
+  gap: 28px;
 }
 
 .col {
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
 .colTitle {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--footer-faint);
-  margin: 0 0 4px;
+  margin: 0 0 10px;
 }
 
+/* Every footer link is a 44px row, not a 17px word: the whole column was the
+   tap-target failure on mobile. The tail-corner hover ground is the same shape
+   rule the rest of the site uses. */
 .link {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
   width: fit-content;
-  font-size: 0.88rem;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 4px 10px;
+  margin-left: -10px;
+  border-radius: var(--r-sm, 12px);
+  font-size: 0.9375rem;
   color: var(--footer-muted);
   text-decoration: none;
-  transition: color 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .link:hover {
   color: var(--footer-fg);
+  background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
 }
 
 .externalIcon {
-  width: 0.8rem;
-  height: 0.8rem;
+  width: 0.85rem;
+  height: 0.85rem;
   flex-shrink: 0;
   stroke-width: 1.8;
 }
@@ -95,9 +109,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
   max-width: 1280px;
   margin: 0 auto;
-  padding-top: 24px;
+  padding-top: 20px;
 }
 
 .bottomMeta {
@@ -108,33 +123,45 @@
 }
 
 .copy {
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   color: var(--footer-faint);
   margin: 0;
 }
 
 .socials {
   display: flex;
-  gap: 16px;
+  gap: 10px;
 }
 
 .social {
-  color: var(--footer-faint);
-  transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-sm, 12px);
+  border: 1px solid var(--footer-line);
+  color: var(--footer-muted);
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .social:hover {
   color: var(--footer-fg);
+  border-color: color-mix(in srgb, var(--footer-fg) 34%, transparent);
+  background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
 }
 
 @media (max-width: 960px) {
   .footer {
-    padding: 48px 24px 24px;
+    padding: 52px 24px 24px;
   }
 
   .inner {
     grid-template-columns: 1fr;
-    gap: 36px;
+    gap: 32px;
   }
 
   .bottom {
@@ -148,9 +175,9 @@
   }
 }
 
-@media (max-width: 560px) {
+@media (max-width: 620px) {
   .columns {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px 24px;
+    gap: 24px 16px;
   }
 }
