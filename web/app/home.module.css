@@ -1,0 +1,1503 @@
+/*
+  agentrelay.com homepage.
+
+  Replaces landing.module.css for `/` and `/messaging` (landing.module.css stays
+  in place for /about, /careers, /pear and the blog). Two reasons: the homepage
+  was shipping 120 KB of render-blocking CSS most of which belonged to other
+  routes, and the design here is a different system from the one that file
+  encodes.
+
+  ── The one shape rule ──────────────────────────────────────────────────────
+  Agent Relay is a messaging layer, so every interactive element and every
+  content surface on this page is a message: a rounded rectangle with a single
+  squared "tail" corner at bottom-left (--r-*, defined in brand.css). Nothing
+  here is a plain rounded rectangle and nothing is a pill. Where direction
+  carries meaning — the relay board, the channel transcript — the mirrored
+  variant (--r-*-in) flips the tail to bottom-right for an incoming message.
+
+  ── Ground ──────────────────────────────────────────────────────────────────
+  The site is hard-coded `data-theme="dark"` on <html>. This page overrides the
+  semantic tokens on `.page` instead, so the shared nav, footer, GitHub badge
+  and waitlist form re-theme to warm stone here and nowhere else.
+*/
+
+.page {
+  /* Palette — the terracotta + Pampas system that already lived unused in
+     brand.css. Two hues (warm ink, ember) plus one muted moss for status. */
+  --paper: #f3efe8;
+  --paper-2: #e9e2d6;
+  --card: #fbf9f5;
+  --ink: #1c1512;
+  --ink-2: #5d4f47;
+  --ink-3: #786961;
+  --rule: #ded5c8;
+  --rule-strong: #c6b8a6;
+  --ember: #b04a30;
+  --ember-deep: #8f3826;
+  --ember-tint: #f2ddd3;
+  --moss: #4f7d55;
+  --night: #191210;
+  --night-2: #241a17;
+  --night-fg: #f3ece2;
+  --night-fg-2: #b7a89d;
+  --night-fg-3: #8d7c72;
+  --night-rule: rgba(243, 236, 226, 0.15);
+  --ember-lit: #e08a63;
+
+  /* Per-band semantics. Only `.night` redefines them. */
+  --sfg: var(--ink);
+  --sfg-2: var(--ink-2);
+  --sfg-3: var(--ink-3);
+  --sline: var(--rule);
+  --sline-strong: var(--rule-strong);
+  --saccent: var(--ember);
+  --ssurface: var(--card);
+
+  --gutter: clamp(20px, 5vw, 60px);
+  --w-narrow: 760px;
+  --w-mid: 1080px;
+  --w-text: 1180px;
+  --w-wide: 1240px;
+
+  --font-display: var(--font-heading), 'Trebuchet MS', sans-serif;
+  --font-text: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Re-point the shared tokens the nav, footer, badge, buttons and waitlist
+     form read, so they follow this page's palette without forking. */
+  --bg: var(--paper);
+  --fg: var(--ink);
+  --fg-muted: var(--ink-2);
+  --fg-faint: var(--ink-3);
+  --line: var(--rule);
+  --surface: var(--card);
+  --card-bg: var(--card);
+  --primary: var(--ember);
+  --primary-hover: var(--ember-deep);
+  --primary-500: var(--ember-deep);
+  --primary-600: var(--ember);
+  --primary-800: transparent;
+  --primary-fg: #fdf7f2;
+  --secondary-surface: transparent;
+  --focus-ring: var(--ink);
+
+  --nav-solid-bg: rgba(251, 249, 245, 0.86);
+  --nav-bg: rgba(251, 249, 245, 0.9);
+  --nav-fg: var(--ink);
+  --nav-border: var(--rule-strong);
+  --nav-border-strong: var(--ink);
+  --nav-surface: rgba(28, 21, 18, 0.05);
+  --nav-surface-hover: rgba(28, 21, 18, 0.09);
+  --nav-link-hover: var(--ember);
+  --nav-shadow: rgba(70, 48, 36, 0.1);
+  --nav-inset: rgba(255, 255, 255, 0.8);
+  --nav-logo-mark: var(--ember);
+  --nav-logo-wordmark: var(--ink);
+
+  --footer-bg: var(--night);
+  --footer-fg: var(--night-fg);
+  --footer-muted: var(--night-fg-2);
+  --footer-faint: var(--night-fg-3);
+  --footer-line: var(--night-rule);
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-text);
+  overflow-x: clip;
+}
+
+.main {
+  display: block;
+}
+
+/* ── Type ────────────────────────────────────────────────────────────────── */
+
+.h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.4vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  color: var(--sfg);
+  text-wrap: balance;
+  max-width: 17ch;
+}
+
+.lede {
+  margin: 0;
+  font-size: clamp(1.0625rem, 1.4vw, 1.3125rem);
+  line-height: 1.55;
+  letter-spacing: -0.008em;
+  color: var(--sfg-2);
+  max-width: 48ch;
+}
+
+.plainList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.plainList li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--sfg-2);
+  max-width: 46ch;
+}
+
+/* The list marker is the tail corner again, at its smallest. */
+.plainList li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 9px;
+  height: 9px;
+  border-radius: 3px 3px 3px 0;
+  background: var(--saccent);
+}
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+.btnPrimary {
+  composes: btn btn-primary from global;
+}
+
+.btnPrimary svg {
+  width: 17px;
+  height: 17px;
+}
+
+.btnGhost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 13px 24px;
+  border: 1.5px solid var(--sline-strong);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--sfg);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background 0.2s;
+}
+
+.btnGhost svg {
+  width: 17px;
+  height: 17px;
+}
+
+.btnGhost:hover {
+  border-color: var(--saccent);
+  color: var(--saccent);
+}
+
+/* ── Copy-a-command control ──────────────────────────────────────────────── */
+
+.command {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px 10px 18px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: var(--r-md);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.command:hover {
+  border-color: var(--ember);
+  background: var(--ember-tint);
+}
+
+.commandNight {
+  background: var(--night-2);
+  border-color: rgba(243, 236, 226, 0.28);
+  color: var(--night-fg);
+}
+
+.commandNight:hover {
+  border-color: var(--ember-lit);
+  background: #2c201b;
+}
+
+.commandPrompt {
+  color: var(--ember);
+  font-weight: 600;
+}
+
+.commandNight .commandPrompt {
+  color: var(--ember-lit);
+}
+
+.commandText {
+  min-width: 0;
+  font-size: 0.9375rem;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.commandAction {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px 5px 8px;
+  border-radius: var(--r-xs);
+  background: rgba(28, 21, 18, 0.06);
+  font-family: var(--font-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.commandNight .commandAction {
+  background: rgba(243, 236, 226, 0.1);
+  color: var(--night-fg-2);
+}
+
+.commandAction svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ── 1. Hero ─────────────────────────────────────────────────────────────── */
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+  align-items: center;
+  gap: clamp(24px, 4vw, 56px);
+  padding: clamp(48px, 6vw, 84px) var(--gutter) clamp(56px, 6vw, 88px);
+  max-width: 1440px;
+  margin: 0 auto;
+  min-height: min(82vh, 820px);
+}
+
+.heroCopy {
+  display: grid;
+  justify-items: start;
+  gap: 26px;
+  min-width: 0;
+}
+
+.heroTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(3.15rem, 8.2vw, 7rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  color: var(--ink);
+  max-width: 11ch;
+}
+
+.heroLede {
+  margin: 0;
+  font-size: clamp(1.0625rem, 1.35vw, 1.3125rem);
+  line-height: 1.55;
+  letter-spacing: -0.008em;
+  color: var(--ink-2);
+  max-width: 42ch;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.heroNote {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  max-width: 40ch;
+}
+
+.heroBoard {
+  min-width: 0;
+  /* The board bleeds past the page gutter on wide screens — the first screen is
+     the one place the 1440px column is deliberately broken. */
+  margin-right: calc(-1 * var(--gutter));
+}
+
+/* ── The relay board ─────────────────────────────────────────────────────── */
+
+.board {
+  position: relative;
+  width: 100%;
+  max-width: 800px;
+  aspect-ratio: 760 / 500;
+  margin-left: auto;
+}
+
+.boardWiresWide,
+.boardWiresNarrow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.boardWiresNarrow {
+  display: none;
+}
+
+.wireBase {
+  fill: none;
+  stroke: #b3a08e;
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.wirePulse {
+  fill: none;
+  stroke: var(--ember);
+  stroke-width: 3;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 7 93;
+  stroke-dashoffset: 100;
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wirePulse {
+    animation: relayTravel 8s linear infinite;
+  }
+
+  .wirePulseOut {
+    animation-name: relayTravelOut;
+  }
+
+  .wire1 {
+    animation-delay: 0s;
+  }
+  .wire2 {
+    animation-delay: 2s;
+  }
+  .wire3 {
+    animation-delay: 4s;
+  }
+  .wire4 {
+    animation-delay: 6s;
+  }
+}
+
+/* Card → hub. */
+@keyframes relayTravel {
+  0% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  19% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  23% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
+
+/* Hub → card: same wire, travelled the other way. */
+@keyframes relayTravelOut {
+  0% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+  }
+  19% {
+    stroke-dashoffset: 100;
+    opacity: 1;
+  }
+  23% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+  100% {
+    stroke-dashoffset: 100;
+    opacity: 0;
+  }
+}
+
+.node {
+  position: absolute;
+  display: grid;
+  gap: 7px;
+  padding: 14px 16px 13px;
+  width: 41%;
+  min-width: 168px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+}
+
+/* The tail points back the way the message came: cards on the right of the
+   board are receiving, so their tail mirrors. */
+.nodeCoder,
+.nodeOps {
+  border-radius: var(--r-md-in);
+}
+
+.nodePlanner {
+  left: 0;
+  top: 4%;
+}
+.nodeCoder {
+  right: 0;
+  top: 0;
+}
+.nodeReviewer {
+  left: 0;
+  top: 66%;
+}
+.nodeOps {
+  right: 0;
+  top: 72%;
+}
+
+.nodeHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.nodeMark {
+  display: inline-flex;
+  color: var(--ink);
+}
+
+.nodeName {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.nodeModel {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.nodeMsg {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.nodeReceipt {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.01em;
+  color: var(--ink-3);
+}
+
+.nodeReceipt::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 2px 2px 2px 0;
+  background: var(--moss);
+}
+
+.hub {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding: 12px 20px 12px 16px;
+  background: var(--night);
+  color: var(--night-fg);
+  border-radius: var(--r-md);
+  box-shadow: 0 14px 34px -18px rgba(25, 18, 16, 0.75);
+}
+
+.hubMark {
+  grid-row: span 2;
+  display: inline-flex;
+  width: 26px;
+  color: var(--ember-lit);
+}
+
+.hubMark svg {
+  width: 100%;
+  height: auto;
+}
+
+.hubName {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.hubMeta {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--night-fg-2);
+  white-space: nowrap;
+}
+
+/* ── Bands ───────────────────────────────────────────────────────────────── */
+
+.band {
+  position: relative;
+}
+
+.night {
+  background: var(--night);
+  --sfg: var(--night-fg);
+  --sfg-2: var(--night-fg-2);
+  --sfg-3: var(--night-fg-3);
+  --sline: var(--night-rule);
+  --sline-strong: rgba(243, 236, 226, 0.3);
+  --saccent: var(--ember-lit);
+  --ssurface: var(--night-2);
+  --focus-ring: #ffd9c4;
+  /* Shared components dropped into a night band (the waitlist form, a button)
+     read the same tokens, so re-point them here rather than forking them. */
+  --card-bg: var(--night-2);
+  --surface: var(--night-2);
+  --fg: var(--night-fg);
+  --fg-muted: var(--night-fg-2);
+  --fg-faint: var(--night-fg-3);
+  --line: var(--night-rule);
+  --primary: var(--ember-lit);
+  --primary-hover: #eda07d;
+  --primary-600: var(--ember-lit);
+  --primary-fg: #1c1512;
+}
+
+/* ── 2. Works with all of them — the short ruled strip ───────────────────── */
+
+.strip {
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.stripInner {
+  max-width: var(--w-text);
+  margin: 0 auto;
+  padding: 30px var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  align-items: center;
+  gap: 26px 56px;
+}
+
+.stripTitle {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.stripText {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.stripLogos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 34px;
+  justify-content: space-between;
+}
+
+.stripLogo {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.stripLogoMark {
+  display: inline-flex;
+  color: var(--ink);
+  opacity: 0.9;
+}
+
+.stripLogoLabel {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* ── 3. Everything Slack has. For agents. ────────────────────────────────── */
+
+.channels {
+  padding: clamp(72px, 9vw, 132px) 0;
+}
+
+.channelsInner {
+  max-width: var(--w-text);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: start;
+}
+
+.channelsHead {
+  display: grid;
+  gap: 28px;
+  position: sticky;
+  top: 108px;
+}
+
+.transcript {
+  border: 1px solid var(--night-rule);
+  border-radius: var(--r-lg);
+  background: var(--night-2);
+  overflow: hidden;
+}
+
+.transcriptHead {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--night-rule);
+}
+
+.transcriptChannel {
+  font-family: var(--font-display);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--night-fg);
+}
+
+.transcriptMeta {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--night-fg-3);
+}
+
+.transcriptBody {
+  list-style: none;
+  margin: 0;
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.bubble {
+  padding: 14px 18px 15px;
+  border-radius: var(--r-md);
+  background: rgba(243, 236, 226, 0.06);
+  border: 1px solid var(--night-rule);
+  max-width: 92%;
+}
+
+.bubbleIn {
+  border-radius: var(--r-md-in);
+  margin-left: auto;
+  background: rgba(224, 138, 99, 0.12);
+  border-color: rgba(224, 138, 99, 0.28);
+}
+
+.bubbleHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.bubbleMark {
+  display: inline-flex;
+  color: var(--night-fg-2);
+}
+
+.bubbleAuthor {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--night-fg);
+}
+
+.bubbleModel,
+.bubbleTime {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--night-fg-3);
+}
+
+.bubbleTime {
+  margin-left: auto;
+}
+
+.bubbleText {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--night-fg-2);
+}
+
+.bubbleText b {
+  font-weight: 600;
+  color: var(--ember-lit);
+}
+
+.transcriptFoot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 0 22px 20px;
+  font-size: 0.875rem;
+  color: var(--night-fg-3);
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--r-xs);
+  border: 1px solid var(--night-rule);
+  background: rgba(243, 236, 226, 0.06);
+  font-size: 0.8125rem;
+  color: var(--night-fg-2);
+}
+
+/* ── 4. The hard parts of delivery — type only, no panel ─────────────────── */
+
+.delivery {
+  padding: clamp(80px, 10vw, 144px) 0;
+}
+
+.deliveryInner {
+  max-width: var(--w-text);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 80px);
+  align-items: start;
+}
+
+.deliveryHead {
+  display: grid;
+  gap: 22px;
+  position: sticky;
+  top: 116px;
+}
+
+/* Fills the sticky column's dead quadrant with the thing the section is
+   actually about, rather than a decorative panel. */
+.deliveryNote {
+  margin: 6px 0 0;
+  padding-top: 18px;
+  border-top: 1px dashed var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.9;
+  color: var(--ink-3);
+}
+
+.deliveryNote b {
+  display: block;
+  font-family: var(--font-text);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ember);
+  letter-spacing: 0;
+}
+
+.rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--rule);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 20px;
+  padding: 26px 0 28px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.rowNum {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ember);
+  opacity: 0.5;
+}
+
+.rowBody {
+  display: grid;
+  gap: 8px;
+}
+
+.rowTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.3125rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.rowText {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+  max-width: 58ch;
+}
+
+/* ── 5. Everything agents need to collaborate ────────────────────────────── */
+
+.caps {
+  background: var(--paper-2);
+  padding: clamp(64px, 7.5vw, 104px) 0;
+}
+
+.capsInner {
+  max-width: var(--w-text);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.capsHead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr);
+  align-items: end;
+  gap: 18px 56px;
+  margin-bottom: 46px;
+}
+
+.capsGrid {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  gap: 20px;
+}
+
+.cap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 26px 26px 22px;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+}
+
+.capTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  color: var(--ink);
+}
+
+.capText {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.capArt {
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 12px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  background: var(--paper-2);
+  border: 1px dashed var(--rule-strong);
+  overflow: hidden;
+}
+
+.capArtLine {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capArtMeta {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ember);
+}
+
+/* ── 6. Make it yours with the SDK ───────────────────────────────────────── */
+
+.sdk {
+  padding: clamp(72px, 9vw, 132px) 0;
+}
+
+.sdkInner {
+  max-width: var(--w-wide);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: clamp(28px, 4vw, 64px);
+  align-items: center;
+}
+
+.codePanel {
+  margin: 0;
+  /* Pulled up out of the band's own rhythm. */
+  margin-top: clamp(-56px, -3vw, 0px);
+  border: 1px solid var(--night-rule);
+  border-radius: var(--r-lg);
+  background: #120d0b;
+  overflow: hidden;
+}
+
+.codeHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--night-rule);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--night-fg-2);
+}
+
+.codeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 3px 3px 3px 0;
+  background: var(--ember-lit);
+}
+
+.codeBody {
+  margin: 0;
+  padding: 22px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.75;
+  color: #d9cec4;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.tkMuted {
+  color: #8d7c72;
+  font-style: italic;
+}
+.tkFn {
+  color: #f0c98a;
+}
+.tkVar {
+  color: #e0a58a;
+}
+.tkKw {
+  color: #d98b7a;
+}
+.tkStr {
+  color: #a3c98f;
+}
+
+.sdkCopy {
+  display: grid;
+  justify-items: start;
+  gap: 20px;
+}
+
+.sdkKicker {
+  margin: -6px 0 0;
+  font-family: var(--font-display);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ember-lit);
+}
+
+.sdkActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ── 7. Speaks A2A out of the box — the quiet one ────────────────────────── */
+
+.a2a {
+  padding: clamp(64px, 7vw, 96px) 0;
+}
+
+.a2aInner {
+  max-width: var(--w-narrow);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 22px;
+}
+
+.a2aInner .h2 {
+  max-width: 14ch;
+}
+
+.a2aCard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin: 6px 0 0;
+  padding: 18px 22px;
+  width: 100%;
+  max-width: 520px;
+  text-align: left;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-md);
+  background: var(--card);
+}
+
+.a2aKey {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--ember);
+}
+
+.a2aValue {
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+
+/* ── 8. Open source from day one ─────────────────────────────────────────── */
+
+.deploy {
+  padding: clamp(64px, 8vw, 112px) 0 clamp(72px, 8vw, 112px);
+  border-top: 1px solid var(--rule);
+}
+
+.deployInner {
+  max-width: var(--w-mid);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  gap: 40px;
+}
+
+.deployHead {
+  display: grid;
+  gap: 18px;
+}
+
+.deployCards {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+}
+
+.deployCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 30px 30px 26px;
+  border: 1px solid var(--rule);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    transform 0.25s var(--ease-out-quint);
+}
+
+.deployCardAlt {
+  background: var(--night);
+  border-color: var(--night);
+  color: var(--night-fg);
+}
+
+.deployCard:hover {
+  border-color: var(--ember);
+}
+
+.deployCardTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.deployCardText {
+  margin: 0;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 42ch;
+}
+
+.deployCardAlt .deployCardText {
+  color: var(--night-fg-2);
+}
+
+.deployCardLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 10px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--ember);
+}
+
+.deployCardAlt .deployCardLink {
+  color: var(--ember-lit);
+}
+
+.deployCardLink svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── 9. Be the first to know ─────────────────────────────────────────────── */
+
+.waitlist {
+  padding: clamp(76px, 9vw, 128px) 0;
+}
+
+.waitlistInner {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 20px;
+}
+
+.waitlistInner .h2 {
+  max-width: 12ch;
+}
+
+.waitlistInner form,
+.waitlistInner > div {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* ── Scroll reveal ───────────────────────────────────────────────────────── */
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .strip,
+    .transcript,
+    .row,
+    .cap,
+    .codePanel,
+    .a2aCard,
+    .deployCard {
+      animation: homeReveal linear both;
+      animation-timeline: view();
+      animation-range: entry 8% entry 58%;
+    }
+  }
+}
+
+@keyframes homeReveal {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ── Breakpoints ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 1080px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    gap: 44px;
+    min-height: 0;
+  }
+
+  .heroBoard {
+    margin-right: 0;
+  }
+
+  .board {
+    margin-left: 0;
+    max-width: 680px;
+  }
+
+  .heroTitle {
+    max-width: 14ch;
+  }
+
+  .channelsInner,
+  .deliveryInner,
+  .sdkInner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .channelsHead,
+  .deliveryHead {
+    position: static;
+  }
+
+  .sdkInner {
+    gap: 40px;
+  }
+
+  .codePanel {
+    order: 2;
+    margin-top: 0;
+  }
+
+  .capsGrid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .cap:first-child {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 880px) {
+  .stripInner {
+    grid-template-columns: 1fr;
+  }
+
+  .stripLogos {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 760px) {
+  /* The board is not hidden on phones — it becomes a vertical relay column:
+     one spine wire down the left gutter, three stops, same travelling pulse. */
+  .board {
+    aspect-ratio: 360 / 470;
+    max-width: 460px;
+    margin: 0 auto;
+  }
+
+  .boardWiresWide {
+    display: none;
+  }
+
+  .boardWiresNarrow {
+    display: block;
+  }
+
+  .node {
+    width: 85%;
+    left: 15%;
+    right: auto;
+    border-radius: var(--r-md);
+  }
+
+  .nodePlanner {
+    top: 3%;
+  }
+
+  .nodeCoder {
+    top: 73%;
+    border-radius: var(--r-md-in);
+  }
+
+  .nodeReviewer,
+  .nodeOps {
+    display: none;
+  }
+
+  .hub {
+    left: 15%;
+    top: 44%;
+    transform: none;
+    width: 85%;
+    padding: 12px 16px;
+  }
+
+  .hubMeta {
+    white-space: normal;
+  }
+
+  .capsHead {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .capsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cap:first-child {
+    grid-column: auto;
+  }
+
+  .deployCards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .rowNum {
+    font-size: 1.25rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .heroActions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .btnPrimary,
+  .btnGhost {
+    width: 100%;
+    min-height: 52px;
+  }
+
+  /* The command is the CTA on a phone, so it wraps to two rows rather than
+     truncating: the full command on top, the copy affordance under it. */
+  .command {
+    display: grid;
+    width: 100%;
+    min-height: 52px;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'prompt text'
+      'action action';
+    align-items: start;
+    row-gap: 10px;
+    padding: 14px 14px 12px 16px;
+  }
+
+  .commandPrompt {
+    grid-area: prompt;
+  }
+
+  .commandText {
+    grid-area: text;
+    font-size: 0.875rem;
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
+  }
+
+  .commandAction {
+    grid-area: action;
+    justify-self: end;
+  }
+
+  .sdkActions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .bubble,
+  .bubbleIn {
+    max-width: 100%;
+    margin-left: 0;
+  }
+
+  .transcriptBody,
+  .transcriptHead {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .transcriptFoot {
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .codeBody {
+    font-size: 0.8125rem;
+    padding: 16px;
+  }
+
+  .cap,
+  .deployCard {
+    padding: 22px 20px 20px;
+  }
+
+  .stripLogos {
+    gap: 14px 22px;
+  }
+}
