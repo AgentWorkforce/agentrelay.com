@@ -32,20 +32,60 @@ a {
   color: inherit;
 }
 
+/* ── Focus ──
+   One rule for the whole site. The 2px offset puts the ring on the page
+   ground rather than on the control, so it is measured against the
+   background: >= 12:1 on every surface the site uses. */
+:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Keyboard-only skip target, revealed on focus. */
+.skip-link {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 200;
+  padding: 12px 20px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  background: var(--fg);
+  color: var(--bg);
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: var(--r-md);
+  transform: translateY(-200%);
+  transition: transform 0.18s var(--ease-out-quint);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
 /* ── Buttons ──
    Canonical button design, shared across the site. Landing-page CSS
    modules pull these in with `composes: btn btn-primary from global;`
-   so the primary button looks identical everywhere. */
+   so the primary button looks identical everywhere.
+
+   Shape comes from --r-md: the tail-corner message radius that every
+   interactive element on the site shares. min-height keeps every button a
+   comfortable target on touch (>= 44px) without per-page overrides. */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 0.92rem;
+  gap: 8px;
+  font-family: var(--font-geist-sans), sans-serif;
+  font-size: 0.9375rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
-  padding: 12px 28px;
-  border-radius: 100px;
+  letter-spacing: -0.005em;
+  padding: 13px 26px;
+  min-height: 48px;
+  border-radius: var(--r-md);
   text-decoration: none;
   cursor: pointer;
   transition:
