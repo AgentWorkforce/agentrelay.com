@@ -53,6 +53,7 @@
   --saccent: var(--ember);
   --ssurface: var(--card);
 
+  --r-band: 44px 44px 44px 0;
   --gutter: clamp(20px, 5vw, 60px);
   --w-narrow: 760px;
   --w-mid: 1080px;
@@ -341,9 +342,6 @@
 
 .heroBoard {
   min-width: 0;
-  /* The board bleeds past the page gutter on wide screens — the first screen is
-     the one place the 1440px column is deliberately broken. */
-  margin-right: calc(-1 * var(--gutter));
 }
 
 /* ── The relay board ─────────────────────────────────────────────────────── */
@@ -370,18 +368,18 @@
 
 .wireBase {
   fill: none;
-  stroke: #b3a08e;
-  stroke-width: 1.5;
+  stroke: #9c8674;
+  stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
 }
 
 .wirePulse {
   fill: none;
   stroke: var(--ember);
-  stroke-width: 3;
+  stroke-width: 3.5;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
-  stroke-dasharray: 7 93;
+  stroke-dasharray: 11 89;
   stroke-dashoffset: 100;
   opacity: 0;
 }
@@ -406,6 +404,62 @@
   }
   .wire4 {
     animation-delay: 6s;
+  }
+
+  /* Each card reacts at the moment its own message leaves or lands, on the
+     same 8s cycle as the wire that serves it. */
+  .nodePlanner,
+  .nodeReviewer {
+    animation: nodeSend 8s linear infinite;
+  }
+
+  .nodeCoder,
+  .nodeOps {
+    animation: nodeReceive 8s linear infinite;
+  }
+
+  .nodePlanner {
+    animation-delay: 0s;
+  }
+  .nodeCoder {
+    animation-delay: 2s;
+  }
+  .nodeReviewer {
+    animation-delay: 4s;
+  }
+  .nodeOps {
+    animation-delay: 6s;
+  }
+}
+
+@keyframes nodeSend {
+  0%,
+  9% {
+    border-color: var(--ember);
+    box-shadow: 0 0 0 3px var(--ember-tint);
+  }
+  20%,
+  100% {
+    border-color: var(--rule);
+    box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+  }
+}
+
+@keyframes nodeReceive {
+  0%,
+  16% {
+    border-color: var(--rule);
+    box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+  }
+  20%,
+  28% {
+    border-color: var(--ember);
+    box-shadow: 0 0 0 3px var(--ember-tint);
+  }
+  40%,
+  100% {
+    border-color: var(--rule);
+    box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
   }
 }
 
@@ -515,7 +569,7 @@
 .nodeModel {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--ink-3);
 }
 
@@ -532,7 +586,7 @@
   align-items: center;
   gap: 7px;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   letter-spacing: 0.01em;
   color: var(--ink-3);
 }
@@ -583,7 +637,7 @@
 
 .hubMeta {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--night-fg-2);
   white-space: nowrap;
 }
@@ -592,6 +646,14 @@
 
 .band {
   position: relative;
+}
+
+/* The shape rule at page scale: an inverted band is itself a message, with the
+   same squared tail corner at bottom-left. The paper ground shows through the
+   three rounded corners, so the page reads as a stack of messages. */
+.night,
+.caps {
+  border-radius: var(--r-band);
 }
 
 .night {
@@ -775,7 +837,7 @@
 .bubbleModel,
 .bubbleTime {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--night-fg-3);
 }
 
@@ -1224,7 +1286,10 @@
 
 /* ── 9. Be the first to know ─────────────────────────────────────────────── */
 
+/* The waitlist runs straight into the footer, so it opens the closing block
+   rather than closing one of its own. */
 .waitlist {
+  border-radius: 44px 44px 0 0;
   padding: clamp(76px, 9vw, 128px) 0;
 }
 
@@ -1340,6 +1405,14 @@
 }
 
 @media (max-width: 760px) {
+  .page {
+    --r-band: 26px 26px 26px 0;
+  }
+
+  .waitlist {
+    border-radius: 26px 26px 0 0;
+  }
+
   /* The board is not hidden on phones — it becomes a vertical relay column:
      one spine wire down the left gutter, three stops, same travelling pulse. */
   .board {
@@ -1357,8 +1430,8 @@
   }
 
   .node {
-    width: 85%;
-    left: 15%;
+    width: 80%;
+    left: 20%;
     right: auto;
     border-radius: var(--r-md);
   }
@@ -1370,6 +1443,7 @@
   .nodeCoder {
     top: 73%;
     border-radius: var(--r-md-in);
+    animation-delay: 0s;
   }
 
   .nodeReviewer,
@@ -1378,10 +1452,10 @@
   }
 
   .hub {
-    left: 15%;
+    left: 20%;
     top: 44%;
     transform: none;
-    width: 85%;
+    width: 80%;
     padding: 12px 16px;
   }
 
@@ -1413,6 +1487,29 @@
 
   .rowNum {
     font-size: 1.25rem;
+  }
+}
+
+/* Prose floor on phones: nothing that is a sentence drops below 16px, and
+   nothing at all below 13px. */
+@media (max-width: 760px) {
+  .nodeMsg,
+  .heroNote,
+  .stripText {
+    font-size: 1rem;
+  }
+
+  .transcriptFoot,
+  .capText,
+  .rowText,
+  .deployCardText {
+    font-size: 1rem;
+  }
+
+  .capArtLine,
+  .capArtMeta,
+  .deliveryNote {
+    font-size: 0.875rem;
   }
 }
 

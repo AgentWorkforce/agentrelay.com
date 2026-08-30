@@ -45,7 +45,7 @@
 }
 
 .tagline {
-  font-size: 0.9375rem;
+  font-size: 1rem;
   color: var(--footer-muted);
   line-height: 1.5;
   max-width: 28ch;
@@ -64,7 +64,7 @@
 }
 
 .colTitle {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -123,7 +123,7 @@
 }
 
 .copy {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--footer-faint);
   margin: 0;
 }
