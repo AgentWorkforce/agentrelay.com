@@ -3,6 +3,12 @@
   color: var(--footer-fg);
   padding: 72px 40px 28px;
   transition: background 0.3s ease;
+  /* The footer carries its own ground, which is dark on every theme — including
+     the light homepage, where the page-level ring is near-black ink. Inheriting
+     that ring would draw dark-on-dark and leave 23 links with no visible focus
+     state, so the ring is re-pointed at the footer's own foreground, which the
+     --footer-bg / --footer-fg pair already guarantees contrasts with it. */
+  --focus-ring: var(--footer-fg);
 }
 
 .inner {

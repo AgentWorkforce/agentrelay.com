@@ -108,7 +108,13 @@ export function SiteNav({
           </div>
 
           {/* Mobile hamburger */}
-          <button className={s.hamburger} onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu">
+          <button
+            className={s.hamburger}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="site-nav-mobile-menu"
+          >
             {menuOpen ? (
               <svg
                 width="20"
@@ -143,6 +149,7 @@ export function SiteNav({
         {/* Mobile menu dropdown */}
         {menuOpen && (
           <div
+            id="site-nav-mobile-menu"
             className={s.mobileMenu}
             onClick={(event) => {
               const target = event.target;

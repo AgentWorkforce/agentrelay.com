@@ -21,12 +21,18 @@
     inset 0 1px 0 var(--nav-inset);
 }
 
+/* The gradient is translucent so the bar picks up whatever it floats over.
+   That only works where page and bar share a value range; a page that scrolls
+   dark bands under a light bar sets --nav-scrolled-base to an opaque ground,
+   which paints as the last background layer underneath the gradient. It
+   defaults to transparent, so every other route is unchanged. */
 .navBarScrolled {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--nav-bg) 78%, transparent) 0%,
-    color-mix(in srgb, var(--nav-bg) 88%, transparent) 100%
-  );
+      135deg,
+      color-mix(in srgb, var(--nav-bg) 78%, transparent) 0%,
+      color-mix(in srgb, var(--nav-bg) 88%, transparent) 100%
+    )
+    var(--nav-scrolled-base, transparent);
   backdrop-filter: blur(24px) saturate(2) brightness(1.05);
   -webkit-backdrop-filter: blur(24px) saturate(2) brightness(1.05);
   border-color: var(--nav-border);

@@ -82,8 +82,14 @@
   --secondary-surface: transparent;
   --focus-ring: var(--ink);
 
-  --nav-solid-bg: rgba(251, 249, 245, 0.86);
+  /* Opaque, like every other theme's solid nav. The bar is sticky and this
+     page scrolls three night bands underneath it; at any alpha below 1 the
+     dark band and its type ghost straight through the cream and the bar
+     turns into a grey slab. There is no backdrop-filter to hide behind —
+     that was dropped for the LCP — so the ground has to be solid. */
+  --nav-solid-bg: #fbf9f5;
   --nav-bg: rgba(251, 249, 245, 0.9);
+  --nav-scrolled-base: #fbf9f5;
   --nav-fg: var(--ink);
   --nav-border: var(--rule-strong);
   --nav-border-strong: var(--ink);
