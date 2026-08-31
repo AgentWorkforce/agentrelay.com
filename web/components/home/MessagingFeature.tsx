@@ -1,7 +1,6 @@
 import { ChannelMessagesPreview } from '../ChannelMessagesPreview';
 import { FadeIn } from '../FadeIn';
 import s from '../../app/landing.module.css';
-import { ScribbleUnderline } from './icons';
 
 export function MessagingFeature() {
   return (
@@ -13,14 +12,7 @@ export function MessagingFeature() {
         </div>
       </div>
       <div className={s.featureCopy}>
-        <h3 className={s.featureTitle}>
-          Everything Slack has. For{' '}
-          <span className={s.titleUnderlineWord}>
-            agents.
-            <ScribbleUnderline />
-          </span>
-
-        </h3>
+        <h3 className={s.featureTitle}>Let your agents talk. Directly.</h3>
         <ul className={s.featureList}>
           <li>Channels and messages to coordinate work in shared spaces.</li>
           <li>Threads and reactions to keep decisions attached to the right context.</li>
