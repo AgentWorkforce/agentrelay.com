@@ -472,24 +472,36 @@ function OpenCodeTerminalBody({ card }: { card: TerminalCard }) {
 
   return (
     <div className={`${s.heroTermBody} ${s.heroOpenCodeBody}`}>
-      <div className={s.heroOpenCodeScrollViewport}>
-        <div className={s.heroOpenCodeScrollTrack}>
-          <div className={s.heroOpenCodePrompt}>{terminalLineCopy(prompt)}</div>
-          <div className={s.heroOpenCodeActivity}>
-            <span className={`${s.heroOpenCodeThought} ${s.heroOpenCodeAddedLine}`}>
-              + Thought: 683ms
-            </span>
-            <span className={s.heroOpenCodeAddedLine}>* {terminalLineCopy(activity)}</span>
-            <span className={`${s.heroOpenCodeResult} ${s.heroOpenCodeAddedLine}`}>
-              ~ {result ? terminalLineCopy(result) : 'Finding files…'}
-            </span>
-          </div>
-          <div className={s.heroOpenCodeMode}>
-            <span>▣</span>
-            <strong>Build</strong>
-            <span>OpenCode</span>
-          </div>
-        </div>
+      <div
+        className={`${s.heroOpenCodePrompt} ${s.heroOpenCodeCycleLine}`}
+        style={{ '--line-delay': '0s' } as TerminalStyle}
+      >
+        {terminalLineCopy(prompt)}
+      </div>
+      <div className={s.heroOpenCodeActivity}>
+        <span
+          className={`${s.heroOpenCodeThought} ${s.heroOpenCodeCycleLine}`}
+          style={{ '--line-delay': '0.42s' } as TerminalStyle}
+        >
+          + Thought: 683ms
+        </span>
+        <span
+          className={s.heroOpenCodeCycleLine}
+          style={{ '--line-delay': '0.84s' } as TerminalStyle}
+        >
+          * {terminalLineCopy(activity)}
+        </span>
+        <span
+          className={`${s.heroOpenCodeResult} ${s.heroOpenCodeCycleLine}`}
+          style={{ '--line-delay': '1.2s' } as TerminalStyle}
+        >
+          ~ {result ? terminalLineCopy(result) : 'Finding files…'}
+        </span>
+      </div>
+      <div className={s.heroOpenCodeMode}>
+        <span>▣</span>
+        <strong>Build</strong>
+        <span>OpenCode</span>
       </div>
       <div className={s.heroOpenCodeComposer}>
         <span className={s.heroTermCursor} />
@@ -514,47 +526,45 @@ function CodexTerminalBody({ card }: { card: TerminalCard }) {
     <div className={`${s.heroTermBody} ${s.heroCodexBody}`}>
       <div className={s.heroCodexScrollViewport}>
         <div className={s.heroCodexScrollTrack}>
-          {['a', 'b'].map((copy) => (
-            <div className={s.heroCodexScrollSequence} key={copy}>
-              <div className={s.heroCodexIdentity}>
-                <strong className={s.heroCodexIdentityTitle}>
-                  <span>&gt;_</span> OpenAI Codex
-                </strong>
-                <span className={s.heroCodexIdentityRow}>
-                  <span className={s.heroCodexIdentityLabel}>model:</span>
-                  <span>coding model</span>
-                  <b>high</b>
-                  <b>fast</b>
-                </span>
-                <span className={s.heroCodexIdentityRow}>
-                  <span className={s.heroCodexIdentityLabel}>directory:</span>
-                  <span className={s.heroCodexIdentityPath}>~/{card.repo}</span>
-                </span>
-              </div>
-              <div className={s.heroCodexPrompt}>
-                <span>›</span>
-                <span>{terminalLineCopy(prompt)}</span>
-              </div>
-              <div className={s.heroCodexReply}>
-                <span>•</span>
-                <span>I’ll inspect the project, then make the smallest safe change.</span>
-              </div>
-              <div className={s.heroCodexRun}>
-                <span className={s.heroCodexRunMarker}>•</span>
-                <span className={s.heroCodexRunCopy}>
-                  <strong>Ran</strong> {terminalLineCopy(activity)}
-                </span>
-                {result ? (
-                  <span className={s.heroCodexRunResult}>└ {terminalLineCopy(result)}</span>
-                ) : null}
-              </div>
-              <div className={s.heroCodexWorking}>
-                <span className={s.heroCodexWorkingMarker}>•</span>
-                <strong>Working</strong>
-                <span>esc to interrupt</span>
-              </div>
+          <div className={s.heroCodexScrollSequence}>
+            <div className={s.heroCodexIdentity}>
+              <strong className={s.heroCodexIdentityTitle}>
+                <span>&gt;_</span> OpenAI Codex
+              </strong>
+              <span className={s.heroCodexIdentityRow}>
+                <span className={s.heroCodexIdentityLabel}>model:</span>
+                <span>coding model</span>
+                <b>high</b>
+                <b>fast</b>
+              </span>
+              <span className={s.heroCodexIdentityRow}>
+                <span className={s.heroCodexIdentityLabel}>directory:</span>
+                <span className={s.heroCodexIdentityPath}>~/{card.repo}</span>
+              </span>
             </div>
-          ))}
+            <div className={`${s.heroCodexPrompt} ${s.heroCodexAddedLine}`}>
+              <span>›</span>
+              <span>{terminalLineCopy(prompt)}</span>
+            </div>
+            <div className={`${s.heroCodexReply} ${s.heroCodexAddedLine}`}>
+              <span>•</span>
+              <span>I’ll inspect the project, then make the smallest safe change.</span>
+            </div>
+            <div className={`${s.heroCodexRun} ${s.heroCodexAddedLine}`}>
+              <span className={s.heroCodexRunMarker}>•</span>
+              <span className={s.heroCodexRunCopy}>
+                <strong>Ran</strong> {terminalLineCopy(activity)}
+              </span>
+              {result ? (
+                <span className={s.heroCodexRunResult}>└ {terminalLineCopy(result)}</span>
+              ) : null}
+            </div>
+            <div className={`${s.heroCodexWorking} ${s.heroCodexAddedLine}`}>
+              <span className={s.heroCodexWorkingMarker}>•</span>
+              <strong>Working</strong>
+              <span>esc to interrupt</span>
+            </div>
+          </div>
         </div>
       </div>
       <div className={s.heroCodexComposer}>
@@ -581,9 +591,7 @@ function ClaudeTerminalBody({ card }: { card: TerminalCard }) {
         <div className={s.heroClaudeScrollTrack}>
           <div className={s.heroClaudeScrollSequence}>
             <div className={s.heroClaudeIdentity}>
-              <pre className={s.heroClaudeMascot}>{`▐▛███▛█
-▝▜██████▀
- ▝▝ ▝▝`}</pre>
+              <span className={s.heroClaudeMascot} aria-hidden="true" />
               <div className={s.heroClaudeIdentityCopy}>
                 <strong className={s.heroClaudeIdentityTitle}>
                   Claude Code <span>v2.1.251</span>
