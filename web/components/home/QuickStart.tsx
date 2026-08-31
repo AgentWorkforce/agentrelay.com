@@ -23,8 +23,8 @@ export function QuickStart() {
               </div>
 
               <p className={s.installSubtitle}>
-                Use the Agent Relay SDK for channels, DMs, threads, and realtime events inside your product
-                or infrastructure.
+                Build agent coordination, shared files, approvals, and durable workflows into your product or
+                infrastructure.
               </p>
             </div>
           </div>
