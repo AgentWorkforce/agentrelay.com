@@ -347,6 +347,63 @@ function RelayNetwork() {
   );
 }
 
+function GrokTerminalBody({ card }: { card: TerminalCard }) {
+  const prompt = card.lines.find((line) => line.tone === 'prompt') ?? card.lines[0];
+  const activity = card.lines.find((line) => line.tone === 'tool') ?? card.lines[1];
+  const result = card.lines.find((line) => line.tone === 'relay' || line.tone === 'ok');
+
+  return (
+    <div className={`${s.heroTermBody} ${s.heroGrokBody}`}>
+      <div className={s.heroGrokContext}>
+        <span className={s.heroGrokBranch}>⌁</span>
+        <span className={s.heroGrokPath}>
+          codex/{card.repo.replace('/', '-')} ~/{card.repo}
+        </span>
+        <span className={s.heroGrokContextMode}>auto</span>
+      </div>
+      <div
+        className={`${s.heroGrokPrompt} ${s.heroGrokCycleLine}`}
+        style={{ '--line-delay': '0s' } as TerminalStyle}
+      >
+        <span>❯</span>
+        <span>{terminalLineCopy(prompt)}</span>
+      </div>
+      <div className={s.heroGrokEvents}>
+        <span
+          className={s.heroGrokCycleLine}
+          style={{ '--line-delay': '0.5s' } as TerminalStyle}
+        >
+          ◆ user_prompt_submit
+        </span>
+        <span
+          className={s.heroGrokCycleLine}
+          style={{ '--line-delay': '0.9s' } as TerminalStyle}
+        >
+          ◆ Thought for 3.2s
+        </span>
+        <span
+          className={`${s.heroGrokReply} ${s.heroGrokCycleLine}`}
+          style={{ '--line-delay': '1.3s' } as TerminalStyle}
+        >
+          {terminalLineCopy(activity)}
+        </span>
+      </div>
+      <div className={s.heroGrokFooter}>
+        <span className={s.heroGrokProgress}>
+          <span className={s.heroGrokProgressGlyph}>∴</span>
+          Preparing tools (3)…
+        </span>
+        {result ? <span className={s.heroGrokResult}>{terminalLineCopy(result)}</span> : null}
+      </div>
+      <div className={s.heroGrokComposer}>
+        <span className={s.heroTermPromptGlyph}>❯</span>
+        <span className={s.heroTermCursor} />
+        <span className={s.heroGrokModel}>Grok Code (high)</span>
+      </div>
+    </div>
+  );
+}
+
 function TerminalRow({
   cards,
   rowClass,
@@ -391,35 +448,39 @@ function TerminalRow({
                   </span>
                 </header>
 
-                <div className={s.heroTermBody}>
-                  <div className={s.heroTermSession}>
-                    <span className={s.heroTermSessionName}>{meta.session}</span>
-                    <span className={s.heroTermMode}>{meta.mode}</span>
-                    <span className={s.heroTermRepo}>~/{card.repo}</span>
-                  </div>
-                  <div className={s.heroTermTranscript}>
-                    {card.lines.map((line, lineIndex) => (
-                      <span
-                        className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
-                        key={line.text}
-                        style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
-                      >
-                        <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
-                        <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+                {card.agent === 'grok' ? (
+                  <GrokTerminalBody card={card} />
+                ) : (
+                  <div className={s.heroTermBody}>
+                    <div className={s.heroTermSession}>
+                      <span className={s.heroTermSessionName}>{meta.session}</span>
+                      <span className={s.heroTermMode}>{meta.mode}</span>
+                      <span className={s.heroTermRepo}>~/{card.repo}</span>
+                    </div>
+                    <div className={s.heroTermTranscript}>
+                      {card.lines.map((line, lineIndex) => (
+                        <span
+                          className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
+                          key={line.text}
+                          style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
+                        >
+                          <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
+                          <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <div className={s.heroTermComposer}>
+                      <span className={s.heroTermLivePrompt}>
+                        <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
+                        <span className={s.heroTermCursor} />
                       </span>
-                    ))}
+                      <span className={s.heroTermState}>
+                        <span className={s.heroTermActivityGlyph}>{meta.activityGlyph}</span>
+                        {meta.state}
+                      </span>
+                    </div>
                   </div>
-                  <div className={s.heroTermComposer}>
-                    <span className={s.heroTermLivePrompt}>
-                      <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
-                      <span className={s.heroTermCursor} />
-                    </span>
-                    <span className={s.heroTermState}>
-                      <span className={s.heroTermActivityGlyph}>{meta.activityGlyph}</span>
-                      {meta.state}
-                    </span>
-                  </div>
-                </div>
+                )}
               </article>
             );
           })
