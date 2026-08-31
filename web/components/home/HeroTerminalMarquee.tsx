@@ -472,36 +472,24 @@ function OpenCodeTerminalBody({ card }: { card: TerminalCard }) {
 
   return (
     <div className={`${s.heroTermBody} ${s.heroOpenCodeBody}`}>
-      <div
-        className={`${s.heroOpenCodePrompt} ${s.heroOpenCodeCycleLine}`}
-        style={{ '--line-delay': '0s' } as TerminalStyle}
-      >
-        {terminalLineCopy(prompt)}
-      </div>
-      <div className={s.heroOpenCodeActivity}>
-        <span
-          className={`${s.heroOpenCodeThought} ${s.heroOpenCodeCycleLine}`}
-          style={{ '--line-delay': '0.42s' } as TerminalStyle}
-        >
-          + Thought: 683ms
-        </span>
-        <span
-          className={s.heroOpenCodeCycleLine}
-          style={{ '--line-delay': '0.84s' } as TerminalStyle}
-        >
-          * {terminalLineCopy(activity)}
-        </span>
-        <span
-          className={`${s.heroOpenCodeResult} ${s.heroOpenCodeCycleLine}`}
-          style={{ '--line-delay': '1.2s' } as TerminalStyle}
-        >
-          ~ {result ? terminalLineCopy(result) : 'Finding files…'}
-        </span>
-      </div>
-      <div className={s.heroOpenCodeMode}>
-        <span>▣</span>
-        <strong>Build</strong>
-        <span>OpenCode</span>
+      <div className={s.heroOpenCodeScrollViewport}>
+        <div className={s.heroOpenCodeScrollTrack}>
+          <div className={s.heroOpenCodePrompt}>{terminalLineCopy(prompt)}</div>
+          <div className={s.heroOpenCodeActivity}>
+            <span className={`${s.heroOpenCodeThought} ${s.heroOpenCodeAddedLine}`}>
+              + Thought: 683ms
+            </span>
+            <span className={s.heroOpenCodeAddedLine}>* {terminalLineCopy(activity)}</span>
+            <span className={`${s.heroOpenCodeResult} ${s.heroOpenCodeAddedLine}`}>
+              ~ {result ? terminalLineCopy(result) : 'Finding files…'}
+            </span>
+          </div>
+          <div className={s.heroOpenCodeMode}>
+            <span>▣</span>
+            <strong>Build</strong>
+            <span>OpenCode</span>
+          </div>
+        </div>
       </div>
       <div className={s.heroOpenCodeComposer}>
         <span className={s.heroTermCursor} />
@@ -591,33 +579,31 @@ function ClaudeTerminalBody({ card }: { card: TerminalCard }) {
     <div className={`${s.heroTermBody} ${s.heroClaudeBody}`}>
       <div className={s.heroClaudeScrollViewport}>
         <div className={s.heroClaudeScrollTrack}>
-          {['a', 'b'].map((copy) => (
-            <div className={s.heroClaudeScrollSequence} key={copy}>
-              <div className={s.heroClaudeIdentity}>
-                <pre className={s.heroClaudeMascot}>{`▐▛███▛█
+          <div className={s.heroClaudeScrollSequence}>
+            <div className={s.heroClaudeIdentity}>
+              <pre className={s.heroClaudeMascot}>{`▐▛███▛█
 ▝▜██████▀
  ▝▝ ▝▝`}</pre>
-                <div className={s.heroClaudeIdentityCopy}>
-                  <strong className={s.heroClaudeIdentityTitle}>
-                    Claude Code <span>v2.1.251</span>
-                  </strong>
-                  <span className={s.heroClaudeModel}>Fable 5 with xhigh effort · Claude Max</span>
-                  <span className={s.heroClaudePath}>~/{card.repo}</span>
-                </div>
-              </div>
-              <div className={s.heroTermTranscript}>
-                {card.lines.map((line) => (
-                  <span
-                    className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
-                    key={`${copy}-${line.text}`}
-                  >
-                    <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
-                    <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
-                  </span>
-                ))}
+              <div className={s.heroClaudeIdentityCopy}>
+                <strong className={s.heroClaudeIdentityTitle}>
+                  Claude Code <span>v2.1.251</span>
+                </strong>
+                <span className={s.heroClaudeModel}>Fable 5 with xhigh effort · Claude Max</span>
+                <span className={s.heroClaudePath}>~/{card.repo}</span>
               </div>
             </div>
-          ))}
+            <div className={s.heroTermTranscript}>
+              {card.lines.map((line) => (
+                <span
+                  className={`${s.heroTermLine} ${s.heroClaudeAddedLine} ${TONE_CLASS[line.tone]}`}
+                  key={line.text}
+                >
+                  <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
+                  <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
       <div className={s.heroTermComposer}>
