@@ -4,12 +4,11 @@ import { ArrowRight } from 'lucide-react';
 import { HeroCommandCta } from './HeroCommandCta';
 import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
-import { GitHubIcon, HeroBackdrop } from './icons';
+import { GitHubIcon } from './icons';
 
 export function Hero() {
   return (
     <div className={s.heroSection}>
-      <HeroBackdrop />
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
