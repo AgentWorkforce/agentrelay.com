@@ -1,0 +1,121 @@
+---
+title: Relay Flows
+description: Build multi-step agent workflows with explicit dependencies, retries, verification, Personas, integrations, and human escalation.
+tags:
+  - Relay Flows
+  - Workflows
+  - Orchestration
+  - Agents
+---
+# Relay Flows
+
+Relay Flows is the workflow engine and CLI for Agent Relay. It runs multi-step agent workflows from TypeScript, YAML, or Python and coordinates dependencies, retries, verification, and human escalation.
+
+Use Relay Flows when work needs more than a single agent session: parallel specialists, deterministic gates, repair loops, or a person who must review the result before execution continues.
+
+## Install
+
+Install the TypeScript workflow package in your project:
+
+```bash
+npm install @relayflows/core
+```
+
+The standalone CLI is available as `@relayflows/cli` and exposes the `relayflows` command.
+
+```bash
+npm install --global @relayflows/cli
+relayflows run workflow.yaml
+```
+
+## Define a workflow
+
+This workflow plans a change, implements it, and sends the result to a reviewer. Each dependency is explicit, so Relay Flows knows which work can run and what must wait.
+
+```ts
+import { workflow } from '@relayflows/core';
+
+const result = await workflow('ship-feature')
+  .pattern('dag')
+  .agent('planner', {
+    cli: 'claude',
+    role: 'Plans implementation',
+  })
+  .agent('developer', {
+    cli: 'codex',
+    role: 'Writes code',
+  })
+  .agent('reviewer', {
+    cli: 'claude',
+    role: 'Reviews code',
+  })
+  .step('plan', {
+    agent: 'planner',
+    task: 'Create an implementation plan for {{task}}',
+  })
+  .step('implement', {
+    agent: 'developer',
+    dependsOn: ['plan'],
+    task: 'Implement this plan: {{steps.plan.output}}',
+  })
+  .step('review', {
+    agent: 'reviewer',
+    dependsOn: ['implement'],
+    task: 'Review the implementation and identify required changes.',
+  })
+  .onError('retry', { maxRetries: 2 })
+  .run();
+
+console.log(result.status);
+```
+
+Workflow results distinguish completed, failed, cancelled, early-completed, and human-required runs. This gives application code an explicit state to observe instead of inferring progress from an agent transcript.
+
+## Execution controls
+
+### Dependencies and concurrency
+
+Use `dependsOn` to build a directed workflow graph. Independent steps can run concurrently while dependent steps wait for their inputs.
+
+### Retries and repair
+
+Steps can set retry limits. A workflow can also use repair-aware error handling so a designated agent receives the failed output and evidence before the step runs again.
+
+### Verification
+
+Attach deterministic verification to a step when completion must be proven.
+
+```yaml
+verification:
+  type: exit_code
+  value: "0"
+  description: "The test command completed successfully"
+```
+
+Relay Flows also supports file-existence and output checks. Verification results become part of the completion decision for the step.
+
+### Human escalation
+
+Set `onExhaustion: needs-human` when exhausted retries should pause for intervention instead of ending as a generic failure. Workflows can also ask blocking questions through Slack and inject the answer into the active agent session.
+
+## Personas and integrations
+
+An agent can reference a Persona instead of defining its harness, model, instructions, skills, and MCP servers inline.
+
+```yaml
+agents:
+  - name: integrations
+    persona: nango-integrations
+```
+
+Relay Flows includes integration primitives for GitHub, Slack, browser work, and Relayfile event subscriptions. Integration events can trigger workflow work or be injected into active agents.
+
+## Workflow patterns
+
+Relay Flows supports dependency graphs, pipelines, fan-out, handoffs, verification loops, supervisor patterns, adversarial reviews, and other topologies. Choose the topology based on the work rather than the number of agents.
+
+For complete examples, see [Six Workflow Patterns with Agent Relay](https://agentrelay.com/blog/six-workflow-patterns-agent-relay).
+
+## Source and examples
+
+The current API, YAML schema, templates, and runnable examples live in the [Relayflows repository](https://github.com/AgentWorkforce/relayflows).

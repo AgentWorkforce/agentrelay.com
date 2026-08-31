@@ -83,17 +83,20 @@ function AgentGroup({
   );
 }
 
-export function HowItWorks() {
+export function HowItWorks({
+  title = 'Works with all of them',
+  subtitle = "It's not a harness, and it's not a framework. Our PTY based driver can power any CLI agent or you can drop in our SDK for your custom orchestrator.",
+}: {
+  title?: string;
+  subtitle?: string;
+} = {}) {
   return (
     <section className={s.howItWorks} aria-labelledby="how-it-works-title">
       <FadeIn direction="up" className={s.howHeader}>
         <h2 id="how-it-works-title" className={s.howTitle}>
-          Works with all of them
+          {title}
         </h2>
-        <p className={s.howSubtitle}>
-          It's not a harness, and it's not a framework. Our PTY based driver can power any CLI agent or you
-          can drop in our SDK for your custom orchestrator.
-        </p>
+        <p className={s.howSubtitle}>{subtitle}</p>
       </FadeIn>
 
       <div className={s.howStage}>

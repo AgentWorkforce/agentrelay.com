@@ -9,7 +9,19 @@ import { InstallCommand } from '../InstallCommand';
 import s from '../../app/landing.module.css';
 import { GitHubIcon, PythonLogo, TypeScriptLogo } from './icons';
 
-export function QuickStart() {
+export function QuickStart({
+  title = 'Make it yours with the SDK',
+  subtitle = 'Use the Agent Relay SDK for channels, DMs, threads, and realtime events inside your product or infrastructure.',
+  docsHref = '/docs',
+  githubHref = 'https://github.com/agentworkforce/relay',
+  command,
+}: {
+  title?: string;
+  subtitle?: string;
+  docsHref?: string;
+  githubHref?: string;
+  command?: string;
+} = {}) {
   return (
     <section className={s.installSection} aria-labelledby="install-title">
       <div className={s.installInner}>
@@ -18,25 +30,22 @@ export function QuickStart() {
             <div className={s.installHeaderText}>
               <div className={s.installTitleRow}>
                 <h2 id="install-title" className={s.installTitle}>
-                  Make it yours with the SDK
+                  {title}
                 </h2>
               </div>
 
-              <p className={s.installSubtitle}>
-                Use the Agent Relay SDK for channels, DMs, threads, and realtime events inside your product
-                or infrastructure.
-              </p>
+              <p className={s.installSubtitle}>{subtitle}</p>
             </div>
           </div>
 
           <div className={s.installActions}>
             <div className={s.installCtas}>
-              <Link href="/docs" className={s.ctaPrimary}>
+              <Link href={docsHref} className={s.ctaPrimary}>
                 Read the docs
                 <ArrowRight aria-hidden="true" />
               </Link>
               <a
-                href="https://github.com/agentworkforce/relay"
+                href={githubHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={s.ctaSecondary}
@@ -45,7 +54,7 @@ export function QuickStart() {
                 GitHub
               </a>
             </div>
-            <InstallCommand />
+            <InstallCommand command={command} />
           </div>
         </div>
 

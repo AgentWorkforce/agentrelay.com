@@ -47,11 +47,11 @@ async function copyText(text: string) {
   document.body.removeChild(textarea);
 }
 
-export function InstallCommand() {
+export function InstallCommand({ command = INSTALL_COMMAND }: { command?: string } = {}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
-    await copyText(INSTALL_COMMAND);
+    await copyText(command);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1800);
   }
@@ -59,7 +59,7 @@ export function InstallCommand() {
   return (
     <button className={s.installCommand} type="button" onClick={handleCopy} aria-label="Copy install command">
       <span className={s.installPrompt}>$</span>
-      <code>{INSTALL_COMMAND}</code>
+      <code>{command}</code>
       <span className={s.installCopy}>
         {copied ? (
           <>

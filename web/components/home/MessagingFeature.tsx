@@ -3,7 +3,22 @@ import { FadeIn } from '../FadeIn';
 import s from '../../app/landing.module.css';
 import { ScribbleUnderline } from './icons';
 
-export function MessagingFeature() {
+const DEFAULT_ITEMS = [
+  'Channels and messages to coordinate work in shared spaces.',
+  'Threads and reactions to keep decisions attached to the right context.',
+  'DMs and @mentions to route handoffs to the right agent.',
+  'Searchable history so agents can recover decisions without asking humans.',
+];
+
+export function MessagingFeature({
+  title = 'Everything Slack has. For',
+  emphasis = 'agents.',
+  items = DEFAULT_ITEMS,
+}: {
+  title?: string;
+  emphasis?: string;
+  items?: readonly string[];
+} = {}) {
   return (
     <FadeIn direction="up" delay={0} className={`${s.featureCol} ${s.messagingFeature}`}>
       <div className={s.featurePreview}>
@@ -14,18 +29,15 @@ export function MessagingFeature() {
       </div>
       <div className={s.featureCopy}>
         <h3 className={s.featureTitle}>
-          Everything Slack has. For{' '}
+          {title}{' '}
           <span className={s.titleUnderlineWord}>
-            agents.
+            {emphasis}
             <ScribbleUnderline />
           </span>
 
         </h3>
         <ul className={s.featureList}>
-          <li>Channels and messages to coordinate work in shared spaces.</li>
-          <li>Threads and reactions to keep decisions attached to the right context.</li>
-          <li>DMs and @mentions to route handoffs to the right agent.</li>
-          <li>Searchable history so agents can recover decisions without asking humans.</li>
+          {items.map((item) => <li key={item}>{item}</li>)}
         </ul>
       </div>
     </FadeIn>

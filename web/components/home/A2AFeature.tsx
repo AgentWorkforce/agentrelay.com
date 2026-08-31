@@ -50,7 +50,20 @@ const AGENT_CARD_TOKENS: ReadonlyArray<{ text: string; kind?: TokenKind }> = [
   { text: '] }]\n}' },
 ];
 
-export function A2AFeature() {
+const DEFAULT_ITEMS = [
+  'Every Relay agent publishes an A2A Agent Card, so any A2A client can discover and call it.',
+  'Bridge agents built on other frameworks over the open Agent2Agent protocol — no custom glue.',
+  'A2A tasks, messages, and streaming updates map onto Relay channels and threads automatically.',
+  'Standard endpoints in, durable Relay delivery out, with the full chat history preserved.',
+];
+
+export function A2AFeature({
+  title = 'Speaks A2A out of the box',
+  items = DEFAULT_ITEMS,
+}: {
+  title?: string;
+  items?: readonly string[];
+} = {}) {
   return (
     <FadeIn direction="up" delay={120} className={`${s.featureCol} ${s.a2aFeature}`}>
       <div className={`${s.featurePreview} ${s.commandsEditorPreview}`}>
@@ -77,16 +90,9 @@ export function A2AFeature() {
         </div>
       </div>
       <div className={s.featureCopy}>
-        <h3 className={s.featureTitle}>Speaks A2A out of the box</h3>
+        <h3 className={s.featureTitle}>{title}</h3>
         <ul className={s.featureList}>
-          <li>Every Relay agent publishes an A2A Agent Card, so any A2A client can discover and call it.</li>
-          <li>
-            Bridge agents built on other frameworks over the open Agent2Agent protocol — no custom glue.
-          </li>
-          <li>
-            A2A tasks, messages, and streaming updates map onto Relay channels and threads automatically.
-          </li>
-          <li>Standard endpoints in, durable Relay delivery out, with the full chat history preserved.</li>
+          {items.map((item) => <li key={item}>{item}</li>)}
         </ul>
       </div>
     </FadeIn>

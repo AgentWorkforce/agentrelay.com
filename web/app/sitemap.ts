@@ -20,6 +20,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
+      url: absoluteUrl('/agent-messaging'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
       url: absoluteUrl('/pear'),
       lastModified: now,
       changeFrequency: 'weekly',
@@ -75,6 +81,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: absoluteUrl('/chief'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: absoluteUrl('/skip'),
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,

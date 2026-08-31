@@ -12,7 +12,7 @@ interface DeployOption {
   text: string;
 }
 
-const DEPLOY_OPTIONS: DeployOption[] = [
+const DEFAULT_DEPLOY_OPTIONS: DeployOption[] = [
   {
     href: 'https://github.com/agentworkforce/relay/blob/main/docs/self-hosting/README.md',
     label: 'Read the Agent Relay self-hosting README on GitHub',
@@ -29,19 +29,24 @@ const DEPLOY_OPTIONS: DeployOption[] = [
   },
 ];
 
-export function Deploy() {
+export function Deploy({
+  title = 'Open source from day one',
+  subtitle = 'Use the open-source engine in your own infrastructure, or let us run it for you with a generous free tier.',
+  options = DEFAULT_DEPLOY_OPTIONS,
+}: {
+  title?: string;
+  subtitle?: string;
+  options?: DeployOption[];
+} = {}) {
   return (
     <section className={s.deploySection}>
       <FadeIn direction="up">
-        <h2 className={s.deployTitle}>Open source from day one</h2>
-        <p className={s.deploySubtitle}>
-          Use the open-source engine in your own infrastructure, or let us run it for you with a generous free
-          tier.
-        </p>
+        <h2 className={s.deployTitle}>{title}</h2>
+        <p className={s.deploySubtitle}>{subtitle}</p>
       </FadeIn>
       <FadeIn direction="up" delay={150}>
         <div className={s.deployCards}>
-          {DEPLOY_OPTIONS.map(({ Icon, ...option }) => (
+          {options.map(({ Icon, ...option }) => (
             <a
               key={option.title}
               href={option.href}
