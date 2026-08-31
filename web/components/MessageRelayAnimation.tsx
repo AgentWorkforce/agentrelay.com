@@ -610,7 +610,7 @@ function drawGlowRings(ctx: CanvasRenderingContext2D, nodes: AgentNode[], center
   }
 }
 
-function ClaudeLogo() {
+export function ClaudeLogo() {
   return (
     <svg className={s.providerLogo} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
@@ -621,7 +621,7 @@ function ClaudeLogo() {
   );
 }
 
-function CodexLogo() {
+export function CodexLogo() {
   return (
     <svg className={s.providerLogo} viewBox="0 0 268 266" fill="none" aria-hidden="true">
       <g transform="translate(-146 -227)">
@@ -655,7 +655,7 @@ function OpenCodeLogo() {
   );
 }
 
-function GeminiLogo() {
+export function GeminiLogo() {
   return (
     <svg className={s.providerLogo} viewBox="0 0 24 24" aria-hidden="true">
       <path
