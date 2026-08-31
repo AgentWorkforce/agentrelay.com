@@ -24,7 +24,7 @@ interface LogoItem {
 /** CLI coding agents that Relay drives over a PTY. */
 const CLI_LOGOS: readonly LogoItem[] = [
   { key: 'claude-code', label: 'Claude Code', node: <ClaudeCode.Color size={ICON_SIZE} /> },
-  // Mono, not .Color: the coloured Codex mark is near-black and disappeared
+  // Mono, not .Color: the coloured Codex mark is near-black and disappears
   // against the chip on this dark band.
   { key: 'codex', label: 'Codex', node: <Codex size={ICON_SIZE} /> },
   { key: 'opencode', label: 'OpenCode', node: <OpenCode size={ICON_SIZE} /> },
@@ -52,14 +52,11 @@ const CUSTOM_LOGOS: readonly LogoItem[] = [
  */
 // Apex coords (% of the relay+connector zone): relay bottom 50%, bus 75%,
 // card tops 100%. The pipes connect the relay box down to each agent group.
-// The drops sit at 24/76, not 25/75: with the row's gap taken out of the
-// stage, a card's centre lands at (100 - gap%) / 4, which is a shade inside
-// the quarter marks. The message-dot keyframes use the same lanes.
 const WIRES: readonly string[] = [
   '50,50 50,75', // relay down to the bus
-  '24,75 76,75', // bus across
-  '24,75 24,100', // bus down to CLI agents
-  '76,75 76,100', // bus down to custom agents
+  '25,75 75,75', // bus across
+  '25,75 25,100', // bus down to CLI agents
+  '75,75 75,100', // bus down to custom agents
 ];
 
 const MESSAGE_CLASSES = [s.howMsg1, s.howMsg2, s.howMsg3] as const;
@@ -76,20 +73,13 @@ function AgentGroup({
   return (
     <div className={s.howGroup}>
       <span className={s.howGroupLabel}>{label}</span>
-      {/* Each mark carries its name in the open. The marks alone were a row of
-          anonymous glyphs — a couple of them (Codex, OpenCode, Cursor) are
-          plain enough that nobody could tell which runtime they were looking
-          at, and the names were hidden in a `title` no touch device shows. */}
-      <ul className={s.howGroupLogos}>
+      <div className={s.howGroupLogos}>
         {logos.map((logo) => (
-          <li key={logo.key} className={s.howChip}>
-            <span className={s.howChipMark} aria-hidden="true">
-              {logo.node}
-            </span>
-            <span className={s.howChipLabel}>{logo.label}</span>
-          </li>
+          <span key={logo.key} className={s.howChip} aria-label={logo.label} title={logo.label}>
+            {logo.node}
+          </span>
         ))}
-      </ul>
+      </div>
       <p className={s.howGroupCaption}>{caption}</p>
     </div>
   );
@@ -146,15 +136,11 @@ export function HowItWorks() {
           <div className={s.howLink} aria-hidden="true" />
         </div>
 
-        {/* A rise, not a converge. The pair used to slide in from opposite
-            sides; now that the cards stack full-width on phones, the inbound
-            translateX(40px) on the right-hand card pushed 40px of scrollable
-            overflow past the gutter. translateY has no such edge. */}
         <div className={s.howRow}>
-          <FadeIn direction="up" className={s.howCol}>
+          <FadeIn direction="right" className={s.howCol}>
             <AgentGroup label="CLI agents" logos={CLI_LOGOS} caption="PTY driven, real-time injection" />
           </FadeIn>
-          <FadeIn direction="up" delay={80} className={s.howCol}>
+          <FadeIn direction="left" delay={80} className={s.howCol}>
             <AgentGroup label="Your custom agents" logos={CUSTOM_LOGOS} caption="Drop-in SDK + bindings" />
           </FadeIn>
         </div>
