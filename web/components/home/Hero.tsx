@@ -15,8 +15,8 @@ export function Hero() {
           </h1>
 
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>
-            Coordinate Claude, Codex, and other agents with shared channels, DMs, searchable
-            history, human approvals, and durable execution for every workflow.
+            Coordinate Claude, Codex, and other coding agents across shared work, approvals, and
+            long-running workflows
           </p>
 
           <div className={s.heroCenterCtas}>
