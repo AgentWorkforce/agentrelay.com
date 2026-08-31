@@ -18,28 +18,43 @@ import s from '../../app/landing.module.css';
 export function MessagingLandingPage() {
   return (
     <div className={`${s.page} ${s.messagingPage}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
+
       <SiteNav actions={<GitHubStarsBadge />} />
 
-      <Hero />
+      <main id="main">
+        <Hero />
 
-      <div className={s.featuresWrapper}>
-        <section className={s.featuresSection}>
-          <MessagingFeature />
-          <HowItWorks />
-          <DeliveryFeature />
-          <QuickStart />
-          <WaveDivider variant="feature" />
-          <AgentToolsFeature />
-          <WaveDivider variant="a2a" className={s.a2aSeparator} />
-          <A2AFeature />
-        </section>
-      </div>
+        <div className={s.featuresWrapper}>
+          <section className={s.featuresSection}>
+            <MessagingFeature />
+            <HowItWorks />
+            <DeliveryFeature
+              title="Build durable workflows"
+              previewVariant="workflow"
+              items={[
+                'Persist every transition so long-running work survives restarts and deploys.',
+                'Retry individual steps without repeating successful work or duplicating side effects.',
+                'Trace every input, output, model action, artifact, and intervention in one run history.',
+                'Trigger workflows from schedules and events, then execute them close to your systems.',
+              ]}
+            />
+            <QuickStart />
+            <WaveDivider variant="feature" />
+            <AgentToolsFeature />
+            <WaveDivider variant="a2a" className={s.a2aSeparator} />
+            <A2AFeature />
+          </section>
+        </div>
 
-      <div className={s.deployWrapper}>
-        <Deploy />
-      </div>
+        <div className={s.deployWrapper}>
+          <Deploy />
+        </div>
 
-      <Waitlist />
+        <Waitlist />
+      </main>
 
       <SiteFooter />
     </div>

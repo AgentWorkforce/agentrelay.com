@@ -2,13 +2,14 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 14px;
+  min-height: 40px;
+  padding: 8px 14px;
   background: var(--nav-surface);
   color: var(--nav-fg);
   border: 1px solid var(--nav-border);
-  border-radius: 100px;
+  border-radius: var(--r-sm, 12px);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-weight: 500;
   animation: throb 3s ease-in-out infinite;
   transition:

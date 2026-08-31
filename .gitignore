@@ -32,3 +32,6 @@ web/waitlist.json
 
 # OS
 .DS_Store
+
+# Palate website-builder skill telemetry, written at the repo root during agent sessions
+build-manifest.json

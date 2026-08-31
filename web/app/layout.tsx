@@ -11,16 +11,22 @@ import './globals.css';
 const inter = Inter({
   variable: '--font-geist-sans',
   subsets: ['latin'],
+  display: 'swap',
 });
 
 const sora = Sora({
   variable: '--font-heading',
   subsets: ['latin'],
+  display: 'swap',
 });
 
+// Mono only ever appears below or beside the LCP element, so it stays off the
+// critical path: two preloaded families instead of three.
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+  display: 'swap',
+  preload: false,
 });
 
 export const metadata: Metadata = {

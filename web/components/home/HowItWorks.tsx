@@ -24,7 +24,9 @@ interface LogoItem {
 /** CLI coding agents that Relay drives over a PTY. */
 const CLI_LOGOS: readonly LogoItem[] = [
   { key: 'claude-code', label: 'Claude Code', node: <ClaudeCode.Color size={ICON_SIZE} /> },
-  { key: 'codex', label: 'Codex', node: <Codex.Color size={ICON_SIZE} /> },
+  // Mono, not .Color: the coloured Codex mark is near-black and disappears
+  // against the chip on this dark band.
+  { key: 'codex', label: 'Codex', node: <Codex size={ICON_SIZE} /> },
   { key: 'opencode', label: 'OpenCode', node: <OpenCode size={ICON_SIZE} /> },
   { key: 'cursor', label: 'Cursor', node: <Cursor size={ICON_SIZE} /> },
   { key: 'grok', label: 'Grok', node: <Grok size={ICON_SIZE} /> },

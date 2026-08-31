@@ -1,30 +1,41 @@
-import { HeroCommandCta } from './HeroCommandCta';
-import { HeroGraph } from './HeroGraph';
+import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
+
+import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../../lib/home-copy';
+import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
-import { HeroBackdrop } from './icons';
+import { GitHubIcon } from './icons';
 
 export function Hero() {
   return (
     <div className={s.heroSection}>
-      <HeroBackdrop />
-      <section className={s.hero}>
-        <div className={s.heroLeft}>
-          <div className={s.heroCopyGroup}>
-            <h1 className={s.headline}>Let your agents talk</h1>
+      <section className={s.heroCenter}>
+        <div className={s.heroCenterColumn}>
+          <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
+            {HOME_HERO_TITLE}
+          </h1>
 
-            <p className={s.subtitle}>
-              Give Claude, Codex or any other agent DMs, channels and a searchable chat history. Build your
-              multi-agent system without worrying about the glue.
-            </p>
+          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
+
+          <div className={s.heroCenterCtas}>
+            <Link className={s.ctaPrimary} href="/docs">
+              Read the docs
+              <ArrowRight aria-hidden="true" />
+            </Link>
+            <a
+              className={s.ctaSecondary}
+              href="https://github.com/agentworkforce/relay"
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <GitHubIcon />
+              GitHub
+            </a>
           </div>
-
-          <HeroCommandCta />
-        </div>
-
-        <div className={s.heroRight}>
-          <HeroGraph />
         </div>
       </section>
+
+      <HeroTerminalMarquee />
     </div>
   );
 }

@@ -7,6 +7,16 @@ const __dirname = path.dirname(__filename);
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Default ("loose") chunking merged unrelated route CSS into one
+    // render-blocking file: the homepage was shipping the /brand, /enterprise,
+    // /telemetry and /legal stylesheets — about 60% of its critical CSS —
+    // before a byte of its own. 'strict' still merges them; opting out entirely
+    // gives each CSS module its own chunk, loaded only where it is used, which
+    // takes the homepage's render-blocking CSS from 253 KB to 82 KB raw
+    // (51 KB → 20 KB gzip) at the cost of a couple more HTTP/2 requests.
+    cssChunking: false,
+  },
   outputFileTracingRoot: path.resolve(__dirname, '..'),
   outputFileTracingIncludes: {
     '/*': ['content/docs/**/*', 'content/blog/**/*'],

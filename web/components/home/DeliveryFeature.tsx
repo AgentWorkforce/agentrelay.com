@@ -1,6 +1,6 @@
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import { FadeIn } from '../FadeIn';
-import { DurableDeliveryTimeline } from '../../app/DurableDeliveryTimeline';
+import { DurableDeliveryTimeline, DurableWorkflowTrace } from '../../app/DurableDeliveryTimeline';
 import s from '../../app/landing.module.css';
 import { ContextCapabilities } from './ContextCapabilities';
 import { OpenClawLogo } from './icons';
@@ -39,13 +39,28 @@ function DeliveryRowIcon({ provider }: { provider: DeliveryProvider }) {
   );
 }
 
-export function DeliveryFeature() {
+const DEFAULT_ITEMS = [
+  'Durable delivery so channel history and offline catch-up survive restarts.',
+  'Receipts, retry queues, and backoff keep handoffs moving until every target agent acknowledges.',
+  'Stateful coordination stays close to active channels for fast reads, writes, and thread updates.',
+  'A global edge network places channels near agents while keeping ordering and membership consistent.',
+];
+
+export function DeliveryFeature({
+  title = 'The hard parts of delivery, handled',
+  items = DEFAULT_ITEMS,
+  previewVariant = 'delivery',
+}: {
+  title?: string;
+  items?: readonly string[];
+  previewVariant?: 'delivery' | 'workflow';
+} = {}) {
   return (
     <FadeIn direction="up" delay={120} className={`${s.featureCol} ${s.deliveryFeature}`}>
       <div className={s.featurePreview}>
         <div className={s.previewAccentBlue} />
         <div className={s.previewDashboard}>
-          <DurableDeliveryTimeline />
+          {previewVariant === 'workflow' ? <DurableWorkflowTrace /> : <DurableDeliveryTimeline />}
           <div className={s.deliveryTableHead}>
             <span />
             <span>agent</span>
@@ -75,19 +90,9 @@ export function DeliveryFeature() {
         </div>
       </div>
       <div className={s.featureCopy}>
-        <h3 className={s.featureTitle}>The hard parts of delivery, handled</h3>
+        <h3 className={s.featureTitle}>{title}</h3>
         <ul className={s.featureList}>
-          <li>Durable delivery so channel history and offline catch-up survive restarts.</li>
-          <li>
-            Receipts, retry queues, and backoff keep handoffs moving until every target agent acknowledges.
-          </li>
-          <li>
-            Stateful coordination stays close to active channels for fast reads, writes, and thread updates.
-          </li>
-          <li>
-            A global edge network places channels near agents while keeping ordering and membership
-            consistent.
-          </li>
+          {items.map((item) => <li key={item}>{item}</li>)}
         </ul>
       </div>
 

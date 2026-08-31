@@ -8,6 +8,26 @@
 */
 
 :root {
+  /* ── Shape ──
+     Agent Relay's one shape rule: every interactive element and every content
+     surface is a message — a rounded rectangle with a single squared "tail"
+     corner at bottom-left. Nothing is a plain rounded rect, nothing is a pill.
+     The `-in` variants mirror the tail to bottom-right, used only where the
+     direction means something (an incoming message vs an outgoing one). */
+  --r-xs: 8px 8px 8px 2px;
+  --r-sm: 12px 12px 12px 2px;
+  --r-md: 16px 16px 16px 3px;
+  --r-lg: 24px 24px 24px 4px;
+  --r-xl: 34px 34px 34px 6px;
+  --r-xs-in: 8px 8px 2px 8px;
+  --r-sm-in: 12px 12px 2px 12px;
+  --r-md-in: 16px 16px 3px 16px;
+  --r-lg-in: 24px 24px 4px 24px;
+
+  /* Focus ring. Drawn with a 2px outline-offset so the ring sits on the page
+     ground rather than on the control, which is what it is measured against. */
+  --focus-ring: #1c1512;
+
   /* Logo */
   --logo-primary: #4a90c2;
   --logo-secondary: rgba(74, 144, 194, 0.5);
@@ -152,6 +172,7 @@
 }
 
 :root[data-theme='dark'] {
+  --focus-ring: #ffd9c4;
   --bg: #08111a;
   --bg-elevated: rgba(12, 20, 30, 0.82);
   --fg: #edf4fb;
