@@ -458,11 +458,9 @@ function GrokTerminalBody({ card }: { card: TerminalCard }) {
 function OpenCodeLoader() {
   return (
     <span className={s.heroOpenCodeLoader}>
-      {[0, 1, 2, 3, 4, 5].map((segment) => (
+      {[0, 1, 2, 3, 4, 5, 6, 7].map((segment) => (
         <span className={s.heroOpenCodeLoaderDot} key={segment} />
       ))}
-      <span className={s.heroOpenCodeLoaderBlock} />
-      <span className={`${s.heroOpenCodeLoaderBlock} ${s.heroOpenCodeLoaderBlockWide}`} />
     </span>
   );
 }

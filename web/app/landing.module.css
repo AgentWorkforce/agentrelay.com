@@ -2710,27 +2710,13 @@
   height: 9px;
 }
 
-.heroOpenCodeLoaderDot,
-.heroOpenCodeLoaderBlock {
+.heroOpenCodeLoaderDot {
   display: inline-block;
   flex: none;
+  width: 5px;
+  height: 5px;
   background: rgba(89, 166, 238, 0.82);
-}
-
-.heroOpenCodeLoaderDot {
-  width: 4px;
-  height: 4px;
-}
-
-.heroOpenCodeLoaderBlock {
-  width: 10px;
-  height: 9px;
-  background: rgba(89, 166, 238, 0.56);
-}
-
-.heroOpenCodeLoaderBlockWide {
-  width: 15px;
-  background: rgba(89, 166, 238, 0.36);
+  transform-origin: center;
 }
 
 .heroOpenCodeShortcut {
@@ -2747,49 +2733,48 @@
     will-change: clip-path, opacity, transform;
   }
 
-  .heroOpenCodeLoaderDot,
-  .heroOpenCodeLoaderBlock {
-    animation: heroOpenCodeLoaderPulse 1.15s ease-in-out infinite both;
+  .heroOpenCodeLoaderDot {
+    animation: heroOpenCodeLoaderPulse 1.28s ease-in-out infinite both;
   }
 
   .heroOpenCodeLoaderDot:nth-child(2) {
-    animation-delay: 90ms;
+    animation-delay: 100ms;
   }
 
   .heroOpenCodeLoaderDot:nth-child(3) {
-    animation-delay: 180ms;
+    animation-delay: 200ms;
   }
 
   .heroOpenCodeLoaderDot:nth-child(4) {
-    animation-delay: 270ms;
+    animation-delay: 300ms;
   }
 
   .heroOpenCodeLoaderDot:nth-child(5) {
-    animation-delay: 360ms;
+    animation-delay: 400ms;
   }
 
   .heroOpenCodeLoaderDot:nth-child(6) {
-    animation-delay: 450ms;
+    animation-delay: 500ms;
   }
 
-  .heroOpenCodeLoaderBlock:nth-child(7) {
-    animation-delay: 540ms;
+  .heroOpenCodeLoaderDot:nth-child(7) {
+    animation-delay: 600ms;
   }
 
-  .heroOpenCodeLoaderBlock:nth-child(8) {
-    animation-delay: 630ms;
+  .heroOpenCodeLoaderDot:nth-child(8) {
+    animation-delay: 700ms;
   }
 }
 
 @keyframes heroOpenCodeLoaderPulse {
   0%,
   100% {
-    opacity: 0.28;
-    transform: scale(0.7);
+    opacity: 0.3;
+    transform: scale(0.68);
   }
-  48% {
+  45% {
     opacity: 1;
-    transform: scale(1);
+    transform: scale(1.28);
   }
 }
 
