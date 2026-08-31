@@ -40,34 +40,50 @@ type RelayPath = {
 
 const AGENT_META: Record<
   TerminalAgent,
-  { cycle: string; label: string; mode: string; prompt: string; state: string }
+  {
+    activityGlyph: string;
+    cycle: string;
+    label: string;
+    mode: string;
+    prompt: string;
+    session: string;
+    state: string;
+  }
 > = {
   claude: {
+    activityGlyph: '✻',
     cycle: '7.8s',
     label: 'Claude Code',
     mode: 'trusted',
     prompt: '❯',
+    session: 'Claude Max',
     state: 'Thinking',
   },
   codex: {
+    activityGlyph: '◌',
     cycle: '7.2s',
     label: 'OpenAI Codex',
     mode: 'workspace-write',
     prompt: '›',
+    session: 'Codex session',
     state: 'Running',
   },
   grok: {
+    activityGlyph: '◆',
     cycle: '7.5s',
     label: 'Grok',
     mode: 'auto',
     prompt: '>',
+    session: 'Grok Code',
     state: 'Working',
   },
   opencode: {
+    activityGlyph: '▣',
     cycle: '6.9s',
     label: 'OpenCode',
     mode: 'build',
     prompt: '>',
+    session: 'OpenCode build',
     state: 'Editing',
   },
 };
@@ -78,6 +94,21 @@ const TONE_CLASS: Record<LineTone, string> = {
   ok: s.heroTermOk,
   relay: s.heroTermRelay,
 };
+
+const LINE_MARKER: Record<LineTone, string> = {
+  prompt: '❯',
+  tool: '└',
+  ok: '✓',
+  relay: '↗',
+};
+
+function terminalLineCopy(line: TerminalLine) {
+  if (line.tone === 'prompt') {
+    return line.text.match(/^\$ \S+ "(.+)"$/)?.[1] ?? line.text.replace(/^\$ /, '');
+  }
+
+  return line.text.replace(/^(?:⎿|✓|↑|→)\s*/, '');
+}
 
 const RELAY_PATHS: RelayPath[] = [
   {
@@ -346,6 +377,7 @@ function TerminalRow({
             return (
               <article
                 className={`${s.heroTerm} ${SIZE_CLASS[card.size]}`}
+                data-agent={card.agent}
                 key={`${rowKey}-${copy}-${index}`}
                 style={terminalStyle}
               >
@@ -360,26 +392,33 @@ function TerminalRow({
                 </header>
 
                 <div className={s.heroTermBody}>
-                  <div className={s.heroTermContext}>
-                    <span className={s.heroTermRepo}>{card.repo}</span>
+                  <div className={s.heroTermSession}>
+                    <span className={s.heroTermSessionName}>{meta.session}</span>
+                    <span className={s.heroTermMode}>{meta.mode}</span>
+                    <span className={s.heroTermRepo}>~/{card.repo}</span>
+                  </div>
+                  <div className={s.heroTermTranscript}>
+                    {card.lines.map((line, lineIndex) => (
+                      <span
+                        className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
+                        key={line.text}
+                        style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
+                      >
+                        <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
+                        <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <div className={s.heroTermComposer}>
+                    <span className={s.heroTermLivePrompt}>
+                      <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
+                      <span className={s.heroTermCursor} />
+                    </span>
                     <span className={s.heroTermState}>
-                      <span className={s.heroTermStateDot} />
-                      {meta.state} · {meta.mode}
+                      <span className={s.heroTermActivityGlyph}>{meta.activityGlyph}</span>
+                      {meta.state}
                     </span>
                   </div>
-                  {card.lines.map((line, lineIndex) => (
-                    <span
-                      className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
-                      key={line.text}
-                      style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
-                    >
-                      {line.text}
-                    </span>
-                  ))}
-                  <span className={s.heroTermLivePrompt}>
-                    <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
-                    <span className={s.heroTermCursor} />
-                  </span>
                 </div>
               </article>
             );
