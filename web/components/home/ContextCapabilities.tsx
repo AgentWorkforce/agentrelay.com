@@ -1,19 +1,77 @@
+import ClaudeCode from '@lobehub/icons/es/ClaudeCode';
+import Codex from '@lobehub/icons/es/Codex';
+import { FileText, FolderOpen, HardDrive } from 'lucide-react';
+
 import { FadeIn } from '../FadeIn';
 import { RealtimeEventFeed } from '../../app/RealtimeEventFeed';
 import { SearchPreviewAnimation } from '../../app/SearchPreviewAnimation';
 import s from '../../app/landing.module.css';
 import { WaveDivider } from './icons';
 
-// relay.webhooks.createInbound() mints the URL and token per webhook, so there
-// is no fixed path to show here — the payload shape and bearer auth are what
-// the snippet is illustrating. See content/docs/webhooks.mdx.
-const WEBHOOK_SNIPPET = `curl -X POST "$RELAY_INBOUND_WEBHOOK_URL" \\
-  -H "Authorization: Bearer $RELAY_WEBHOOK_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"message":"Deploy finished","author":"github-actions[bot]"}'`;
+function SharedFileMountPreview() {
+  return (
+    <div
+      className={s.sharedFileMount}
+      role="img"
+      aria-label="Claude Code and Codex sharing a real-time mounted project file tree"
+    >
+      <div className={s.mountTopbar}>
+        <HardDrive size={13} strokeWidth={1.8} aria-hidden="true" />
+        <code>/relay/shared</code>
+        <span className={s.mountStatus}>
+          <span aria-hidden="true" />
+          mounted
+        </span>
+      </div>
+
+      <div className={s.mountAgentRow}>
+        <div className={`${s.mountAgent} ${s.mountAgentClaude}`}>
+          <ClaudeCode size={14} aria-hidden="true" />
+          <span>Claude Code</span>
+        </div>
+        <div className={s.mountTransport} aria-hidden="true">
+          <span className={s.mountPulseWrite} />
+          <span className={s.mountPulseRead} />
+        </div>
+        <div className={`${s.mountAgent} ${s.mountAgentCodex}`}>
+          <Codex size={14} aria-hidden="true" />
+          <span>Codex</span>
+        </div>
+      </div>
+
+      <div className={s.mountTree}>
+        <div className={s.mountTreeHead}>
+          <FolderOpen size={13} strokeWidth={1.8} aria-hidden="true" />
+          <span>shared-workspace</span>
+          <small>rev 42</small>
+        </div>
+        <div className={s.mountFile}>
+          <FileText size={12} strokeWidth={1.8} aria-hidden="true" />
+          <code>plans/release-plan.md</code>
+          <span>+12</span>
+        </div>
+        <div className={s.mountFile}>
+          <FileText size={12} strokeWidth={1.8} aria-hidden="true" />
+          <code>artifacts/test-results.json</code>
+          <span>sync</span>
+        </div>
+        <div className={s.mountFile}>
+          <FileText size={12} strokeWidth={1.8} aria-hidden="true" />
+          <code>build/manifest.json</code>
+          <span>read</span>
+        </div>
+      </div>
+
+      <div className={s.mountActivity} aria-hidden="true">
+        <span>Claude wrote release-plan.md</span>
+        <span>Codex mounted revision 42</span>
+      </div>
+    </div>
+  );
+}
 
 /**
- * The "build the right context" band: real-time events, webhooks, and search.
+ * The "build the right context" band: real-time events, shared files, and search.
  * Rendered inside {@link DeliveryFeature} so it stays grouped with the delivery
  * story, matching the original DOM nesting.
  */
@@ -60,29 +118,14 @@ export function ContextCapabilities() {
       </FadeIn>
 
       <FadeIn direction="up" delay={160} className={s.capabilityItem}>
-        <div className={`${s.featurePreview} ${s.capabilityPreview} ${s.webhookCapabilityPreview}`}>
-          <div className={s.webhookPreview}>
-            <div className={s.webhookCodeTitle}>
-              <span className={s.webhookCodeDots} aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </span>
-              <span>terminal</span>
-            </div>
-            <pre className={s.webhookCodeSnippet}>
-              <code>
-                <span className={s.codeComment}>$ </span>
-                {WEBHOOK_SNIPPET}
-              </code>
-            </pre>
-          </div>
+        <div className={`${s.featurePreview} ${s.capabilityPreview} ${s.sharedFilesCapabilityPreview}`}>
+          <SharedFileMountPreview />
         </div>
         <div className={s.capabilityCopy}>
-          <h3>Webhooks</h3>
+          <h3>Shared Files</h3>
           <p>
-            Create a webhook, get a URL, POST to it from GitHub Actions, Sentry, PagerDuty, or any service.
-            Messages appear in your channel instantly.
+            Queue-first virtual filesystem-over-REST that ingests noisy external webhooks, projects a durable
+            file tree, and performs conflict-safe writeback with retries, dead-lettering, and replay.
           </p>
         </div>
       </FadeIn>

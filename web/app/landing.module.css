@@ -4746,36 +4746,343 @@
   color: rgba(226, 232, 240, 0.58);
 }
 
-.webhookCapabilityPreview {
+.sharedFilesCapabilityPreview {
   background: #07111e;
 }
 
-.webhookCapabilityPreview .webhookPreview {
-  padding: 0;
-  justify-content: stretch;
+.sharedFileMount {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% -30%, rgba(73, 157, 214, 0.2), transparent 52%),
+    #07111e;
+  color: rgba(226, 232, 240, 0.86);
+  font-family: var(--font-geist-mono), monospace;
 }
 
-.webhookCapabilityPreview .webhookCodeTitle {
-  border-top: 0;
-  border-right: 0;
-  border-left: 0;
-  border-radius: 0;
-  border-bottom-color: rgba(156, 207, 255, 0.2);
-  background: linear-gradient(180deg, rgba(74, 144, 194, 0.34), rgba(22, 47, 72, 0.56));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  color: rgba(248, 250, 252, 0.82);
-  backdrop-filter: blur(16px) saturate(1.35);
-  -webkit-backdrop-filter: blur(16px) saturate(1.35);
+.mountTopbar,
+.mountAgent,
+.mountTree {
+  border: 1px solid rgba(156, 207, 255, 0.15);
+  background: rgba(14, 23, 41, 0.9);
+  box-shadow: 0 10px 24px rgba(2, 7, 18, 0.22);
 }
 
-.webhookCapabilityPreview .webhookCodeSnippet {
-  flex: 1;
+.mountTopbar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  color: rgba(181, 205, 226, 0.76);
+  font-size: 0.61rem;
+}
+
+.mountTopbar code {
+  overflow: hidden;
+  color: rgba(241, 245, 249, 0.9);
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mountStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #78d5ad;
+  white-space: nowrap;
+}
+
+.mountStatus > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.mountAgentRow {
+  display: grid;
+  grid-template-columns: max-content minmax(36px, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mountAgent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  color: rgba(226, 232, 240, 0.78);
+  font-size: 0.58rem;
+  white-space: nowrap;
+}
+
+.mountAgentClaude svg {
+  color: #df7b58;
+}
+
+.mountAgentCodex svg {
+  color: #91b7d4;
+}
+
+.mountTransport {
+  position: relative;
+  height: 10px;
+  overflow: hidden;
+}
+
+.mountTransport::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgba(116, 184, 226, 0.32);
+  transform: translateY(-50%);
+}
+
+.mountPulseWrite,
+.mountPulseRead {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 40%,
+    rgba(116, 184, 226, 0.2) 46%,
+    #9ccfff 50%,
+    rgba(116, 184, 226, 0.2) 54%,
+    transparent 60%
+  );
+  will-change: transform, opacity;
+}
+
+.mountPulseWrite {
+  transform: translateX(-100%);
+}
+
+.mountPulseRead {
+  transform: translateX(100%);
+}
+
+.mountTree {
   min-height: 0;
-  border-right: 0;
-  border-bottom: 0;
-  border-left: 0;
-  border-radius: 0;
-  box-shadow: none;
+  overflow: hidden;
+  border-radius: 9px;
+}
+
+.mountTreeHead,
+.mountFile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+}
+
+.mountTreeHead {
+  min-height: 28px;
+  padding: 6px 9px;
+  border-bottom: 1px solid rgba(156, 207, 255, 0.12);
+  color: rgba(241, 245, 249, 0.88);
+  font-size: 0.61rem;
+  font-weight: 700;
+}
+
+.mountTreeHead small {
+  color: rgba(120, 213, 173, 0.78);
+  font: inherit;
+  font-weight: 500;
+}
+
+.mountFile {
+  min-height: 27px;
+  padding: 6px 9px 6px 20px;
+  color: rgba(148, 163, 184, 0.76);
+  font-size: 0.56rem;
+}
+
+.mountFile + .mountFile {
+  border-top: 1px solid rgba(156, 207, 255, 0.08);
+}
+
+.mountFile::before {
+  content: '';
+  position: absolute;
+  inset: 2px 4px;
+  border: 1px solid rgba(116, 184, 226, 0.22);
+  border-radius: 5px;
+  background: rgba(50, 119, 169, 0.16);
+  opacity: 0;
+}
+
+.mountFile > * {
+  position: relative;
+  z-index: 1;
+}
+
+.mountFile code {
+  overflow: hidden;
+  color: rgba(218, 229, 239, 0.84);
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mountFile > span {
+  color: rgba(116, 184, 226, 0.86);
+}
+
+.mountActivity {
+  position: relative;
+  display: grid;
+  min-height: 14px;
+  padding-left: 13px;
+  color: rgba(173, 192, 210, 0.72);
+  font-size: 0.56rem;
+  line-height: 14px;
+}
+
+.mountActivity::before {
+  content: '';
+  position: absolute;
+  top: 5px;
+  left: 1px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #78d5ad;
+}
+
+.mountActivity span {
+  grid-area: 1 / 1;
+  opacity: 0;
+}
+
+.mountActivity span:first-child {
+  opacity: 1;
+}
+
+@keyframes sharedMountWrite {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+
+  12%,
+  34% {
+    opacity: 1;
+  }
+
+  38%,
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes sharedMountRead {
+  0%,
+  50% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  54%,
+  76% {
+    opacity: 1;
+  }
+
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+@keyframes sharedMountFileSync {
+  0%,
+  20%,
+  100% {
+    opacity: 0;
+  }
+
+  22%,
+  42% {
+    opacity: 1;
+  }
+
+  44% {
+    opacity: 0;
+  }
+}
+
+@keyframes sharedMountActivityFirst {
+  0%,
+  47% {
+    opacity: 1;
+  }
+
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes sharedMountActivitySecond {
+  0%,
+  47% {
+    opacity: 0;
+  }
+
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mountPulseWrite {
+    animation: sharedMountWrite 5.6s steps(9, end) infinite;
+  }
+
+  .mountPulseRead {
+    animation: sharedMountRead 5.6s steps(9, end) infinite;
+  }
+
+  .mountFile::before {
+    animation: sharedMountFileSync 5.6s steps(1, end) infinite;
+  }
+
+  .mountFile:nth-child(3)::before {
+    animation-delay: 0.65s;
+  }
+
+  .mountFile:nth-child(4)::before {
+    animation-delay: 1.3s;
+  }
+
+  .mountActivity span:first-child {
+    animation: sharedMountActivityFirst 5.6s steps(1, end) infinite;
+  }
+
+  .mountActivity span:last-child {
+    animation: sharedMountActivitySecond 5.6s steps(1, end) infinite;
+  }
 }
 
 .capabilityPreview .searchPreview {
@@ -5480,83 +5787,6 @@
   background: rgba(7, 17, 31, 0.72);
   box-shadow: 0 14px 32px rgba(2, 7, 18, 0.24);
   backdrop-filter: blur(12px);
-}
-
-.webhookPreview {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 20px 0 20px 20px;
-  color: #f7fafc;
-}
-
-.webhookCodeTitle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-right: 0;
-  border-radius: 10px 0 0 0;
-  background: #111a24;
-  color: rgba(226, 232, 240, 0.72);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.68rem;
-  line-height: 1;
-}
-
-.webhookCodeDots {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-}
-
-.webhookCodeDots span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.webhookCodeDots span:nth-child(1) {
-  background: #ff5f57;
-}
-
-.webhookCodeDots span:nth-child(2) {
-  background: #febc2e;
-}
-
-.webhookCodeDots span:nth-child(3) {
-  background: #28c840;
-}
-
-.webhookCodeSnippet {
-  width: 100%;
-  min-height: 174px;
-  margin: 0;
-  padding: 18px 16px 20px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-top: 0;
-  border-right: 0;
-  border-radius: 0 0 0 10px;
-  background: #07111e;
-  box-shadow: -10px 12px 30px rgba(2, 7, 18, 0.28);
-  color: rgba(248, 250, 252, 0.9);
-  overflow: hidden;
-}
-
-.webhookCodeSnippet code {
-  overflow: hidden;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.7rem;
-  font-weight: 700;
-  line-height: 1.7;
-  text-overflow: ellipsis;
-  white-space: pre-wrap;
 }
 
 .commandPrompt code {
@@ -6988,30 +7218,12 @@
     gap: 9px;
   }
 
-  .webhookPreview {
-    padding: 16px 0 16px 16px;
-  }
-
   .commandsPreview {
     inset: 0;
   }
 
   .commandsCard {
     padding: 20px;
-  }
-
-  .webhookCodeTitle {
-    padding: 10px 14px;
-  }
-
-  .webhookCodeSnippet {
-    min-height: 168px;
-    padding: 15px 14px 16px;
-  }
-
-  .webhookCodeSnippet code {
-    font-size: 0.66rem;
-    line-height: 1.65;
   }
 
   .searchPreview {
