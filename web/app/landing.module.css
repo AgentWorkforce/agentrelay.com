@@ -2219,6 +2219,31 @@
   border-bottom: 1px solid rgba(116, 184, 226, 0.14);
 }
 
+.heroTermTraffic {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.heroTermTraffic span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.heroTermTraffic span:nth-child(1) {
+  background: #ff5f57;
+}
+
+.heroTermTraffic span:nth-child(2) {
+  background: #febc2e;
+}
+
+.heroTermTraffic span:nth-child(3) {
+  background: #28c840;
+}
+
 .heroTermTitle {
   display: inline-flex;
   flex: 1;

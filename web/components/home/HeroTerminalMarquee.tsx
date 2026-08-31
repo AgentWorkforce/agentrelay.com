@@ -669,6 +669,11 @@ function TerminalRow({
                 style={terminalStyle}
               >
                 <header className={s.heroTermBar}>
+                  <span className={s.heroTermTraffic}>
+                    <span />
+                    <span />
+                    <span />
+                  </span>
                   <span className={s.heroTermTitle}>
                     <TerminalAgentLogo
                       agent={card.agent}
