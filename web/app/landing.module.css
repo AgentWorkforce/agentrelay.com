@@ -2133,17 +2133,47 @@
 }
 
 .heroTerm {
+  --term-accent: #74b8e2;
+  --term-panel: rgba(8, 22, 36, 0.94);
   display: flex;
   flex-direction: column;
   flex: none;
   margin-right: 14px;
-  border: 1px solid rgba(116, 184, 226, 0.16);
+  min-height: 126px;
+  border: 1px solid color-mix(in srgb, var(--term-accent) 24%, rgba(116, 184, 226, 0.12));
   border-radius: 10px;
-  /* This band is navy in both themes, so the card carries the dark palette
-     outright rather than through --agent-card-*, which flips to white. */
-  background: rgba(8, 22, 36, 0.86);
-  box-shadow: 0 6px 18px rgba(2, 10, 20, 0.28);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--term-accent) 5%, transparent), transparent 46%),
+    var(--term-panel);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--term-accent) 12%, transparent),
+    0 6px 18px rgba(2, 10, 20, 0.28);
   overflow: hidden;
+}
+
+.heroTermClaude {
+  --term-accent: #d98767;
+  --term-panel: rgba(25, 17, 18, 0.95);
+}
+
+.heroTermCodex {
+  --term-accent: #91d2bd;
+  --term-panel: rgba(7, 23, 25, 0.95);
+}
+
+.heroTermOpenCode {
+  --term-accent: #79d8a7;
+  --term-panel: rgba(7, 23, 22, 0.95);
+}
+
+.heroTermGemini {
+  --term-accent: #9bbcff;
+  --term-panel: rgba(12, 20, 38, 0.95);
+}
+
+.heroTermCopilot {
+  --term-accent: #b6a6e8;
+  --term-panel: rgba(20, 18, 38, 0.95);
 }
 
 .heroTermSm {
@@ -2163,8 +2193,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: rgba(15, 33, 48, 0.94);
-  border-bottom: 1px solid rgba(116, 184, 226, 0.14);
+  background: color-mix(in srgb, var(--term-panel) 84%, var(--term-accent) 16%);
+  border-bottom: 1px solid color-mix(in srgb, var(--term-accent) 22%, transparent);
 }
 
 .heroTermLights {
@@ -2195,6 +2225,7 @@
 
 .heroTermTitle {
   display: inline-flex;
+  flex: 1;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -2212,17 +2243,77 @@
   width: 12px;
   height: 12px;
   flex-shrink: 0;
-  color: rgba(219, 233, 244, 0.9);
+  color: var(--term-accent);
+}
+
+.heroTermState {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  color: color-mix(in srgb, var(--term-accent) 74%, white 26%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.heroTermStateDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--term-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--term-accent) 12%, transparent);
+}
+
+.heroTermProductBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 25px;
+  padding: 5px 11px;
+  border-bottom: 1px solid color-mix(in srgb, var(--term-accent) 14%, transparent);
+  color: var(--term-accent);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.heroTermClaude .heroTermProductBar {
+  margin: 6px 8px 0;
+  min-height: 22px;
+  padding: 3px 7px;
+  border: 1px solid color-mix(in srgb, var(--term-accent) 58%, transparent);
+  border-radius: 4px;
+}
+
+.heroTermProduct {
+  overflow: hidden;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroTermMode {
+  flex: none;
+  color: color-mix(in srgb, var(--term-accent) 58%, rgba(211, 227, 240, 0.78));
+  font-size: 0.54rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .heroTermBody {
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 10px 12px 12px;
+  gap: 4px;
+  min-height: 72px;
+  padding: 8px 12px 9px;
 }
 
 .heroTermLine {
+  position: relative;
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.7rem;
   line-height: 1.35;
@@ -2230,6 +2321,66 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroTermLine {
+    animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+    animation-delay: calc(var(--term-phase) + var(--line-delay));
+    will-change: clip-path, opacity, transform;
+  }
+
+  .heroTermStateDot {
+    animation: heroTerminalStatusPulse 1.7s ease-in-out infinite;
+  }
+
+  .heroTermCursor {
+    animation: heroTerminalCursorBlink 920ms steps(2, start) infinite;
+  }
+}
+
+@keyframes heroTerminalLineCycle {
+  0%,
+  7% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+    transform: translateY(3px);
+  }
+  19%,
+  76% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    transform: translateY(0);
+  }
+  91%,
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 0 0);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes heroTerminalStatusPulse {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heroTerminalCursorBlink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  49%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .heroTermPrompt {
@@ -2246,6 +2397,30 @@
 
 .heroTermRelay {
   color: #85c6ec;
+}
+
+.heroTermLivePrompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 10px;
+  color: var(--term-accent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.65rem;
+  line-height: 1;
+}
+
+.heroTermPromptGlyph {
+  min-width: 8px;
+  font-weight: 700;
+}
+
+.heroTermCursor {
+  display: inline-block;
+  width: 6px;
+  height: 9px;
+  background: color-mix(in srgb, var(--term-accent) 82%, white 18%);
+  opacity: 0.78;
 }
 
 .badge {

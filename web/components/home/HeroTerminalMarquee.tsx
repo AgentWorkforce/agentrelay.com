@@ -1,5 +1,9 @@
+import type { CSSProperties } from 'react';
+
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import s from '../../app/landing.module.css';
+
+type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode' | 'gemini' | 'copilot'>;
 
 type LineTone = 'prompt' | 'tool' | 'ok' | 'relay';
 
@@ -10,13 +14,68 @@ type TerminalLine = {
 
 type TerminalCard = {
   /** Which agent's terminal this is — drives the mark in the title bar. */
-  agent: AgentTool;
+  agent: TerminalAgent;
   /** The title bar string, `agent · repo` the way a real shell tab reads. */
   title: string;
   /** Three or four lines: a prompt, what the agent did, where it went. */
   lines: TerminalLine[];
   /** Card width step. The rows read as sessions, not as a grid, so widths vary. */
   size: 'sm' | 'md' | 'lg';
+};
+
+type TerminalStyle = CSSProperties & {
+  '--line-delay'?: string;
+  '--term-cycle'?: string;
+  '--term-phase'?: string;
+};
+
+const AGENT_META: Record<
+  TerminalAgent,
+  { cycle: string; label: string; mode: string; prompt: string; state: string }
+> = {
+  claude: {
+    cycle: '7.8s',
+    label: 'Claude Code',
+    mode: 'trusted',
+    prompt: '❯',
+    state: 'Thinking',
+  },
+  codex: {
+    cycle: '7.2s',
+    label: 'OpenAI Codex',
+    mode: 'workspace-write',
+    prompt: '›',
+    state: 'Running',
+  },
+  opencode: {
+    cycle: '6.9s',
+    label: 'OpenCode',
+    mode: 'build',
+    prompt: '>',
+    state: 'Editing',
+  },
+  gemini: {
+    cycle: '7.5s',
+    label: 'Gemini CLI',
+    mode: 'auto edit',
+    prompt: '✦',
+    state: 'Working',
+  },
+  copilot: {
+    cycle: '7.1s',
+    label: 'GitHub Copilot',
+    mode: 'agent',
+    prompt: '>',
+    state: 'Working',
+  },
+};
+
+const AGENT_CLASS: Record<TerminalAgent, string> = {
+  claude: s.heroTermClaude,
+  codex: s.heroTermCodex,
+  opencode: s.heroTermOpenCode,
+  gemini: s.heroTermGemini,
+  copilot: s.heroTermCopilot,
 };
 
 const TONE_CLASS: Record<LineTone, string> = {
@@ -42,7 +101,7 @@ const ROW_ONE: TerminalCard[] = [
     size: 'md',
     lines: [
       { tone: 'prompt', text: '$ claude "fix the flaky retry test"' },
-      { tone: 'tool', text: '⎿ ran 26 tests — 26 passed' },
+      { tone: 'tool', text: '⎿ ran 26 tests - 26 passed' },
       { tone: 'relay', text: '↑ pushed fix-retry → PR #482' },
     ],
   },
@@ -82,7 +141,7 @@ const ROW_ONE: TerminalCard[] = [
     size: 'sm',
     lines: [
       { tone: 'prompt', text: '$ copilot "unflake the ws suite"' },
-      { tone: 'tool', text: '⎿ retried 3× — stable' },
+      { tone: 'tool', text: '⎿ retried 3× - stable' },
       { tone: 'relay', text: '→ note left in #build-router' },
     ],
   },
@@ -203,40 +262,69 @@ function TerminalRow({
   // copy's width (translateX(-50%)) and snaps back with the second copy already
   // sitting where the first one started.
   const copies = ['a', 'b'];
+  const rowPhase = rowKey === 'one' ? 0 : rowKey === 'two' ? 2.2 : 4.4;
 
   return (
     <div className={s.heroMarqueeRow}>
       <div className={`${s.heroMarqueeTrack} ${rowClass}`}>
-        {copies.map((copy) =>
-          cards.map((card, index) => (
-            <article
-              className={`${s.heroTerm} ${SIZE_CLASS[card.size]}`}
-              key={`${rowKey}-${copy}-${index}`}
-            >
-              <header className={s.heroTermBar}>
-                <span className={s.heroTermLights} aria-hidden="true">
-                  <span />
-                  <span />
-                  <span />
-                </span>
-                <span className={s.heroTermTitle}>
-                  <AgentToolLogo
-                    className={s.heroTermMark}
-                    idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                    provider={card.agent}
-                  />
-                  {card.title}
-                </span>
-              </header>
-              <div className={s.heroTermBody}>
-                {card.lines.map((line, lineIndex) => (
-                  <span className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`} key={lineIndex}>
-                    {line.text}
+        {copies.map((copy, copyIndex) =>
+          cards.map((card, index) => {
+            const meta = AGENT_META[card.agent];
+            const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
+            const terminalStyle: TerminalStyle = {
+              '--term-cycle': meta.cycle,
+              '--term-phase': `${phase}s`,
+            };
+
+            return (
+              <article
+                className={`${s.heroTerm} ${SIZE_CLASS[card.size]} ${AGENT_CLASS[card.agent]}`}
+                key={`${rowKey}-${copy}-${index}`}
+                style={terminalStyle}
+              >
+                <header className={s.heroTermBar}>
+                  <span className={s.heroTermLights} aria-hidden="true">
+                    <span />
+                    <span />
+                    <span />
                   </span>
-                ))}
-              </div>
-            </article>
-          ))
+                  <span className={s.heroTermTitle}>
+                    <AgentToolLogo
+                      className={s.heroTermMark}
+                      idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
+                      provider={card.agent}
+                    />
+                    {card.title}
+                  </span>
+                  <span className={s.heroTermState}>
+                    <span className={s.heroTermStateDot} />
+                    {meta.state}
+                  </span>
+                </header>
+
+                <div className={s.heroTermProductBar}>
+                  <span className={s.heroTermProduct}>{meta.label}</span>
+                  <span className={s.heroTermMode}>{meta.mode}</span>
+                </div>
+
+                <div className={s.heroTermBody}>
+                  {card.lines.map((line, lineIndex) => (
+                    <span
+                      className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
+                      key={line.text}
+                      style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
+                    >
+                      {line.text}
+                    </span>
+                  ))}
+                  <span className={s.heroTermLivePrompt}>
+                    <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
+                    <span className={s.heroTermCursor} />
+                  </span>
+                </div>
+              </article>
+            );
+          })
         )}
       </div>
     </div>
