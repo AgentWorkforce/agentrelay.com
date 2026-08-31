@@ -2021,182 +2021,248 @@
   padding-top: 56px;
 }
 
-.heroCopyGroup {
-  display: grid;
-  gap: 10px;
-  max-width: 610px;
-}
-
 .heroRight {
   position: relative;
   align-self: stretch;
   min-height: 580px;
 }
 
-/* ── Phone stand-in for the live graph ──────────────────────────────────
-   A miniature of the desktop constellation, not a diagram of it: the same
-   agent cards, named, still saying something, three of them instead of
-   eight. Flat DOM + one SVG, no canvas and no rAF.
-
-   The geometry is all percentages so the wires land on the card centres at
-   every width: each card is 46% wide, the hub centred (50%) and the pair
-   pinned to the gutters (centres 23% and 77%). */
-.heroMini {
-  position: relative;
+/* ── Home hero: one centred column over the terminal marquee ─────────────
+   The product pages keep the two-column `.hero` above; the home page runs a
+   single centred column so the marquee band underneath gets the full width. */
+.heroCenter {
+  display: flex;
+  justify-content: center;
   width: 100%;
-  max-width: 380px;
-  height: 200px;
-  margin: 0 auto;
+  padding: 72px 40px 0;
 }
 
-.heroMiniWires {
-  position: absolute;
-  inset: 0;
+.heroCenterColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
   width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
+  max-width: 880px;
+  text-align: center;
 }
 
-.heroMiniCard {
-  position: absolute;
-  z-index: 1;
-  width: 46%;
-  height: 58px;
-  overflow: hidden;
-  border: 1px solid rgba(116, 184, 226, 0.18);
-  border-radius: 8px;
-  /* This band is navy in both themes, so the card carries the dark palette
-     outright rather than through --agent-card-*, which flips to white. */
-  background: rgba(10, 23, 36, 0.92);
-  box-shadow: 0 4px 14px rgba(2, 10, 20, 0.26);
+/* One step down from the product pages' `.headline`: this line is five words,
+   not three, and at the shared scale it filled the fold on its own and pushed
+   the marquee off the bottom of the screen. The column prefix is load-bearing —
+   `.headline` and `.subtitle` are declared further down this file, so a bare
+   class here would lose the cascade to them. */
+.heroCenterColumn .heroCenterHeadline {
+  font-size: clamp(2.6rem, 5.4vw, 4.5rem);
+  max-width: 20ch;
+  text-wrap: balance;
 }
 
-/* Staggered, not stacked. Three cards on a symmetric triangle read as an org
-   chart; the desktop constellation is loose, so the pair below is offset by
-   9% and the hub sits a shade left of centre. */
-.heroMiniHub {
-  left: 25%;
-  top: 0;
+.heroCenterColumn .heroCenterSubtitle {
+  max-width: 52ch;
+  margin: -4px auto 0;
+  text-wrap: pretty;
 }
 
-.heroMiniLeft {
-  left: 0;
-  top: 62%;
-}
-
-.heroMiniRight {
-  left: 54%;
-  top: 71%;
-}
-
-.heroMiniHeader {
+.heroCenterCtas {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  padding: 5px 8px;
-  background: rgba(16, 32, 46, 0.96);
-  border-bottom: 1px solid rgba(116, 184, 226, 0.16);
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 2px;
 }
 
-.heroMiniIdentity {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  min-width: 0;
-}
-
-.heroMiniIdentity svg {
-  width: 12px;
-  height: 12px;
-  flex-shrink: 0;
-}
-
-.heroMiniName {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #dbe9f4;
-  white-space: nowrap;
-}
-
-.heroMiniModel {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.53rem;
-  letter-spacing: 0.02em;
-  color: #8fa4b7;
-  white-space: nowrap;
-}
-
-.heroMiniStatus {
+/* ── Terminal marquee ────────────────────────────────────────────────────
+   Three full-bleed rows of agent sessions sliding past. Each track holds two
+   identical copies of its cards and slides exactly one copy's width, so the
+   loop is seamless; the spacing lives in each card's margin-right rather than
+   a flex gap so that -50% lands on a card boundary rather than half a gap
+   short. Rows differ in duration, direction and negative delay (a phase
+   offset) so the card seams never line up across the band. The rows also hold
+   different numbers of cards, so their tracks are different lengths and the
+   seams drift instead of beating in step. */
+.heroMarquee {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  height: 30px;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  margin-top: 68px;
+  padding-bottom: 26px;
+  /* clip, not hidden: the band never adds page scroll, and the cards' shadows
+     still breathe above and below the row. */
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
-.heroMiniDot {
-  width: 4px;
-  height: 4px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: #63d18b;
-  box-shadow: 0 0 4px rgba(99, 209, 139, 0.28);
+.heroMarqueeRow {
+  width: 100%;
+  overflow-x: clip;
+  overflow-y: visible;
+}
+
+.heroMarqueeTrack {
+  display: flex;
+  align-items: stretch;
+  width: max-content;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .heroMiniDot {
-    animation: heroMiniPulse 1.6s ease-in-out infinite;
+  .heroMarqueeTrack {
+    will-change: transform;
+    animation: heroMarqueeSlide linear infinite;
+  }
+
+  .heroMarqueeTrackOne {
+    animation-duration: 74s;
+    animation-delay: -11s;
+  }
+
+  .heroMarqueeTrackTwo {
+    animation-duration: 88s;
+    animation-delay: -37s;
+    animation-direction: reverse;
+  }
+
+  .heroMarqueeTrackThree {
+    animation-duration: 66s;
+    animation-delay: -23s;
   }
 }
 
-@keyframes heroMiniPulse {
-  0%,
-  100% {
-    opacity: 1;
+@keyframes heroMarqueeSlide {
+  from {
+    transform: translate3d(0, 0, 0);
   }
-  50% {
-    opacity: 0.35;
+  to {
+    transform: translate3d(-50%, 0, 0);
   }
 }
 
-.heroMiniSaying,
-.heroMiniSayingActive {
+/* The second and third rows start part-way along so the seams stagger even
+   when motion is off. */
+.heroMarqueeTrackTwo {
+  margin-left: -132px;
+}
+
+.heroMarqueeTrackThree {
+  margin-left: -258px;
+}
+
+.heroTerm {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  margin-right: 14px;
+  border: 1px solid rgba(116, 184, 226, 0.16);
+  border-radius: 10px;
+  /* This band is navy in both themes, so the card carries the dark palette
+     outright rather than through --agent-card-*, which flips to white. */
+  background: rgba(8, 22, 36, 0.86);
+  box-shadow: 0 6px 18px rgba(2, 10, 20, 0.28);
+  overflow: hidden;
+}
+
+.heroTermSm {
+  width: 268px;
+}
+
+.heroTermMd {
+  width: 312px;
+}
+
+.heroTermLg {
+  width: 352px;
+}
+
+.heroTermBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(15, 33, 48, 0.94);
+  border-bottom: 1px solid rgba(116, 184, 226, 0.14);
+}
+
+.heroTermLights {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.heroTermLights span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(116, 184, 226, 0.26);
+}
+
+.heroTermLights span:first-child {
+  background: rgba(233, 116, 104, 0.62);
+}
+
+.heroTermLights span:nth-child(2) {
+  background: rgba(232, 187, 106, 0.56);
+}
+
+.heroTermLights span:last-child {
+  background: rgba(112, 199, 141, 0.56);
+}
+
+.heroTermTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.6rem;
+  font-size: 0.68rem;
+  font-weight: 500;
   letter-spacing: 0.01em;
+  color: rgba(206, 227, 243, 0.82);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #8fa4b7;
 }
 
-.heroMiniSayingActive {
-  color: #cddff0;
+.heroTermMark {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: rgba(219, 233, 244, 0.9);
 }
 
-/* One message caught in flight on the hub-to-Coder wire, the same pill the
-   canvas pops when a message lands. It is what turns three boxes into a
-   conversation. */
-.heroMiniToast {
-  position: absolute;
-  z-index: 1;
-  left: 61%;
-  top: 47%;
-  transform: translate(-50%, -50%);
-  padding: 4px 10px;
-  border: 1px solid rgba(74, 144, 194, 0.4);
-  border-radius: 100px;
-  background: rgba(10, 23, 36, 0.94);
+.heroTermBody {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px 12px;
+}
+
+.heroTermLine {
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-size: 0.7rem;
+  line-height: 1.35;
+  letter-spacing: 0;
   white-space: nowrap;
-  color: #8fc7ea;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heroTermPrompt {
+  color: rgba(238, 247, 255, 0.94);
+}
+
+.heroTermTool {
+  color: rgba(160, 184, 204, 0.82);
+}
+
+.heroTermOk {
+  color: #7fd3a0;
+}
+
+.heroTermRelay {
+  color: #85c6ec;
 }
 
 .badge {
@@ -2264,36 +2330,19 @@
   padding-top: 4px;
 }
 
-.heroCommandGroup {
-  display: grid;
-  /* minmax(0, 1fr), not the implicit `auto`: the auto track was floored by the
-     install command's min-content width, so on phones the intro line and the
-     copy button both ran past the gutter and had their right edge clipped. */
-  grid-template-columns: minmax(0, 1fr);
-  gap: 10px;
-  width: min(100%, 610px);
-  margin-top: 0;
-}
-
-.heroCommandIntro {
-  color: rgba(184, 211, 232, 0.62);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  line-height: 1.25;
-  max-width: 56ch;
-}
-
+/* The hero's onboarding command: sized to the command itself and centred under
+   the two buttons, so it reads as the quiet third tier rather than a second
+   full-width block competing with them. */
 .heroCommandCta {
   appearance: none;
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-top: 0;
-  min-height: 54px;
-  padding: 10px 12px 10px 16px;
+  gap: 10px;
+  max-width: 100%;
+  margin: 0 auto;
+  min-height: 46px;
+  padding: 6px 8px 6px 16px;
   border: 1px solid rgba(116, 184, 226, 0.2);
   border-radius: 10px;
   background:
@@ -6257,16 +6306,29 @@
     min-width: 0;
   }
 
-  .heroCopyGroup {
-    gap: 10px;
-  }
-
   .heroRight {
     min-height: 320px;
   }
 
   .headline {
     font-size: clamp(2.85rem, 10.5vw, 4.35rem);
+  }
+
+  .heroCenter {
+    padding: 40px 32px 0;
+  }
+
+  .heroCenterColumn {
+    gap: 20px;
+    max-width: 640px;
+  }
+
+  .heroCenterColumn .heroCenterHeadline {
+    font-size: clamp(2.5rem, 7.6vw, 3.9rem);
+  }
+
+  .heroMarquee {
+    margin-top: 52px;
   }
 
   .sdkSection {
@@ -6374,13 +6436,74 @@
     gap: 26px;
   }
 
-  .heroCopyGroup {
-    gap: 8px;
-  }
-
   .headline {
     font-size: clamp(3.05rem, 11.5vw, 4.5rem);
     line-height: 1.08;
+  }
+
+  /* Phones: the same architecture, one step smaller. The headline is four
+     words on four lines at this width, so the column tightens and the band
+     comes up to meet it. */
+  .heroCenter {
+    padding: 34px 24px 0;
+  }
+
+  .heroCenterColumn {
+    gap: 18px;
+  }
+
+  .heroCenterColumn .heroCenterHeadline {
+    font-size: clamp(2.3rem, 10.2vw, 3.5rem);
+    max-width: none;
+  }
+
+  .heroCenterColumn .heroCenterSubtitle {
+    max-width: 40ch;
+  }
+
+  .heroCenterCtas {
+    align-self: stretch;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .heroMarquee {
+    gap: 10px;
+    margin-top: 40px;
+    padding-bottom: 18px;
+  }
+
+  .heroTerm {
+    margin-right: 10px;
+  }
+
+  .heroTermSm {
+    width: 228px;
+  }
+
+  .heroTermMd {
+    width: 262px;
+  }
+
+  .heroTermLg {
+    width: 292px;
+  }
+
+  .heroTermTitle {
+    font-size: 0.64rem;
+  }
+
+  .heroTermLine {
+    font-size: 0.66rem;
+  }
+
+  .heroMarqueeTrackTwo {
+    margin-left: -96px;
+  }
+
+  .heroMarqueeTrackThree {
+    margin-left: -188px;
   }
 
   .ctas {
@@ -6401,13 +6524,13 @@
     line-height: 1.62;
   }
 
-  /* Now that the button is held to the gutter, the command has to fit inside
-     it: tighter padding plus one step down puts all 33 characters on screen
-     rather than leaving the tail behind a scrollbar nobody can see. The copy
-     button keeps its full 38px — on a coarse pointer it is always visible. */
+  /* The command has to fit inside the gutter: tighter padding plus one step
+     down puts all 33 characters on screen rather than leaving the tail behind
+     a scrollbar nobody can see. The copy button keeps its full 38px — on a
+     coarse pointer it is always visible. */
   .heroCommandCta {
     gap: 8px;
-    padding: 10px 8px 10px 12px;
+    padding: 6px 6px 6px 12px;
   }
 
   .heroCommandText {
@@ -6422,12 +6545,10 @@
   .featureList,
   .capabilityCopy p,
   .installSubtitle,
-  .deployCardText,
-  .heroCommandIntro {
+  .deployCardText {
     font-size: 1rem;
   }
 
-  /* Phones keep the constellation — as the flat miniature, not the canvas. */
   .heroRight {
     min-height: 0;
     align-self: center;

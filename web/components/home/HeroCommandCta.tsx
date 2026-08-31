@@ -28,6 +28,10 @@ async function copyCommand() {
   document.body.removeChild(textarea);
 }
 
+/**
+ * The onboarding command, sized to itself and centred under the hero's two
+ * buttons — a third, quieter tier rather than a second full-width block.
+ */
 export function HeroCommandCta() {
   const [copied, setCopied] = useState(false);
 
@@ -38,20 +42,15 @@ export function HeroCommandCta() {
   }
 
   return (
-    <div className={s.heroCommandGroup}>
-      <span className={s.heroCommandIntro}>
-        Run our interactive onboarding to try it with your agent right now
+    <button className={s.heroCommandCta} type="button" onClick={handleCopy}>
+      <span className={s.heroCommandPrompt}>$</span>
+      <code className={s.heroCommandText}>{HERO_COMMAND}</code>
+      <span className={s.heroCommandCopyButton} aria-hidden="true">
+        {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
       </span>
-      <button className={s.heroCommandCta} type="button" onClick={handleCopy}>
-        <span className={s.heroCommandPrompt}>$</span>
-        <code className={s.heroCommandText}>{HERO_COMMAND}</code>
-        <span className={s.heroCommandCopyButton} aria-hidden="true">
-          {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
-        </span>
-        <span className={s.heroCommandCopied} aria-live="polite">
-          {copied ? 'Copied' : 'Copy'}
-        </span>
-      </button>
-    </div>
+      <span className={s.heroCommandCopied} aria-live="polite">
+        {copied ? 'Copied' : 'Copy'}
+      </span>
+    </button>
   );
 }
