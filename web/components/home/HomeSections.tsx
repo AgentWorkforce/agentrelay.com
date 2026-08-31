@@ -115,7 +115,7 @@ const TRANSCRIPT: ChannelMessage[] = [
 
 export function ChannelsSection() {
   return (
-    <section className={`${s.band} ${s.night} ${s.channels}`} aria-labelledby="channels-title">
+    <section className={`${s.band} ${s.lift} ${s.channels}`} aria-labelledby="channels-title">
       <div className={s.channelsInner}>
         <div className={s.channelsHead}>
           <h2 className={s.h2} id="channels-title">
@@ -340,7 +340,7 @@ const ORCHESTRATOR: ReadonlyArray<{ text: string; kind?: TokenKind }> = [
 
 export function SdkSection() {
   return (
-    <section className={`${s.band} ${s.night} ${s.sdk}`} aria-labelledby="sdk-title">
+    <section className={`${s.band} ${s.lift} ${s.sdk}`} aria-labelledby="sdk-title">
       <div className={s.sdkInner}>
         <figure className={s.codePanel}>
           <figcaption className={s.codeHead}>
@@ -388,7 +388,7 @@ export function SdkSection() {
               <ArrowUpRight aria-hidden="true" />
             </a>
           </div>
-          <CopyCommand command="npm install @agent-relay/sdk" tone="night" />
+          <CopyCommand command="npm install @agent-relay/sdk" tone="lift" />
         </div>
       </div>
     </section>
@@ -491,7 +491,7 @@ export function OpenSourceSection() {
 
 export function WaitlistSection() {
   return (
-    <section className={`${s.band} ${s.night} ${s.waitlist}`} aria-labelledby="waitlist-title">
+    <section className={`${s.band} ${s.lift} ${s.waitlist}`} aria-labelledby="waitlist-title">
       <div className={s.waitlistInner}>
         <h2 className={s.h2} id="waitlist-title">
           Be the first to know

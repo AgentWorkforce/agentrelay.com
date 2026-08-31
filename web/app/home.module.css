@@ -16,41 +16,67 @@
   variant (--r-*-in) flips the tail to bottom-right for an incoming message.
 
   ── Ground ──────────────────────────────────────────────────────────────────
-  The site is hard-coded `data-theme="dark"` on <html>. This page overrides the
-  semantic tokens on `.page` instead, so the shared nav, footer, GitHub badge
-  and waitlist form re-theme to warm stone here and nowhere else.
+  The site runs `data-theme="dark"` on <html> and every interior route stands
+  on the navy in brand.css. So does this page: it takes brand.css's own dark
+  ground (#08111a) rather than inventing one, and overrides the semantic tokens
+  on `.page` only to build the band ladder above it. The shared nav, footer,
+  GitHub badge and waitlist form follow those tokens, so the homepage and the
+  interior routes are one continuous world.
 */
 
 .page {
-  /* Palette — the terracotta + Pampas system that already lived unused in
-     brand.css. Two hues (warm ink, ember) plus one muted moss for status. */
-  --paper: #f3efe8;
-  --paper-2: #e9e2d6;
-  --card: #fbf9f5;
-  --ink: #1c1512;
-  --ink-2: #5d4f47;
-  --ink-3: #786961;
-  --rule: #ded5c8;
-  --rule-strong: #c6b8a6;
-  --ember: #b04a30;
-  --ember-deep: #8f3826;
-  --ember-tint: #f2ddd3;
-  --moss: #4f7d55;
-  --night: #191210;
-  --night-2: #241a17;
-  --night-fg: #f3ece2;
-  --night-fg-2: #b7a89d;
-  --night-fg-3: #8d7c72;
-  --night-rule: rgba(243, 236, 226, 0.15);
-  --ember-lit: #e08a63;
+  /* ── Palette — Agent Relay blue ───────────────────────────────────────────
+     One hue family. Every value below is either lifted straight from
+     brand.css's dark theme or tuned inside it; nothing here is a stock
+     framework blue.
 
-  /* Per-band semantics. Only `.night` redefines them. */
-  --sfg: var(--ink);
-  --sfg-2: var(--ink-2);
-  --sfg-3: var(--ink-3);
+       ground   #08111a  brand.css `--bg`, dark theme. The site's own floor.
+       accent   #74b8e2  brand.css dark `--primary`, the Curious Blue family
+                         that the logo mark (#4a90c2) already lives in. It is
+                         a desaturated sky with a faint cyan lean — nowhere
+                         near #3b82f6 or #58a6ff.
+       signal   #63d18b  brand.css dark `--agent-card-status`, delivery only.
+
+     Grounds run as a four-step ladder rather than a light/dark flip, because
+     the page is now a single dark theme. Each step is a real, measured lift:
+     well ×1.16, card ×1.40, lift ×1.62 against the ground. The inverted bands
+     go *up* into a chromatic brand navy instead of down into black — a band
+     cannot invert below an already-black floor. */
+  --navy: #08111a;
+  --well: #0c2131;
+  --card: #113047;
+  --lift: #17395a;
+  --abyss: #040c14;
+
+  /* One text ladder, not two: the whole page is dark now, so the same three
+     values carry every ground. Worst case is --text-3 on --lift at 4.70:1. */
+  --text: #e9f1f9;
+  --text-2: #a7bccd;
+  --text-3: #91a7ba;
+
+  /* Hairlines composite rather than sit at a fixed lightness, so one value
+     stays visible on all four grounds (a solid hairline tuned for the floor
+     disappears inside a lift band). */
+  --rule: rgba(148, 189, 219, 0.18);
+  --rule-strong: rgba(190, 220, 245, 0.55);
+
+  --sky: #74b8e2;
+  --sky-lit: #9fd4f5;
+  --sky-tint: rgba(116, 184, 226, 0.13);
+  --signal: #63d18b;
+
+  /* The relay wires. The original site drew this network in a leftover green
+     that vanished on navy; this is a steel blue held at 4.90:1 against the
+     ground so the routing announces itself instead of hiding. */
+  --wire: #558aa8;
+
+  /* Per-band semantics. Only `.lift` redefines them, and only the surfaces. */
+  --sfg: var(--text);
+  --sfg-2: var(--text-2);
+  --sfg-3: var(--text-3);
   --sline: var(--rule);
   --sline-strong: var(--rule-strong);
-  --saccent: var(--ember);
+  --saccent: var(--sky);
   --ssurface: var(--card);
 
   --r-band: 44px 44px 44px 0;
@@ -66,49 +92,54 @@
 
   /* Re-point the shared tokens the nav, footer, badge, buttons and waitlist
      form read, so they follow this page's palette without forking. */
-  --bg: var(--paper);
-  --fg: var(--ink);
-  --fg-muted: var(--ink-2);
-  --fg-faint: var(--ink-3);
+  --bg: var(--navy);
+  --fg: var(--text);
+  --fg-muted: var(--text-2);
+  --fg-faint: var(--text-3);
   --line: var(--rule);
   --surface: var(--card);
   --card-bg: var(--card);
-  --primary: var(--ember);
-  --primary-hover: var(--ember-deep);
-  --primary-500: var(--ember-deep);
-  --primary-600: var(--ember);
+  --primary: var(--sky);
+  --primary-hover: var(--sky-lit);
+  --primary-500: var(--sky-lit);
+  --primary-600: var(--sky);
   --primary-800: transparent;
-  --primary-fg: #fdf7f2;
+  /* The primary button is a luminous sky plate with the page's own ground as
+     its label — 8.79:1, and the accent lands exactly where the page wants a
+     decision made. */
+  --primary-fg: var(--navy);
   --secondary-surface: transparent;
-  --focus-ring: var(--ink);
+  --focus-ring: #bfe3ff;
 
-  /* Opaque, like every other theme's solid nav. The bar is sticky and this
-     page scrolls three night bands underneath it; at any alpha below 1 the
-     dark band and its type ghost straight through the cream and the bar
-     turns into a grey slab. There is no backdrop-filter to hide behind —
-     that was dropped for the LCP — so the ground has to be solid. */
-  --nav-solid-bg: #fbf9f5;
-  --nav-bg: rgba(251, 249, 245, 0.9);
-  --nav-scrolled-base: #fbf9f5;
-  --nav-fg: var(--ink);
-  --nav-border: var(--rule-strong);
-  --nav-border-strong: var(--ink);
-  --nav-surface: rgba(28, 21, 18, 0.05);
-  --nav-surface-hover: rgba(28, 21, 18, 0.09);
-  --nav-link-hover: var(--ember);
-  --nav-shadow: rgba(70, 48, 36, 0.1);
-  --nav-inset: rgba(255, 255, 255, 0.8);
-  --nav-logo-mark: var(--ember);
-  --nav-logo-wordmark: var(--ink);
+  /* brand.css's dark `--nav-solid-bg`, unchanged, so the bar is the same bar
+     it is on /docs. Kept opaque rather than translucent: the page scrolls
+     three lift bands underneath a sticky bar and there is no backdrop-filter
+     to hide behind — that was dropped for the LCP. */
+  --nav-solid-bg: #0c1c2a;
+  --nav-bg: rgba(12, 28, 42, 0.94);
+  --nav-scrolled-base: #0c1c2a;
+  --nav-fg: var(--text);
+  --nav-border: rgba(148, 189, 219, 0.22);
+  --nav-border-strong: rgba(190, 220, 245, 0.5);
+  --nav-surface: rgba(148, 189, 219, 0.1);
+  --nav-surface-hover: rgba(148, 189, 219, 0.17);
+  --nav-link-hover: var(--sky-lit);
+  --nav-shadow: rgba(0, 0, 0, 0.45);
+  --nav-inset: rgba(190, 220, 245, 0.08);
+  --nav-logo-mark: var(--sky);
+  --nav-logo-wordmark: var(--text);
 
-  --footer-bg: var(--night);
-  --footer-fg: var(--night-fg);
-  --footer-muted: var(--night-fg-2);
-  --footer-faint: var(--night-fg-3);
-  --footer-line: var(--night-rule);
+  /* The waitlist band runs straight into the footer, so the footer opens on
+     that band's own ground and settles onto brand.css's dark `--bg` — the
+     same two stops the interior footer uses, entered one step higher. */
+  --footer-bg: linear-gradient(180deg, var(--lift) 0%, var(--navy) 100%);
+  --footer-fg: var(--text);
+  --footer-muted: #b9c9d8;
+  --footer-faint: var(--text-3);
+  --footer-line: rgba(148, 189, 219, 0.2);
 
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--navy);
+  color: var(--text);
   font-family: var(--font-text);
   overflow-x: clip;
 }
@@ -223,7 +254,7 @@
   border: 1.5px dashed var(--rule-strong);
   border-radius: var(--r-md);
   background: var(--card);
-  color: var(--ink);
+  color: var(--text);
   font-family: var(--font-mono);
   cursor: pointer;
   text-align: left;
@@ -233,28 +264,24 @@
 }
 
 .command:hover {
-  border-color: var(--ember);
-  background: var(--ember-tint);
+  border-color: var(--sky);
+  background: var(--sky-tint);
 }
 
-.commandNight {
-  background: var(--night-2);
-  border-color: rgba(243, 236, 226, 0.28);
-  color: var(--night-fg);
+/* Inside a lift band the chip recesses instead of rising. */
+.commandLift {
+  background: var(--well);
+  border-color: var(--rule-strong);
 }
 
-.commandNight:hover {
-  border-color: var(--ember-lit);
-  background: #2c201b;
+.commandLift:hover {
+  border-color: var(--sky);
+  background: #0e2a41;
 }
 
 .commandPrompt {
-  color: var(--ember);
+  color: var(--sky);
   font-weight: 600;
-}
-
-.commandNight .commandPrompt {
-  color: var(--ember-lit);
 }
 
 .commandText {
@@ -273,16 +300,16 @@
   gap: 6px;
   padding: 5px 10px 5px 8px;
   border-radius: var(--r-xs);
-  background: rgba(28, 21, 18, 0.06);
+  background: rgba(148, 189, 219, 0.13);
   font-family: var(--font-text);
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
-.commandNight .commandAction {
-  background: rgba(243, 236, 226, 0.1);
-  color: var(--night-fg-2);
+.commandLift .commandAction {
+  background: rgba(190, 220, 245, 0.14);
+  color: var(--text-2);
 }
 
 .commandAction svg {
@@ -317,7 +344,7 @@
   font-weight: 800;
   line-height: 0.9;
   letter-spacing: -0.045em;
-  color: var(--ink);
+  color: var(--text);
   max-width: 11ch;
 }
 
@@ -326,7 +353,7 @@
   font-size: clamp(1.0625rem, 1.35vw, 1.3125rem);
   line-height: 1.55;
   letter-spacing: -0.008em;
-  color: var(--ink-2);
+  color: var(--text-2);
   max-width: 42ch;
 }
 
@@ -342,7 +369,7 @@
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.5;
-  color: var(--ink-3);
+  color: var(--text-3);
   max-width: 40ch;
 }
 
@@ -374,14 +401,14 @@
 
 .wireBase {
   fill: none;
-  stroke: #9c8674;
+  stroke: var(--wire);
   stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
 }
 
 .wirePulse {
   fill: none;
-  stroke: var(--ember);
+  stroke: var(--sky-lit);
   stroke-width: 3.5;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
@@ -441,13 +468,13 @@
 @keyframes nodeSend {
   0%,
   9% {
-    border-color: var(--ember);
-    box-shadow: 0 0 0 3px var(--ember-tint);
+    border-color: var(--sky);
+    box-shadow: 0 0 0 3px var(--sky-tint);
   }
   20%,
   100% {
     border-color: var(--rule);
-    box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+    box-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -455,17 +482,17 @@
   0%,
   16% {
     border-color: var(--rule);
-    box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+    box-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.7);
   }
   20%,
   28% {
-    border-color: var(--ember);
-    box-shadow: 0 0 0 3px var(--ember-tint);
+    border-color: var(--sky);
+    box-shadow: 0 0 0 3px var(--sky-tint);
   }
   40%,
   100% {
     border-color: var(--rule);
-    box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+    box-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.7);
   }
 }
 
@@ -525,7 +552,7 @@
   background: var(--card);
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
-  box-shadow: 0 10px 26px -18px rgba(58, 36, 24, 0.5);
+  box-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.7);
 }
 
 /* The tail points back the way the message came: cards on the right of the
@@ -561,7 +588,7 @@
 
 .nodeMark {
   display: inline-flex;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .nodeName {
@@ -569,21 +596,21 @@
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .nodeModel {
   margin-left: auto;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
 .nodeMsg {
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.45;
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
 .nodeReceipt {
@@ -594,7 +621,7 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   letter-spacing: 0.01em;
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
 .nodeReceipt::before {
@@ -602,7 +629,7 @@
   width: 6px;
   height: 6px;
   border-radius: 2px 2px 2px 0;
-  background: var(--moss);
+  background: var(--signal);
 }
 
 .hub {
@@ -616,17 +643,20 @@
   align-items: center;
   column-gap: 10px;
   padding: 12px 20px 12px 16px;
-  background: var(--night);
-  color: var(--night-fg);
+  /* The accent is spent once on the first screen, and it is spent here: the
+     hub is the product, so it is the only plate on the board that is lit
+     rather than lifted. Everything else on the board is a navy card. */
+  background: var(--sky);
+  color: var(--navy);
   border-radius: var(--r-md);
-  box-shadow: 0 14px 34px -18px rgba(25, 18, 16, 0.75);
+  box-shadow: 0 16px 40px -20px rgba(116, 184, 226, 0.55);
 }
 
 .hubMark {
   grid-row: span 2;
   display: inline-flex;
   width: 26px;
-  color: var(--ember-lit);
+  color: var(--navy);
 }
 
 .hubMark svg {
@@ -644,7 +674,7 @@
 .hubMeta {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--night-fg-2);
+  color: rgba(8, 17, 26, 0.74);
   white-space: nowrap;
 }
 
@@ -657,33 +687,21 @@
 /* The shape rule at page scale: an inverted band is itself a message, with the
    same squared tail corner at bottom-left. The paper ground shows through the
    three rounded corners, so the page reads as a stack of messages. */
-.night,
+.lift,
 .caps {
   border-radius: var(--r-band);
 }
 
-.night {
-  background: var(--night);
-  --sfg: var(--night-fg);
-  --sfg-2: var(--night-fg-2);
-  --sfg-3: var(--night-fg-3);
-  --sline: var(--night-rule);
-  --sline-strong: rgba(243, 236, 226, 0.3);
-  --saccent: var(--ember-lit);
-  --ssurface: var(--night-2);
-  --focus-ring: #ffd9c4;
-  /* Shared components dropped into a night band (the waitlist form, a button)
-     read the same tokens, so re-point them here rather than forking them. */
-  --card-bg: var(--night-2);
-  --surface: var(--night-2);
-  --fg: var(--night-fg);
-  --fg-muted: var(--night-fg-2);
-  --fg-faint: var(--night-fg-3);
-  --line: var(--night-rule);
-  --primary: var(--ember-lit);
-  --primary-hover: #eda07d;
-  --primary-600: var(--ember-lit);
-  --primary-fg: #1c1512;
+/* The inverted band. On a dark page an inversion has to go *up*, so a lift
+   band is a lighter, more chromatic brand navy and the panels inside it
+   recess to --well instead of rising. Because the page is a single dark
+   theme now, the text ladder, the accent, the hairlines and the focus ring
+   all carry over unchanged — only the surfaces move. */
+.lift {
+  background: var(--lift);
+  --ssurface: var(--well);
+  --card-bg: var(--well);
+  --surface: var(--well);
 }
 
 /* ── 2. Works with all of them — the short ruled strip ───────────────────── */
@@ -709,14 +727,14 @@
   font-size: 1.375rem;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .stripText {
   margin: 0;
   font-size: 0.9375rem;
   line-height: 1.5;
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
 .stripLogos {
@@ -737,13 +755,13 @@
 
 .stripLogoMark {
   display: inline-flex;
-  color: var(--ink);
+  color: var(--text);
   opacity: 0.9;
 }
 
 .stripLogoLabel {
   font-size: 0.8125rem;
-  color: var(--ink-3);
+  color: var(--text-3);
   white-space: nowrap;
 }
 
@@ -771,9 +789,9 @@
 }
 
 .transcript {
-  border: 1px solid var(--night-rule);
+  border: 1px solid var(--rule);
   border-radius: var(--r-lg);
-  background: var(--night-2);
+  background: var(--well);
   overflow: hidden;
 }
 
@@ -782,7 +800,7 @@
   align-items: baseline;
   gap: 12px;
   padding: 16px 22px;
-  border-bottom: 1px solid var(--night-rule);
+  border-bottom: 1px solid var(--rule);
 }
 
 .transcriptChannel {
@@ -790,13 +808,13 @@
   font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--night-fg);
+  color: var(--text);
 }
 
 .transcriptMeta {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--night-fg-3);
+  color: var(--text-3);
 }
 
 .transcriptBody {
@@ -810,16 +828,16 @@
 .bubble {
   padding: 14px 18px 15px;
   border-radius: var(--r-md);
-  background: rgba(243, 236, 226, 0.06);
-  border: 1px solid var(--night-rule);
+  background: rgba(148, 189, 219, 0.07);
+  border: 1px solid var(--rule);
   max-width: 92%;
 }
 
 .bubbleIn {
   border-radius: var(--r-md-in);
   margin-left: auto;
-  background: rgba(224, 138, 99, 0.12);
-  border-color: rgba(224, 138, 99, 0.28);
+  background: rgba(116, 184, 226, 0.14);
+  border-color: rgba(116, 184, 226, 0.34);
 }
 
 .bubbleHead {
@@ -831,20 +849,20 @@
 
 .bubbleMark {
   display: inline-flex;
-  color: var(--night-fg-2);
+  color: var(--text-2);
 }
 
 .bubbleAuthor {
   font-weight: 600;
   font-size: 0.9375rem;
-  color: var(--night-fg);
+  color: var(--text);
 }
 
 .bubbleModel,
 .bubbleTime {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--night-fg-3);
+  color: var(--text-3);
 }
 
 .bubbleTime {
@@ -855,12 +873,12 @@
   margin: 0;
   font-size: 1rem;
   line-height: 1.55;
-  color: var(--night-fg-2);
+  color: var(--text-2);
 }
 
 .bubbleText b {
   font-weight: 600;
-  color: var(--ember-lit);
+  color: var(--sky);
 }
 
 .transcriptFoot {
@@ -870,7 +888,7 @@
   margin: 0;
   padding: 0 22px 20px;
   font-size: 0.875rem;
-  color: var(--night-fg-3);
+  color: var(--text-3);
 }
 
 .reaction {
@@ -878,10 +896,10 @@
   align-items: center;
   padding: 4px 10px;
   border-radius: var(--r-xs);
-  border: 1px solid var(--night-rule);
-  background: rgba(243, 236, 226, 0.06);
+  border: 1px solid var(--rule);
+  background: rgba(148, 189, 219, 0.07);
   font-size: 0.8125rem;
-  color: var(--night-fg-2);
+  color: var(--text-2);
 }
 
 /* ── 4. The hard parts of delivery — type only, no panel ─────────────────── */
@@ -916,7 +934,7 @@
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.9;
-  color: var(--ink-3);
+  color: var(--text-3);
 }
 
 .deliveryNote b {
@@ -924,7 +942,7 @@
   font-family: var(--font-text);
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--ember);
+  color: var(--sky);
   letter-spacing: 0;
 }
 
@@ -950,8 +968,8 @@
   line-height: 0.9;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
-  color: var(--ember);
-  opacity: 0.5;
+  color: var(--sky);
+  opacity: 0.7;
 }
 
 .rowBody {
@@ -965,21 +983,21 @@
   font-size: 1.3125rem;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .rowText {
   margin: 0;
   font-size: 1.0625rem;
   line-height: 1.6;
-  color: var(--ink-2);
+  color: var(--text-2);
   max-width: 58ch;
 }
 
 /* ── 5. Everything agents need to collaborate ────────────────────────────── */
 
 .caps {
-  background: var(--paper-2);
+  background: var(--well);
   padding: clamp(64px, 7.5vw, 104px) 0;
 }
 
@@ -1019,14 +1037,14 @@
   font-size: 1.25rem;
   font-weight: 700;
   letter-spacing: -0.025em;
-  color: var(--ink);
+  color: var(--text);
 }
 
 .capText {
   margin: 0;
   font-size: 1rem;
   line-height: 1.55;
-  color: var(--ink-2);
+  color: var(--text-2);
 }
 
 .capArt {
@@ -1036,7 +1054,7 @@
   padding-top: 12px;
   padding: 12px 14px;
   border-radius: var(--r-sm);
-  background: var(--paper-2);
+  background: var(--navy);
   border: 1px dashed var(--rule-strong);
   overflow: hidden;
 }
@@ -1044,7 +1062,7 @@
 .capArtLine {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--ink);
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1053,7 +1071,7 @@
 .capArtMeta {
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--ember);
+  color: var(--sky);
 }
 
 /* ── 6. Make it yours with the SDK ───────────────────────────────────────── */
@@ -1076,9 +1094,9 @@
   margin: 0;
   /* Pulled up out of the band's own rhythm. */
   margin-top: clamp(-56px, -3vw, 0px);
-  border: 1px solid var(--night-rule);
+  border: 1px solid var(--rule);
   border-radius: var(--r-lg);
-  background: #120d0b;
+  background: var(--abyss);
   overflow: hidden;
 }
 
@@ -1087,17 +1105,17 @@
   align-items: center;
   gap: 10px;
   padding: 13px 20px;
-  border-bottom: 1px solid var(--night-rule);
+  border-bottom: 1px solid var(--rule);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--night-fg-2);
+  color: var(--text-2);
 }
 
 .codeDot {
   width: 8px;
   height: 8px;
   border-radius: 3px 3px 3px 0;
-  background: var(--ember-lit);
+  background: var(--sky);
 }
 
 .codeBody {
@@ -1107,26 +1125,28 @@
   font-family: var(--font-mono);
   font-size: 0.875rem;
   line-height: 1.75;
-  color: #d9cec4;
+  color: #aebfd0;
   white-space: pre;
   tab-size: 2;
 }
 
+/* brand.css's own console palette (--terminal-*), so the homepage's code
+   panel is the same terminal every interior route already renders. */
 .tkMuted {
-  color: #8d7c72;
+  color: #6d8296;
   font-style: italic;
 }
 .tkFn {
-  color: #f0c98a;
+  color: #e6d78d;
 }
 .tkVar {
-  color: #e0a58a;
+  color: #6bd4bc;
 }
 .tkKw {
-  color: #d98b7a;
+  color: #7eb8da;
 }
 .tkStr {
-  color: #a3c98f;
+  color: #e4a986;
 }
 
 .sdkCopy {
@@ -1141,7 +1161,7 @@
   font-size: 1.1875rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--ember-lit);
+  color: var(--sky);
 }
 
 .sdkActions {
@@ -1187,7 +1207,7 @@
   gap: 10px;
   padding: 12px 22px;
   border-bottom: 1px solid var(--rule);
-  background: rgba(28, 21, 18, 0.025);
+  background: rgba(148, 189, 219, 0.06);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
 }
@@ -1197,17 +1217,17 @@
   width: 8px;
   height: 8px;
   border-radius: 3px 3px 3px 0;
-  background: var(--moss);
+  background: var(--signal);
 }
 
 .a2aCardName {
-  color: var(--ink);
+  color: var(--text);
   font-weight: 500;
 }
 
 .a2aCardKind {
   margin-left: auto;
-  color: var(--ink-3);
+  color: var(--text-3);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -1225,14 +1245,14 @@
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--ember);
+  color: var(--sky);
 }
 
 .a2aValue {
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.875rem;
-  color: var(--ink-2);
+  color: var(--text-2);
   overflow-wrap: anywhere;
 }
 
@@ -1270,21 +1290,23 @@
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   background: var(--card);
-  color: var(--ink);
+  color: var(--text);
   text-decoration: none;
   transition:
     border-color 0.2s,
     transform 0.25s var(--ease-out-quint);
 }
 
+/* The pair differentiates by depth, not by hue: self-host is a raised card,
+   the hosted one is cut down into the ground and drawn with the stronger
+   hairline so a recessed card still reads as a deliberate surface. */
 .deployCardAlt {
-  background: var(--night);
-  border-color: var(--night);
-  color: var(--night-fg);
+  background: var(--abyss);
+  border-color: var(--rule-strong);
 }
 
 .deployCard:hover {
-  border-color: var(--ember);
+  border-color: var(--sky);
 }
 
 .deployCardTitle {
@@ -1299,12 +1321,8 @@
   margin: 0;
   font-size: 1.0625rem;
   line-height: 1.55;
-  color: var(--ink-2);
+  color: var(--text-2);
   max-width: 42ch;
-}
-
-.deployCardAlt .deployCardText {
-  color: var(--night-fg-2);
 }
 
 .deployCardLink {
@@ -1316,11 +1334,7 @@
   padding-top: 10px;
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--ember);
-}
-
-.deployCardAlt .deployCardLink {
-  color: var(--ember-lit);
+  color: var(--sky);
 }
 
 .deployCardLink svg {

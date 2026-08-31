@@ -31,7 +31,7 @@ async function copyText(text: string) {
  * interactive element on the page (tail corner, bottom left), that reads out
  * its own state to assistive tech via the polite live region.
  */
-export function CopyCommand({ command, tone = 'paper' }: { command: string; tone?: 'paper' | 'night' }) {
+export function CopyCommand({ command, tone = 'ground' }: { command: string; tone?: 'ground' | 'lift' }) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -42,7 +42,7 @@ export function CopyCommand({ command, tone = 'paper' }: { command: string; tone
 
   return (
     <button
-      className={`${s.command} ${tone === 'night' ? s.commandNight : ''}`}
+      className={`${s.command} ${tone === 'lift' ? s.commandLift : ''}`}
       type="button"
       onClick={handleCopy}
       aria-label={`Copy the command ${command}`}
