@@ -1943,7 +1943,11 @@
   background: var(--agent-tools-band-bg);
 }
 
-.messagingPage > :not(:first-child) {
+/* Lift the page content above the hero wash. Targeted at the two content
+   siblings by name so the sticky nav (and the keyboard skip link that now
+   precedes it) keep their own positioning. */
+.messagingPage > main,
+.messagingPage > footer {
   position: relative;
   z-index: 1;
 }
@@ -2029,6 +2033,15 @@
   min-height: 580px;
 }
 
+/* Flat stand-in for the live graph, used below the canvas breakpoint. */
+.heroStill {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  margin: 0 auto;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -2096,6 +2109,10 @@
 
 .heroCommandGroup {
   display: grid;
+  /* minmax(0, 1fr), not the implicit `auto`: the auto track was floored by the
+     install command's min-content width, so on phones the intro line and the
+     copy button both ran past the gutter and had their right edge clipped. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   width: min(100%, 610px);
   margin-top: 0;
@@ -6073,9 +6090,14 @@
     min-height: auto;
   }
 
+  /* min-width: 0 stops the single grid track from being floored by the install
+     command's min-content width, which pushed the hero column ~34px past the
+     gutter and clipped the right edge of the copy button on phones. The
+     command itself already scrolls inside the button. */
   .heroLeft {
     gap: 28px;
     padding-top: 0;
+    min-width: 0;
   }
 
   .heroCopyGroup {
@@ -6222,8 +6244,37 @@
     line-height: 1.62;
   }
 
+  /* Now that the button is held to the gutter, the command has to fit inside
+     it: tighter padding plus one step down puts all 33 characters on screen
+     rather than leaving the tail behind a scrollbar nobody can see. The copy
+     button keeps its full 38px — on a coarse pointer it is always visible. */
+  .heroCommandCta {
+    gap: 8px;
+    padding: 10px 8px 10px 12px;
+  }
+
+  .heroCommandText {
+    font-size: 0.76rem;
+  }
+
+  /* Phone prose floor. The responsive scale steps running copy down to
+     14–15.7px, which is under the 16px body minimum exactly where the column
+     is narrowest and the text is hardest to read. Labels, captions, code and
+     the mock chat UI keep their own smaller sizes — this is only the
+     sentence-length prose. */
+  .featureList,
+  .capabilityCopy p,
+  .installSubtitle,
+  .deployCardText,
+  .heroCommandIntro {
+    font-size: 1rem;
+  }
+
+  /* Phones keep the constellation — as the flat still, not the canvas. */
   .heroRight {
-    display: none;
+    min-height: 0;
+    align-self: center;
+    width: 100%;
   }
 
   .installSection {
@@ -6420,17 +6471,18 @@
     radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 72%),
     #0e2031;
   box-shadow:
-    0 0 0 6px color-mix(in srgb, var(--primary) 8%, transparent),
+    0 0 0 4px color-mix(in srgb, var(--primary) 6%, transparent),
     0 16px 44px color-mix(in srgb, #04101c 52%, transparent);
 }
 
+/* A close, low halo that separates the hub from the band without blooming. */
 .howCoreNode::before {
   content: '';
   position: absolute;
-  inset: -22px;
+  inset: -14px;
   z-index: -1;
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 16%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 9%, transparent), transparent 70%);
   pointer-events: none;
 }
 
@@ -6490,8 +6542,8 @@
   border-radius: 50%;
   background: var(--c);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent),
-    0 0 14px 2px var(--c);
+    0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent),
+    0 0 7px 1px color-mix(in srgb, var(--c) 55%, transparent);
   opacity: 0;
   /* Position is driven by the individual `translate` property and the size is
      driven by the individual `scale` property; both composite on the GPU and

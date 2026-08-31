@@ -326,11 +326,22 @@ function buildCenters(nodes: AgentNode[], w: number, h: number): NodeCenter[] {
   }));
 }
 
+/* Brand blue, one value per theme. The network reads as the site's own colour
+   rather than the leftover green it was drawn in. */
+const NETWORK_RGB_DARK = '116, 184, 226';
+const NETWORK_RGB_LIGHT = '45, 106, 156';
+
+function networkRgb() {
+  return isDarkMode() ? NETWORK_RGB_DARK : NETWORK_RGB_LIGHT;
+}
+
 function drawConnectionLines(
   ctx: CanvasRenderingContext2D,
   centers: NodeCenter[],
   connections: [number, number][]
 ) {
+  const rgb = networkRgb();
+
   for (const [i, j] of connections) {
     const ci = centers[i];
     const cj = centers[j];
@@ -338,7 +349,7 @@ function drawConnectionLines(
       continue;
     }
 
-    const lineOpacity = Math.min(ci.opacity, cj.opacity) * 0.1;
+    const lineOpacity = Math.min(ci.opacity, cj.opacity) * 0.3;
     if (lineOpacity < 0.01) {
       continue;
     }
@@ -346,8 +357,10 @@ function drawConnectionLines(
     ctx.beginPath();
     ctx.moveTo(ci.cx, ci.cy);
     ctx.lineTo(cj.cx, cj.cy);
-    ctx.strokeStyle = `rgba(45, 79, 62, ${lineOpacity})`;
-    ctx.lineWidth = 1;
+    /* No shadowBlur here on purpose: the line carries its own weight at this
+       opacity, and a blur behind every edge is what turned the network neon. */
+    ctx.strokeStyle = `rgba(${rgb}, ${lineOpacity})`;
+    ctx.lineWidth = 1.1;
     ctx.stroke();
   }
 }
@@ -573,6 +586,8 @@ function drawMessages(
 }
 
 function drawGlowRings(ctx: CanvasRenderingContext2D, nodes: AgentNode[], centers: NodeCenter[]) {
+  const rgb = networkRgb();
+
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     if (node.glowOpacity <= 0.01 || node.opacity <= 0.1) {
@@ -581,10 +596,13 @@ function drawGlowRings(ctx: CanvasRenderingContext2D, nodes: AgentNode[], center
 
     const center = centers[i];
     const radius = 56;
-    const alpha = node.glowOpacity * node.opacity * 0.07;
-    const grad = ctx.createRadialGradient(center.cx, center.cy, radius * 0.6, center.cx, center.cy, radius);
-    grad.addColorStop(0, `rgba(45, 79, 62, ${alpha})`);
-    grad.addColorStop(1, 'rgba(45, 79, 62, 0)');
+    /* A tight, low halo that only says "this node is busy". Starting the ramp
+       late (0.62) keeps it hugging the card instead of blooming into the
+       background. */
+    const alpha = node.glowOpacity * node.opacity * 0.09;
+    const grad = ctx.createRadialGradient(center.cx, center.cy, radius * 0.62, center.cx, center.cy, radius);
+    grad.addColorStop(0, `rgba(${rgb}, ${alpha})`);
+    grad.addColorStop(1, `rgba(${rgb}, 0)`);
     ctx.beginPath();
     ctx.arc(center.cx, center.cy, radius, 0, Math.PI * 2);
     ctx.fillStyle = grad;
@@ -814,8 +832,8 @@ export function MessageRelayAnimation() {
               transform: `scale(${0.92 + node.opacity * 0.08})`,
               boxShadow:
                 node.glowOpacity > 0
-                  ? `0 0 ${18 * node.glowOpacity}px rgba(45, 79, 62, ${0.15 * node.glowOpacity}), 0 2px 10px rgba(0,0,0,0.08)`
-                  : '0 2px 8px rgba(0,0,0,0.06)',
+                  ? `0 0 ${14 * node.glowOpacity}px rgba(116, 184, 226, ${0.12 * node.glowOpacity}), 0 4px 16px rgba(2, 10, 20, 0.3)`
+                  : '0 4px 14px rgba(2, 10, 20, 0.26)',
               pointerEvents: node.opacity < 0.1 ? 'none' : undefined,
             }}
           >

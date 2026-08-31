@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { PostHogProvider } from '@posthog/next';
-import { Bricolage_Grotesque, Geist_Mono, Instrument_Sans } from 'next/font/google';
+import { Geist_Mono, Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { defaultOgImage } from '../lib/og-meta';
@@ -8,18 +8,13 @@ import { absoluteUrl, POSTHOG_HOST, SITE_EMAIL, SITE_NAME, SITE_URL } from '../l
 import { WebsitePostHogPageView } from './PostHogPageView';
 import './globals.css';
 
-// Two families carry the whole site: a characterful display grotesque set very
-// large and very tight, and a quiet text grotesque for everything else. Both are
-// single-axis (wght) variable faces, so two files cover the full weight ladder.
-// The variable names stay `--font-geist-sans` / `--font-heading` because ~25 CSS
-// modules reference them by those names.
-const instrumentSans = Instrument_Sans({
+const inter = Inter({
   variable: '--font-geist-sans',
   subsets: ['latin'],
   display: 'swap',
 });
 
-const bricolage = Bricolage_Grotesque({
+const sora = Sora({
   variable: '--font-heading',
   subsets: ['latin'],
   display: 'swap',
@@ -158,10 +153,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           title="Agent Relay blog"
         />
       </head>
-      <body
-        className={`${instrumentSans.variable} ${geistMono.variable} ${bricolage.variable}`}
-        suppressHydrationWarning
-      >
+      <body className={`${inter.variable} ${geistMono.variable} ${sora.variable}`} suppressHydrationWarning>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteStructuredData) }}
