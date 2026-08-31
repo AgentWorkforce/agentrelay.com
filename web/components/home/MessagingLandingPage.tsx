@@ -31,7 +31,16 @@ export function MessagingLandingPage() {
           <section className={s.featuresSection}>
             <MessagingFeature />
             <HowItWorks />
-            <DeliveryFeature />
+            <DeliveryFeature
+              title="The hard parts of execution, handled"
+              previewVariant="workflow"
+              items={[
+                'Persist every transition so long-running work survives restarts and deploys.',
+                'Retry individual steps without repeating successful work or duplicating side effects.',
+                'Trace every input, output, model action, artifact, and intervention in one run history.',
+                'Trigger workflows from schedules and events, then execute them close to your systems.',
+              ]}
+            />
             <QuickStart />
             <WaveDivider variant="feature" />
             <AgentToolsFeature />

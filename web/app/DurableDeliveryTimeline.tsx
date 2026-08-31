@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Bot, Check, CircleAlert, Database, FileOutput, RotateCcw, UserRoundCheck, Webhook } from 'lucide-react';
 
 import { AgentToolLogo, type AgentTool } from '../components/AgentToolLogos';
 import s from './landing.module.css';
@@ -167,6 +168,104 @@ export function DurableDeliveryTimeline() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+type WorkflowTraceItem = {
+  detail: string;
+  kind: 'checkpoint' | 'complete' | 'human' | 'model' | 'output' | 'retry' | 'trigger';
+  title: string;
+};
+
+const WORKFLOW_TRACE: readonly WorkflowTraceItem[] = [
+  { kind: 'trigger', title: 'repo.push received', detail: 'event · us-west' },
+  { kind: 'checkpoint', title: 'Input persisted', detail: 'checkpoint_01' },
+  { kind: 'model', title: 'Claude Code', detail: 'wrote release-plan.md' },
+  { kind: 'human', title: 'Approval recorded', detail: 'artifact accepted' },
+  { kind: 'retry', title: 'Deploy step', detail: 'attempt 2 · idempotent' },
+  { kind: 'output', title: 'Output persisted', detail: 'build_418' },
+  { kind: 'complete', title: 'Run completed', detail: '6 transitions · 1 retry' },
+];
+
+const WORKFLOW_STEP_DELAYS_MS = [1100, 1250, 1950, 1550, 2100, 1250, 3200] as const;
+
+function WorkflowTraceIcon({ kind }: { kind: WorkflowTraceItem['kind'] }) {
+  const iconProps = { 'aria-hidden': true, size: 15 } as const;
+
+  switch (kind) {
+    case 'trigger':
+      return <Webhook {...iconProps} />;
+    case 'checkpoint':
+      return <Database {...iconProps} />;
+    case 'model':
+      return <Bot {...iconProps} />;
+    case 'human':
+      return <UserRoundCheck {...iconProps} />;
+    case 'retry':
+      return <RotateCcw {...iconProps} />;
+    case 'output':
+      return <FileOutput {...iconProps} />;
+    case 'complete':
+      return <Check {...iconProps} />;
+  }
+}
+
+export function DurableWorkflowTrace() {
+  const [activeStep, setActiveStep] = useState(0);
+
+  useEffect(() => {
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) {
+      setActiveStep(WORKFLOW_TRACE.length - 1);
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setActiveStep((current) => (current + 1) % WORKFLOW_TRACE.length);
+    }, WORKFLOW_STEP_DELAYS_MS[activeStep]);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeStep]);
+
+  return (
+    <div className={s.workflowTracePreview} aria-label="Durable workflow execution trace">
+      <div className={s.workflowTraceHeader}>
+        <span>run_01J7</span>
+        <strong>{activeStep === WORKFLOW_TRACE.length - 1 ? 'completed' : 'running'}</strong>
+      </div>
+      <div className={s.workflowTraceRail} aria-hidden="true">
+        <span style={{ height: `${(activeStep / (WORKFLOW_TRACE.length - 1)) * 100}%` }} />
+      </div>
+      <div className={s.workflowTraceRows}>
+        {WORKFLOW_TRACE.map((item, index) => {
+          const state = index < activeStep ? 'complete' : index === activeStep ? 'active' : 'pending';
+          const kindClass = item.kind === 'retry'
+            ? s.workflowTraceKindRetry
+            : item.kind === 'human'
+              ? s.workflowTraceKindHuman
+              : '';
+          return (
+            <div
+              className={`${s.workflowTraceRow} ${s[`workflowTraceRow_${state}`]} ${kindClass}`}
+              key={item.title}
+            >
+              <span className={s.workflowTraceIcon}>
+                <WorkflowTraceIcon kind={item.kind} />
+              </span>
+              <span className={s.workflowTraceCopy}>
+                <strong>{item.title}</strong>
+                <small>{item.detail}</small>
+              </span>
+              <span className={s.workflowTraceStatus}>
+                {state === 'complete' ? <Check aria-hidden="true" size={13} /> : null}
+                {state === 'active' && item.kind === 'retry' ? <CircleAlert aria-hidden="true" size={13} /> : null}
+                {state === 'active' ? (item.kind === 'retry' ? 'retrying' : 'processing') : null}
+              </span>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
