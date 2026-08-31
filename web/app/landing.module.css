@@ -2783,6 +2783,25 @@
   padding-top: 7px;
 }
 
+.heroClaudeScrollViewport {
+  position: relative;
+  height: 78px;
+  flex: none;
+  overflow: hidden;
+}
+
+.heroClaudeScrollTrack,
+.heroClaudeScrollSequence {
+  display: flex;
+  flex-direction: column;
+}
+
+.heroClaudeScrollSequence {
+  flex: none;
+  min-height: 102px;
+  padding-bottom: 8px;
+}
+
 .heroClaudeIdentity {
   display: grid;
   grid-template-columns: 50px minmax(0, 1fr);
@@ -2853,6 +2872,26 @@
 .heroCodexBody {
   gap: 0;
   padding-top: 7px;
+}
+
+.heroCodexScrollViewport {
+  position: relative;
+  height: 80px;
+  flex: none;
+  margin-bottom: 3px;
+  overflow: hidden;
+}
+
+.heroCodexScrollTrack,
+.heroCodexScrollSequence {
+  display: flex;
+  flex-direction: column;
+}
+
+.heroCodexScrollSequence {
+  flex: none;
+  min-height: 116px;
+  padding-bottom: 8px;
 }
 
 .heroCodexIdentity {
@@ -3003,6 +3042,10 @@
   white-space: nowrap;
 }
 
+.heroCodexScrollSequence .heroCodexWorking {
+  margin-top: 0;
+}
+
 .heroCodexWorking strong {
   color: rgba(193, 212, 229, 0.82);
   font-weight: 650;
@@ -3059,14 +3102,28 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .heroCodexCycleLine {
-    animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
-    animation-delay: calc(var(--term-phase) + var(--line-delay));
-    will-change: clip-path, opacity, transform;
+  .heroClaudeScrollTrack,
+  .heroCodexScrollTrack {
+    animation: heroTerminalTranscriptScroll var(--term-cycle) linear infinite;
+    animation-delay: var(--term-phase);
+    will-change: transform;
+  }
+
+  .heroClaudeBody .heroTermLine {
+    animation: none;
   }
 
   .heroCodexWorkingMarker {
     animation: heroCodexWorkingPulse 1.25s ease-in-out infinite;
+  }
+}
+
+@keyframes heroTerminalTranscriptScroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -50%, 0);
   }
 }
 

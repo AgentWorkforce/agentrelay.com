@@ -524,51 +524,50 @@ function CodexTerminalBody({ card }: { card: TerminalCard }) {
 
   return (
     <div className={`${s.heroTermBody} ${s.heroCodexBody}`}>
-      <div className={s.heroCodexIdentity}>
-        <strong className={s.heroCodexIdentityTitle}>
-          <span>&gt;_</span> OpenAI Codex
-        </strong>
-        <span className={s.heroCodexIdentityRow}>
-          <span className={s.heroCodexIdentityLabel}>model:</span>
-          <span>coding model</span>
-          <b>high</b>
-          <b>fast</b>
-        </span>
-        <span className={s.heroCodexIdentityRow}>
-          <span className={s.heroCodexIdentityLabel}>directory:</span>
-          <span className={s.heroCodexIdentityPath}>~/{card.repo}</span>
-        </span>
-      </div>
-      <div
-        className={`${s.heroCodexPrompt} ${s.heroCodexCycleLine}`}
-        style={{ '--line-delay': '0s' } as TerminalStyle}
-      >
-        <span>›</span>
-        <span>{terminalLineCopy(prompt)}</span>
-      </div>
-      <div
-        className={`${s.heroCodexReply} ${s.heroCodexCycleLine}`}
-        style={{ '--line-delay': '0.42s' } as TerminalStyle}
-      >
-        <span>•</span>
-        <span>I’ll inspect the project, then make the smallest safe change.</span>
-      </div>
-      <div
-        className={`${s.heroCodexRun} ${s.heroCodexCycleLine}`}
-        style={{ '--line-delay': '0.84s' } as TerminalStyle}
-      >
-        <span className={s.heroCodexRunMarker}>•</span>
-        <span className={s.heroCodexRunCopy}>
-          <strong>Ran</strong> {terminalLineCopy(activity)}
-        </span>
-        {result ? (
-          <span className={s.heroCodexRunResult}>└ {terminalLineCopy(result)}</span>
-        ) : null}
-      </div>
-      <div className={s.heroCodexWorking}>
-        <span className={s.heroCodexWorkingMarker}>•</span>
-        <strong>Working</strong>
-        <span>esc to interrupt</span>
+      <div className={s.heroCodexScrollViewport}>
+        <div className={s.heroCodexScrollTrack}>
+          {['a', 'b'].map((copy) => (
+            <div className={s.heroCodexScrollSequence} key={copy}>
+              <div className={s.heroCodexIdentity}>
+                <strong className={s.heroCodexIdentityTitle}>
+                  <span>&gt;_</span> OpenAI Codex
+                </strong>
+                <span className={s.heroCodexIdentityRow}>
+                  <span className={s.heroCodexIdentityLabel}>model:</span>
+                  <span>coding model</span>
+                  <b>high</b>
+                  <b>fast</b>
+                </span>
+                <span className={s.heroCodexIdentityRow}>
+                  <span className={s.heroCodexIdentityLabel}>directory:</span>
+                  <span className={s.heroCodexIdentityPath}>~/{card.repo}</span>
+                </span>
+              </div>
+              <div className={s.heroCodexPrompt}>
+                <span>›</span>
+                <span>{terminalLineCopy(prompt)}</span>
+              </div>
+              <div className={s.heroCodexReply}>
+                <span>•</span>
+                <span>I’ll inspect the project, then make the smallest safe change.</span>
+              </div>
+              <div className={s.heroCodexRun}>
+                <span className={s.heroCodexRunMarker}>•</span>
+                <span className={s.heroCodexRunCopy}>
+                  <strong>Ran</strong> {terminalLineCopy(activity)}
+                </span>
+                {result ? (
+                  <span className={s.heroCodexRunResult}>└ {terminalLineCopy(result)}</span>
+                ) : null}
+              </div>
+              <div className={s.heroCodexWorking}>
+                <span className={s.heroCodexWorkingMarker}>•</span>
+                <strong>Working</strong>
+                <span>esc to interrupt</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
       <div className={s.heroCodexComposer}>
         <span>›</span>
@@ -590,29 +589,36 @@ function ClaudeTerminalBody({ card }: { card: TerminalCard }) {
 
   return (
     <div className={`${s.heroTermBody} ${s.heroClaudeBody}`}>
-      <div className={s.heroClaudeIdentity}>
-        <pre className={s.heroClaudeMascot}>{`▐▛███▛█
+      <div className={s.heroClaudeScrollViewport}>
+        <div className={s.heroClaudeScrollTrack}>
+          {['a', 'b'].map((copy) => (
+            <div className={s.heroClaudeScrollSequence} key={copy}>
+              <div className={s.heroClaudeIdentity}>
+                <pre className={s.heroClaudeMascot}>{`▐▛███▛█
 ▝▜██████▀
  ▝▝ ▝▝`}</pre>
-        <div className={s.heroClaudeIdentityCopy}>
-          <strong className={s.heroClaudeIdentityTitle}>
-            Claude Code <span>v2.1.251</span>
-          </strong>
-          <span className={s.heroClaudeModel}>Fable 5 with xhigh effort · Claude Max</span>
-          <span className={s.heroClaudePath}>~/{card.repo}</span>
+                <div className={s.heroClaudeIdentityCopy}>
+                  <strong className={s.heroClaudeIdentityTitle}>
+                    Claude Code <span>v2.1.251</span>
+                  </strong>
+                  <span className={s.heroClaudeModel}>Fable 5 with xhigh effort · Claude Max</span>
+                  <span className={s.heroClaudePath}>~/{card.repo}</span>
+                </div>
+              </div>
+              <div className={s.heroTermTranscript}>
+                {card.lines.map((line) => (
+                  <span
+                    className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
+                    key={`${copy}-${line.text}`}
+                  >
+                    <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
+                    <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-      <div className={s.heroTermTranscript}>
-        {card.lines.map((line, lineIndex) => (
-          <span
-            className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
-            key={line.text}
-            style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
-          >
-            <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
-            <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
-          </span>
-        ))}
       </div>
       <div className={s.heroTermComposer}>
         <span className={s.heroTermLivePrompt}>
