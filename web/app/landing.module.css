@@ -1998,6 +1998,167 @@
   filter: none;
 }
 
+.heroFlowBg {
+  opacity: 0.78;
+  filter: none;
+}
+
+:global(html[data-theme='dark']) .heroFlowBg {
+  opacity: 0.72;
+}
+
+.heroFlowHaze,
+.heroFlowLinesA,
+.heroFlowLinesB,
+.heroFlowOrbit {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+}
+
+.heroFlowHaze {
+  animation: heroFlowHazeDrift 15s ease-in-out infinite alternate;
+}
+
+.heroFlowLines {
+  fill: none;
+  stroke-width: 1.15;
+  opacity: 0.42;
+  vector-effect: non-scaling-stroke;
+}
+
+.heroFlowLinesA {
+  animation: heroFlowDriftA 13s ease-in-out infinite alternate;
+}
+
+.heroFlowLinesB {
+  stroke-width: 0.9;
+  opacity: 0.28;
+  animation: heroFlowDriftB 17s ease-in-out infinite alternate;
+}
+
+.heroFlowOrbit {
+  stroke-width: 0.8;
+  opacity: 0.22;
+  transform-origin: 760px 290px;
+  animation: heroFlowOrbit 18s ease-in-out infinite alternate;
+}
+
+.heroFlowLinesA path,
+.heroFlowLinesB path,
+.heroFlowOrbit path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.heroFlowLinesA path {
+  animation: heroFlowLineBreatheA 8s ease-in-out infinite alternate;
+}
+
+.heroFlowLinesA path:nth-child(even) {
+  animation-direction: alternate-reverse;
+  animation-delay: -3s;
+}
+
+.heroFlowLinesB path {
+  animation: heroFlowLineBreatheB 10s ease-in-out infinite alternate;
+}
+
+.heroFlowLinesB path:nth-child(2) {
+  animation-delay: -5s;
+}
+
+.heroFlowOrbit path {
+  animation: heroFlowOrbitBreathe 7s ease-in-out infinite alternate;
+}
+
+.heroFlowOrbit path:last-child {
+  animation-direction: alternate-reverse;
+  animation-delay: -2.5s;
+}
+
+@keyframes heroFlowHazeDrift {
+  from {
+    opacity: 0.22;
+    transform: translate3d(-34px, 16px, 0) rotate(-0.8deg) scale(1.01);
+  }
+  to {
+    opacity: 0.36;
+    transform: translate3d(32px, -18px, 0) rotate(1.1deg) scale(1.075);
+  }
+}
+
+@keyframes heroFlowDriftA {
+  from {
+    opacity: 0.3;
+    transform: translate3d(-24px, 10px, 0) rotate(-1.4deg) scale(1.02, 0.97);
+  }
+  to {
+    opacity: 0.46;
+    transform: translate3d(28px, -12px, 0) rotate(1.6deg) scale(0.99, 1.045);
+  }
+}
+
+@keyframes heroFlowDriftB {
+  from {
+    opacity: 0.22;
+    transform: translate3d(24px, -14px, 0) rotate(1.2deg) scale(1.04, 1);
+  }
+  to {
+    opacity: 0.34;
+    transform: translate3d(-28px, 15px, 0) rotate(-1.5deg) scale(0.985, 1.035);
+  }
+}
+
+@keyframes heroFlowOrbit {
+  from {
+    opacity: 0.16;
+    transform: translate3d(-10px, 4px, 0) rotate(-3.2deg) scale(0.97);
+  }
+  to {
+    opacity: 0.28;
+    transform: translate3d(12px, -7px, 0) rotate(3.8deg) scale(1.045);
+  }
+}
+
+@keyframes heroFlowLineBreatheA {
+  from {
+    transform: translate3d(0, -4px, 0) scaleY(0.97);
+  }
+  to {
+    transform: translate3d(0, 5px, 0) scaleY(1.035);
+  }
+}
+
+@keyframes heroFlowLineBreatheB {
+  from {
+    transform: translate3d(-3px, 4px, 0) scale(0.99, 1.025);
+  }
+  to {
+    transform: translate3d(4px, -5px, 0) scale(1.02, 0.975);
+  }
+}
+
+@keyframes heroFlowOrbitBreathe {
+  from {
+    transform: rotate(-1.4deg) scale(0.985);
+  }
+  to {
+    transform: rotate(1.8deg) scale(1.025);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .heroFlowHaze,
+  .heroFlowLinesA,
+  .heroFlowLinesB,
+  .heroFlowOrbit,
+  .heroFlowLinesA path,
+  .heroFlowLinesB path,
+  .heroFlowOrbit path {
+    animation: none;
+  }
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1fr 1.2fr;
@@ -2074,6 +2235,10 @@
   opacity: 0.85;
 }
 
+.workflowHeadline {
+  font-size: clamp(3.2rem, 6.35vw, 5rem);
+}
+
 :global(html[data-theme='dark']) .headline {
   opacity: 1;
 }
@@ -2092,6 +2257,17 @@
   align-items: center;
   gap: 16px;
   padding-top: 4px;
+}
+
+.heroPrimaryCtaWrap {
+  display: flex;
+  align-items: center;
+}
+
+.heroStartCta {
+  min-height: 54px;
+  padding-inline: 28px;
+  font-size: 1rem;
 }
 
 .heroCommandGroup {
@@ -5060,10 +5236,205 @@
   }
 }
 
+.workflowTracePreview {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  padding: 12px 18px 12px 44px;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.workflowTraceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 26px;
+  margin-bottom: 6px;
+  padding: 0 10px;
+  border: 1px solid rgba(156, 207, 255, 0.13);
+  border-radius: 8px;
+  background: rgba(15, 27, 45, 0.68);
+  color: rgba(190, 206, 224, 0.72);
+  font-size: 0.58rem;
+}
+
+.workflowTraceHeader strong {
+  color: #74b8e2;
+  font-size: 0.54rem;
+  font-weight: 700;
+}
+
+.workflowTraceRail {
+  position: absolute;
+  top: 45px;
+  bottom: 28px;
+  left: 27px;
+  width: 1px;
+  overflow: hidden;
+  background: rgba(126, 184, 218, 0.16);
+}
+
+.workflowTraceRail span {
+  display: block;
+  width: 100%;
+  min-height: 4px;
+  background: #2e6a9c;
+  box-shadow: 0 0 10px rgba(74, 144, 194, 0.38);
+  transition: height 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workflowTraceRows {
+  display: grid;
+  gap: 4px;
+}
+
+.workflowTraceRow {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 35px;
+  padding: 3px 9px;
+  overflow: hidden;
+  border: 1px solid rgba(156, 207, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(15, 27, 45, 0.7);
+  color: rgba(245, 248, 255, 0.94);
+  box-shadow: 0 8px 22px rgba(2, 7, 18, 0.18);
+  transition:
+    opacity 360ms ease,
+    border-color 360ms ease,
+    background-color 360ms ease,
+    transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.workflowTraceRow::before {
+  position: absolute;
+  top: 50%;
+  left: -22px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgba(116, 184, 226, 0.45);
+  border-radius: 50%;
+  background: #07111f;
+  content: '';
+  transform: translateY(-50%);
+}
+
+.workflowTraceRow_pending {
+  opacity: 0.22;
+  transform: translateY(2px);
+}
+
+.workflowTraceRow_active {
+  border-color: rgba(116, 184, 226, 0.56);
+  background: rgba(19, 38, 61, 0.9);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.workflowTraceRow_active::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(116, 184, 226, 0.1) 48%, transparent 76%);
+  content: '';
+  pointer-events: none;
+  transform: translateX(-100%);
+  animation: workflowTraceScan 1.35s ease-in-out infinite;
+}
+
+.workflowTraceRow_active::before,
+.workflowTraceRow_complete::before {
+  border-color: #2e6a9c;
+  background: #2e6a9c;
+}
+
+.workflowTraceRow_complete {
+  opacity: 0.72;
+}
+
+.workflowTraceKindRetry.workflowTraceRow_active {
+  border-color: rgba(216, 135, 111, 0.58);
+  background: rgba(55, 34, 36, 0.78);
+}
+
+.workflowTraceKindRetry.workflowTraceRow_active::after {
+  background: linear-gradient(90deg, transparent 0%, rgba(216, 135, 111, 0.12) 48%, transparent 76%);
+}
+
+.workflowTraceIcon {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  color: #74b8e2;
+}
+
+.workflowTraceKindRetry .workflowTraceIcon,
+.workflowTraceKindHuman .workflowTraceIcon {
+  color: #d8876f;
+}
+
+.workflowTraceCopy {
+  min-width: 0;
+}
+
+.workflowTraceCopy strong,
+.workflowTraceCopy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowTraceCopy strong {
+  color: rgba(245, 248, 255, 0.94);
+  font-size: 0.61rem;
+  line-height: 1.2;
+}
+
+.workflowTraceCopy small {
+  margin-top: 1px;
+  color: rgba(190, 206, 224, 0.6);
+  font-size: 0.45rem;
+  line-height: 1.15;
+}
+
+.workflowTraceStatus {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #74b8e2;
+  font-size: 0.48rem;
+  font-weight: 700;
+}
+
+.workflowTraceKindRetry .workflowTraceStatus {
+  color: #d8876f;
+}
+
+@keyframes workflowTraceScan {
+  0% {
+    transform: translateX(-100%);
+  }
+  70%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .durableTimelineRow,
-  .durableDelivered {
+  .durableDelivered,
+  .workflowTraceRow_active::after {
     animation: none;
+  }
+
+  .workflowTraceRail span,
+  .workflowTraceRow {
+    transition: none;
   }
 }
 
@@ -6084,6 +6455,10 @@
 
   .heroRight {
     min-height: 320px;
+  }
+
+  .heroRightWorkflows {
+    min-height: 720px;
   }
 
   .headline {

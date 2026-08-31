@@ -42,12 +42,14 @@ export function SiteNav({
   mobileMenuContent,
   hideLinks,
   hideMobileDocsLink,
+  docsHref = '/docs',
 }: {
   center?: React.ReactNode;
   actions?: React.ReactNode;
   mobileMenuContent?: React.ReactNode;
   hideLinks?: boolean;
   hideMobileDocsLink?: boolean;
+  docsHref?: string;
 } = {}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -79,7 +81,7 @@ export function SiteNav({
             {!hideLinks && (
               <ul className={s.links}>
                 <li>
-                  <Link href="/docs" className={s.link}>
+                  <Link href={docsHref} className={s.link}>
                     Docs
                   </Link>
                 </li>
@@ -138,7 +140,7 @@ export function SiteNav({
             }}
           >
             {!hideLinks && !hideMobileDocsLink && (
-              <Link href="/docs" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+              <Link href={docsHref} className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                 Docs
               </Link>
             )}

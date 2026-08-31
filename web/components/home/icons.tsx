@@ -222,7 +222,69 @@ export function WaveDivider({
  * Inline so it paints with the first server-rendered HTML — no extra request
  * and no above-the-fold flash.
  */
-export function HeroBackdrop() {
+export function HeroBackdrop({ variant = 'messaging' }: { variant?: 'messaging' | 'workflows' } = {}) {
+  if (variant === 'workflows') {
+    return (
+      <svg
+        className={`${s.heroBgSvg} ${s.heroFlowBg}`}
+        viewBox="0 0 1200 600"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
+        <defs>
+          <linearGradient id="workflowFlowGradient" x1="-80" y1="80" x2="1280" y2="510" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#74B8E2" stopOpacity="0" />
+            <stop offset="0.28" stopColor="#74B8E2" stopOpacity="0.22" />
+            <stop offset="0.58" stopColor="#D9F0FF" stopOpacity="0.13" />
+            <stop offset="0.84" stopColor="#4A90C2" stopOpacity="0.16" />
+            <stop offset="1" stopColor="#4A90C2" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="workflowFlowSoft" x1="1080" y1="70" x2="120" y2="540" gradientUnits="userSpaceOnUse">
+            <stop stopColor="#74B8E2" stopOpacity="0" />
+            <stop offset="0.45" stopColor="#74B8E2" stopOpacity="0.1" />
+            <stop offset="0.7" stopColor="#FFFFFF" stopOpacity="0.08" />
+            <stop offset="1" stopColor="#FFFFFF" stopOpacity="0" />
+          </linearGradient>
+          <radialGradient id="workflowFlowWash" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(790 280) rotate(166) scale(620 310)">
+            <stop stopColor="#74B8E2" stopOpacity="0.075" />
+            <stop offset="0.54" stopColor="#4A90C2" stopOpacity="0.025" />
+            <stop offset="1" stopColor="#4A90C2" stopOpacity="0" />
+          </radialGradient>
+          <filter id="workflowFlowBlur" x="-25%" y="-45%" width="150%" height="190%">
+            <feGaussianBlur stdDeviation="26" />
+          </filter>
+        </defs>
+
+        <rect width="1200" height="600" fill="url(#workflowFlowWash)" />
+
+        <g className={s.heroFlowHaze} filter="url(#workflowFlowBlur)" strokeLinecap="round">
+          <path d="M-180 438 C120 202 348 574 625 328 C846 132 1008 154 1390 350" stroke="url(#workflowFlowGradient)" strokeWidth="116" opacity="0.3" />
+          <path d="M-210 168 C110 408 370 28 670 254 C918 442 1114 360 1390 112" stroke="url(#workflowFlowSoft)" strokeWidth="92" opacity="0.22" />
+        </g>
+
+        <g className={`${s.heroFlowLines} ${s.heroFlowLinesA}`} stroke="url(#workflowFlowGradient)" strokeLinecap="round">
+          <path d="M-160 492 C120 238 356 584 640 342 C854 160 1040 174 1370 382" />
+          <path d="M-170 462 C108 214 352 548 624 316 C844 128 1034 146 1380 352" />
+          <path d="M-180 430 C92 190 340 512 608 290 C834 102 1024 116 1388 320" />
+          <path d="M-190 396 C72 166 326 474 588 264 C814 84 1008 86 1396 286" />
+        </g>
+
+        <g className={`${s.heroFlowLines} ${s.heroFlowLinesB}`} stroke="url(#workflowFlowSoft)" strokeLinecap="round">
+          <path d="M-180 94 C118 378 378 10 682 226 C926 398 1128 316 1380 72" />
+          <path d="M-194 126 C108 402 374 44 668 252 C912 424 1120 348 1390 104" />
+          <path d="M-208 158 C96 428 364 78 652 278 C894 446 1108 382 1400 138" />
+        </g>
+
+        <g className={`${s.heroFlowLines} ${s.heroFlowOrbit}`} stroke="url(#workflowFlowGradient)" strokeLinecap="round">
+          <path d="M476 306 C548 168 782 124 968 212 C1128 288 1040 420 824 430 C620 440 452 360 524 238 C604 102 884 98 1042 232" />
+          <path d="M522 326 C596 214 786 176 930 236 C1050 286 982 382 820 394 C658 406 526 350 578 264 C636 168 842 154 974 246" opacity="0.7" />
+        </g>
+      </svg>
+    );
+  }
+
   return (
     <svg
       className={s.heroBgSvg}

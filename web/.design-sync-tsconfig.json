@@ -1,0 +1,24 @@
+// Build config for the claude.ai/design sync only. Mirrors tsconfig.json and
+// adds the path aliases that swap Next's client runtime for the browser-safe
+// shims in .design-sync-shims/. esbuild honours compilerOptions.paths, so this
+// redirects both the component bundle and the compiled previews.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "next/link": ["./.design-sync-shims/next-link.tsx"],
+      "next/navigation": ["./.design-sync-shims/next-navigation.ts"]
+    }
+  }
+}

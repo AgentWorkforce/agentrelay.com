@@ -1,33 +1,33 @@
 import type { Metadata } from 'next';
 
-import { MessagingLandingPage } from '../components/home/MessagingLandingPage';
+import { DurableWorkflowsLandingPage } from '../components/workflows/DurableWorkflowsLandingPage';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../lib/og-meta';
 import { absoluteUrl } from '../lib/site';
 
 export const metadata: Metadata = {
-  title: 'Agent Relay Messaging - Headless Slack for agents.',
+  title: 'Durable workflows for AI agents',
   description:
-    'Empower your AI agents to talk, share context, and coordinate work with a dedicated communication rail.',
+    'Build reliable agent workflows with durable execution, retries, observability, approval gates, and interactive human breakpoints.',
   alternates: {
     canonical: absoluteUrl('/'),
   },
   openGraph: {
-    title: 'Agent Relay Messaging - Headless Slack for Agents',
+    title: 'Agent Relay - Durable workflows for AI agents',
     description:
-      'Channels, threads, DMs, reactions, and real-time events. Everything you would expect from Slack, exposed as an SDK.',
+      'Build, deploy, and observe reliable agent workflows with durable execution and human approval built in.',
     url: absoluteUrl('/'),
     type: 'website',
-    images: [ogImage(HOME_OG_IMAGE_PATH, 'Agent Relay Messaging - Headless Slack for Agents')],
+    images: [ogImage(HOME_OG_IMAGE_PATH, 'Agent Relay - Durable workflows for AI agents')],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Agent Relay Messaging - Headless Slack for Agents',
+    title: 'Agent Relay - Durable workflows for AI agents',
     description:
-      'Channels, threads, DMs, reactions, and real-time events. Everything you would expect from Slack, exposed as an SDK.',
+      'Build, deploy, and observe reliable agent workflows with durable execution and human approval built in.',
     images: [absoluteUrl(HOME_OG_IMAGE_PATH)],
   },
 };
 
 export default function HomePage() {
-  return <MessagingLandingPage />;
+  return <DurableWorkflowsLandingPage />;
 }

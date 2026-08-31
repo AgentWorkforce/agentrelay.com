@@ -32,6 +32,7 @@ export const docsNav: NavGroup[] = [
   {
     title: 'Automation',
     items: [
+      { title: 'Relay Flows', slug: 'relayflows' },
       { title: 'Actions', slug: 'actions' },
       { title: 'Orchestrating with actions', slug: 'orchestrating-with-actions' },
       { title: 'Events', slug: 'events' },

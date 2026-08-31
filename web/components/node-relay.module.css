@@ -14,6 +14,1066 @@
   pointer-events: none;
 }
 
+/* Vertical durable-workflow diagram. Time runs downward. Agent, gate, and
+   deterministic stages use distinct visual grammars so the execution model is
+   readable before the labels are parsed. */
+.pipelineContainer {
+  min-height: 580px;
+}
+
+.pipelineCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.pipelinePath,
+.pipelineSignal {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.pipelinePath {
+  stroke: color-mix(in srgb, var(--agent-card-border-active) 72%, transparent);
+  stroke-width: 1.25;
+}
+
+.pipelineSignal {
+  stroke: #2e6a9c;
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  opacity: 0.9;
+  animation-duration: 14s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+
+.pipelineSignal_trigger {
+  animation-name: pipelineSignalTrigger;
+}
+
+.pipelineSignal_agents {
+  animation-name: pipelineSignalAgents;
+}
+
+.pipelineSignal_join {
+  animation-name: pipelineSignalJoin;
+}
+
+.pipelineSignal_teamPlanner {
+  animation-name: pipelineSignalTeamPlanner;
+}
+
+.pipelineSignal_teamBuilder {
+  animation-name: pipelineSignalTeamBuilder;
+}
+
+.pipelineSignal_teamReviewer {
+  animation-name: pipelineSignalTeamReviewer;
+}
+
+.pipelineSignal_teamLoop {
+  animation-name: pipelineSignalTeamLoop;
+}
+
+.pipelineSignal_publish {
+  animation-name: pipelineSignalPublish;
+}
+
+.pipelineSignal_email {
+  animation-name: pipelineSignalEmail;
+}
+
+.pipelineStage {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  color: var(--agent-card-title);
+  background: var(--agent-card-bg);
+  border: 1px solid var(--agent-card-border);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 7%);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.pipelineStage > svg {
+  flex: 0 0 auto;
+}
+
+.pipelineStage strong {
+  display: block;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+}
+
+.pipelineStage span {
+  display: block;
+  margin-top: 2px;
+  color: var(--agent-card-muted);
+  font-size: 0.49rem;
+  line-height: 1.35;
+}
+
+.pipelineTrigger {
+  top: 3%;
+  left: 38%;
+  width: 24%;
+  min-height: 50px;
+  gap: 9px;
+  padding: 7px 10px;
+  animation: pipelineStageTrigger 14s ease-in-out infinite;
+}
+
+.pipelineTrigger img {
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
+}
+
+.pipelineDeterministic {
+  border-color: color-mix(in srgb, #74b8e2 45%, var(--agent-card-border));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, #4a90c2 8%, transparent), transparent 58%),
+    var(--agent-card-bg);
+}
+
+.pipelineDeterministic > svg:first-of-type {
+  width: 17px;
+  height: 17px;
+  margin-right: 8px;
+  color: #74b8e2;
+}
+
+.pipelineNormalize {
+  top: 15%;
+  left: 30%;
+  width: 40%;
+  min-height: 42px;
+  padding: 7px 10px;
+  animation: pipelineStageValidation 14s ease-in-out infinite;
+}
+
+.pipelineCheck {
+  width: 15px;
+  height: 15px;
+  margin-left: auto;
+  color: var(--agent-card-status);
+}
+
+.pipelineAgentWork {
+  --pipeline-agent-accent: #d97757;
+
+  top: 25%;
+  display: block;
+  width: 32%;
+  min-height: 84px;
+  overflow: visible;
+  border-color: color-mix(in srgb, var(--pipeline-agent-accent) 62%, var(--agent-card-border));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--pipeline-agent-accent) 9%, transparent), transparent 55%),
+    var(--agent-card-bg);
+  animation: pipelineStageAgents 14s ease-in-out infinite;
+}
+
+.pipelineAgentClaude {
+  left: 15%;
+  animation-name: pipelineStageClaude;
+}
+
+.pipelineAgentCodex {
+  --pipeline-agent-accent: #74b8e2;
+
+  right: 15%;
+  animation-name: pipelineStageCodex;
+}
+
+.pipelineAgentHeader {
+  display: flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 8px 5px 10px;
+  border-bottom: 1px solid var(--agent-card-border);
+  border-radius: 7px 7px 0 0;
+  background: var(--agent-card-header);
+}
+
+.pipelineAgentIdentity {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  margin: 0 !important;
+  color: var(--agent-card-title) !important;
+  font-size: 0.61rem !important;
+  font-weight: 650;
+}
+
+.pipelineAgentIdentity svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pipelineAgentBody {
+  display: grid;
+  gap: 5px;
+  padding: 7px 10px 8px;
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--pipeline-agent-accent) 5%, transparent), transparent 45%),
+    color-mix(in srgb, var(--agent-card-bg) 96%, black 4%);
+}
+
+.pipelineTerminalPrompt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.pipelineTerminalPrompt span {
+  margin: 0;
+  color: var(--pipeline-agent-accent);
+  font-size: 0.58rem;
+  font-weight: 800;
+}
+
+.pipelineTerminalPrompt code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--agent-card-title);
+  font-size: 0.51rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipelineTerminalPrompt i {
+  width: 1px;
+  height: 0.65rem;
+  flex: 0 0 auto;
+  background: var(--pipeline-agent-accent);
+  opacity: 0;
+  animation: pipelineTerminalCursor 14s step-end infinite;
+}
+
+.pipelineTerminalActivity {
+  position: relative;
+  height: 0.72rem;
+  overflow: hidden;
+}
+
+.pipelineTerminalPhase {
+  position: absolute;
+  inset: 0 auto auto 0;
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin: 0 !important;
+  overflow: hidden;
+  color: var(--agent-card-muted);
+  font-size: 0.44rem !important;
+  line-height: 0.72rem !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translateY(5px);
+  animation: pipelineTerminalPhaseOne 14s ease-in-out infinite;
+}
+
+.pipelineTerminalPhase:nth-child(2) {
+  animation-name: pipelineTerminalPhaseTwo;
+}
+
+.pipelineTerminalPhase:nth-child(3) {
+  animation-name: pipelineTerminalPhaseThree;
+}
+
+.pipelineTerminalPhase b {
+  color: var(--pipeline-agent-accent);
+  font-size: 0.47rem;
+  font-weight: 700;
+}
+
+.pipelineTerminalPhase:first-child b {
+  animation: pipelineTerminalThinking 1.1s linear infinite;
+}
+
+/* The agents share the workflow clock, but not a fake synchronized terminal.
+   Each tool call gets its own dwell time and the join waits for both answers. */
+.pipelineAgentClaude .pipelineTerminalPrompt i {
+  animation-name: pipelineTerminalCursorClaude;
+}
+
+.pipelineAgentCodex .pipelineTerminalPrompt i {
+  animation-name: pipelineTerminalCursorCodex;
+}
+
+.pipelineAgentClaude .pipelineTerminalPhase:nth-child(1) {
+  animation-name: pipelineClaudeRead;
+}
+
+.pipelineAgentClaude .pipelineTerminalPhase:nth-child(2) {
+  animation-name: pipelineClaudeBash;
+}
+
+.pipelineAgentClaude .pipelineTerminalPhase:nth-child(3) {
+  animation-name: pipelineClaudeWrite;
+}
+
+.pipelineAgentCodex .pipelineTerminalPhase:nth-child(1) {
+  animation-name: pipelineCodexRead;
+}
+
+.pipelineAgentCodex .pipelineTerminalPhase:nth-child(2) {
+  animation-name: pipelineCodexBash;
+}
+
+.pipelineAgentCodex .pipelineTerminalPhase:nth-child(3) {
+  animation-name: pipelineCodexWrite;
+}
+
+.pipelineAgentClaude .pipelineTerminalPhase:first-child b {
+  animation-duration: 0.85s;
+}
+
+.pipelineAgentCodex .pipelineTerminalPhase:first-child b {
+  animation-duration: 1.35s;
+}
+
+.pipelineAgentClaude .pipelineAgentOutput {
+  animation-name: pipelineClaudeAnswer;
+}
+
+.pipelineAgentCodex .pipelineAgentOutput {
+  animation-name: pipelineCodexAnswer;
+}
+
+.pipelineTerminalA11y {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.pipelineAgentOutput {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-top: 1px solid color-mix(in srgb, var(--pipeline-agent-accent) 30%, var(--agent-card-border));
+  background: color-mix(in srgb, var(--pipeline-agent-accent) 8%, transparent);
+  opacity: 0.18;
+  animation: pipelineAgentAnswer 14s ease-in-out infinite;
+}
+
+.pipelineAgentOutput span {
+  margin: 0;
+  color: var(--pipeline-agent-accent);
+  font-size: 0.4rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.pipelineAgentOutput strong {
+  font-size: 0.5rem;
+}
+
+@keyframes pipelineTerminalCursor {
+  0%,
+  19.9% {
+    opacity: 0;
+  }
+  20%,
+  23% {
+    opacity: 1;
+  }
+  23.1%,
+  26% {
+    opacity: 0;
+  }
+  26.1%,
+  29% {
+    opacity: 1;
+  }
+  29.1%,
+  32% {
+    opacity: 0;
+  }
+  32.1%,
+  35% {
+    opacity: 1;
+  }
+  35.1%,
+  38% {
+    opacity: 0;
+  }
+  38.1%,
+  41% {
+    opacity: 1;
+  }
+  41.1%,
+  44% {
+    opacity: 0;
+  }
+  44.1%,
+  47% {
+    opacity: 1;
+  }
+  47.1%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes pipelineTerminalPhaseOne {
+  0%,
+  20% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  23%,
+  27% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  30%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pipelineTerminalPhaseTwo {
+  0%,
+  28% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  31%,
+  35% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  38%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pipelineTerminalPhaseThree {
+  0%,
+  36% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  39%,
+  43% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  46%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pipelineAgentAnswer {
+  0%,
+  43% {
+    opacity: 0.18;
+  }
+  47%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes pipelineTerminalThinking {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pipelineStageClaude {
+  0%,
+  16% {
+    opacity: 0.18;
+  }
+  20%,
+  46% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageCodex {
+  0%,
+  18% {
+    opacity: 0.18;
+  }
+  22%,
+  49% {
+    opacity: 1;
+  }
+  53%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineTerminalCursorClaude {
+  0%, 19.9%, 23.1%, 27.1%, 31.1%, 35.1%, 39.1%, 43.1%, 100% { opacity: 0; }
+  20%, 23%, 27%, 31%, 35%, 39%, 43% { opacity: 1; }
+}
+
+@keyframes pipelineTerminalCursorCodex {
+  0%, 21.9%, 26.1%, 31.1%, 36.1%, 41.1%, 46.1%, 49.1%, 100% { opacity: 0; }
+  22%, 26%, 31%, 36%, 41%, 46%, 49% { opacity: 1; }
+}
+
+@keyframes pipelineClaudeRead {
+  0%, 19% { opacity: 0; transform: translateY(5px); }
+  21%, 25% { opacity: 1; transform: translateY(0); }
+  27%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes pipelineClaudeBash {
+  0%, 25% { opacity: 0; transform: translateY(5px); }
+  28%, 35% { opacity: 1; transform: translateY(0); }
+  37%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes pipelineClaudeWrite {
+  0%, 35% { opacity: 0; transform: translateY(5px); }
+  38%, 43% { opacity: 1; transform: translateY(0); }
+  45%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes pipelineCodexRead {
+  0%, 21% { opacity: 0; transform: translateY(5px); }
+  23%, 30% { opacity: 1; transform: translateY(0); }
+  32%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes pipelineCodexBash {
+  0%, 30% { opacity: 0; transform: translateY(5px); }
+  33%, 37% { opacity: 1; transform: translateY(0); }
+  39%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes pipelineCodexWrite {
+  0%, 37% { opacity: 0; transform: translateY(5px); }
+  40%, 47% { opacity: 1; transform: translateY(0); }
+  49%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes pipelineClaudeAnswer {
+  0%, 43% { opacity: 0.18; }
+  46%, 100% { opacity: 1; }
+}
+
+@keyframes pipelineCodexAnswer {
+  0%, 47% { opacity: 0.18; }
+  50%, 100% { opacity: 1; }
+}
+
+.pipelineTransition {
+  position: absolute;
+  z-index: 2;
+  padding: 2px 5px;
+  border: 1px solid var(--agent-card-border-active);
+  border-radius: 3px;
+  background: var(--agent-card-bg);
+  color: var(--agent-card-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.43rem;
+  line-height: 1.2;
+}
+
+.pipelineArtifactTransition {
+  top: 41.2%;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: pipelineTransitionAgents 14s ease-in-out infinite;
+}
+
+.pipelineApprovedTransition {
+  top: 57.5%;
+  left: 52%;
+  color: #d8876f;
+  animation: pipelineTransitionApproved 14s ease-in-out infinite;
+}
+
+.pipelinePassedTransition {
+  top: 76.8%;
+  left: 57%;
+  color: #74b8e2;
+  animation: pipelineTransitionPassed 14s ease-in-out infinite;
+}
+
+.pipelineHumanGate {
+  top: 45%;
+  left: 23%;
+  width: 54%;
+  min-height: 68px;
+  gap: 9px;
+  padding: 10px;
+  border-color: color-mix(in srgb, #d8876f 72%, var(--agent-card-border));
+  background:
+    linear-gradient(90deg, color-mix(in srgb, #d8876f 14%, transparent), transparent 64%),
+    var(--agent-card-bg);
+  animation: pipelineStageReview 14s ease-in-out infinite;
+}
+
+.pipelineHumanGate > svg {
+  width: 22px;
+  height: 22px;
+  color: #d8876f;
+}
+
+.pipelineGateActions {
+  display: flex !important;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 0 auto !important;
+}
+
+.pipelineGateActions small {
+  padding: 3px 5px;
+  border: 1px solid var(--agent-card-border);
+  border-radius: 3px;
+  color: var(--agent-card-muted);
+  font-size: 0.4rem;
+  white-space: nowrap;
+}
+
+.pipelineGateActions small:last-child {
+  border-color: #d8876f;
+  color: #f0b09c;
+  background: color-mix(in srgb, #d8876f 15%, transparent);
+}
+
+.pipelineTeamAgent {
+  width: 26%;
+  min-height: 46px;
+  gap: 7px;
+  padding: 7px 9px;
+  border-color: color-mix(in srgb, #74b8e2 42%, var(--agent-card-border));
+  background:
+    linear-gradient(100deg, color-mix(in srgb, #2e6a9c 10%, transparent), transparent 62%),
+    var(--agent-card-bg);
+}
+
+.pipelineTeamAgent > svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
+.pipelineTeamAgent strong {
+  font-size: 0.56rem;
+}
+
+.pipelineTeamAgent span {
+  font-size: 0.43rem;
+}
+
+.pipelineTeamPlanner {
+  top: 61%;
+  left: 14%;
+  animation: pipelineStageTeamPlanner 14s ease-in-out infinite;
+}
+
+.pipelineTeamBuilder {
+  top: 61%;
+  left: 60%;
+  animation: pipelineStageTeamBuilder 14s ease-in-out infinite;
+}
+
+.pipelineTeamReviewer {
+  top: 69%;
+  left: 37%;
+  animation: pipelineStageTeamReviewer 14s ease-in-out infinite;
+}
+
+.pipelinePublish {
+  top: 79%;
+  left: 33%;
+  width: 44%;
+  min-height: 50px;
+  padding: 9px 10px;
+  animation: pipelineStagePublish 14s ease-in-out infinite;
+}
+
+.pipelineEmail {
+  top: 90%;
+  left: 55.5%;
+  width: 24%;
+  min-height: 52px;
+  gap: 9px;
+  padding: 8px 10px;
+  transform: translateX(-50%);
+  animation: pipelineStageEmail 14s ease-in-out infinite;
+}
+
+.pipelineEmail > svg:first-child {
+  width: 21px;
+  height: 21px;
+  color: #74b8e2;
+}
+
+@keyframes pipelineSignalTrigger {
+  0%,
+  3% {
+    stroke-dashoffset: 1;
+  }
+  8%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalAgents {
+  0%,
+  12% {
+    stroke-dashoffset: 1;
+  }
+  18%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalJoin {
+  0%,
+  50% {
+    stroke-dashoffset: 1;
+  }
+  55%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalTeamPlanner {
+  0%,
+  60% {
+    stroke-dashoffset: 1;
+  }
+  64%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalTeamBuilder {
+  0%,
+  64% {
+    stroke-dashoffset: 1;
+  }
+  68%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalTeamReviewer {
+  0%,
+  68% {
+    stroke-dashoffset: 1;
+  }
+  72%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalTeamLoop {
+  0%,
+  72% {
+    stroke-dashoffset: 1;
+  }
+  76%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalPublish {
+  0%,
+  76% {
+    stroke-dashoffset: 1;
+  }
+  80%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineSignalEmail {
+  0%,
+  86% {
+    stroke-dashoffset: 1;
+  }
+  92%,
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pipelineStageTrigger {
+  0%,
+  7% {
+    opacity: 1;
+  }
+  10%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageValidation {
+  0%,
+  5% {
+    opacity: 0.2;
+  }
+  9%,
+  17% {
+    opacity: 1;
+  }
+  21%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageAgents {
+  0%,
+  16% {
+    opacity: 0.18;
+  }
+  20%,
+  48% {
+    opacity: 1;
+  }
+  52%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageReview {
+  0%,
+  51% {
+    opacity: 0.18;
+  }
+  55%,
+  62% {
+    opacity: 1;
+  }
+  66%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageTeamPlanner {
+  0%,
+  60% {
+    opacity: 0.18;
+  }
+  64%,
+  67% {
+    opacity: 1;
+  }
+  69%,
+  72% {
+    opacity: 0.48;
+  }
+  74%,
+  77% {
+    opacity: 1;
+  }
+  79%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageTeamBuilder {
+  0%,
+  64% {
+    opacity: 0.18;
+  }
+  68%,
+  71% {
+    opacity: 1;
+  }
+  74%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageTeamReviewer {
+  0%,
+  68% {
+    opacity: 0.18;
+  }
+  72%,
+  75% {
+    opacity: 1;
+  }
+  78%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStagePublish {
+  0%,
+  74% {
+    opacity: 0.18;
+  }
+  78%,
+  84% {
+    opacity: 1;
+  }
+  88%,
+  100% {
+    opacity: 0.56;
+  }
+}
+
+@keyframes pipelineStageEmail {
+  0%,
+  86% {
+    opacity: 0.18;
+  }
+  90%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes pipelineTransitionAgents {
+  0%,
+  50% {
+    opacity: 0.15;
+  }
+  53%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes pipelineTransitionApproved {
+  0%,
+  60% {
+    opacity: 0.15;
+  }
+  65%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes pipelineTransitionPassed {
+  0%,
+  74% {
+    opacity: 0.15;
+  }
+  78%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 900px) {
+  .pipelineContainer {
+    min-height: 720px;
+  }
+
+  .pipelineAgentWork {
+    width: 35%;
+  }
+
+  .pipelineAgentClaude {
+    left: 13%;
+  }
+
+  .pipelineAgentCodex {
+    right: 13%;
+  }
+
+  .pipelineHumanGate {
+    left: 19%;
+    width: 62%;
+  }
+
+  .pipelineStage strong {
+    font-size: 0.58rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipelineSignal {
+    animation: none;
+    opacity: 0;
+  }
+
+  .pipelineTerminalPrompt i,
+  .pipelineTerminalPhase,
+  .pipelineTerminalPhase:first-child b,
+  .pipelineAgentOutput,
+  .pipelineTrigger,
+  .pipelineNormalize,
+  .pipelineAgentWork,
+  .pipelineHumanGate,
+  .pipelineTeamAgent,
+  .pipelinePublish,
+  .pipelineEmail,
+  .pipelineTransition {
+    animation: none;
+  }
+
+  .pipelineAgentOutput,
+  .pipelineTrigger,
+  .pipelineNormalize,
+  .pipelineAgentWork,
+  .pipelineHumanGate,
+  .pipelineTeamAgent,
+  .pipelinePublish,
+  .pipelineEmail,
+  .pipelineTransition {
+    opacity: 1;
+  }
+
+  .pipelineTerminalPhase {
+    opacity: 0;
+    transform: none;
+  }
+
+  .pipelineTerminalPhase:last-child {
+    opacity: 1;
+  }
+}
+
 /* ══════════════════════════════════════
    Terminal Card
    ══════════════════════════════════════ */

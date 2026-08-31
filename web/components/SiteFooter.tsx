@@ -29,7 +29,7 @@ const footerColumns: FooterColumn[] = [
   {
     title: 'Open Source',
     links: [
-      { label: 'Relay', href: '/messaging' },
+      { label: 'Relay Messaging', href: '/agent-messaging' },
       { label: 'RelayFile', href: 'https://github.com/AgentWorkforce/relayfile' },
       { label: 'RelayAuth', href: 'https://github.com/AgentWorkforce/relayauth' },
       { label: 'RelayFlows', href: 'https://github.com/AgentWorkforce/relayflows' },

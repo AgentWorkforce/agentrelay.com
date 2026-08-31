@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { MessageRelayAnimation } from '../MessageRelayAnimation';
+import { WorkflowPipelineAnimation } from '../WorkflowPipelineAnimation';
 
 // Matches the mobile breakpoint in landing.module.css where .heroRight is hidden.
 const MOBILE_QUERY = '(max-width: 600px)';
@@ -30,7 +31,7 @@ function subscribeToMediaQuery(mql: MediaQueryList, listener: () => void) {
  * so on mobile we avoid mounting it entirely (rather than just hiding it with
  * CSS) to keep the page lightweight on phones.
  */
-export function HeroGraph() {
+export function HeroGraph({ variant = 'messaging' }: { variant?: 'messaging' | 'workflows' } = {}) {
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
@@ -45,5 +46,5 @@ export function HeroGraph() {
     return null;
   }
 
-  return <MessageRelayAnimation />;
+  return variant === 'workflows' ? <WorkflowPipelineAnimation /> : <MessageRelayAnimation />;
 }

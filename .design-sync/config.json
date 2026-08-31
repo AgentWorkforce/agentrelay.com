@@ -1,0 +1,114 @@
+{
+  "projectId": "3abe2a61-fb2c-4167-8142-92840a218217",
+  "shape": "package",
+  "pkg": "web",
+  "globalName": "AgentRelay",
+  "entry": "web/.design-sync-entry.tsx",
+  "srcDir": "components",
+  "tsconfig": ".design-sync-tsconfig.json",
+  "cssEntry": ".ds-css/compiled.css",
+  "buildCmd": "npm --workspace web run build && node .design-sync/build-css.mjs",
+  "componentSrcMap": {
+    "Badge": "components/ui/badge.tsx",
+    "Button": "components/ui/button.tsx",
+    "Input": "components/ui/input.tsx",
+    "Card": "components/ui/card.tsx",
+    "CardHeader": "components/ui/card.tsx",
+    "CardFooter": "components/ui/card.tsx",
+    "CardTitle": "components/ui/card.tsx",
+    "CardDescription": "components/ui/card.tsx",
+    "CardContent": "components/ui/card.tsx",
+    "DocsCard": "components/docs/Card.tsx",
+    "CardGroup": "components/docs/CardGroup.tsx",
+    "BannerLink": "components/docs/BannerLink.tsx",
+    "CodeGroup": "components/docs/CodeGroup.tsx",
+    "CopyCodeButton": "components/docs/CopyCodeButton.tsx",
+    "DocsLanguageProvider": "components/docs/DocsLanguageContext.tsx",
+    "DocsNav": "components/docs/DocsNav.tsx",
+    "DocsProductSwitcher": "components/docs/DocsNav.tsx",
+    "DocsPageActions": "components/docs/DocsPageActions.tsx",
+    "DocsSearch": "components/docs/DocsSearch.tsx",
+    "DocsVersionSelect": "components/docs/DocsVersionSelect.tsx",
+    "IntegrationGrid": "components/docs/IntegrationGrid.tsx",
+    "LegacySpawnOptionsTable": "components/docs/LegacySpawnOptionsTable.tsx",
+    "Note": "components/docs/Note.tsx",
+    "Warning": "components/docs/Warning.tsx",
+    "TableOfContents": "components/docs/TableOfContents.tsx",
+    "BlogTableOfContents": "components/blog/BlogTableOfContents.tsx",
+    "SiteNav": "components/SiteNav.tsx",
+    "LogoIcon": "components/SiteNav.tsx",
+    "LogoWordmark": "components/SiteNav.tsx",
+    "SiteFooter": "components/SiteFooter.tsx",
+    "WaitlistForm": "components/WaitlistForm.tsx",
+    "InstallCommand": "components/InstallCommand.tsx",
+    "AgentSetupPrompt": "components/InstallCommand.tsx",
+    "CopyInstructionsButton": "components/CopyInstructionsButton.tsx",
+    "DocsGitHubStarsBadge": "components/DocsGitHubStarsBadge.tsx",
+    "SdkCodeExample": "components/SdkCodeExample.tsx",
+    "AgentToolLogo": "components/AgentToolLogos.tsx",
+    "FadeIn": "components/FadeIn.tsx",
+    "RelayAnimation": "components/RelayAnimation.tsx",
+    "MessageRelayAnimation": "components/MessageRelayAnimation.tsx",
+    "NodeRelayAnimation": "components/NodeRelayAnimation.tsx",
+    "ChannelMessagesPreview": "components/ChannelMessagesPreview.tsx",
+    "AgentArt": "components/agents/AgentArt.tsx",
+    "BuildYourOwn": "components/agents/BuildYourOwn.tsx",
+    "ForkAgentButton": "components/agents/ForkAgentButton.tsx",
+    "IntegrationLogos": "components/agents/IntegrationLogos.tsx",
+    "BrandTheme": null
+  },
+  "docsDir": "../.design-sync/groups",
+  "readmeHeader": ".design-sync/conventions.md",
+  "provider": {
+    "component": "BrandTheme",
+    "props": {
+      "theme": "dark"
+    }
+  },
+  "overrides": {
+    "SiteNav": {
+      "cardMode": "single",
+      "primaryStory": "DocsHeader",
+      "viewport": "1280x720"
+    },
+    "CardGroup": {
+      "viewport": "1240x900"
+    },
+    "BannerLink": {
+      "viewport": "1240x900"
+    },
+    "DocsPageActions": {
+      "viewport": "1240x900"
+    },
+    "TableOfContents": {
+      "viewport": "1240x900"
+    },
+    "DocsCard": {
+      "viewport": "1240x900"
+    },
+    "CodeGroup": {
+      "viewport": "1240x900"
+    },
+    "LegacySpawnOptionsTable": {
+      "viewport": "1240x900"
+    },
+    "IntegrationGrid": {
+      "viewport": "1240x900"
+    },
+    "DocsNav": {
+      "viewport": "1240x900"
+    },
+    "DocsSearch": {
+      "viewport": "1240x900"
+    },
+    "BlogTableOfContents": {
+      "viewport": "1240x900"
+    },
+    "DocsProductSwitcher": {
+      "viewport": "1240x900"
+    },
+    "DocsVersionSelect": {
+      "viewport": "1240x900"
+    }
+  }
+}
