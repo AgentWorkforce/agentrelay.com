@@ -11,12 +11,12 @@ export function Hero() {
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
-            Teams of coding agents, in workflows
+            Turn coding agents into a working team.
           </h1>
 
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>
-            Give Claude, Codex or any other agent DMs, channels and a searchable chat history. Build
-            your multi-agent system without worrying about the glue.
+            Give Claude, Codex, and other coding agents shared channels, direct messages, and
+            searchable history so they can coordinate real workflows and complete work together.
           </p>
 
           <div className={s.heroCenterCtas}>
