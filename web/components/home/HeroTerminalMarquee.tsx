@@ -1,9 +1,11 @@
 import type { CSSProperties } from 'react';
 
+import Grok from '@lobehub/icons/es/Grok';
+
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import s from '../../app/landing.module.css';
 
-type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode' | 'gemini' | 'copilot'>;
+type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
 
 type LineTone = 'prompt' | 'tool' | 'ok' | 'relay';
 
@@ -47,26 +49,19 @@ const AGENT_META: Record<
     prompt: '›',
     state: 'Running',
   },
+  grok: {
+    cycle: '7.5s',
+    label: 'Grok',
+    mode: 'auto',
+    prompt: '>',
+    state: 'Working',
+  },
   opencode: {
     cycle: '6.9s',
     label: 'OpenCode',
     mode: 'build',
     prompt: '>',
     state: 'Editing',
-  },
-  gemini: {
-    cycle: '7.5s',
-    label: 'Gemini CLI',
-    mode: 'auto edit',
-    prompt: '✦',
-    state: 'Working',
-  },
-  copilot: {
-    cycle: '7.1s',
-    label: 'GitHub Copilot',
-    mode: 'agent',
-    prompt: '>',
-    state: 'Working',
   },
 };
 
@@ -78,11 +73,10 @@ const TONE_CLASS: Record<LineTone, string> = {
 };
 
 /**
- * Three rows of agent sessions, each one a small terminal the way Claude Code,
- * Codex or OpenCode actually look: a title bar with the agent, then repository
- * and activity context inside the session. The animated lines show the prompt,
- * what the tool did, and where the result went, which for Agent
- * Relay means a channel, a DM or a PR.
+ * Three rows of Claude Code, Codex, Grok and OpenCode sessions. Each title bar
+ * names the agent, while repository and activity context stay in the terminal.
+ * The animated lines show the prompt, what the tool did, and where the result
+ * went, which for Agent Relay means a channel, a DM or a PR.
  *
  * The cards are illustrative chrome, so the whole band is aria-hidden and holds
  * nothing focusable; the hero's real content is the column above it.
@@ -119,21 +113,21 @@ const ROW_ONE: TerminalCard[] = [
     ],
   },
   {
-    agent: 'gemini',
+    agent: 'grok',
     repo: 'relay/docs',
     size: 'md',
     lines: [
-      { tone: 'prompt', text: '$ gemini "refresh the quickstart"' },
+      { tone: 'prompt', text: '$ grok "refresh the quickstart"' },
       { tone: 'tool', text: '⎿ edited docs/quickstart.mdx' },
       { tone: 'relay', text: '→ DM to Reviewer: ready for a pass' },
     ],
   },
   {
-    agent: 'copilot',
+    agent: 'claude',
     repo: 'relay/tests',
     size: 'sm',
     lines: [
-      { tone: 'prompt', text: '$ copilot "unflake the ws suite"' },
+      { tone: 'prompt', text: '$ claude "unflake the ws suite"' },
       { tone: 'tool', text: '⎿ retried 3× - stable' },
       { tone: 'relay', text: '→ note left in #build-router' },
     ],
@@ -142,11 +136,11 @@ const ROW_ONE: TerminalCard[] = [
 
 const ROW_TWO: TerminalCard[] = [
   {
-    agent: 'copilot',
+    agent: 'grok',
     repo: 'relay/web',
     size: 'lg',
     lines: [
-      { tone: 'prompt', text: '$ copilot "port nav to the new tokens"' },
+      { tone: 'prompt', text: '$ grok "port nav to the new tokens"' },
       { tone: 'tool', text: '⎿ 4 files changed, 61 insertions' },
       { tone: 'relay', text: '↑ opened PR #491 · asked Reviewer' },
     ],
@@ -185,11 +179,11 @@ const ROW_TWO: TerminalCard[] = [
 
 const ROW_THREE: TerminalCard[] = [
   {
-    agent: 'gemini',
+    agent: 'grok',
     repo: 'relay/search',
     size: 'md',
     lines: [
-      { tone: 'prompt', text: '$ gemini "index the thread history"' },
+      { tone: 'prompt', text: '$ grok "index the thread history"' },
       { tone: 'tool', text: '⎿ reindexed 84,102 messages' },
       { tone: 'relay', text: '→ summary in #build-search' },
     ],
@@ -242,6 +236,12 @@ const SIZE_CLASS = {
   lg: s.heroTermLg,
 } as const;
 
+function TerminalAgentLogo({ agent, idPrefix }: { agent: TerminalAgent; idPrefix: string }) {
+  if (agent === 'grok') return <Grok className={s.heroTermMark} />;
+
+  return <AgentToolLogo className={s.heroTermMark} idPrefix={idPrefix} provider={agent} />;
+}
+
 function TerminalRow({
   cards,
   rowClass,
@@ -277,10 +277,9 @@ function TerminalRow({
               >
                 <header className={s.heroTermBar}>
                   <span className={s.heroTermTitle}>
-                    <AgentToolLogo
-                      className={s.heroTermMark}
+                    <TerminalAgentLogo
+                      agent={card.agent}
                       idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                      provider={card.agent}
                     />
                     {meta.label}
                   </span>
