@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-import { HeroCommandCta } from './HeroCommandCta';
 import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
 import { GitHubIcon } from './icons';
@@ -35,8 +34,6 @@ export function Hero() {
               GitHub
             </a>
           </div>
-
-          <HeroCommandCta />
         </div>
       </section>
 
