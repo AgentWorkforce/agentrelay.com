@@ -300,15 +300,15 @@ function RelayNetwork() {
         <path className={s.heroRelayPath} d={route.d} id={route.id} key={route.id} />
       ))}
       {RELAY_PATHS.map((route) => (
-        <circle className={s.heroRelaySpark} key={`${route.id}-spark`} r="2.4">
+        <circle className={s.heroRelaySpark} key={`${route.id}-spark`} r="3.2">
           <animateMotion begin={route.delay} dur={route.duration} repeatCount="indefinite">
             <mpath href={`#${route.id}`} />
           </animateMotion>
           <animate
             attributeName="opacity"
-            dur="1.8s"
+            dur="1.2s"
             repeatCount="indefinite"
-            values="0.28;0.9;0.28"
+            values="0.2;1;0.2"
           />
         </circle>
       ))}

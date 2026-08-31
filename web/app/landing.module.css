@@ -2092,8 +2092,8 @@
 
 .heroRelayPath {
   fill: none;
-  stroke: rgba(116, 184, 226, 0.2);
-  stroke-width: 1;
+  stroke: rgba(116, 184, 226, 0.28);
+  stroke-width: 1.6;
   vector-effect: non-scaling-stroke;
 }
 
@@ -2118,7 +2118,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .heroRelayPath {
-    animation: heroRelayPathPulse 6.4s ease-in-out infinite;
+    animation: heroRelayPathPulse 4.4s ease-in-out infinite;
   }
 
   .heroRelayPath:nth-of-type(2n) {
@@ -2158,7 +2158,7 @@
 @keyframes heroRelayPathPulse {
   0%,
   100% {
-    opacity: 0.42;
+    opacity: 0.28;
   }
   50% {
     opacity: 1;
