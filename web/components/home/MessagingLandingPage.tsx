@@ -32,7 +32,7 @@ export function MessagingLandingPage() {
             <MessagingFeature />
             <HowItWorks />
             <DeliveryFeature
-              title="The hard parts of execution, handled"
+              title="Build durable workflows"
               previewVariant="workflow"
               items={[
                 'Persist every transition so long-running work survives restarts and deploys.',
