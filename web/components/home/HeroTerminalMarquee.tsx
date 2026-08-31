@@ -13,10 +13,10 @@ type TerminalLine = {
 };
 
 type TerminalCard = {
-  /** Which agent's terminal this is — drives the mark in the title bar. */
+  /** Which agent's terminal this is; drives the name and mark in the title bar. */
   agent: TerminalAgent;
-  /** The title bar string, `agent · repo` the way a real shell tab reads. */
-  title: string;
+  /** Repository context shown inside the terminal session. */
+  repo: string;
   /** Three or four lines: a prompt, what the agent did, where it went. */
   lines: TerminalLine[];
   /** Card width step. The rows read as sessions, not as a grid, so widths vary. */
@@ -70,14 +70,6 @@ const AGENT_META: Record<
   },
 };
 
-const AGENT_CLASS: Record<TerminalAgent, string> = {
-  claude: s.heroTermClaude,
-  codex: s.heroTermCodex,
-  opencode: s.heroTermOpenCode,
-  gemini: s.heroTermGemini,
-  copilot: s.heroTermCopilot,
-};
-
 const TONE_CLASS: Record<LineTone, string> = {
   prompt: s.heroTermPrompt,
   tool: s.heroTermTool,
@@ -87,8 +79,9 @@ const TONE_CLASS: Record<LineTone, string> = {
 
 /**
  * Three rows of agent sessions, each one a small terminal the way Claude Code,
- * Codex or OpenCode actually look: a title bar with the agent and the repo, a
- * prompt line, what the tool did, and where the result went — which for Agent
+ * Codex or OpenCode actually look: a title bar with the agent, then repository
+ * and activity context inside the session. The animated lines show the prompt,
+ * what the tool did, and where the result went, which for Agent
  * Relay means a channel, a DM or a PR.
  *
  * The cards are illustrative chrome, so the whole band is aria-hidden and holds
@@ -97,7 +90,7 @@ const TONE_CLASS: Record<LineTone, string> = {
 const ROW_ONE: TerminalCard[] = [
   {
     agent: 'claude',
-    title: 'claude · agentrelay/web',
+    repo: 'agentrelay/web',
     size: 'md',
     lines: [
       { tone: 'prompt', text: '$ claude "fix the flaky retry test"' },
@@ -107,7 +100,7 @@ const ROW_ONE: TerminalCard[] = [
   },
   {
     agent: 'codex',
-    title: 'codex · relay/router',
+    repo: 'relay/router',
     size: 'lg',
     lines: [
       { tone: 'prompt', text: '$ codex "trace the dropped socket"' },
@@ -117,7 +110,7 @@ const ROW_ONE: TerminalCard[] = [
   },
   {
     agent: 'opencode',
-    title: 'opencode · relay/sdk',
+    repo: 'relay/sdk',
     size: 'sm',
     lines: [
       { tone: 'prompt', text: '$ opencode "threads for py sdk"' },
@@ -127,7 +120,7 @@ const ROW_ONE: TerminalCard[] = [
   },
   {
     agent: 'gemini',
-    title: 'gemini · relay/docs',
+    repo: 'relay/docs',
     size: 'md',
     lines: [
       { tone: 'prompt', text: '$ gemini "refresh the quickstart"' },
@@ -137,7 +130,7 @@ const ROW_ONE: TerminalCard[] = [
   },
   {
     agent: 'copilot',
-    title: 'copilot · relay/tests',
+    repo: 'relay/tests',
     size: 'sm',
     lines: [
       { tone: 'prompt', text: '$ copilot "unflake the ws suite"' },
@@ -150,7 +143,7 @@ const ROW_ONE: TerminalCard[] = [
 const ROW_TWO: TerminalCard[] = [
   {
     agent: 'copilot',
-    title: 'copilot · relay/web',
+    repo: 'relay/web',
     size: 'lg',
     lines: [
       { tone: 'prompt', text: '$ copilot "port nav to the new tokens"' },
@@ -160,7 +153,7 @@ const ROW_TWO: TerminalCard[] = [
   },
   {
     agent: 'claude',
-    title: 'claude · relay/api',
+    repo: 'relay/api',
     size: 'sm',
     lines: [
       { tone: 'tool', text: '⎿ relay.send_message(#build-web)' },
@@ -170,7 +163,7 @@ const ROW_TWO: TerminalCard[] = [
   },
   {
     agent: 'codex',
-    title: 'codex · relay/billing',
+    repo: 'relay/billing',
     size: 'md',
     lines: [
       { tone: 'prompt', text: '$ codex "add the usage export"' },
@@ -180,7 +173,7 @@ const ROW_TWO: TerminalCard[] = [
   },
   {
     agent: 'opencode',
-    title: 'opencode · relay/cli',
+    repo: 'relay/cli',
     size: 'md',
     lines: [
       { tone: 'prompt', text: '$ opencode "make relay login retry"' },
@@ -193,7 +186,7 @@ const ROW_TWO: TerminalCard[] = [
 const ROW_THREE: TerminalCard[] = [
   {
     agent: 'gemini',
-    title: 'gemini · relay/search',
+    repo: 'relay/search',
     size: 'md',
     lines: [
       { tone: 'prompt', text: '$ gemini "index the thread history"' },
@@ -203,7 +196,7 @@ const ROW_THREE: TerminalCard[] = [
   },
   {
     agent: 'claude',
-    title: 'claude · relay/infra',
+    repo: 'relay/infra',
     size: 'sm',
     lines: [
       { tone: 'tool', text: '⎿ waiting on Planner in #ship-it' },
@@ -213,7 +206,7 @@ const ROW_THREE: TerminalCard[] = [
   },
   {
     agent: 'claude',
-    title: 'claude · agentrelay/web',
+    repo: 'agentrelay/web',
     size: 'lg',
     lines: [
       { tone: 'prompt', text: '$ claude "review PR #482"' },
@@ -223,7 +216,7 @@ const ROW_THREE: TerminalCard[] = [
   },
   {
     agent: 'codex',
-    title: 'codex · relay/router',
+    repo: 'relay/router',
     size: 'md',
     lines: [
       { tone: 'tool', text: '⎿ picked up task from #build-router' },
@@ -233,7 +226,7 @@ const ROW_THREE: TerminalCard[] = [
   },
   {
     agent: 'opencode',
-    title: 'opencode · relay/web',
+    repo: 'relay/web',
     size: 'lg',
     lines: [
       { tone: 'prompt', text: '$ opencode "wire up the pricing table"' },
@@ -278,36 +271,29 @@ function TerminalRow({
 
             return (
               <article
-                className={`${s.heroTerm} ${SIZE_CLASS[card.size]} ${AGENT_CLASS[card.agent]}`}
+                className={`${s.heroTerm} ${SIZE_CLASS[card.size]}`}
                 key={`${rowKey}-${copy}-${index}`}
                 style={terminalStyle}
               >
                 <header className={s.heroTermBar}>
-                  <span className={s.heroTermLights} aria-hidden="true">
-                    <span />
-                    <span />
-                    <span />
-                  </span>
                   <span className={s.heroTermTitle}>
                     <AgentToolLogo
                       className={s.heroTermMark}
                       idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
                       provider={card.agent}
                     />
-                    {card.title}
-                  </span>
-                  <span className={s.heroTermState}>
-                    <span className={s.heroTermStateDot} />
-                    {meta.state}
+                    {meta.label}
                   </span>
                 </header>
 
-                <div className={s.heroTermProductBar}>
-                  <span className={s.heroTermProduct}>{meta.label}</span>
-                  <span className={s.heroTermMode}>{meta.mode}</span>
-                </div>
-
                 <div className={s.heroTermBody}>
+                  <div className={s.heroTermContext}>
+                    <span className={s.heroTermRepo}>{card.repo}</span>
+                    <span className={s.heroTermState}>
+                      <span className={s.heroTermStateDot} />
+                      {meta.state} · {meta.mode}
+                    </span>
+                  </div>
                   {card.lines.map((line, lineIndex) => (
                     <span
                       className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}

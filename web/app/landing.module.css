@@ -2134,46 +2134,16 @@
 
 .heroTerm {
   --term-accent: #74b8e2;
-  --term-panel: rgba(8, 22, 36, 0.94);
   display: flex;
   flex-direction: column;
   flex: none;
   margin-right: 14px;
   min-height: 126px;
-  border: 1px solid color-mix(in srgb, var(--term-accent) 24%, rgba(116, 184, 226, 0.12));
+  border: 1px solid rgba(116, 184, 226, 0.16);
   border-radius: 10px;
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--term-accent) 5%, transparent), transparent 46%),
-    var(--term-panel);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--term-accent) 12%, transparent),
-    0 6px 18px rgba(2, 10, 20, 0.28);
+  background: rgba(8, 22, 36, 0.9);
+  box-shadow: 0 6px 18px rgba(2, 10, 20, 0.28);
   overflow: hidden;
-}
-
-.heroTermClaude {
-  --term-accent: #d98767;
-  --term-panel: rgba(25, 17, 18, 0.95);
-}
-
-.heroTermCodex {
-  --term-accent: #91d2bd;
-  --term-panel: rgba(7, 23, 25, 0.95);
-}
-
-.heroTermOpenCode {
-  --term-accent: #79d8a7;
-  --term-panel: rgba(7, 23, 22, 0.95);
-}
-
-.heroTermGemini {
-  --term-accent: #9bbcff;
-  --term-panel: rgba(12, 20, 38, 0.95);
-}
-
-.heroTermCopilot {
-  --term-accent: #b6a6e8;
-  --term-panel: rgba(20, 18, 38, 0.95);
 }
 
 .heroTermSm {
@@ -2193,34 +2163,8 @@
   align-items: center;
   gap: 8px;
   padding: 6px 10px;
-  background: color-mix(in srgb, var(--term-panel) 84%, var(--term-accent) 16%);
-  border-bottom: 1px solid color-mix(in srgb, var(--term-accent) 22%, transparent);
-}
-
-.heroTermLights {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.heroTermLights span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: rgba(116, 184, 226, 0.26);
-}
-
-.heroTermLights span:first-child {
-  background: rgba(233, 116, 104, 0.62);
-}
-
-.heroTermLights span:nth-child(2) {
-  background: rgba(232, 187, 106, 0.56);
-}
-
-.heroTermLights span:last-child {
-  background: rgba(112, 199, 141, 0.56);
+  background: rgba(15, 33, 48, 0.94);
+  border-bottom: 1px solid rgba(116, 184, 226, 0.14);
 }
 
 .heroTermTitle {
@@ -2243,7 +2187,25 @@
   width: 12px;
   height: 12px;
   flex-shrink: 0;
-  color: var(--term-accent);
+  color: rgba(219, 233, 244, 0.9);
+}
+
+.heroTermContext {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.heroTermRepo {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(160, 184, 204, 0.78);
+  font-size: 0.58rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .heroTermState {
@@ -2251,57 +2213,20 @@
   flex: none;
   align-items: center;
   gap: 5px;
-  color: color-mix(in srgb, var(--term-accent) 74%, white 26%);
+  color: rgba(183, 207, 226, 0.74);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.56rem;
   font-weight: 600;
   letter-spacing: 0.03em;
-  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .heroTermStateDot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--term-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--term-accent) 12%, transparent);
-}
-
-.heroTermProductBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 25px;
-  padding: 5px 11px;
-  border-bottom: 1px solid color-mix(in srgb, var(--term-accent) 14%, transparent);
-  color: var(--term-accent);
-  font-family: var(--font-geist-mono), monospace;
-}
-
-.heroTermClaude .heroTermProductBar {
-  margin: 6px 8px 0;
-  min-height: 22px;
-  padding: 3px 7px;
-  border: 1px solid color-mix(in srgb, var(--term-accent) 58%, transparent);
-  border-radius: 4px;
-}
-
-.heroTermProduct {
-  overflow: hidden;
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.heroTermMode {
-  flex: none;
-  color: color-mix(in srgb, var(--term-accent) 58%, rgba(211, 227, 240, 0.78));
-  font-size: 0.54rem;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  background: rgba(116, 184, 226, 0.8);
+  box-shadow: 0 0 0 3px rgba(116, 184, 226, 0.1);
 }
 
 .heroTermBody {
