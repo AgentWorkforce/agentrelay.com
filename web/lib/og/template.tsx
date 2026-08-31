@@ -12,6 +12,8 @@
  */
 import type { ReactElement } from 'react';
 
+import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE_LINES } from '../home-copy';
+
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 export const OG_CONTENT_TYPE = 'image/png';
 
@@ -792,14 +794,17 @@ export function LandingVariant({
             flexDirection: 'column',
             fontFamily: headingFamily,
             fontWeight: 800,
-            fontSize: 76,
+            fontSize: 48,
             lineHeight: 1.0,
             letterSpacing: '-0.045em',
             color: PALETTE.fg,
           }}
         >
-          <span style={{ display: 'flex' }}>Let your</span>
-          <span style={{ display: 'flex' }}>agents talk</span>
+          {HOME_HERO_TITLE_LINES.map((line) => (
+            <span key={line} style={{ display: 'flex' }}>
+              {line}
+            </span>
+          ))}
         </div>
         <div
           style={{
@@ -811,7 +816,7 @@ export function LandingVariant({
             maxWidth: 470,
           }}
         >
-          Give Claude, Codex or any agent DMs, channels, and a searchable chat history — without the glue.
+          {HOME_HERO_DESCRIPTION}
         </div>
       </div>
 

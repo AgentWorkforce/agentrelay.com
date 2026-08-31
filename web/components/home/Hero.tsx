@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
+import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../../lib/home-copy';
 import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
 import { GitHubIcon } from './icons';
@@ -11,13 +12,10 @@ export function Hero() {
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
-            Turn coding agents into a working team.
+            {HOME_HERO_TITLE}
           </h1>
 
-          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>
-            Coordinate Claude, Codex, and other coding agents across shared work, approvals, and
-            long-running workflows
-          </p>
+          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
 
           <div className={s.heroCenterCtas}>
             <Link className={s.ctaPrimary} href="/docs">
