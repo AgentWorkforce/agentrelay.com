@@ -31,11 +31,13 @@ type TerminalStyle = CSSProperties & {
   '--term-phase'?: string;
 };
 
-type RelayPath = {
+type RelayRoute = {
   d: string;
   delay: string;
   duration: string;
   id: string;
+  origin: { x: number; y: number };
+  target: { x: number; y: number };
 };
 
 const AGENT_META: Record<
@@ -110,42 +112,46 @@ function terminalLineCopy(line: TerminalLine) {
   return line.text.replace(/^(?:⎿|✓|↑|→)\s*/, '');
 }
 
-const RELAY_PATHS: RelayPath[] = [
+const RELAY_ROUTES: RelayRoute[] = [
   {
     id: 'hero-relay-route-one',
-    d: 'M -80 62 C 120 12 260 108 460 58 S 800 102 1040 52 S 1240 82 1360 44',
-    duration: '10.8s',
-    delay: '-2.1s',
+    d: 'M 318 62 C 410 62 438 202 552 202',
+    duration: '10.6s',
+    delay: '-1.4s',
+    origin: { x: 318, y: 62 },
+    target: { x: 552, y: 202 },
   },
   {
     id: 'hero-relay-route-two',
-    d: 'M 70 202 C 250 140 360 258 560 198 S 860 138 1060 210 S 1260 260 1360 192',
-    duration: '12.6s',
-    delay: '-7.4s',
+    d: 'M 654 202 C 758 202 782 344 904 344',
+    duration: '12.2s',
+    delay: '-6.8s',
+    origin: { x: 654, y: 202 },
+    target: { x: 904, y: 344 },
   },
   {
     id: 'hero-relay-route-three',
-    d: 'M -80 344 C 120 286 280 390 480 334 S 820 286 1010 348 S 1230 392 1360 326',
-    duration: '11.4s',
-    delay: '-5.3s',
+    d: 'M 956 344 C 1078 344 1080 62 1206 62',
+    duration: '11.3s',
+    delay: '-4.1s',
+    origin: { x: 956, y: 344 },
+    target: { x: 1206, y: 62 },
   },
   {
     id: 'hero-relay-route-four',
-    d: 'M 180 68 C 300 118 360 132 485 204 S 650 286 795 344',
-    duration: '8.8s',
-    delay: '-3.7s',
+    d: 'M 1184 62 C 1088 62 1030 202 872 202',
+    duration: '13.1s',
+    delay: '-9.3s',
+    origin: { x: 1184, y: 62 },
+    target: { x: 872, y: 202 },
   },
   {
     id: 'hero-relay-route-five',
-    d: 'M 1100 58 C 960 110 920 154 820 206 S 650 270 540 340',
-    duration: '9.6s',
-    delay: '-6.2s',
-  },
-  {
-    id: 'hero-relay-route-six',
-    d: 'M -40 196 C 180 228 255 126 420 80 S 760 132 900 210 S 1110 320 1320 336',
-    duration: '13.2s',
-    delay: '-9.1s',
+    d: 'M 338 344 C 450 344 476 62 624 62',
+    duration: '11.8s',
+    delay: '-11.1s',
+    origin: { x: 338, y: 344 },
+    target: { x: 624, y: 62 },
   },
 ];
 
@@ -327,21 +333,66 @@ function RelayNetwork() {
       preserveAspectRatio="none"
       viewBox="0 0 1280 410"
     >
-      {RELAY_PATHS.map((route) => (
-        <path className={s.heroRelayPath} d={route.d} id={route.id} key={route.id} />
-      ))}
-      {RELAY_PATHS.map((route) => (
-        <circle className={s.heroRelaySpark} key={`${route.id}-spark`} r="3.2">
-          <animateMotion begin={route.delay} dur={route.duration} repeatCount="indefinite">
-            <mpath href={`#${route.id}`} />
-          </animateMotion>
-          <animate
-            attributeName="opacity"
-            dur="1.2s"
-            repeatCount="indefinite"
-            values="0.2;1;0.2"
-          />
-        </circle>
+      {RELAY_ROUTES.map((route) => (
+        <g key={route.id}>
+          <path className={s.heroRelayRoute} d={route.d} id={route.id} />
+          <circle
+            className={s.heroRelayOrigin}
+            cx={route.origin.x}
+            cy={route.origin.y}
+            opacity="0"
+            r="7"
+          >
+            <animate
+              attributeName="opacity"
+              begin={route.delay}
+              dur={route.duration}
+              keyTimes="0;0.14;0.16;0.2;1"
+              repeatCount="indefinite"
+              values="0;0;0.68;0;0"
+            />
+          </circle>
+          <g className={s.heroRelayPacket} opacity="0">
+            <path className={s.heroRelayPacketTail} d="M -19 0 H -5" />
+            <circle className={s.heroRelayPacketHalo} r="7" />
+            <circle className={s.heroRelayPacketCore} r="3.1" />
+            <animateMotion
+              begin={route.delay}
+              calcMode="linear"
+              dur={route.duration}
+              keyPoints="0;0;1;1"
+              keyTimes="0;0.16;0.42;1"
+              repeatCount="indefinite"
+              rotate="auto"
+            >
+              <mpath href={`#${route.id}`} />
+            </animateMotion>
+            <animate
+              attributeName="opacity"
+              begin={route.delay}
+              dur={route.duration}
+              keyTimes="0;0.15;0.17;0.39;0.42;1"
+              repeatCount="indefinite"
+              values="0;0;1;1;0;0"
+            />
+          </g>
+          <circle
+            className={s.heroRelayArrival}
+            cx={route.target.x}
+            cy={route.target.y}
+            opacity="0"
+            r="9"
+          >
+            <animate
+              attributeName="opacity"
+              begin={route.delay}
+              dur={route.duration}
+              keyTimes="0;0.4;0.42;0.48;1"
+              repeatCount="indefinite"
+              values="0;0;0.78;0;0"
+            />
+          </circle>
+        </g>
       ))}
     </svg>
   );

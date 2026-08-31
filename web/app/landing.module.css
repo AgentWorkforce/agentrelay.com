@@ -2090,16 +2090,36 @@
   pointer-events: none;
 }
 
-.heroRelayPath {
+.heroRelayRoute {
   fill: none;
-  stroke: rgba(116, 184, 226, 0.28);
-  stroke-width: 1.6;
+  stroke: none;
+}
+
+.heroRelayPacket,
+.heroRelayOrigin,
+.heroRelayArrival {
+  display: none;
+}
+
+.heroRelayPacketTail {
+  fill: none;
+  stroke: rgba(125, 194, 233, 0.82);
+  stroke-linecap: round;
+  stroke-width: 2.1;
   vector-effect: non-scaling-stroke;
 }
 
-.heroRelaySpark {
-  display: none;
-  fill: rgba(151, 211, 244, 0.9);
+.heroRelayPacketHalo,
+.heroRelayOrigin,
+.heroRelayArrival {
+  fill: none;
+  stroke: rgba(125, 194, 233, 0.58);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+}
+
+.heroRelayPacketCore {
+  fill: rgba(166, 219, 247, 0.96);
 }
 
 .heroMarqueeRow {
@@ -2117,19 +2137,9 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .heroRelayPath {
-    animation: heroRelayPathPulse 4.4s ease-in-out infinite;
-  }
-
-  .heroRelayPath:nth-of-type(2n) {
-    animation-delay: -2.6s;
-  }
-
-  .heroRelayPath:nth-of-type(3n) {
-    animation-delay: -4.8s;
-  }
-
-  .heroRelaySpark {
+  .heroRelayPacket,
+  .heroRelayOrigin,
+  .heroRelayArrival {
     display: inline;
   }
 
@@ -2152,16 +2162,6 @@
   .heroMarqueeTrackThree {
     animation-duration: 66s;
     animation-delay: -23s;
-  }
-}
-
-@keyframes heroRelayPathPulse {
-  0%,
-  100% {
-    opacity: 0.28;
-  }
-  50% {
-    opacity: 1;
   }
 }
 
