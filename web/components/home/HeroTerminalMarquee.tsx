@@ -404,6 +404,70 @@ function GrokTerminalBody({ card }: { card: TerminalCard }) {
   );
 }
 
+function OpenCodeLoader() {
+  return (
+    <span className={s.heroOpenCodeLoader}>
+      {[0, 1, 2, 3, 4, 5].map((segment) => (
+        <span className={s.heroOpenCodeLoaderDot} key={segment} />
+      ))}
+      <span className={s.heroOpenCodeLoaderBlock} />
+      <span className={`${s.heroOpenCodeLoaderBlock} ${s.heroOpenCodeLoaderBlockWide}`} />
+    </span>
+  );
+}
+
+function OpenCodeTerminalBody({ card }: { card: TerminalCard }) {
+  const prompt = card.lines.find((line) => line.tone === 'prompt') ?? card.lines[0];
+  const activity = card.lines.find((line) => line.tone === 'tool') ?? card.lines[1];
+  const result = card.lines.find((line) => line.tone === 'relay' || line.tone === 'ok');
+
+  return (
+    <div className={`${s.heroTermBody} ${s.heroOpenCodeBody}`}>
+      <div
+        className={`${s.heroOpenCodePrompt} ${s.heroOpenCodeCycleLine}`}
+        style={{ '--line-delay': '0s' } as TerminalStyle}
+      >
+        {terminalLineCopy(prompt)}
+      </div>
+      <div className={s.heroOpenCodeActivity}>
+        <span
+          className={`${s.heroOpenCodeThought} ${s.heroOpenCodeCycleLine}`}
+          style={{ '--line-delay': '0.42s' } as TerminalStyle}
+        >
+          + Thought: 683ms
+        </span>
+        <span
+          className={s.heroOpenCodeCycleLine}
+          style={{ '--line-delay': '0.84s' } as TerminalStyle}
+        >
+          * {terminalLineCopy(activity)}
+        </span>
+        <span
+          className={`${s.heroOpenCodeResult} ${s.heroOpenCodeCycleLine}`}
+          style={{ '--line-delay': '1.2s' } as TerminalStyle}
+        >
+          ~ {result ? terminalLineCopy(result) : 'Finding files…'}
+        </span>
+      </div>
+      <div className={s.heroOpenCodeMode}>
+        <span>▣</span>
+        <strong>Build</strong>
+        <span>OpenCode</span>
+      </div>
+      <div className={s.heroOpenCodeComposer}>
+        <span className={s.heroTermCursor} />
+        <span className={s.heroOpenCodeComposerMode}>Build</span>
+        <span>OpenCode session</span>
+      </div>
+      <div className={s.heroOpenCodeLoaderRow}>
+        <OpenCodeLoader />
+        <span>esc interrupt</span>
+        <span className={s.heroOpenCodeShortcut}>tab agents</span>
+      </div>
+    </div>
+  );
+}
+
 function TerminalRow({
   cards,
   rowClass,
@@ -450,6 +514,8 @@ function TerminalRow({
 
                 {card.agent === 'grok' ? (
                   <GrokTerminalBody card={card} />
+                ) : card.agent === 'opencode' ? (
+                  <OpenCodeTerminalBody card={card} />
                 ) : (
                   <div className={s.heroTermBody}>
                     <div className={s.heroTermSession}>

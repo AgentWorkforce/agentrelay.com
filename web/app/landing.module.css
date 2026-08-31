@@ -2607,6 +2607,192 @@
   }
 }
 
+.heroOpenCodeBody {
+  gap: 0;
+  padding-top: 8px;
+}
+
+.heroOpenCodePrompt {
+  min-width: 0;
+  margin-bottom: 7px;
+  padding: 5px 7px;
+  border-left: 2px solid rgba(89, 166, 238, 0.92);
+  background: rgba(226, 237, 246, 0.08);
+  color: rgba(237, 244, 249, 0.94);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.63rem;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.heroOpenCodeActivity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 42px;
+  padding-inline: 8px;
+  color: rgba(155, 176, 192, 0.76);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.56rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.heroOpenCodeThought {
+  color: rgba(214, 164, 93, 0.92);
+}
+
+.heroOpenCodeResult {
+  overflow: hidden;
+  color: rgba(220, 231, 239, 0.86);
+  text-overflow: ellipsis;
+}
+
+.heroOpenCodeMode {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 8px 0;
+  color: rgba(148, 169, 185, 0.68);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.55rem;
+}
+
+.heroOpenCodeMode > span:first-child,
+.heroOpenCodeMode strong {
+  color: rgba(89, 166, 238, 0.9);
+}
+
+.heroOpenCodeMode strong {
+  font-weight: 650;
+}
+
+.heroOpenCodeComposer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  margin-top: auto;
+  padding: 4px 6px;
+  border-left: 2px solid rgba(89, 166, 238, 0.92);
+  background: rgba(226, 237, 246, 0.08);
+  color: rgba(151, 171, 187, 0.66);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.54rem;
+  white-space: nowrap;
+}
+
+.heroOpenCodeComposerMode {
+  margin-left: auto;
+  color: rgba(89, 166, 238, 0.94);
+}
+
+.heroOpenCodeLoaderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 14px;
+  color: rgba(169, 186, 199, 0.72);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.51rem;
+  white-space: nowrap;
+}
+
+.heroOpenCodeLoader {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 9px;
+}
+
+.heroOpenCodeLoaderDot,
+.heroOpenCodeLoaderBlock {
+  display: inline-block;
+  flex: none;
+  background: rgba(89, 166, 238, 0.82);
+}
+
+.heroOpenCodeLoaderDot {
+  width: 4px;
+  height: 4px;
+}
+
+.heroOpenCodeLoaderBlock {
+  width: 10px;
+  height: 9px;
+  background: rgba(89, 166, 238, 0.56);
+}
+
+.heroOpenCodeLoaderBlockWide {
+  width: 15px;
+  background: rgba(89, 166, 238, 0.36);
+}
+
+.heroOpenCodeShortcut {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroOpenCodeCycleLine {
+    animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+    animation-delay: calc(var(--term-phase) + var(--line-delay));
+    will-change: clip-path, opacity, transform;
+  }
+
+  .heroOpenCodeLoaderDot,
+  .heroOpenCodeLoaderBlock {
+    animation: heroOpenCodeLoaderPulse 1.15s ease-in-out infinite both;
+  }
+
+  .heroOpenCodeLoaderDot:nth-child(2) {
+    animation-delay: 90ms;
+  }
+
+  .heroOpenCodeLoaderDot:nth-child(3) {
+    animation-delay: 180ms;
+  }
+
+  .heroOpenCodeLoaderDot:nth-child(4) {
+    animation-delay: 270ms;
+  }
+
+  .heroOpenCodeLoaderDot:nth-child(5) {
+    animation-delay: 360ms;
+  }
+
+  .heroOpenCodeLoaderDot:nth-child(6) {
+    animation-delay: 450ms;
+  }
+
+  .heroOpenCodeLoaderBlock:nth-child(7) {
+    animation-delay: 540ms;
+  }
+
+  .heroOpenCodeLoaderBlock:nth-child(8) {
+    animation-delay: 630ms;
+  }
+}
+
+@keyframes heroOpenCodeLoaderPulse {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: scale(0.7);
+  }
+  48% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .heroTermPromptGlyph {
   min-width: 8px;
   font-weight: 700;
