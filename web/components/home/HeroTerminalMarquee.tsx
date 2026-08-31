@@ -536,6 +536,49 @@ function CodexTerminalBody({ card }: { card: TerminalCard }) {
   );
 }
 
+function ClaudeTerminalBody({ card }: { card: TerminalCard }) {
+  const meta = AGENT_META.claude;
+
+  return (
+    <div className={`${s.heroTermBody} ${s.heroClaudeBody}`}>
+      <div className={s.heroClaudeIdentity}>
+        <pre className={s.heroClaudeMascot}>{`▐▛███▛█
+▝▜██████▀
+ ▝▝ ▝▝`}</pre>
+        <div className={s.heroClaudeIdentityCopy}>
+          <strong className={s.heroClaudeIdentityTitle}>
+            Claude Code <span>v2.1.251</span>
+          </strong>
+          <span className={s.heroClaudeModel}>Fable 5 with xhigh effort · Claude Max</span>
+          <span className={s.heroClaudePath}>~/{card.repo}</span>
+        </div>
+      </div>
+      <div className={s.heroTermTranscript}>
+        {card.lines.map((line, lineIndex) => (
+          <span
+            className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
+            key={line.text}
+            style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
+          >
+            <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
+            <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+          </span>
+        ))}
+      </div>
+      <div className={s.heroTermComposer}>
+        <span className={s.heroTermLivePrompt}>
+          <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
+          <span className={s.heroTermCursor} />
+        </span>
+        <span className={s.heroTermState}>
+          <span className={s.heroTermActivityGlyph}>{meta.activityGlyph}</span>
+          {meta.state}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function TerminalRow({
   cards,
   rowClass,
@@ -586,6 +629,8 @@ function TerminalRow({
                   <OpenCodeTerminalBody card={card} />
                 ) : card.agent === 'codex' ? (
                   <CodexTerminalBody card={card} />
+                ) : card.agent === 'claude' ? (
+                  <ClaudeTerminalBody card={card} />
                 ) : (
                   <div className={s.heroTermBody}>
                     <div className={s.heroTermSession}>

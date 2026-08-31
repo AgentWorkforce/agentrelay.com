@@ -2793,6 +2793,78 @@
   }
 }
 
+.heroClaudeBody {
+  gap: 0;
+  padding-top: 7px;
+}
+
+.heroClaudeIdentity {
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 40px;
+  margin-bottom: 6px;
+}
+
+.heroClaudeMascot {
+  margin: 0;
+  color: #d97855;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.08em;
+  white-space: pre;
+}
+
+.heroClaudeIdentityCopy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  font-family: var(--font-geist-mono), monospace;
+  line-height: 1.18;
+}
+
+.heroClaudeIdentityTitle {
+  overflow: hidden;
+  color: rgba(222, 230, 246, 0.94);
+  font-size: 0.58rem;
+  font-weight: 680;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroClaudeIdentityTitle span {
+  color: rgba(158, 169, 184, 0.7);
+  font-weight: 500;
+}
+
+.heroClaudeModel,
+.heroClaudePath {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(177, 189, 204, 0.76);
+  font-size: 0.49rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroClaudePath {
+  color: rgba(161, 177, 194, 0.68);
+}
+
+.heroClaudeBody .heroTermTranscript {
+  min-height: 48px;
+}
+
+.heroClaudeBody .heroTermLine {
+  font-size: 0.59rem;
+}
+
 .heroCodexBody {
   gap: 0;
   padding-top: 7px;
