@@ -2793,6 +2793,238 @@
   }
 }
 
+.heroCodexBody {
+  gap: 0;
+  padding-top: 7px;
+}
+
+.heroCodexIdentity {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  margin-bottom: 5px;
+  padding: 4px 6px;
+  border: 1px solid rgba(160, 184, 204, 0.28);
+  border-radius: 3px;
+  color: rgba(196, 215, 232, 0.84);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  line-height: 1.18;
+}
+
+.heroCodexIdentityTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 1px;
+  color: rgba(223, 235, 246, 0.94);
+  font-size: 0.58rem;
+  font-weight: 680;
+  letter-spacing: 0.02em;
+}
+
+.heroCodexIdentityTitle span {
+  color: rgba(141, 170, 198, 0.76);
+}
+
+.heroCodexIdentityRow {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.heroCodexIdentityRow b {
+  color: rgba(132, 202, 238, 0.92);
+  font-weight: 600;
+}
+
+.heroCodexIdentityLabel {
+  width: 46px;
+  flex: none;
+  color: rgba(137, 159, 180, 0.68);
+}
+
+.heroCodexIdentityPath {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(162, 208, 178, 0.86);
+  text-overflow: ellipsis;
+}
+
+.heroCodexPrompt,
+.heroCodexReply,
+.heroCodexRun,
+.heroCodexWorking,
+.heroCodexComposer,
+.heroCodexFooter {
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.heroCodexPrompt {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 4px;
+  padding: 4px 5px;
+  background: rgba(226, 237, 246, 0.11);
+  color: rgba(229, 238, 247, 0.94);
+  font-size: 0.58rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.heroCodexPrompt span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heroCodexReply {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  margin-bottom: 3px;
+  color: rgba(199, 216, 232, 0.82);
+  font-size: 0.51rem;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.heroCodexReply span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.heroCodexRun {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr);
+  min-width: 0;
+  margin-bottom: 3px;
+  color: rgba(155, 179, 201, 0.75);
+  font-size: 0.5rem;
+  line-height: 1.22;
+}
+
+.heroCodexRunMarker {
+  color: rgba(169, 218, 112, 0.92);
+}
+
+.heroCodexRunCopy,
+.heroCodexRunResult {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroCodexRunCopy strong {
+  color: rgba(215, 230, 241, 0.9);
+  font-weight: 650;
+}
+
+.heroCodexRunResult {
+  grid-column: 2;
+  color: rgba(137, 162, 184, 0.68);
+}
+
+.heroCodexWorking {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: auto;
+  margin-bottom: 3px;
+  color: rgba(145, 168, 190, 0.66);
+  font-size: 0.49rem;
+  white-space: nowrap;
+}
+
+.heroCodexWorking strong {
+  color: rgba(193, 212, 229, 0.82);
+  font-weight: 650;
+}
+
+.heroCodexWorkingMarker {
+  display: inline-block;
+  color: rgba(130, 185, 226, 0.9);
+}
+
+.heroCodexComposer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 19px;
+  padding: 3px 5px;
+  background: rgba(226, 237, 246, 0.11);
+  color: rgba(220, 232, 242, 0.86);
+  font-size: 0.52rem;
+}
+
+.heroCodexComposerHint {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(155, 177, 197, 0.66);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroCodexFooter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  padding: 3px 5px 0;
+  color: rgba(181, 202, 219, 0.72);
+  font-size: 0.47rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.heroCodexFooter strong {
+  color: rgba(132, 202, 238, 0.92);
+  font-weight: 600;
+}
+
+.heroCodexFooterPath {
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  color: rgba(162, 208, 178, 0.82);
+  text-overflow: ellipsis;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroCodexCycleLine {
+    animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+    animation-delay: calc(var(--term-phase) + var(--line-delay));
+    will-change: clip-path, opacity, transform;
+  }
+
+  .heroCodexWorkingMarker {
+    animation: heroCodexWorkingPulse 1.25s ease-in-out infinite;
+  }
+}
+
+@keyframes heroCodexWorkingPulse {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.72);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .heroTermPromptGlyph {
   min-width: 8px;
   font-weight: 700;

@@ -468,6 +468,74 @@ function OpenCodeTerminalBody({ card }: { card: TerminalCard }) {
   );
 }
 
+function CodexTerminalBody({ card }: { card: TerminalCard }) {
+  const prompt = card.lines.find((line) => line.tone === 'prompt') ?? card.lines[0];
+  const activity = card.lines.find((line) => line.tone === 'tool') ?? card.lines[1];
+  const result = card.lines.find((line) => line.tone === 'relay' || line.tone === 'ok');
+
+  return (
+    <div className={`${s.heroTermBody} ${s.heroCodexBody}`}>
+      <div className={s.heroCodexIdentity}>
+        <strong className={s.heroCodexIdentityTitle}>
+          <span>&gt;_</span> OpenAI Codex
+        </strong>
+        <span className={s.heroCodexIdentityRow}>
+          <span className={s.heroCodexIdentityLabel}>model:</span>
+          <span>coding model</span>
+          <b>high</b>
+          <b>fast</b>
+        </span>
+        <span className={s.heroCodexIdentityRow}>
+          <span className={s.heroCodexIdentityLabel}>directory:</span>
+          <span className={s.heroCodexIdentityPath}>~/{card.repo}</span>
+        </span>
+      </div>
+      <div
+        className={`${s.heroCodexPrompt} ${s.heroCodexCycleLine}`}
+        style={{ '--line-delay': '0s' } as TerminalStyle}
+      >
+        <span>›</span>
+        <span>{terminalLineCopy(prompt)}</span>
+      </div>
+      <div
+        className={`${s.heroCodexReply} ${s.heroCodexCycleLine}`}
+        style={{ '--line-delay': '0.42s' } as TerminalStyle}
+      >
+        <span>•</span>
+        <span>I’ll inspect the project, then make the smallest safe change.</span>
+      </div>
+      <div
+        className={`${s.heroCodexRun} ${s.heroCodexCycleLine}`}
+        style={{ '--line-delay': '0.84s' } as TerminalStyle}
+      >
+        <span className={s.heroCodexRunMarker}>•</span>
+        <span className={s.heroCodexRunCopy}>
+          <strong>Ran</strong> {terminalLineCopy(activity)}
+        </span>
+        {result ? (
+          <span className={s.heroCodexRunResult}>└ {terminalLineCopy(result)}</span>
+        ) : null}
+      </div>
+      <div className={s.heroCodexWorking}>
+        <span className={s.heroCodexWorkingMarker}>•</span>
+        <strong>Working</strong>
+        <span>esc to interrupt</span>
+      </div>
+      <div className={s.heroCodexComposer}>
+        <span>›</span>
+        <span className={s.heroTermCursor} />
+        <span className={s.heroCodexComposerHint}>Ask Codex to do anything</span>
+      </div>
+      <div className={s.heroCodexFooter}>
+        <span>coding model</span>
+        <strong>high</strong>
+        <strong>fast</strong>
+        <span className={s.heroCodexFooterPath}>~/{card.repo}</span>
+      </div>
+    </div>
+  );
+}
+
 function TerminalRow({
   cards,
   rowClass,
@@ -516,6 +584,8 @@ function TerminalRow({
                   <GrokTerminalBody card={card} />
                 ) : card.agent === 'opencode' ? (
                   <OpenCodeTerminalBody card={card} />
+                ) : card.agent === 'codex' ? (
+                  <CodexTerminalBody card={card} />
                 ) : (
                   <div className={s.heroTermBody}>
                     <div className={s.heroTermSession}>
