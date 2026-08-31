@@ -2066,6 +2066,8 @@
    different numbers of cards, so their tracks are different lengths and the
    seams drift instead of beating in step. */
 .heroMarquee {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2078,7 +2080,31 @@
   overflow-y: visible;
 }
 
+.heroRelayNetwork {
+  position: absolute;
+  inset: 0 0 26px;
+  z-index: 0;
+  width: 100%;
+  height: calc(100% - 26px);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.heroRelayPath {
+  fill: none;
+  stroke: rgba(116, 184, 226, 0.2);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.heroRelaySpark {
+  display: none;
+  fill: rgba(151, 211, 244, 0.9);
+}
+
 .heroMarqueeRow {
+  position: relative;
+  z-index: 1;
   width: 100%;
   overflow-x: clip;
   overflow-y: visible;
@@ -2091,6 +2117,22 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  .heroRelayPath {
+    animation: heroRelayPathPulse 6.4s ease-in-out infinite;
+  }
+
+  .heroRelayPath:nth-of-type(2n) {
+    animation-delay: -2.6s;
+  }
+
+  .heroRelayPath:nth-of-type(3n) {
+    animation-delay: -4.8s;
+  }
+
+  .heroRelaySpark {
+    display: inline;
+  }
+
   .heroMarqueeTrack {
     will-change: transform;
     animation: heroMarqueeSlide linear infinite;
@@ -2110,6 +2152,16 @@
   .heroMarqueeTrackThree {
     animation-duration: 66s;
     animation-delay: -23s;
+  }
+}
+
+@keyframes heroRelayPathPulse {
+  0%,
+  100% {
+    opacity: 0.42;
+  }
+  50% {
+    opacity: 1;
   }
 }
 

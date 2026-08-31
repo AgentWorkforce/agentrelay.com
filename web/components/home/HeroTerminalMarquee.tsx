@@ -31,6 +31,13 @@ type TerminalStyle = CSSProperties & {
   '--term-phase'?: string;
 };
 
+type RelayPath = {
+  d: string;
+  delay: string;
+  duration: string;
+  id: string;
+};
+
 const AGENT_META: Record<
   TerminalAgent,
   { cycle: string; label: string; mode: string; prompt: string; state: string }
@@ -71,6 +78,45 @@ const TONE_CLASS: Record<LineTone, string> = {
   ok: s.heroTermOk,
   relay: s.heroTermRelay,
 };
+
+const RELAY_PATHS: RelayPath[] = [
+  {
+    id: 'hero-relay-route-one',
+    d: 'M -80 62 C 120 12 260 108 460 58 S 800 102 1040 52 S 1240 82 1360 44',
+    duration: '10.8s',
+    delay: '-2.1s',
+  },
+  {
+    id: 'hero-relay-route-two',
+    d: 'M 70 202 C 250 140 360 258 560 198 S 860 138 1060 210 S 1260 260 1360 192',
+    duration: '12.6s',
+    delay: '-7.4s',
+  },
+  {
+    id: 'hero-relay-route-three',
+    d: 'M -80 344 C 120 286 280 390 480 334 S 820 286 1010 348 S 1230 392 1360 326',
+    duration: '11.4s',
+    delay: '-5.3s',
+  },
+  {
+    id: 'hero-relay-route-four',
+    d: 'M 180 68 C 300 118 360 132 485 204 S 650 286 795 344',
+    duration: '8.8s',
+    delay: '-3.7s',
+  },
+  {
+    id: 'hero-relay-route-five',
+    d: 'M 1100 58 C 960 110 920 154 820 206 S 650 270 540 340',
+    duration: '9.6s',
+    delay: '-6.2s',
+  },
+  {
+    id: 'hero-relay-route-six',
+    d: 'M -40 196 C 180 228 255 126 420 80 S 760 132 900 210 S 1110 320 1320 336',
+    duration: '13.2s',
+    delay: '-9.1s',
+  },
+];
 
 /**
  * Three rows of Claude Code, Codex, Grok and OpenCode sessions. Each title bar
@@ -242,6 +288,34 @@ function TerminalAgentLogo({ agent, idPrefix }: { agent: TerminalAgent; idPrefix
   return <AgentToolLogo className={s.heroTermMark} idPrefix={idPrefix} provider={agent} />;
 }
 
+function RelayNetwork() {
+  return (
+    <svg
+      className={s.heroRelayNetwork}
+      focusable="false"
+      preserveAspectRatio="none"
+      viewBox="0 0 1280 410"
+    >
+      {RELAY_PATHS.map((route) => (
+        <path className={s.heroRelayPath} d={route.d} id={route.id} key={route.id} />
+      ))}
+      {RELAY_PATHS.map((route) => (
+        <circle className={s.heroRelaySpark} key={`${route.id}-spark`} r="2.4">
+          <animateMotion begin={route.delay} dur={route.duration} repeatCount="indefinite">
+            <mpath href={`#${route.id}`} />
+          </animateMotion>
+          <animate
+            attributeName="opacity"
+            dur="1.8s"
+            repeatCount="indefinite"
+            values="0.28;0.9;0.28"
+          />
+        </circle>
+      ))}
+    </svg>
+  );
+}
+
 function TerminalRow({
   cards,
   rowClass,
@@ -319,6 +393,7 @@ function TerminalRow({
 export function HeroTerminalMarquee() {
   return (
     <div aria-hidden="true" className={s.heroMarquee} data-marquee-band="">
+      <RelayNetwork />
       <TerminalRow cards={ROW_ONE} rowClass={s.heroMarqueeTrackOne} rowKey="one" />
       <TerminalRow cards={ROW_TWO} rowClass={s.heroMarqueeTrackTwo} rowKey="two" />
       <TerminalRow cards={ROW_THREE} rowClass={s.heroMarqueeTrackThree} rowKey="three" />
