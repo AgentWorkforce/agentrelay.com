@@ -11,7 +11,7 @@ export function Hero() {
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
-            Durable coding agent team workflows
+            Teams of coding agents, in workflows
           </h1>
 
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>
