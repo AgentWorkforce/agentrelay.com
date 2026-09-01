@@ -44,6 +44,7 @@ const AGENT_META: Record<
   TerminalAgent,
   {
     activityGlyph: string;
+    branchPrefix: string;
     cycle: string;
     label: string;
     mode: string;
@@ -54,6 +55,7 @@ const AGENT_META: Record<
 > = {
   claude: {
     activityGlyph: '✻',
+    branchPrefix: 'claude',
     cycle: '7.8s',
     label: 'Claude Code',
     mode: 'trusted',
@@ -63,6 +65,7 @@ const AGENT_META: Record<
   },
   codex: {
     activityGlyph: '◌',
+    branchPrefix: 'codex',
     cycle: '7.2s',
     label: 'OpenAI Codex',
     mode: 'workspace-write',
@@ -72,6 +75,7 @@ const AGENT_META: Record<
   },
   grok: {
     activityGlyph: '◆',
+    branchPrefix: 'grok',
     cycle: '7.5s',
     label: 'Grok',
     mode: 'auto',
@@ -81,6 +85,7 @@ const AGENT_META: Record<
   },
   opencode: {
     activityGlyph: '▣',
+    branchPrefix: 'opencode',
     cycle: '6.9s',
     label: 'OpenCode',
     mode: 'build',
@@ -399,6 +404,7 @@ function RelayNetwork() {
 }
 
 function GrokTerminalBody({ card }: { card: TerminalCard }) {
+  const meta = AGENT_META[card.agent];
   const prompt = card.lines.find((line) => line.tone === 'prompt') ?? card.lines[0];
   const activity = card.lines.find((line) => line.tone === 'tool') ?? card.lines[1];
   const result = card.lines.find((line) => line.tone === 'relay' || line.tone === 'ok');
@@ -408,9 +414,9 @@ function GrokTerminalBody({ card }: { card: TerminalCard }) {
       <div className={s.heroGrokContext}>
         <span className={s.heroGrokBranch}>⌁</span>
         <span className={s.heroGrokPath}>
-          codex/{card.repo.replace('/', '-')} ~/{card.repo}
+          {meta.branchPrefix}/{card.repo.replace('/', '-')} ~/{card.repo}
         </span>
-        <span className={s.heroGrokContextMode}>auto</span>
+        <span className={s.heroGrokContextMode}>{meta.mode}</span>
       </div>
       <div
         className={`${s.heroGrokPrompt} ${s.heroGrokCycleLine}`}
