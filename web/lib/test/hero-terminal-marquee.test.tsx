@@ -15,4 +15,10 @@ describe('HeroTerminalMarquee', () => {
     expect(markup).toContain('grok/relay-docs ~/relay/docs');
     expect(markup).not.toContain('codex/relay-docs ~/relay/docs');
   });
+
+  it('renders enough repeated sequences to keep wide marquee rows covered', () => {
+    const markup = renderToStaticMarkup(<HeroTerminalMarquee />);
+
+    expect(markup.match(/grok\/relay-docs ~\/relay\/docs/g)).toHaveLength(4);
+  });
 });

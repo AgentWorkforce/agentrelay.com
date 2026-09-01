@@ -643,10 +643,10 @@ function TerminalRow({
   rowClass: string;
   rowKey: string;
 }) {
-  // Two identical copies make the loop seamless: the track slides exactly one
-  // copy's width (translateX(-50%)) and snaps back with the second copy already
-  // sitting where the first one started.
-  const copies = ['a', 'b'];
+  // Four identical copies keep at least three full sequences beyond the loop
+  // boundary. That prevents wide viewports from outrunning shorter rows while
+  // the track slides exactly one copy's width (translateX(-25%)).
+  const copies = ['a', 'b', 'c', 'd'];
   const rowPhase = rowKey === 'one' ? 0 : rowKey === 'two' ? 2.2 : 4.4;
 
   return (
