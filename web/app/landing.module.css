@@ -2057,10 +2057,10 @@
 }
 
 /* ── Terminal marquee ────────────────────────────────────────────────────
-   Three full-bleed rows of agent sessions sliding past. Each track holds two
+   Three full-bleed rows of agent sessions sliding past. Each track holds four
    identical copies of its cards and slides exactly one copy's width, so the
    loop is seamless; the spacing lives in each card's margin-right rather than
-   a flex gap so that -50% lands on a card boundary rather than half a gap
+   a flex gap so that -25% lands on a card boundary rather than half a gap
    short. Rows differ in duration, direction and negative delay (a phase
    offset) so the card seams never line up across the band. The rows also hold
    different numbers of cards, so their tracks are different lengths and the
@@ -2170,7 +2170,7 @@
     transform: translate3d(0, 0, 0);
   }
   to {
-    transform: translate3d(-50%, 0, 0);
+    transform: translate3d(-25%, 0, 0);
   }
 }
 
