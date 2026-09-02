@@ -21,6 +21,7 @@ const footerColumns: FooterColumn[] = [
     title: 'Products',
     links: [
       { label: 'Relay Cloud', href: 'https://agentrelay.com/cloud' },
+      { label: 'Skip', href: '/skip' },
       { label: 'Enterprise', href: '/enterprise' },
       { label: 'Reflex', href: '/reflex' },
       { label: 'Pear', href: '/pear' },
