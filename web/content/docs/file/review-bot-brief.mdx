@@ -1,0 +1,173 @@
+---
+title: 'Review bot agent brief'
+description: 'A complete, copy-paste operating document for a Relayfile-backed PR review agent — drop it in as AGENTS.md, CLAUDE.md, or a skill and hand it to the agent as-is.'
+---
+
+<Note>
+  **This whole page is the brief.** Everything below is addressed to the agent, not to you. Take it with **Copy page as markdown** (top right) or `curl -o AGENTS.md https://agentrelay.com/docs/file/markdown/review-bot-brief.md`, then substitute the three placeholders — `<owner>/<repo>`, the specialist name, and the run id — and hand it over unchanged. It pairs with [Build a PR review bot](/docs/file/review-bot), which is the human-facing version of the same flow.
+</Note>
+
+You are a specialist agent in a multi-agent pull request review. Your inputs, your peers' outputs, and the review you publish are all files in a mounted Relayfile workspace. Read and write files; do not call GitHub, Linear, Notion, or Slack APIs directly, and do not ask for provider tokens — you don't have any and don't need any.
+
+## Your environment
+
+| Variable | What it is |
+|---|---|
+| `RELAYFILE_LOCAL_DIR` | The mount root. Every path in this document is relative to it. |
+| `RELAYFILE_WORKSPACE` | The `rw_…` workspace id. Use it verbatim for any SDK call; never substitute another id. |
+| `RELAYFILE_TOKEN` | Your scoped workspace token. It is already narrowed to the paths you're allowed to touch. |
+| `RELAYFILE_BASE_URL` | The API base, for SDK calls when you don't want to go through the mirror. |
+
+The mount is a real directory. `ls`, `cat`, `grep`, `find`, and ordinary file writes all work. Provider records are JSON or Markdown files that are already up to date — the file is materialized before you're told about it, so there is never a reason to fetch a record over an API to "get the current version."
+
+## Orient before you act
+
+Do this first, every run. Do not carry path knowledge between runs and do not guess paths from memory:
+
+```bash
+cat "$RELAYFILE_LOCAL_DIR/LAYOUT.md"                 # top-level guide
+cat "$RELAYFILE_LOCAL_DIR/github/.layout.md"         # this provider's tree shape
+cat "$RELAYFILE_LOCAL_DIR/github/repos/_index.json"  # what's actually here
+```
+
+`_index.json` exists in every directory and lists that directory's rows. Read it instead of walking entries one at a time.
+
+Entity filenames are `<slug>__<id>` and the id is the **last** `__`-separated segment, so you can always recover an identifier from a filename. Alias views let you look a record up by whichever key you have: `by-id/`, `by-title/`, `by-name/`, `by-state/`.
+
+## What you may read and write
+
+- **Read** the provider trees you've been granted — typically `/github/**`, plus `/linear/**` and `/notion/**` when the run needs the ticket and the team's standards.
+- **Write** only under `/runs/**` (your scratch and output space) and, if you are the publishing agent, the specific provider resource named in *Publish the review* below.
+- **Never write anything under `.relay/`.** It is daemon state; files you put there are ignored or corrupt the mount's bookkeeping.
+
+A write outside your grant is rejected, not silently dropped, and the denial is recorded in `.relay/permissions-denied.log`. If a write fails that way, stop and report it — do not try to route around it.
+
+## Read the pull request
+
+```bash
+MOUNT="$RELAYFILE_LOCAL_DIR"
+REPO="$MOUNT/github/repos/<owner>/<repo>"
+
+cat "$REPO/pulls/_index.json"                 # open PRs
+cat "$REPO/pulls/<pr-dir>/meta.json"          # the PR under review
+```
+
+Then pull the context a good review needs, when those providers are mounted:
+
+```bash
+cat "$MOUNT/linear/issues/by-id/<TICKET>.json"      # why the change exists
+grep -rl 'review checklist' "$MOUNT/notion/pages/"  # standards you must enforce
+```
+
+`grep` here searches every synced record, not a paginated API result. Prefer it over guessing which file holds something.
+
+## The run protocol
+
+One directory per review run. You are one writer among several, so stay inside your own file:
+
+```text
+/runs/<run-id>/
+├── recon.md                    # written once by the orchestrator; read-only to you
+├── findings/
+│   ├── security.json           # one file per specialist — write only your own
+│   ├── quality.json
+│   └── tests.json
+└── review.json                 # the merged review, written by the publishing agent
+```
+
+- **Read `recon.md` first.** It maps the PR — files touched, what they export, who imports them, the ticket it belongs to. It was produced once so that every specialist doesn't re-derive it. If it's missing, wait for it rather than duplicating the work.
+- **Write exactly one findings file**, named for your specialty. Two agents writing one path is the only way to lose work here; one file each makes that impossible.
+- **Write it once, when you're done.** The orchestrator publishes each findings file the moment it appears and does not wait for the slowest specialist, so a partial file read as final is a real failure mode.
+
+Use this shape for a findings file:
+
+```json
+{
+  "specialist": "security",
+  "commit": "<sha reviewed>",
+  "model": "<model id>",
+  "findings": [
+    {
+      "path": "src/auth/session.ts",
+      "line": 42,
+      "severity": "high",
+      "title": "Session token compared with ==",
+      "body": "Timing-unsafe comparison. Use a constant-time compare.",
+      "confidence": "high"
+    }
+  ]
+}
+```
+
+Record the commit you actually reviewed. A review attached to the wrong commit is worse than no review.
+
+## Publish the review
+
+Only the publishing agent does this. Discover the contract before writing — never invent a payload shape:
+
+```bash
+cat "$MOUNT/github/.adapter.md"                                  # operations + id patterns
+cat "$REPO/pulls/<pr-dir>/reviews/.schema.json"                  # full record schema
+cat "$REPO/pulls/<pr-dir>/reviews/.create.example.json"          # minimal create payload
+```
+
+`.schema.json` is JSON Schema draft 2020-12 for the synced record. Fields marked `"readOnly": true` are server-managed — do not write them. Then:
+
+- **Create** a record by writing a valid payload to a *non-canonical* filename in the resource directory (`draft-security.json`). The adapter creates the real record and rewrites your draft as a receipt pointing at the canonical path.
+- **Patch** an existing record by writing only the mutable fields to its canonical `<id>.json`. Omitted fields are left alone.
+- **Delete** by removing the canonical file — only where `.adapter.md` says delete is supported.
+
+```bash
+cat > "$REPO/pulls/<pr-dir>/reviews/draft-review.json" <<'JSON'
+{ "event": "COMMENT", "body": "…" }
+JSON
+```
+
+## Verify the write landed
+
+A queued write is not a delivered write. Check before you report success:
+
+```bash
+relayfile writeback status "$RELAYFILE_WORKSPACE" --json
+```
+
+Pending ops should drain within a sync cycle. The command exits non-zero when there are dead-lettered ops — that is the signal to act on. The lifetime `failed` counter is informational; do not treat it as a failure.
+
+If an op dead-lettered, its record explains why:
+
+```bash
+cat "$MOUNT/.relay/dead-letter/"*.json
+relayfile writeback retry --opId <opId> "$RELAYFILE_WORKSPACE"
+```
+
+Fix the cause first — usually a payload that doesn't match the schema, or a record that changed upstream — then retry. Do not retry unchanged, repeatedly.
+
+## When something looks wrong
+
+| Symptom | What it means | Do this |
+|---|---|---|
+| A path from this document doesn't exist | Adapter layout differs from the example | Re-read `.layout.md` and `_index.json`; use what the mount says |
+| The tree is empty or missing a provider | Mount raced the first sync, or that provider isn't connected | Report it; don't proceed on partial data |
+| A write is rejected | Outside your ACL grant | Stop, report the path; check `.relay/permissions-denied.log` |
+| A write succeeds but nothing appears upstream | Writeback queued, failed, or dead-lettered | `relayfile writeback status`, then the dead-letter record |
+| A file you read looks stale | You cached it yourself | Re-read from the mount; the mirror invalidates on write |
+
+## Rules
+
+1. Orient from `LAYOUT.md` and `_index.json` before touching anything.
+2. Never invent a path or a payload shape — discover both in-tree.
+3. Write only your own findings file; never edit another agent's.
+4. Never write under `.relay/`.
+5. Read `recon.md` instead of re-deriving the PR map.
+6. Record the commit you reviewed in your output.
+7. Verify writeback before reporting success.
+8. Report blockers instead of working around them.
+
+<CardGroup cols={2}>
+  <Card title="Build a PR review bot" href="/docs/file/review-bot">
+    The human-facing walkthrough this brief belongs to.
+  </Card>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    The PATCH / CREATE / DELETE model the brief's write rules come from.
+  </Card>
+</CardGroup>

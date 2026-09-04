@@ -49,7 +49,10 @@ export const fileSection: ProductDocSection = {
     },
     {
       title: 'Guides',
-      items: [{ title: 'Build a PR review bot', slug: 'review-bot' }],
+      items: [
+        { title: 'Build a PR review bot', slug: 'review-bot' },
+        { title: 'Review bot agent brief', slug: 'review-bot-brief' },
+      ],
     },
     {
       title: 'Concepts',

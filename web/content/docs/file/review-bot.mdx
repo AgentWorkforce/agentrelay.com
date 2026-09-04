@@ -27,6 +27,19 @@ The three things this guide buys you:
 - **Context across sandboxes.** Specialists in separate sandboxes see each other's work through the filesystem, in sub-second time.
 - **Writeback without provider tokens.** The bot posts its review by writing JSON to a path. Retries, rate limits, and dead-lettering are the writeback workers' problem.
 
+## Where it runs
+
+The integration stack is hosted either way — what changes is where the bot's processes live and how they get credentials. Pick a lane before step 1; the steps below are annotated for both.
+
+| | Workstation | Cloud sandboxes | Serverless / CI step |
+|---|---|---|---|
+| Provisioning | `relayfile setup` once, interactively | `relayfile setup` once by a human, **or** headless with `--cloud-token` | same one-time provisioning |
+| Per-run mount | long-lived `relayfile mount --background` | `ensureMountedWorkspace` per sandbox ([step 5](#5-mount-the-same-workspace-in-every-sandbox)) | `relayfile mount --once`, or no mount at all |
+| Credentials in the process | your local relay session | a workspace-scoped JWT from `handle.env()` | `RELAYFILE_TOKEN` in the environment |
+| Good for | building and debugging the bot | the real fleet — one sandbox per specialist | a single review pass with no daemon |
+
+The important part: **provisioning happens once, mounting happens per run.** A cloud bot doesn't re-do OAuth on every PR — it joins a workspace that's already connected and mounts it in seconds.
+
 ## 1. Connect GitHub
 
 One command logs you into Cloud, creates the workspace, runs the provider OAuth, waits for the first sync, and mounts the result:
@@ -44,6 +57,45 @@ relayfile setup \
 <Note>
   The Nango connect URL has a short TTL. If you finish the OAuth after the command has already exited, re-run the same `relayfile setup` line — a re-run reuses the workspace and only opens a new connect flow when the provider isn't connected yet.
 </Note>
+
+### Provisioning from a machine with no browser
+
+If the bot is provisioned by CI or a deploy job rather than a person at a laptop, skip the browser login with a Cloud token and skip the mount loop — this step only needs to leave a connected workspace behind:
+
+```bash
+RELAYFILE_CLOUD_TOKEN="$CLOUD_TOKEN" relayfile setup \
+  --provider github \
+  --workspace review-bot \
+  --skip-mount \
+  --no-open
+```
+
+`--skip-mount` returns as soon as the workspace exists and the provider reports ready, which is exactly the boundary between provisioning and running. The provider OAuth itself still needs a human the first time — print the connect URL, have someone complete it once, and every later run just joins.
+
+The same thing from code, when your control plane already holds Cloud tokens:
+
+```ts
+import { RelayfileSetup } from "@relayfile/sdk"
+
+const setup = RelayfileSetup.fromCloudTokens(
+  { accessToken, refreshToken, accessTokenExpiresAt },
+  { cloudApiUrl: "https://agentrelay.com/cloud" },
+)
+
+const workspace = await setup.joinWorkspace("rw_…")
+
+const { connectLink } = await workspace.connectIntegration("github")
+if (connectLink) {
+  await notifyOperator(connectLink)          // one-time human step
+  await workspace.waitForConnection("github")
+}
+```
+
+`fromCloudTokens` refreshes inside the refresh window, so a long-lived control plane doesn't have to re-auth between runs. Store the returned `rw_…` id — that's what every sandbox joins later.
+
+<Warning>
+  Use the `rw_…` workspace id from `joinWorkspace` (or from `relayfile setup`) for every data-plane call. It is not interchangeable with the request-side app UUID, and substituting one for the other fails in ways that look like a permissions problem.
+</Warning>
 
 ## 2. Verify the mount before you write any bot code
 
@@ -66,6 +118,15 @@ cat ./relayfile-mount/github/repos/_index.json
 ```
 
 `LAYOUT.md`, per-provider `.layout.md`, and `_index.json` are the contract — see [Mount layout](/docs/file/mount-layout). An agent that `cat`s them at startup needs no path knowledge in its prompt.
+
+Without a mount — from CI, or from a laptop checking on the cloud workspace — `relayfile tree` and `relayfile read` answer the same questions against the server:
+
+```bash
+relayfile tree review-bot /github --depth 2
+relayfile read review-bot /LAYOUT.md
+```
+
+Both resolve a token from `--token`, then `RELAYFILE_TOKEN`, then your relay session, so a CI job needs one secret and no login step.
 
 ## 3. Add the rest of the bot's context
 
@@ -154,6 +215,33 @@ Three things to keep straight when you fan this out:
 - **`handle.env()` is the whole handoff.** It carries `RELAYFILE_BASE_URL`, `RELAYFILE_TOKEN`, `RELAYFILE_WORKSPACE`, and `RELAYFILE_LOCAL_DIR`. Spread it into the child process; the sandbox never sees your Cloud access token or the provider credentials.
 
 Use `handle.status()` for a readiness snapshot and `handle.stop()` on teardown — it drains in-flight syncs and never deletes the local directory.
+
+### Where the cloud process gets its credentials
+
+`connect()` from `@relayfile/agents` runs the same bootstrap and resolves credentials in two steps: environment overrides first — `CLOUD_API_URL`, `CLOUD_API_ACCESS_TOKEN`, `CLOUD_WORKSPACE_ID` — then `~/.agentworkforce/relay/cloud-auth.json`, written by `agent-relay cloud login`. The env path is the one to use in a cloud runner; the file path is the one to use on a workstation.
+
+```ts
+import { connect, tools } from "@relayfile/agents"
+
+// CLOUD_API_ACCESS_TOKEN + CLOUD_WORKSPACE_ID come from the runner's secrets
+const rf = await connect({
+  agentName: "security-reviewer",
+  scopes: ["relayfile:fs:read:/github/**", "relayfile:fs:write:/runs/**"],
+})
+```
+
+One login per machine; the per-agent scoping is what you vary between specialists.
+
+### Or skip the mount entirely
+
+A cloud agent with no writable disk — a Lambda, a Worker, a short-lived job — doesn't need the mirror. The same workspace is reachable over HTTP with the same paths:
+
+```ts
+const tree = await client.listTree(workspaceId, { path: "/github/repos/acme/api/pulls", depth: 2 })
+const pr = await client.readFile(workspaceId, "/github/repos/acme/api/pulls/42__bump-deps/meta.json")
+```
+
+You lose `grep` over the tree and gain a cold start measured in milliseconds. A useful split for a review bot: mount in the specialist sandboxes that actually explore the PR, use the client directly in the small functions that only read one record or post one result. Both see the same writes.
 
 ## 6. Coordinate through the filesystem
 
@@ -248,6 +336,12 @@ relayfile listen \
 
 Or in-process with `onWrite`, filtered by the same glob. Either way the reviewer wakes on provider state changing rather than on a request arriving — see [Events and webhooks](/docs/file/events).
 
+In the cloud this belongs in one long-lived orchestrator process — `relayfile listen` under your supervisor, or `connectWebSocket` inside the service — which then spawns a sandbox per PR. A subscriber that reconnects with a cursor gets the events it missed while it was down, so a deploy in the middle of a busy afternoon doesn't drop PRs on the floor.
+
+<BannerLink href="/docs/file/review-bot-brief" icon="bot">
+  Copy-paste agent brief — the same contract written for the agent itself, ready to drop in as `AGENTS.md`.
+</BannerLink>
+
 ## Tear down
 
 ```bash
@@ -267,7 +361,7 @@ rm -rf ./relayfile-mount
   <Card title="Real-time sync" href="/docs/file/realtime-sync">
     Why the orchestrator sees a specialist's write on the next read.
   </Card>
-  <Card title="CLI reference" href="/docs/file/cli">
-    Every flag used in this guide.
+  <Card title="Review bot agent brief" href="/docs/file/review-bot-brief">
+    The copy-paste operating document to hand the agent.
   </Card>
 </CardGroup>
