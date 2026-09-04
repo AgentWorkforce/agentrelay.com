@@ -48,6 +48,10 @@ export const fileSection: ProductDocSection = {
       ],
     },
     {
+      title: 'Guides',
+      items: [{ title: 'Build a PR review bot', slug: 'review-bot' }],
+    },
+    {
       title: 'Concepts',
       items: [
         { title: 'Events and webhooks', slug: 'events' },

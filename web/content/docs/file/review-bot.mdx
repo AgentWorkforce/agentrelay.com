@@ -1,0 +1,273 @@
+---
+title: 'Build a PR review bot'
+description: 'End-to-end: connect GitHub with one command, add the rest of your context providers, mount the same workspace in every reviewer sandbox, and post the review back by writing a file.'
+---
+
+A PR review bot is the shape Relayfile fits best: several agents, several providers, one shared state. This guide runs the whole flow end to end — from an empty machine to a bot whose orchestrator and specialists all read the same PR, coordinate through files, and post the finished review back to GitHub without any of them holding a provider token.
+
+## What you're building
+
+```text
+                    Relayfile workspace  (github + linear + notion + slack)
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        │                         │                         │
+  orchestrator sandbox      security sandbox          quality sandbox
+  mount: /workspace         mount: /workspace         mount: /workspace
+  read  /github/**          read  /github/**          read  /github/**
+  read  /notion/**          read  /runs/**            read  /runs/**
+  write /runs/**            write /runs/**            write /runs/**
+```
+
+Every sandbox mounts the *same* workspace. The orchestrator writes its recon notes to `/runs/…`; the specialists read them as ordinary files a second later. Specialists write findings to `/runs/…`; the orchestrator streams them out as each one lands. Nothing in that loop is a queue, a webhook, or a bespoke protocol — it's [real-time sync](/docs/file/realtime-sync) over a shared tree.
+
+The three things this guide buys you:
+
+- **One integration surface.** Adding Linear or Slack context later is `relayfile integration connect`, not another OAuth app, webhook endpoint, and client library.
+- **Context across sandboxes.** Specialists in separate sandboxes see each other's work through the filesystem, in sub-second time.
+- **Writeback without provider tokens.** The bot posts its review by writing JSON to a path. Retries, rate limits, and dead-lettering are the writeback workers' problem.
+
+## 1. Connect GitHub
+
+One command logs you into Cloud, creates the workspace, runs the provider OAuth, waits for the first sync, and mounts the result:
+
+```bash
+relayfile setup \
+  --provider github \
+  --workspace review-bot \
+  --local-dir ./relayfile-mount \
+  --no-open
+```
+
+`--no-open` prints the login and connect URLs instead of launching a browser — always pass it when an agent (or CI) is driving the command, since a headless browser launch burns the OAuth state. Open the two URLs it prints, complete them, and the command blocks until GitHub reports ready.
+
+<Note>
+  The Nango connect URL has a short TTL. If you finish the OAuth after the command has already exited, re-run the same `relayfile setup` line — a re-run reuses the workspace and only opens a new connect flow when the provider isn't connected yet.
+</Note>
+
+## 2. Verify the mount before you write any bot code
+
+```bash
+relayfile status review-bot
+```
+
+Read three fields and move on:
+
+- **`lag`** — how stale the mirror is. Under a few seconds is healthy; over 60s means investigate before blaming your agent.
+- **`daemon`** — if it says `not running`, restart it with `relayfile mount review-bot ./relayfile-mount --background`.
+- **`dead-lettered`** — gate on this one. `failed` is a lifetime counter and is informational; dead-lettered means writes gave up.
+
+Then let the mount tell you its own shape rather than hard-coding paths from this page:
+
+```bash
+cat ./relayfile-mount/LAYOUT.md
+cat ./relayfile-mount/github/.layout.md
+cat ./relayfile-mount/github/repos/_index.json
+```
+
+`LAYOUT.md`, per-provider `.layout.md`, and `_index.json` are the contract — see [Mount layout](/docs/file/mount-layout). An agent that `cat`s them at startup needs no path knowledge in its prompt.
+
+## 3. Add the rest of the bot's context
+
+A review is better when the reviewer can see the ticket that motivated the PR and the engineering standards it's supposed to follow. Don't guess provider ids — ask the live catalog, which spans both backends:
+
+```bash
+relayfile integration available --refresh
+relayfile integration search notion --refresh --json
+```
+
+Then connect what you need. Each provider lands as another subtree under the same mount:
+
+```bash
+relayfile integration connect linear --workspace review-bot --no-open
+relayfile integration connect notion --workspace review-bot --no-open
+relayfile integration connect slack  --workspace review-bot --no-open
+relayfile integration list --workspace review-bot --json
+```
+
+Nango is the default backend; request Composio explicitly for toolkits it brokers (`--backend composio`). If a Composio toolkit can't create managed auth automatically, the command says so — a human adds a custom auth config in Composio, then re-runs the identical command.
+
+<Note>
+  Jira and Confluence are the one provider pair that needs a follow-up: a single Atlassian grant can cover several sites, so the CLI prompts for one after OAuth and stores its `cloudId`. If the picker was skipped, set it explicitly with `relayfile integration set-metadata jira cloudId=… baseUrl=https://….atlassian.net --workspace review-bot --yes`. The command replaces the whole metadata namespace, so pass every key you want to keep.
+</Note>
+
+The bot's context is now four providers wide and still one interface. That's the property worth designing around: adding `/notion` cost the reviewer agent zero new tool schemas, because `ls`/`cat`/`grep` already worked.
+
+## 4. Read the PR
+
+Reads are reads. Enumerate the PRs, open one, and pull the surrounding context from other providers with the same handful of verbs:
+
+```bash
+MOUNT=./relayfile-mount
+
+# what's open
+cat $MOUNT/github/repos/acme/api/pulls/_index.json
+
+# the PR under review
+cat $MOUNT/github/repos/acme/api/pulls/42__bump-deps/meta.json
+
+# the ticket it references, by id
+cat $MOUNT/linear/issues/by-id/AGE-12.json
+
+# the standards the reviewer should enforce
+grep -rl 'review checklist' $MOUNT/notion/pages/
+```
+
+`grep` here is exhaustive over synced records, not a paginated provider search — that difference is most of why a file-shaped reviewer beats an API-shaped one on recall. The `<slug>__<id>` naming means the reviewer can recover `42` from the directory name and write back to the canonical path later without a lookup.
+
+<Note>
+  Path shapes are adapter-owned and versioned with the adapter, so treat `.layout.md` and `_index.json` in *your* mount as authoritative over the examples above.
+</Note>
+
+## 5. Mount the same workspace in every sandbox
+
+This is the step that makes it a fleet instead of a script. From inside an already-authorized sandbox, `ensureMountedWorkspace` mints a scoped mount token, supervises the `relayfile-mount` process, and resolves once the mirror is reachable:
+
+```ts
+import { RelayfileSetup } from "@relayfile/sdk"
+
+const setup = new RelayfileSetup({ accessToken })
+
+const handle = await setup.ensureMountedWorkspace({
+  workspaceId: "rw_…",
+  provider: "github",
+  verifyProvider: true,
+  providerReadyTimeoutMs: 30_000,
+  localDir: "/workspace",
+  scopes: [
+    "relayfile:fs:read:/github/**",
+    "relayfile:fs:read:/runs/**",
+    "relayfile:fs:write:/runs/**",
+  ],
+})
+
+// hand the mount to the specialist process — no provider tokens cross this line
+await sandbox.process.executeCommand("claude --print 'Review /workspace'", {
+  env: handle.env(),
+})
+```
+
+Three things to keep straight when you fan this out:
+
+- **`verifyProvider` gates on readiness.** Without it a specialist can mount before the first sync finishes and review an empty tree. `ProviderNotConnectedError` and `ProviderNotReadyError` are typed so you can tell "never connected" from "still syncing" without a second round-trip.
+- **Scope each specialist down.** The minted token's scopes are a subset of the caller's grant, so the security reviewer gets `read:/github/**` and `write:/runs/**` and nothing else. Use the path-scoped form — a bare `fs:read` can fall back to a broad grant. See [ACLs](/docs/file/acls).
+- **`handle.env()` is the whole handoff.** It carries `RELAYFILE_BASE_URL`, `RELAYFILE_TOKEN`, `RELAYFILE_WORKSPACE`, and `RELAYFILE_LOCAL_DIR`. Spread it into the child process; the sandbox never sees your Cloud access token or the provider credentials.
+
+Use `handle.status()` for a readiness snapshot and `handle.stop()` on teardown — it drains in-flight syncs and never deletes the local directory.
+
+## 6. Coordinate through the filesystem
+
+Keep the bot's own state on a path no adapter owns — `/runs/**` here. Writeback is adapter-driven, so a path outside every provider subtree stays inside the workspace instead of queueing a provider call: a durable, shared scratch space with the same sub-second visibility as the provider trees. `relayfile writeback status` is the check — writes under `/runs/**` shouldn't add pending ops.
+
+The orchestrator finishes recon and publishes it as a file:
+
+```bash
+cat > $MOUNT/runs/pr-42/recon.md <<'EOF'
+# PR 42 — recon
+Touched: src/auth/session.ts, src/auth/index.ts
+Exported from: src/auth/index.ts (re-exported by src/server.ts)
+Ticket: AGE-12 (Fix login bug)
+EOF
+```
+
+Every specialist reads that one file instead of re-deriving the map of the PR — the recon cost is paid once and shared. Then each writes its own findings under its own path, so two specialists never contend for one file:
+
+```bash
+echo '{"specialist":"security","findings":[…]}' \
+  > $MOUNT/runs/pr-42/findings/security.json
+```
+
+The orchestrator doesn't wait for the slowest specialist. It subscribes to the findings directory and publishes each result the moment it lands:
+
+```ts
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { onWrite } from "@relayfile/sdk"
+
+onWrite("/runs/pr-42/findings/**", async (event) => {
+  // the file is materialized before the event fires — just read it
+  const finding = JSON.parse(await readFile(join(mountDir, event.path), "utf8"))
+  await publishFinding(finding)   // stream it out now, don't wait for the rest
+}, { client, workspaceId, operations: ["create", "update"] })
+```
+
+Delivery is at-least-once and `revision` is the per-file ordering key, so deduplicate on `eventId` and keep the handler idempotent. A specialist that crashes and restarts re-reads `recon.md` and resumes; nothing about the run lived only in a dead process's memory.
+
+## 7. Post the review back to GitHub
+
+Writeback is a file write, but discover the contract first instead of guessing a shape:
+
+```bash
+cat $MOUNT/github/.adapter.md
+cat $MOUNT/github/repos/acme/api/pulls/42__bump-deps/reviews/.schema.json
+cat $MOUNT/github/repos/acme/api/pulls/42__bump-deps/reviews/.create.example.json
+```
+
+The schema is JSON Schema draft 2020-12 for the full synced record; fields marked `"readOnly": true` are server-managed and must not be written. Then the three rules from [Reads and writes](/docs/file/reads-and-writes) apply:
+
+- **CREATE** — write a valid payload to any *non-canonical* filename in the resource directory. The adapter creates the real record and rewrites your draft file as a receipt pointing at the canonical path.
+- **PATCH** — write only the mutable fields to the canonical `<id>.json`. Omitted fields are left alone.
+- **DELETE** — remove the canonical file, when the resource's `.adapter.md` says delete is supported.
+
+```bash
+cat > $MOUNT/github/repos/acme/api/pulls/42__bump-deps/reviews/draft-security.json <<'EOF'
+{ "event": "COMMENT", "body": "2 findings from the security pass…" }
+EOF
+```
+
+From the SDK, the same write carries optimistic concurrency — pass the revision you read, catch `RevisionConflictError`, re-read, retry:
+
+```ts
+await client.writeFile({
+  workspaceId,
+  path: "/github/repos/acme/api/pulls/42__bump-deps/reviews/draft-security.json",
+  baseRevision: "*",
+  content: JSON.stringify(review),
+  contentType: "application/json",
+})
+```
+
+Confirm it landed:
+
+```bash
+relayfile writeback status review-bot --json | jq
+```
+
+Pending writebacks should drain to zero within a sync cycle, and the command exits non-zero only when there are dead-lettered ops — so gate CI on the exit code, not on the lifetime `failed` counter. If `deadLettered` is non-empty, each record under `$MOUNT/.relay/dead-letter/<opId>.json` carries `lastStatus` and a truncated `lastBody` — fix the payload, then `relayfile writeback retry --opId <opId> review-bot`. Read denials are preserved separately in `$MOUNT/.relay/permissions-denied.log`, so an ACL mistake surfaces as a logged denial rather than a silent no-op. Never write anything under `.relay/` yourself.
+
+## 8. Trigger on a new PR without running a webhook server
+
+The bot doesn't need a GitHub App endpoint of its own. A provider webhook is already normalized into a file event on a canonical path, and the file is materialized *before* the event fires — so the handler starts with state on disk, not a payload to parse:
+
+```bash
+relayfile listen \
+  --path "/github/repos/acme/api/pulls/**" \
+  --event file.created \
+  --run "review-bot start {{path}}"
+```
+
+Or in-process with `onWrite`, filtered by the same glob. Either way the reviewer wakes on provider state changing rather than on a request arriving — see [Events and webhooks](/docs/file/events).
+
+## Tear down
+
+```bash
+relayfile stop review-bot
+relayfile integration disconnect github --workspace review-bot --yes
+relayfile workspace delete review-bot --yes
+rm -rf ./relayfile-mount
+```
+
+<CardGroup cols={2}>
+  <Card title="Mounting from a sandbox" href="/docs/file/mounting">
+    Every option on `mountWorkspace` and `ensureMountedWorkspace`.
+  </Card>
+  <Card title="ACLs" href="/docs/file/acls">
+    Scope each specialist to the paths it should read and write.
+  </Card>
+  <Card title="Real-time sync" href="/docs/file/realtime-sync">
+    Why the orchestrator sees a specialist's write on the next read.
+  </Card>
+  <Card title="CLI reference" href="/docs/file/cli">
+    Every flag used in this guide.
+  </Card>
+</CardGroup>
