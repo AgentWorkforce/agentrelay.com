@@ -183,6 +183,10 @@ export const factorySection: ProductDocSection = {
       ],
     },
     {
+      title: 'Guides',
+      items: [{ title: 'Running Factory', slug: 'running' }],
+    },
+    {
       title: 'Configure',
       items: [
         { title: 'Safety scope', slug: 'safety-scope' },
@@ -195,7 +199,6 @@ export const factorySection: ProductDocSection = {
       items: [
         { title: 'CLI', slug: 'cli' },
         { title: 'Where it runs', slug: 'where-it-runs' },
-        { title: 'Running Factory', slug: 'running' },
         { title: 'Observability', slug: 'observability' },
       ],
     },

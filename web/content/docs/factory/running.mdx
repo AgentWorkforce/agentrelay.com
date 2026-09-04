@@ -10,7 +10,7 @@ Factory splits into a **control plane** that decides what to work on and **agent
 | Need | Check |
 |---|---|
 | Factory CLI | `npm install -g @agent-relay/factory` (Node ≥ 22) |
-| `agent-relay` + `relayfile` | Installed and signed in — peers, not dependencies. `factory init` verifies both are on `PATH` |
+| `agent-relay` + `relayfile` | Installed and signed in — peers, not dependencies. **Agent Relay 11.3.1 or later**; `factory init` verifies both are on `PATH` |
 | GitHub connected to your relay workspace | With push access. **The GitHub App installation must cover the target repos** — a repo the installation can't see fails every write with `403: Resource not accessible by integration` |
 | Harness CLIs on `PATH` | `claude`, `codex`, `opencode`, … — whatever your agents run |
 | `gh auth login` | Only for `github.identity: "user"`; the default `"auto"` publishes through the connected App |
@@ -77,7 +77,7 @@ A killed dispatch leaves recoverable state, not lost work — the durable lifecy
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `Live state changed before writeback` | The run died after claiming the issue | `gh issue edit <n> --remove-label factory:in-progress`, re-dispatch |
+| `Live state changed before writeback` | The run died after claiming the issue | Remove the `factory:in-progress` label on the issue — GitHub UI, or `gh issue edit <n> --remove-label factory:in-progress` if you have a local `gh` login — then re-dispatch |
 | `registration is create-only` | Stale agent records from the crashed run | `agent-relay agent remove <name>` for the implementer/reviewer names, or `factory reap-orphans` |
 | `operation was aborted due to timeout` | Relaycast throttling | The dispatch retries on its own; if the process died, re-run it — the lifecycle resumes |
 
@@ -94,6 +94,10 @@ factory start --mode live --backend relay
 ```
 
 The control plane runs on your host; agents are placed onto fleet nodes through the hosted engine. Bring a node online:
+
+<Warning>
+  Agent Relay 11.3.0 and earlier print the active workspace key from `node up`. Check `agent-relay --version` and upgrade to 11.3.1 or later before running it in any logged or transcribed terminal — see [Where it runs](/docs/factory/where-it-runs).
+</Warning>
 
 ```bash
 # once per machine — redeem an enrollment token from the Fleet page
@@ -116,7 +120,7 @@ Run **one** control-plane host per workspace; multiple processes on that host ar
 
 ### Hosted control plane in Cloud
 
-`@agent-relay/factory/hosted` is the worker-safe control-plane entrypoint — no Node filesystem or process dependency, the complete sweep (`reconcile invocation completions → discover → triage → dispatch → merge gate → idempotent writeback`) driven by your host:
+`@agent-relay/factory/hosted` is the worker-safe control-plane entrypoint — no Node filesystem or process dependency, the complete sweep (`reconcile invocation completions → discover → triage → dispatch → merge gate → idempotent writeback`) driven by your host. This is you hosting the control plane inside your own Cloud worker, not a managed Factory that Agent Relay runs for you — see [Where it runs](/docs/factory/where-it-runs):
 
 ```ts
 import {
