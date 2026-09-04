@@ -39,7 +39,7 @@ describe('Relayfile product docs', () => {
     );
 
     expect(searchEntry).toMatchObject({ title: 'Build a PR review bot' });
-    expect(searchEntry?.headings).toContain('5. Mount the same workspace in every sandbox');
+    expect(searchEntry?.headings).toContain('5. Give every sandbox the same workspace');
     expect(searchEntry?.headings).toContain('Where it runs');
     expect(searchEntry?.headings).toContain('Provisioning from a machine with no browser');
     expect(searchEntry?.headings).toContain('Where the cloud process gets its credentials');

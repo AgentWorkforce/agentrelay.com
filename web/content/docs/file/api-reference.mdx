@@ -65,12 +65,13 @@ curl -sS \
 
 ### Write a file
 
-`PUT /v1/workspaces/{workspaceId}/fs/file` creates or updates one file.
+`PUT /v1/workspaces/{workspaceId}/fs/file` creates or updates one file. It requires **`If-Match`** as well as the usual `X-Correlation-Id`: without it the request fails `412 precondition_failed`. `If-Match: *` is create-or-overwrite; pass a revision for a conditional write.
 
 ```bash
 curl -sS -X PUT \
   -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
   -H "X-Correlation-Id: ${RELAYFILE_CORRELATION_ID}" \
+  -H "If-Match: *" \
   -H "Content-Type: application/json" \
   "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/file" \
   -d '{ "path": "/docs/guide.md", "content": "# agent guide", "contentType": "text/markdown" }' | jq .

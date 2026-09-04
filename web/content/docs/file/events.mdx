@@ -40,16 +40,14 @@ Every change — webhook, sync, or another agent's write — surfaces as the sam
 
 ## Consuming events
 
-Filter by path glob and event type so an agent only wakes for what it cares about. From the CLI:
+Filter by path glob and event type so an agent only wakes for what it cares about. To fan events out to a channel, the CLI binds a path glob to a webhook:
 
 ```bash
-relayfile listen \
-  --path "/linear/issues/by-state/triage/**" \
-  --event file.created \
-  --run "claude --print 'Triage this: {{path}}'"
+relayfile integration bind linear "/linear/issues/by-state/triage/**" \
+  --channel triage --webhook "$WEBHOOK_ID" --webhook-token "$WEBHOOK_TOKEN"
 ```
 
-Or from the SDK with `onWrite`, which subscribes over the same WebSocket stream and dispatches by pattern:
+To react in your own process, use the SDK's `onWrite`, which subscribes over the same WebSocket stream and dispatches by pattern:
 
 ```typescript
 import { onWrite } from '@relayfile/sdk';

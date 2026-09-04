@@ -62,13 +62,11 @@ Bulk-upload a local directory into a workspace, respecting `.gitignore` and `--e
 relayfile seed my-workspace ./src
 ```
 
-| Flag | Default | Description |
-|---|---|---|
-| `--exclude` | (none) | Glob patterns to exclude (repeatable) |
-| `--dry-run` | `false` | List files that would upload, without uploading |
-| `--batch-size` | `50` | Files per bulk API request |
-
 It walks the directory and posts batches to the bulk write endpoint, printing progress.
+
+<Warning>
+  Two limits as of `0.10.41`: `seed` takes no flags — `--dry-run`, `--exclude`, and `--batch-size` are rejected as undefined — and it resolves credentials only from `~/.relayfile/credentials.json`, so it does not work from a relay Cloud session (`relayfile login --api-key`, or `--token`, is required). `relayfile ops list` has the same credential limitation and degrades to local-only results with a warning.
+</Warning>
 
 ## `relayfile tree`
 
@@ -138,10 +136,18 @@ See [Run locally](/docs/file/run-locally) for the daemon in context and [Local d
 | `relayfile export` | Download a snapshot (`--format tar\|json\|patch`) |
 | `relayfile status` | Per-provider sync state, lag, conflicts, denials |
 | `relayfile integration connect / list / disconnect` | Manage provider integrations after setup |
+| `relayfile integration available / search` | Browse or search the live provider catalog (`--refresh`, `--json`) |
+| `relayfile integration set-metadata` | Replace flat provider metadata (Jira/Confluence `cloudId`) |
+| `relayfile integration bind / unbind` | Route a provider path glob to a channel webhook |
 | `relayfile pull` | Force a reconcile of a path or the whole workspace |
-| `relayfile permissions` | Show writable paths and expected schema for a path |
+| `relayfile writeback status / list / retry` | Local pending, failed, and dead-lettered writebacks |
 | `relayfile ops list / replay` | Inspect and replay dead-lettered writeback ops |
+| `relayfile restart` / `relayfile supervisor` | Restart a mount, or install it as a launchd/systemd service |
 | `relayfile stop` / `relayfile logs` | Control and read a background mount daemon |
+
+<Note>
+  There is no `relayfile permissions` command. To find out what a path expects, read the provider's `.adapter.md` and `.schema.json` under `/discovery/<provider>/…`; to see what was denied, read `.relay/state.json` → `deniedPaths` in the mirror.
+</Note>
 
 ## Global flags
 

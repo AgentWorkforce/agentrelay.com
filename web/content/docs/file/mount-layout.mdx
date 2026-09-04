@@ -3,16 +3,16 @@ title: 'Mount layout'
 description: 'Every Relayfile mount is self-describing: LAYOUT.md, per-integration layout files, _index.json, canonical naming, and four alias views.'
 ---
 
-Every mount is self-describing. The agent never needs to learn paths from external documentation — `cat mount/LAYOUT.md` lists everything, and per-integration `.layout.md` files document the tree shape for each provider. This is deliberate: an agent oriented by reading the tree itself doesn't carry path knowledge in its prompt or schema.
+Every mount is self-describing. The agent never needs to learn paths from external documentation — `cat mount/LAYOUT.md` lists everything, and per-integration `LAYOUT.md` files document the tree shape for each provider. This is deliberate: an agent oriented by reading the tree itself doesn't carry path knowledge in its prompt or schema.
 
 ## The tree
 
 ```
 mount/
-├── LAYOUT.md                              # virtual, read-only — top-level guide
+├── LAYOUT.md                              # top-level guide: every provider root
 ├── _index.json                            # root listing
 ├── linear/
-│   ├── .layout.md                         # linear-specific tree shape
+│   ├── LAYOUT.md                          # linear-specific tree shape
 │   ├── issues/
 │   │   ├── _index.json
 │   │   ├── AGE-12__fix-login-bug.json     # canonical: <slug>__<id>
@@ -33,12 +33,12 @@ mount/
 Three kinds of metadata files make the tree navigable without prior knowledge:
 
 - **`LAYOUT.md`** at the root is a virtual, read-only guide to the top-level structure. It's the first thing an agent should `cat` after mounting.
-- **`<integration>/.layout.md`** documents the tree shape for a single provider — what directories exist under `linear/`, what each holds.
+- **`<integration>/LAYOUT.md`** documents the tree shape for a single provider — what directories exist under `linear/`, what each holds, and which paths are artifacts rather than records. Uppercase, no leading dot.
 - **`_index.json`** in every directory lists the rows that directory contains, so an agent can read one file to understand a directory rather than walking every entry.
 
 ## Canonical naming
 
-Entity files follow a `<sanitized-name>__<id>` convention so identifiers are recoverable from any filename. The ID is always the **last** `__`-separated segment:
+Entity files put an identifier and a human-readable name in one filename, separated by `__`, so identifiers are recoverable from a listing. **Which side the id sits on is per-adapter**: Linear writes `<sanitized-name>__<uuid>` (id last), GitHub writes `<number>__<slug>` (id first). Read the provider's `LAYOUT.md` rather than assuming, and prefer `_index.json` rows for lookup:
 
 ```text
 inbox/threads/Re_Welcome__01HXYZ.json
@@ -48,7 +48,7 @@ inbox/threads/01HXYZ.json
 The first path is the canonical human-readable form. The second is a legacy fallback that remains readable during the naming transition — consumers should accept both the new-style filename and the bare `<id>` basename while producers are updated.
 
 <Note>
-  Because the ID is recoverable from the filename, an agent can read `AGE-12__fix-login-bug.json`, derive the identifier `AGE-12`, and write back to the canonical path without a separate lookup.
+  Take the exact filename from a listing or `_index.json` rather than assembling one. Some adapters require the full `<number>__<slug>` directory on reads — for GitHub, `pulls/59/meta.json` returns `404` while `pulls/59__<slug>/meta.json` resolves — and the same adapter may still accept a bare id on the write path.
 </Note>
 
 ## The four alias views
