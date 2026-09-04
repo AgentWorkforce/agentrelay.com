@@ -45,7 +45,7 @@ Four naming rules that will otherwise cost you a run:
 1. GitHub record directories are **`<number>__<slug>`, number first**. Linear uses `<name>__<uuid>`, id last. There is no single rule — read the provider's `LAYOUT.md`.
 2. **Reads need the full directory name.** `pulls/<pull-number>/meta.json` returns 404; only `pulls/<pr-dir>/meta.json` resolves. Take `<pr-dir>` from the index or a listing; never assemble it.
 3. **Records are envelopes.** A record is `{ provider, objectType, objectId, deleted, payload }`. The provider's object is under `payload` — `jq .payload.state`, not `jq .state`.
-4. Alias views (`by-id/`, `by-title/`, `by-state/`, `by-creator/`, `by-edited/`) live in a flat sibling namespace, `/github/repos/<owner>__<repo>/pulls/…`, not under the canonical repo path. Linear's are at `/linear/issues/by-id/<TICKET>.json`.
+4. Alias views live in a flat sibling namespace for GitHub — `/github/repos/<owner>__<repo>/pulls/by-id/<pull-number>.json`, not under the canonical repo path — and under the canonical subtree for Linear (`/linear/issues/by-id/<TICKET>.json`). Which views exist varies by adapter and resource, so list the alias directory rather than assuming one.
 
 ## What you may read and write
 

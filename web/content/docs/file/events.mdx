@@ -65,7 +65,7 @@ Or from the SDK with `onWrite`, which subscribes over the same WebSocket stream 
 import { onWrite } from '@relayfile/sdk';
 
 onWrite('/linear/issues/**', async (event) => {
-  if (event.source === 'agent') return; // ignore our own writes
+  if (event.origin === 'agent_write') return; // ignore our own writes
   await agent.handle(event);
 }, { client, workspaceId, operations: ['create', 'update'] });
 ```

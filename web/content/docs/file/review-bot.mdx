@@ -390,7 +390,7 @@ The bot doesn't need a GitHub App endpoint of its own. A provider webhook is alr
 From the CLI, `relayfile listen` streams the feed and runs a command per event:
 
 ```bash
-relayfile listen default \
+relayfile listen review-bot \
   --path "/github/repos/acme/api/pulls/**" \
   --event file.created \
   --run "review-bot start {{path}}"

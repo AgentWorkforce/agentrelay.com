@@ -1,6 +1,6 @@
 ---
 title: 'Mount layout'
-description: 'Every Relayfile mount is self-describing: LAYOUT.md, per-integration layout files, _index.json, canonical naming, and four alias views.'
+description: 'Every Relayfile mount is self-describing: LAYOUT.md, per-integration layout files, _index.json, canonical naming, and per-adapter alias views.'
 ---
 
 Every mount is self-describing. The agent never needs to learn paths from external documentation — `cat mount/LAYOUT.md` lists everything, and per-integration `LAYOUT.md` files document the tree shape for each provider. This is deliberate: an agent oriented by reading the tree itself doesn't carry path knowledge in its prompt or schema.
@@ -20,12 +20,15 @@ mount/
 │   │   ├── by-id/AGE-12.json
 │   │   └── by-state/in-progress/AGE-12__fix-login-bug.json
 │   └── users/by-name/dana.json
-└── github/
-    └── repos/
-        ├── _index.json
-        ├── acme/api/
-        │   └── pulls/42__bump-deps/meta.json
-        └── by-name/acme__api.json
+├── github/
+│   ├── LAYOUT.md
+│   └── repos/
+│       ├── _index.json
+│       └── acme/api/
+│           ├── pulls/_index.json
+│           └── pulls/42__bump-deps/meta.json   # <number>__<slug>
+└── github/repos/acme__api/                     # flat alias namespace
+    └── pulls/by-id/42.json
 ```
 
 ## Self-describing files
@@ -51,16 +54,18 @@ The first path is the canonical human-readable form. The second is a legacy fall
   Take the exact filename from a listing or `_index.json` rather than assembling one. Some adapters require the full `<number>__<slug>` directory on reads — for GitHub, `pulls/59/meta.json` returns `404` while `pulls/59__<slug>/meta.json` resolves — and the same adapter may still accept a bare id on the write path.
 </Note>
 
-## The four alias views
+## Alias views
 
-Each resource type ships four alias views out of the box, so an agent can navigate the same records by whichever key it has in hand:
+Alias views let an agent navigate the same records by whichever key it has in hand — `by-id/`, `by-title/`, `by-state/`, `by-edited/`, `by-assignee/`, `by-creator/`, `by-priority/`, `by-name/`, `by-uuid/`. They are views over the same canonical entities, not copies you have to keep in sync.
 
-- **`by-title/`** — slug lookups (`AGE-12-fix-login-bug.json`).
-- **`by-id/`** — identifier lookups (`AGE-12.json`).
-- **`by-name/`** — human-readable name lookups (`dana.json`, `acme__api.json`).
-- **`by-state/`** — grouped by issue or PR state (`by-state/in-progress/...`).
+**Which views exist, and where they live, is decided by the adapter and the resource** — there is no fixed set. Two things to check in the provider's `LAYOUT.md` before building a path:
 
-These are views over the same canonical entities, not copies you have to keep in sync. An agent that knows only a state can `ls by-state/in-progress/`; one that knows only a name can read `by-name/dana.json`.
+- **Location.** Linear puts them under the canonical subtree (`/linear/issues/by-id/AR-100.json`). GitHub puts them in a *flat sibling namespace* keyed `<owner>__<repo>` (`/github/repos/acme__api/pulls/by-id/42.json`) — there is no `by-name` under `/github/repos/`.
+- **Set.** On a live workspace, GitHub pulls expose `by-creator`, `by-edited`, `by-id`, `by-state`, and `by-title`; GitHub issues expose four of those; Linear issues add `by-assignee`, `by-priority`, and `by-uuid`.
+
+<Note>
+  A flat alias directory also has an `_index.json`, and it means something different: it is a manifest of which alias subdirectories exist (`{ "rows": [ { "title": "by-id", "file": "by-id/" } ] }`), not a record index. Only the canonical tree's `_index.json` lists records, as a bare JSON array.
+</Note>
 
 ## Lazy repo materialization
 
