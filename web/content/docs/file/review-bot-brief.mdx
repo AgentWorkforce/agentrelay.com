@@ -4,7 +4,11 @@ description: 'A complete, copy-paste operating document for a Relayfile-backed P
 ---
 
 <Note>
-  **This whole page is the brief.** Everything below is addressed to the agent, not to you. Take it with **Copy page as markdown** (top right) or `curl -o AGENTS.md https://agentrelay.com/docs/file/markdown/review-bot-brief.md`.
+  **This whole page is the brief.** Everything below is addressed to the agent, not to you — it is meant to be fetched as markdown and handed over, not browsed:
+
+  ```bash
+  curl -o AGENTS.md https://agentrelay.com/docs/file/markdown/review-bot-brief.md
+  ```
 
   Before handing it over, replace every `<angle-bracket>` placeholder — `<owner>/<repo>` and the specialist name are the two you set once, and `<run-id>`, `<pr-dir>`, `<pull-number>`, `<TICKET>`, `<sha>`, `<model-id>`, and `<opId>` are filled per run or per finding. Verified against `relayfile` 0.10.53; it pairs with [Build a PR review bot](/docs/file/review-bot).
 </Note>

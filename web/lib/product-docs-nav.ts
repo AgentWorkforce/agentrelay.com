@@ -29,6 +29,12 @@ export interface ProductDocSection {
   repo: string;
   /** Current published version, shown as a badge in the sidebar header. */
   version?: string;
+  /**
+   * Slugs that are built and indexed but deliberately kept out of the sidebar —
+   * pages whose real audience is an agent fetching the `.md` mirror, not a
+   * human browsing the nav.
+   */
+  unlistedSlugs?: string[];
   nav: NavGroup[];
 }
 
@@ -38,6 +44,8 @@ export const fileSection: ProductDocSection = {
   tagline: 'The event layer for AI agents.',
   repo: 'AgentWorkforce/relayfile',
   version: '0.10.53',
+  // Handed to an agent as markdown from the review-bot guide, not browsed.
+  unlistedSlugs: ['review-bot-brief'],
   nav: [
     {
       title: 'Start',
@@ -49,10 +57,7 @@ export const fileSection: ProductDocSection = {
     },
     {
       title: 'Guides',
-      items: [
-        { title: 'Build a PR review bot', slug: 'review-bot' },
-        { title: 'Review bot agent brief', slug: 'review-bot-brief' },
-      ],
+      items: [{ title: 'Build a PR review bot', slug: 'review-bot' }],
     },
     {
       title: 'Concepts',
@@ -221,7 +226,12 @@ export function getProductSectionForPath(pathname: string): ProductDocSection | 
 }
 
 export function getProductDocSlugs(section: ProductDocSection): string[] {
-  return [...new Set(section.nav.flatMap((group) => group.items.map((item) => item.slug)))];
+  return [
+    ...new Set([
+      ...section.nav.flatMap((group) => group.items.map((item) => item.slug)),
+      ...(section.unlistedSlugs ?? []),
+    ]),
+  ];
 }
 
 export const productBasePath = (section: ProductDocSection): string => `/docs/${section.id}`;
