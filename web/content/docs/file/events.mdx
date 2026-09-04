@@ -57,7 +57,7 @@ relayfile listen \
   --run "claude --print 'Triage this: {{path}}'"
 ```
 
-`relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]` streams the workspace's event feed. `--format json` prints one event object per line, for piping into anything that isn't a shell command. To fan events out to a channel instead of a local process, bind the glob to a webhook with `relayfile integration bind <provider> <glob> --channel … --webhook … --webhook-token …`.
+`relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]` streams the workspace's event feed. `--run` substitutes `{{path}}`, `{{type}}`, `{{provider}}`, and `{{revision}}` as single values, plus `{{event}}` for the whole event as space-separated `key:value` pairs — quote that one, or its dozen-odd tokens splatter across the command's arguments. `--format json` prints one event object per line, for piping into anything that isn't a shell command. To fan events out to a channel instead of a local process, bind the glob to a webhook with `relayfile integration bind <provider> <glob> --channel … --webhook … --webhook-token …`.
 
 Or from the SDK with `onWrite`, which subscribes over the same WebSocket stream and dispatches by pattern:
 

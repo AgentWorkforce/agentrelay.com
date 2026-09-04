@@ -99,11 +99,34 @@ relayfile listen \
 | `--provider` | all | Only events from one provider |
 | `--path` | all | Path glob to filter on |
 | `--event` | all | Event type (`file.created`, `file.updated`, `file.deleted`) |
-| `--run` | (none) | Command to execute per event; `{{path}}` is substituted |
+| `--run` | (none) | Command to execute per event, with placeholder substitution (below) |
 | `--format` | `text` | `text` or `json` (one event object per line) |
 | `--background` | `false` | Detach and keep listening |
 
+`--run` substitutes five placeholders into the command:
+
+| Placeholder | Expands to | Example |
+|---|---|---|
+| `{{path}}` | the changed path | `/runs/pr-59/findings/security.json` |
+| `{{type}}` | the event type | `file.created` |
+| `{{provider}}` | the owning provider | `github` |
+| `{{revision}}` | the file's revision | `rev_2936535` |
+| `{{event}}` | **the whole event**, as space-separated `key:value` pairs | `type:file.created path:/runs/… revision:rev_… eventId:evt_… origin:agent_write …` |
+
+<Warning>
+  Quote `{{event}}`. It expands to the entire event — a dozen or more space-separated tokens — so an unquoted `--run "my-agent --event {{event}}"` splatters them across `argv`. Write `--run "my-agent --event '{{event}}'"`. The single-value placeholders are passed as one argument each.
+</Warning>
+
 Events carry `eventId`, `type`, `path`, `revision`, `provider`, `origin`, `correlationId`, and — for small files — the content inlined. See [Events and webhooks](/docs/file/events).
+
+To keep a subscriber running across reboots, `relayfile supervisor install` accepts every `listen` flag and embeds them verbatim into a launchd (macOS) or systemd (Linux) unit that restarts on failure:
+
+```bash
+relayfile supervisor install \
+  --path "/linear/issues/by-state/triage/**" --event file.created \
+  --run "claude --print 'New triage issue at {{path}}. Assign it.'"
+relayfile supervisor status
+```
 
 <Note>
   `listen` is missing from `relayfile --help` and `relayfile help listen` prints the generic help, but `relayfile listen --help` shows its usage. Expect to supervise it: on a busy workspace the stream can end mid-message, and reconnecting immediately earns a `429` on the WebSocket handshake — run it with `--background` or under `relayfile supervisor install`, and back off between reconnects.

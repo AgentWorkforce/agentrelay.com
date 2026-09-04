@@ -396,7 +396,7 @@ relayfile listen default \
   --run "review-bot start {{path}}"
 ```
 
-Its full surface is `relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]`. A delivered event carries `eventId`, `type`, `path`, `revision`, `provider`, `origin`, `correlationId`, and — for small files — the content inlined, so the handler usually needs no follow-up read:
+Its full surface is `relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]`, and `--run` substitutes `{{path}}`, `{{type}}`, `{{provider}}`, `{{revision}}`, and `{{event}}` (the whole event — quote it). A delivered event carries `eventId`, `type`, `path`, `revision`, `provider`, `origin`, `correlationId`, and — for small files — the content inlined, so the handler usually needs no follow-up read:
 
 ```json
 {"type":"file.created","path":"/runs/pr-59/findings/security.json","revision":"rev_2935117",
