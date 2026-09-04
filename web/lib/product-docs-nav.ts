@@ -37,7 +37,7 @@ export const fileSection: ProductDocSection = {
   label: 'Relayfile',
   tagline: 'The event layer for AI agents.',
   repo: 'AgentWorkforce/relayfile',
-  version: '0.10.31',
+  version: '0.10.53',
   nav: [
     {
       title: 'Start',
@@ -45,6 +45,13 @@ export const fileSection: ProductDocSection = {
         { title: 'Introduction', slug: 'introduction' },
         { title: 'Quickstart', slug: 'quickstart' },
         { title: 'Why files', slug: 'why-files' },
+      ],
+    },
+    {
+      title: 'Guides',
+      items: [
+        { title: 'Build a PR review bot', slug: 'review-bot' },
+        { title: 'Review bot agent brief', slug: 'review-bot-brief' },
       ],
     },
     {

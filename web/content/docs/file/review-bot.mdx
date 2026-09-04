@@ -1,0 +1,446 @@
+---
+title: 'Build a PR review bot'
+description: 'End-to-end: connect GitHub with one command, add the rest of your context providers, give every sandbox the same workspace, and post the review back by writing a file.'
+---
+
+A PR review bot is the shape Relayfile fits best: several agents, several providers, one shared state. This guide runs the whole flow end to end — from an empty machine to a bot whose orchestrator and specialists all read the same PR, coordinate through files, and post the finished review back to GitHub without any of them holding a provider token.
+
+<Note>
+  Every command, path, and payload below was run against a live workspace on `relayfile` **0.10.53**. The review in step 7 was posted by writing the file this guide tells you to write — [`agentrelay.com#59` review 5112118049](https://github.com/AgentWorkforce/agentrelay.com/pull/59#pullrequestreview-5112118049). Where a path or flag is version-dependent, it says so.
+</Note>
+
+## What you're building
+
+```text
+                    Relayfile workspace  (github + linear + notion + slack)
+                                  │
+        ┌─────────────────────────┼─────────────────────────┐
+        │                         │                         │
+  orchestrator sandbox      security sandbox          quality sandbox
+  mount: /workspace         mount: /workspace         mount: /workspace
+  read  /github/**          read  /github/**          read  /github/**
+  read  /notion/**          read  /runs/**            read  /runs/**
+  write /runs/**            write /runs/**            write /runs/**
+```
+
+Every sandbox works against the *same* workspace. The orchestrator writes its recon notes to `/runs/…`; the specialists read them as ordinary files a second later. Specialists write findings to `/runs/…`; the orchestrator streams them out as each one lands. Nothing in that loop is a queue, a webhook, or a bespoke protocol — it's [real-time sync](/docs/file/realtime-sync) over a shared tree.
+
+The three things this guide buys you:
+
+- **One integration surface.** Adding Linear or Slack context later is `relayfile integration connect`, not another OAuth app, webhook endpoint, and client library.
+- **Context across sandboxes.** Specialists in separate sandboxes see each other's work through the filesystem.
+- **Writeback without provider tokens.** The bot posts its review by writing JSON to a path. Retries, rate limits, and dead-lettering are the writeback workers' problem.
+
+## Where it runs
+
+The integration stack is hosted either way — what changes is where the bot's processes live and how they get credentials.
+
+| | Workstation | Cloud sandboxes | Serverless / CI step |
+|---|---|---|---|
+| Provisioning | `relayfile setup` once, interactively | `relayfile setup` once by a human, **or** headless with `--cloud-token` | same one-time provisioning |
+| Per-run access | long-lived `relayfile mount --background` | `ensureMountedWorkspace` per sandbox ([step 5](#5-give-every-sandbox-the-same-workspace)) | no mount — the HTTP API directly |
+| Credentials in the process | your local relay session | a workspace-scoped JWT from `handle.env()` | `RELAYFILE_TOKEN` in the environment |
+| Good for | building and debugging the bot | the real fleet — one sandbox per specialist | a single review pass with no daemon |
+
+**Provisioning happens once; access happens per run.** A cloud bot doesn't re-do OAuth on every PR — it joins a workspace that's already connected.
+
+<Warning>
+  A workspace can have exactly **one registered local mirror per machine**. Pointing `relayfile mount` at a second directory fails with *"workspace … is already mirrored at …; refusing to silently re-home it"*. That's a guard, not a bug: `--rehome` **moves** the existing mirror rather than adding one. On a machine that already mounts the workspace for something else, use the API path instead of re-homing someone else's mirror.
+</Warning>
+
+## 1. Connect GitHub
+
+One command logs you into Cloud, creates the workspace, runs the provider OAuth, waits for the first sync, and mounts the result:
+
+```bash
+relayfile setup \
+  --provider github \
+  --workspace review-bot \
+  --local-dir ./relayfile-mount \
+  --no-open
+```
+
+`--no-open` prints the login and connect URLs instead of launching a browser — always pass it when an agent (or CI) is driving the command, since a headless browser launch burns the OAuth state.
+
+<Note>
+  Both URLs are short-lived. A Cloud device code expires in minutes and the Nango connect URL has its own TTL, so complete them while the command is still waiting. If it exits first, re-run the same line — a re-run reuses the workspace and only opens a new connect flow when the provider isn't connected yet.
+</Note>
+
+### Provisioning from a machine with no browser
+
+If the bot is provisioned by CI or a deploy job rather than a person at a laptop, skip the browser login with a Cloud token and skip the mount loop — this step only needs to leave a connected workspace behind:
+
+```bash
+RELAYFILE_CLOUD_TOKEN="$CLOUD_TOKEN" relayfile setup \
+  --provider github \
+  --workspace review-bot \
+  --skip-mount \
+  --no-open
+```
+
+On a headless host you can also authorize from a browser on another machine — `agent-relay cloud login --device` prints a URL and a short code, then blocks until you approve it.
+
+The same provisioning from code, when your control plane already holds Cloud tokens:
+
+```ts
+import { RelayfileSetup } from "@relayfile/sdk"
+
+const setup = RelayfileSetup.fromCloudTokens(
+  { accessToken, refreshToken, accessTokenExpiresAt },
+  { cloudApiUrl: "https://agentrelay.com/cloud" },
+)
+
+const workspace = await setup.joinWorkspace("rw_…")
+const client = workspace.client()   // bound, auto-refreshing — used throughout this guide
+
+const { connectLink } = await workspace.connectIntegration("github")
+if (connectLink) {
+  await notifyOperator(connectLink)          // one-time human step
+  await workspace.waitForConnection("github")
+}
+```
+
+<Warning>
+  Use the `rw_…` workspace id for every data-plane call. It is not interchangeable with the request-side app UUID, and substituting one for the other fails in ways that look like a permissions problem.
+</Warning>
+
+## 2. Verify before you write any bot code
+
+```bash
+relayfile status review-bot
+```
+
+The output is per-provider health plus a mirror footer:
+
+```text
+workspace rw_…  (review-bot)   mode: poll   lag: 0s
+auth: agent-relay session ok
+  github       healthy  queue lag 0s   event active; last event 3m12s ago
+
+local mirror: /Users/you/relayfile-mount
+daemon: not running
+
+pending writebacks: 0    conflicts: 0    denied: 0
+```
+
+- **`lag`** and per-provider `healthy` / `lagging` tell you whether reads will be current.
+- **`daemon: not running`** means the mirror is stale until you start it: `relayfile mount review-bot ./relayfile-mount --background`.
+- The footer counts (`pending writebacks`, `conflicts`, `denied`) are **local mirror state**. Dead-letter counts live in a different command — see step 7.
+
+Then let the workspace describe its own shape rather than hard-coding paths from this page:
+
+```bash
+relayfile read review-bot /LAYOUT.md          # top-level guide, lists every provider root
+relayfile read review-bot /github/LAYOUT.md   # the GitHub adapter's own contract
+```
+
+<Note>
+  The provider layout file is `<provider>/LAYOUT.md` — uppercase, no leading dot. `/github/LAYOUT.md` is long and worth reading in full: it documents index row shapes, alias views, and which paths are artifacts rather than records.
+</Note>
+
+`relayfile tree` and `relayfile read` work against the server with no mount, which is what CI and a laptop checking on a cloud workspace both want:
+
+```bash
+relayfile tree review-bot /github/repos --depth 2
+```
+
+Two things to expect from `tree` on a real workspace: it **paginates** (it prints a `next cursor:` line on large directories), and a busy workspace returns `http 429 workspace_busy`. Retry with backoff, and prefer reading a directory's `_index.json` over walking it.
+
+## 3. Add the rest of the bot's context
+
+A review is better when the reviewer can see the ticket that motivated the PR and the standards it's supposed to follow. Don't guess provider ids — ask the live catalog:
+
+```bash
+relayfile integration available --refresh
+relayfile integration search notion --refresh --json
+```
+
+Then connect what you need. Each provider lands as another subtree under the same workspace:
+
+```bash
+relayfile integration connect linear --workspace review-bot --no-open
+relayfile integration connect notion --workspace review-bot --no-open
+relayfile integration connect slack  --workspace review-bot --no-open
+relayfile integration list --workspace review-bot
+```
+
+`integration list` prints one row per connection with `provider / status / lag / last_event_at`, so it doubles as a health check.
+
+Nango is the default backend; request Composio explicitly for toolkits it brokers (`--backend composio`). If a Composio toolkit can't create managed auth automatically, the command says so — a human adds a custom auth config in Composio, then re-runs the identical command.
+
+<Note>
+  Jira and Confluence need a follow-up: a single Atlassian grant can cover several sites, so the CLI prompts for one after OAuth and stores its `cloudId`. If the picker was skipped, set it explicitly with `relayfile integration set-metadata jira cloudId=… baseUrl=https://….atlassian.net --workspace review-bot --yes`. The command replaces the whole metadata namespace, so pass every key you want to keep.
+</Note>
+
+## 4. Read the PR
+
+Start from the index, not from a guessed filename:
+
+```bash
+relayfile read review-bot /github/repos/AgentWorkforce/agentrelay.com/pulls/_index.json | jq '.[0:3]'
+```
+
+Canonical `_index.json` files are a **bare JSON array**. Pull rows carry the fields you'd otherwise open every record to get:
+
+```json
+{ "id": "59", "title": "docs(relayfile): Guides section…", "updated": "2026-09-04T10:06:10Z",
+  "number": 59, "state": "open", "labels": [], "headRef": "docs/relayfile-review-bot-guide" }
+```
+
+That's enough to pick a PR by state, label, or branch without reading a single record. Then open the record:
+
+```bash
+R=/github/repos/AgentWorkforce/agentrelay.com
+relayfile read review-bot "$R/pulls/59__docs-relayfile-guides-section-pr-review-bot-walkthrough-local-cloud-and-a-copy/meta.json"
+```
+
+Three details that will bite an agent that guesses:
+
+1. **GitHub record directories are `<number>__<slug>` — number first.** The generic "the id is the last `__` segment" rule in the root `LAYOUT.md` holds for Linear (`<name>__<uuid>`), not for GitHub.
+2. **The full directory name is required for reads.** `pulls/59/meta.json` returns `404 not_found`; only `pulls/59__<slug>/meta.json` resolves. Take the name from `_index.json` or a directory listing — never assemble it.
+3. **Records are envelopes.** A record is `{ provider, objectType, objectId, deleted, payload }` and the provider's own object is under `payload`. `jq .state` returns null; `jq .payload.state` is what you want.
+
+Alias views live in a flat sibling namespace, `<owner>__<repo>`, not under the canonical repo path:
+
+```bash
+relayfile tree review-bot /github/repos/AgentWorkforce__agentrelay.com/pulls --depth 1
+# → by-creator/  by-edited/  by-id/  by-state/  by-title/
+```
+
+Linear works the same way with its own keys — `/linear/issues/by-id/AR-100.json` resolves a ticket by its human identifier:
+
+```bash
+relayfile read review-bot /linear/issues/by-id/AR-100.json | jq '.payload.title'
+```
+
+## 5. Give every sandbox the same workspace
+
+This is the step that makes it a fleet instead of a script. From inside an already-authorized sandbox, `ensureMountedWorkspace` mints a scoped mount token, supervises the `relayfile-mount` process, and resolves once the mirror is reachable:
+
+```ts
+import { RelayfileSetup } from "@relayfile/sdk"
+
+const setup = new RelayfileSetup({ accessToken })
+
+const handle = await setup.ensureMountedWorkspace({
+  workspaceId: "rw_…",
+  provider: "github",
+  verifyProvider: true,
+  providerReadyTimeoutMs: 30_000,
+  localDir: "/workspace",
+  scopes: [
+    "relayfile:fs:read:/github/**",
+    "relayfile:fs:read:/runs/**",
+    "relayfile:fs:write:/runs/**",
+  ],
+})
+
+// hand the mount to the specialist process — no provider tokens cross this line
+await sandbox.process.executeCommand("claude --print 'Review /workspace'", {
+  env: handle.env(),
+})
+```
+
+Three things to keep straight when you fan this out:
+
+- **`verifyProvider` gates on readiness.** Without it a specialist can mount before the first sync finishes and review an empty tree. `ProviderNotConnectedError` and `ProviderNotReadyError` are typed so you can tell "never connected" from "still syncing".
+- **Scope each specialist down.** The minted token's scopes are a subset of the caller's grant. Use the path-scoped form — a bare `fs:read` can fall back to a broad grant. See [ACLs](/docs/file/acls).
+- **`handle.env()` is the whole handoff.** It carries `RELAYFILE_BASE_URL`, `RELAYFILE_TOKEN`, `RELAYFILE_WORKSPACE`, and `RELAYFILE_LOCAL_DIR`. The sandbox never sees your Cloud access token or the provider credentials.
+
+Each sandbox is a separate machine, so the one-mirror-per-machine rule doesn't constrain the fleet — it only bites when two things on the *same* box want the same workspace.
+
+### Where the cloud process gets its credentials
+
+`connect()` from `@relayfile/agents` resolves credentials in two steps: environment overrides first — `CLOUD_API_URL`, `CLOUD_API_ACCESS_TOKEN`, `CLOUD_WORKSPACE_ID` — then `~/.agentworkforce/relay/cloud-auth.json`, written by `agent-relay cloud login`. The env path is for a cloud runner; the file path is for a workstation.
+
+```ts
+import { connect, tools } from "@relayfile/agents"
+
+const rf = await connect({
+  agentName: "security-reviewer",
+  scopes: ["relayfile:fs:read:/github/**", "relayfile:fs:write:/runs/**"],
+})
+```
+
+### Or skip the mount entirely
+
+A cloud agent with no writable disk — a Lambda, a Worker, a short-lived job — doesn't need a mirror. The same workspace is reachable over HTTP with the same paths, using the `client` from step 1 (`workspace.client()`, or `rf.client` from `connect()`):
+
+```ts
+const tree = await client.listTree(workspaceId, { path: "/github/repos/acme/api/pulls", depth: 2 })
+const pr = await client.readFile(workspaceId, "/github/repos/acme/api/pulls/42__bump-deps/meta.json")
+```
+
+You lose `grep` over the tree and gain a cold start measured in milliseconds. A useful split: mount in the specialist sandboxes that explore the PR, use the client in the small functions that read one record or post one result.
+
+## 6. Coordinate through the filesystem
+
+Keep the bot's own state on a path no adapter owns — `/runs/**` here. The write still persists and still raises an event, but no provider call is queued. You can see the difference in the write response: a path under a provider returns a real `opId` with `"state":"pending"`, while a path with no adapter behind it returns an empty `opId` and `"state":"succeeded"` immediately.
+
+```json
+// PUT /runs/pr-59/findings/security.json
+{"opId":"","status":"queued","targetRevision":"rev_…","writeback":{"provider":"runs","state":"succeeded"}}
+```
+
+The orchestrator finishes recon and publishes it as a file:
+
+```bash
+cat > $MOUNT/runs/pr-59/recon.md <<'EOF'
+# PR 59 — recon
+Touched: src/auth/session.ts, src/auth/index.ts
+Exported from: src/auth/index.ts (re-exported by src/server.ts)
+Ticket: AR-100
+EOF
+```
+
+Every specialist reads that one file instead of re-deriving the map of the PR. Then each writes its own findings under its own path, so two specialists never contend for one file:
+
+```bash
+echo '{"specialist":"security","findings":[]}' \
+  > $MOUNT/runs/pr-59/findings/security.json
+```
+
+The orchestrator doesn't wait for the slowest specialist. It subscribes to the findings directory and publishes each result the moment it lands:
+
+```ts
+import { readFile } from "node:fs/promises"
+import { join } from "node:path"
+import { onWrite } from "@relayfile/sdk"
+
+onWrite("/runs/pr-59/findings/**", async (event) => {
+  // the file is materialized before the event fires — just read it
+  const finding = JSON.parse(await readFile(join(mountDir, event.path), "utf8"))
+  await publishFinding(finding)   // stream it out now, don't wait for the rest
+}, { client, workspaceId, operations: ["create", "update"] })
+```
+
+Delivery is at-least-once and `revision` is the per-file ordering key, so deduplicate on `eventId` and keep the handler idempotent. `event.path` is a workspace path; joining it with the mount root only works when the mount isn't scoped to a subtree with `--remote-path`.
+
+## 7. Post the review back to GitHub
+
+Writeback is a file write, but discover the contract first. Discovery documents live in their own `/discovery` tree with literal placeholder segments — **not** as siblings of the records:
+
+```bash
+D="/discovery/github/repos/{owner}/{repo}/pulls/{pullNumber}"
+relayfile read review-bot /discovery/github/.adapter.md
+relayfile read review-bot "$D/reviews/.schema.json"
+relayfile read review-bot "$D/reviews/.create.example.json"
+```
+
+`.adapter.md` is the authority on which resources are writable, the ID pattern for each, and what a create draft becomes. For pull request reviews it gives the resource as `/github/repos/{owner}/{repo}/pulls/{pullNumber}/reviews/<id>.json` with ID pattern `^\d+$`, and the review schema requires **`event`, `body`, and `comments`** — omitting `comments` fails validation.
+
+Then the three write rules:
+
+- **CREATE** — write a valid payload to a *non-canonical* filename in the resource directory. Any name that doesn't match the resource's ID pattern is a draft.
+- **PATCH** — write only the mutable fields to the canonical `<id>.json`. Fields marked `readOnly` in the schema are rejected.
+- **DELETE** — remove the canonical file, where `.adapter.md` says delete is supported.
+
+```bash
+cat > "$MOUNT/github/repos/AgentWorkforce/agentrelay.com/pulls/59/reviews/draft-security.json" <<'JSON'
+{ "event": "COMMENT", "body": "2 findings from the security pass…", "comments": [] }
+JSON
+```
+
+<Warning>
+  **Write paths use the bare pull number, reads use `<number>__<slug>`.** `pulls/59/reviews/draft-security.json` is the correct write target even though `pulls/59/meta.json` doesn't exist for reading. Don't derive one from the other.
+
+  The same directory accepts `merge.json` and `close.json` as write resources — writing either one merges or closes the pull request. Keep a review bot's write grant scoped so a confused agent can't reach them.
+</Warning>
+
+The adapter rewrites your draft file into a receipt naming the real record:
+
+```json
+{ "created": 5112118049, "externalId": "5112118049", "id": "5112118049",
+  "path": "/github/repos/AgentWorkforce/agentrelay.com/pulls/59/reviews/draft-security.json",
+  "url": "https://github.com/AgentWorkforce/agentrelay.com/pull/59#pullrequestreview-5112118049" }
+```
+
+Read the file back until `created` appears — that receipt, not the write's HTTP 200, is the proof the review exists. Editor scratch names (`partial.json`, `.tmp.json`, `*.tmp.json`, `*.partial.json`) are ignored and never become drafts.
+
+### Doing it over HTTP
+
+From a function with no mount, the same write is one request — and both headers are **required**, not decoration:
+
+```bash
+curl -sS -X PUT \
+  -H "Authorization: Bearer ${RELAYFILE_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -H "X-Correlation-Id: review-bot-$(date +%s)" \
+  -H "If-Match: *" \
+  "${RELAYFILE_BASE_URL}/v1/workspaces/${RELAYFILE_WORKSPACE}/fs/file" \
+  -d '{"path":"/github/repos/…/pulls/59/reviews/draft.json","content":"{…}","contentType":"application/json"}'
+```
+
+Omit `X-Correlation-Id` and you get `400 bad_request`; omit `If-Match` and you get `412 precondition_failed`. `If-Match: *` is create-or-overwrite; pass a revision to make the write conditional.
+
+### Verifying
+
+```bash
+relayfile writeback status review-bot --json
+```
+
+This reports the **local mirror's** queue — `pending`, `failed`, `dead-lettered` — so it's the check for writes made through a mount. A write made over HTTP is a server-side op instead; verify that one by reading the draft back for its receipt.
+
+If an op dead-letters, its record under `$MOUNT/.relay/dead-letter/<opId>.json` carries `lastStatus` and a truncated `lastBody`; fix the cause, then `relayfile writeback retry --opId <opId> review-bot`. Denied paths are recorded in `$MOUNT/.relay/state.json` under `deniedPaths` (some versions also write `permissions-denied.log`). Never write anything under `.relay/` yourself.
+
+## 8. Trigger on a new PR without running a webhook server
+
+The bot doesn't need a GitHub App endpoint of its own. A provider webhook is already normalized into a file event on a canonical path, and the file is materialized *before* the event fires — so the handler starts with state on disk, not a payload to parse.
+
+From the CLI, `relayfile listen` streams the feed and runs a command per event:
+
+```bash
+relayfile listen review-bot \
+  --path "/github/repos/acme/api/pulls/**" \
+  --event file.created \
+  --run "review-bot start {{path}}"
+```
+
+Its full surface is `relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]`, and `--run` substitutes `{{path}}`, `{{type}}`, `{{provider}}`, `{{revision}}`, and `{{event}}` (the whole event — quote it). A delivered event carries `eventId`, `type`, `path`, `revision`, `provider`, `origin`, `correlationId`, and — for small files — the content inlined, so the handler usually needs no follow-up read:
+
+```json
+{"type":"file.created","path":"/runs/pr-59/findings/security.json","revision":"rev_2935117",
+ "eventId":"evt_2507297","provider":"runs","origin":"agent_write","inlineContent":true,"content":"{}"}
+```
+
+`origin` is what keeps a bot from reacting to itself: `provider_sync` is a webhook from the provider, `agent_write` is another agent's write.
+
+Alternatives: subscribe in-process with the SDK (`connectWebSocket({ onEvent })`, or the glob-filtered `onWrite` from step 6), or fan events out to a channel with `relayfile integration bind <provider> <glob> --channel … --webhook … --webhook-token …`.
+
+<Warning>
+  Supervise the subscriber. On a busy workspace the event stream drops within seconds — either mid-message or on a frame EOF — and reconnecting too fast earns a `429` on the WebSocket handshake. Run it with `--background` or under `relayfile supervisor install`, and back off between reconnects. A subscriber that reconnects with a cursor gets the events it missed.
+</Warning>
+
+Either way the reviewer wakes on provider state changing rather than on a request arriving — see [Events and webhooks](/docs/file/events). In the cloud, keep the subscriber in one long-lived orchestrator that spawns a sandbox per PR.
+
+## Tear down
+
+```bash
+relayfile stop review-bot
+relayfile integration disconnect github --workspace review-bot --yes
+relayfile workspace delete review-bot --yes
+rm -rf ./relayfile-mount
+```
+
+<Warning>
+  `relayfile workspace join <id> --name <name>` **renames an existing local entry** for that workspace id rather than adding a second one. If you're scripting workspace setup, check `relayfile workspace list` before and after.
+</Warning>
+
+<BannerLink href="/docs/file/review-bot-brief" icon="bot">
+  Copy-paste agent brief — the same contract written for the agent itself, ready to drop in as `AGENTS.md`.
+</BannerLink>
+
+<CardGroup cols={2}>
+  <Card title="Mounting from a sandbox" href="/docs/file/mounting">
+    Every option on `mountWorkspace` and `ensureMountedWorkspace`.
+  </Card>
+  <Card title="ACLs" href="/docs/file/acls">
+    Scope each specialist to the paths it should read and write.
+  </Card>
+  <Card title="Real-time sync" href="/docs/file/realtime-sync">
+    Why the orchestrator sees a specialist's write on the next read.
+  </Card>
+  <Card title="Review bot agent brief" href="/docs/file/review-bot-brief">
+    The copy-paste operating document to hand the agent.
+  </Card>
+</CardGroup>
