@@ -1,0 +1,175 @@
+---
+title: 'Running Factory'
+description: 'The runbook: the full loop on one machine, then the control plane in Cloud with agents on fleet nodes.'
+---
+
+Factory splits into a **control plane** that decides what to work on and **agents** that do the work in real checkouts. This page is the hands-on runbook for both halves: the whole loop on one machine first, then each half in the cloud. [Where it runs](/docs/factory/where-it-runs) is the conceptual map; this is the sequence of commands.
+
+## Prerequisites
+
+| Need | Check |
+|---|---|
+| Factory CLI | `npm install -g @agent-relay/factory` (Node ≥ 22) |
+| `agent-relay` + `relayfile` | Installed and signed in — peers, not dependencies. `factory init` verifies both are on `PATH` |
+| GitHub connected to your relay workspace | With push access. **The GitHub App installation must cover the target repos** — a repo the installation can't see fails every write with `403: Resource not accessible by integration` |
+| Harness CLIs on `PATH` | `claude`, `codex`, `opencode`, … — whatever your agents run |
+| `gh auth login` | Only for `github.identity: "user"`; the default `"auto"` publishes through the connected App |
+
+## Local — the whole loop on one machine
+
+The control plane and every agent run on your box, against the checkouts in your `clonePaths`. Factory reuses a relay broker already running for your workspace and starts one if there isn't.
+
+### 1. Point it at a repo
+
+From the repository checkout you want worked on:
+
+```bash
+factory init
+```
+
+It derives the repo from `origin`, resolves your active workspace, starts the local mount, waits for the GitHub projection of that repo, and writes `factory.config.json` for GitHub-native dispatch. Every check happens before any write, so a failed init leaves nothing behind. Use `factory init owner/repo` when the checkout has no GitHub remote.
+
+### 2. Give the broker a durable identity
+
+If Factory cold-starts its broker, set two variables — this is the difference between restarts that work and restarts that collide:
+
+```bash
+export AGENT_RELAY_STATE_DIR="$PWD/.factory/relay-state"
+export AGENT_RELAY_BROKER_NAME=garden-demo-broker
+```
+
+A self-started broker otherwise names itself after the checkout directory and generates a fresh identity each start. After a crash the name is registered but unproven, and the next start refuses with `agent name … is already registered`. With a dedicated state dir the broker persists its identity and rejoins cleanly; `AGENT_RELAY_BROKER_NAME` keeps the name stable and independent of the directory. Gitignore the state dir; never point it at a project's `.agentworkforce/relay`.
+
+### 3. Plan without touching anything
+
+Label an issue `factory`, then:
+
+```bash
+factory run-once --dry-run
+```
+
+Discovers and triages, writes nothing, spawns nothing. Issues pulled but not dispatched are the [safety scope](/docs/factory/safety-scope) doing its job — they're real, just not opted in.
+
+### 4. Dispatch for real
+
+```bash
+factory dispatch 42      # one issue, deterministically
+factory run-once          # or: whatever is ready, up to batchSize
+```
+
+The sequence, all against the live issue:
+
+1. **Claim** — `factory:in-progress` label, then the dispatch comment, confirmed by provider read-back. Three retries; an exhausted write dead-letters and fails the dispatch rather than reporting success with missing state.
+2. **Worktree** — an isolated checkout per issue on a deterministic `factory/<issue>-<repo>-<run>` branch.
+3. **Implementer** — spawns (codex, claude, … per your config), fixes, commits, pushes the branch. It does not open the PR.
+4. **Publish** — Factory opens the PR through the connected App, then hands it to the reviewer agent.
+5. **Human review** — the issue moves to `factory:human-review`. `mergePolicy` defaults to `never`: every merge is yours.
+
+A one-shot `dispatch` stays alive until its agents exit — default 30 minutes, `FACTORY_AGENT_EXIT_TIMEOUT_MS` — then shuts down the broker it started.
+
+<Note>
+Big workspace? If the roster probe times out and the fleet circuit opens, raise it: `fleetHealth.rosterTimeoutMs` (max 60000), `failureThreshold`, `resetTimeoutMs` in `factory.config.json`.
+</Note>
+
+### 5. Recover from a crash
+
+A killed dispatch leaves recoverable state, not lost work — the durable lifecycle row, deterministic agent identities, and pushed branch all survive. The three residues you may have to clear by hand:
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `Live state changed before writeback` | The run died after claiming the issue | `gh issue edit <n> --remove-label factory:in-progress`, re-dispatch |
+| `registration is create-only` | Stale agent records from the crashed run | `agent-relay agent remove <name>` for the implementer/reviewer names, or `factory reap-orphans` |
+| `operation was aborted due to timeout` | Relaycast throttling | The dispatch retries on its own; if the process died, re-run it — the lifecycle resumes |
+
+Worktree and branch leftovers are ordinary git: `git worktree remove … --force`, `git branch -D <factory/…>`. `factory status` prints in-flight dispatches, held agents, and circuit state as JSON.
+
+## Cloud — each half where it belongs
+
+Two shapes: keep the CLI control plane on a host you choose and place agents on fleet nodes, or host the control plane itself in Cloud.
+
+### CLI control plane + fleet nodes
+
+```bash
+factory start --mode live --backend relay
+```
+
+The control plane runs on your host; agents are placed onto fleet nodes through the hosted engine. Bring a node online:
+
+```bash
+# once per machine — redeem an enrollment token from the Fleet page
+agent-relay cloud enroll --token ocl_node_enr_…
+
+# each boot — node up auto-discovers agent-relay.ts in the working directory
+agent-relay node up
+```
+
+```ts
+// agent-relay.ts — must default-export the node definition
+export { default } from '@agent-relay/factory/node'
+```
+
+The node reads `factory.node.json`: `workspaceId`, `capabilities`, and the `clonePaths`/`cloneRoot` map of checkouts it services. Each mapped repo is advertised as a `repo:<label>` tag so repo-scoped work routes to a node that actually has it; spawns for unadvertised paths are refused.
+
+Relay dispatch is lifecycle-owned, not fire-and-forget: the dispatch process keeps a small publisher runtime alive until the remote branch has produced a PR, terminal writeback is acknowledged, and remote agents are released. The lifecycle — per-run branch, placement results, PR receipt, fenced owner lease — is persisted beside the loop registry, so `factory start` or a replacement process on the same host takes over after a crash.
+
+Run **one** control-plane host per workspace; multiple processes on that host are fenced by a shared lock. Active/active across hosts is deliberately unsupported. For production, point `AGENT_RELAY_STATE_DIR` at a directory distinct from any project broker and set `fleetHealth.requireDedicatedBroker: true` — Factory then refuses to silently reuse an interactive broker. `batchSize` defaults to 1 and is capped at 5.
+
+### Hosted control plane in Cloud
+
+`@agent-relay/factory/hosted` is the worker-safe control-plane entrypoint — no Node filesystem or process dependency, the complete sweep (`reconcile invocation completions → discover → triage → dispatch → merge gate → idempotent writeback`) driven by your host:
+
+```ts
+import {
+  createHostedFactory,
+  DurableObjectHostedFactoryStateStore,
+} from '@agent-relay/factory/hosted'
+
+const state = new DurableObjectHostedFactoryStateStore(durableObjectState.storage)
+const factory = createHostedFactory(
+  { workspaceId, ownerId: isolateId, config },
+  { state, discovery, fleet, completions, mergeGate, writeback, reporter },
+)
+
+await factory.runOnce()      // invoke from cron/alarms and safe webhook wakeups
+```
+
+Your host supplies the ports:
+
+| Port | Supplies |
+|---|---|
+| `state` | Durable coordination storage — the DO adapter stores each workspace independently, with lease claims and lifecycle writes in storage transactions |
+| `discovery` | Ready issues from the mounted tracker |
+| `fleet` | Spawn/status against the hosted engine; the invocation ID is the at-least-once dedupe key |
+| `completions` | Completion lookups — `runOnce()` re-polls every persisted invocation before discovery, so a dropped completion webhook is recovered by the next scheduled sweep |
+| `writeback` | `requestClarification` / `dispatched` / `completed`, each carrying a stable idempotency key |
+| `mergeGate`, `reporter` | Optional: merge verdicts and the `FactoryEventReporter` event stream |
+
+Pushed completions don't have to wait for the sweep: `factory.ingestCompletion(completion)` folds a webhook delivery in directly. Every mutation is fenced against the current lease owner and a monotonically increasing epoch — an expired host cannot write after takeover — and spawn invocation IDs are deterministic, making recovery safe when an external operation succeeds just before the host loses its lease.
+
+Tokens, one per role:
+
+| Token | Prefix | Held by |
+|---|---|---|
+| Workspace key | `rk_live_` | The orchestrator (`RELAY_WORKSPACE_KEY`) — mints Factory's own agent identity |
+| Agent token | `at_live_` | Optional pin for the orchestrator's identity; spawned agents get their own |
+| Node token | `nt_live_` | Each worker node, from `cloud enroll` |
+| Observer token | `ot_live_` | Read-only dashboards and streams — never dispatch |
+
+Hosts that only need the event wire schema, creator, and reporter types should import `@agent-relay/factory/telemetry` instead — it excludes the filesystem-backed outbox.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Observability" href="/docs/factory/observability">
+    Instances, runs, timelines, and what Factory reports to Cloud.
+  </Card>
+  <Card title="Safety scope" href="/docs/factory/safety-scope">
+    Widen what Factory may touch — deliberately.
+  </Card>
+  <Card title="Configuration" href="/docs/factory/configuration">
+    Routing, recipes, models per role, states, and writeback.
+  </Card>
+  <Card title="Where it runs" href="/docs/factory/where-it-runs">
+    The conceptual map behind this runbook.
+  </Card>
+</CardGroup>
