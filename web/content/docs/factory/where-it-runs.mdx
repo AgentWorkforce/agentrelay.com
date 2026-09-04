@@ -65,8 +65,6 @@ Active/active control planes on different hosts are intentionally unsupported: s
 
 ## What runs in Cloud today
 
-For now cloud is where Factory **reports**, not where it runs. [Observability](/docs/factory/observability) — instances, runs, and timelines — plus fleet node enrollment and placement.
+Cloud is where Factory **reports**, where fleet nodes enroll and get placed, and where you can host the control plane yourself. [Observability](/docs/factory/observability) — instances, runs, and timelines — plus fleet node enrollment and placement. The `@agent-relay/factory/hosted` entrypoint runs the complete sweep inside a Cloud worker you own — see [Running Factory](/docs/factory/running) for that runbook.
 
-There is no hosted Factory that runs the loop for you yet: the control plane is something you run, on a machine you choose.
-
-Running on the cloud is coming soon.
+What Cloud doesn't do yet is run Factory **for** you: there is no managed hosted Factory where Agent Relay operates the loop on your workspace. The control plane is something you run — on a machine you choose, or in a Cloud worker you own. A managed hosted Factory is coming soon.
