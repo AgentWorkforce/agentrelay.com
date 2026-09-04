@@ -69,6 +69,13 @@
   gap: 12px;
 }
 
+.brandGroup {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 14px;
+}
+
 .logo {
   color: var(--nav-fg);
   text-decoration: none;
@@ -169,6 +176,10 @@
 
   .logoWordmark {
     height: 22px;
+  }
+
+  .brandGroup {
+    gap: 10px;
   }
 
   .links {

@@ -987,3 +987,219 @@
   .skipPage .investor-marquee { overflow-x: auto; mask-image: none; scrollbar-width: none; }
   .skipPage .investor-marquee::-webkit-scrollbar { display: none; }
 }
+
+/* Agent Relay treatment for the Skip route. */
+.skipPage.relayBrand {
+  --page: #fbfbfa;
+  --paper: #fff;
+  --soft: #f4f5f5;
+  --soft-blue: #edf4f8;
+  --ink: #191919;
+  --muted: #686868;
+  --line: #e2e3e3;
+  --line-strong: #cfd2d3;
+  --accent: #2e6794;
+  --accent-text: #f8fbfd;
+  --page-frame-edge: max(24px, calc((100vw - 1280px) / 2));
+  --radius: var(--r-md);
+  font-family: var(--font-geist-sans), sans-serif;
+  background: var(--page);
+}
+
+.skipPage.relayBrand .hero {
+  position: relative;
+}
+
+.skipPage.relayBrand .hero::before,
+.skipPage.relayBrand .hero::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 18;
+  width: 1px;
+  background: var(--line);
+  content: "";
+  pointer-events: none;
+}
+
+.skipPage.relayBrand .hero::before {
+  left: var(--page-frame-edge);
+}
+
+.skipPage.relayBrand .hero::after {
+  right: var(--page-frame-edge);
+}
+
+.skipPage.relayBrand :is(h1, h2) {
+  font-family: var(--font-heading), sans-serif;
+  text-wrap: balance;
+}
+
+.skipPage.relayBrand .skip-nav-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--nav-fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.08rem;
+  font-weight: 620;
+  letter-spacing: -.055em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.skipPage.relayBrand .skip-nav-wordmark::before {
+  width: 1px;
+  height: 24px;
+  margin-right: 4px;
+  background: color-mix(in srgb, var(--nav-fg) 24%, transparent);
+  content: "";
+}
+
+.skipPage.relayBrand .skip-nav-avatar {
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--nav-fg) 28%, transparent);
+  border-radius: 50%;
+  background: #f3eee5;
+  object-fit: contain;
+}
+
+.skipPage.relayBrand .skip-nav-cta {
+  min-height: 40px;
+  padding: 9px 17px;
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: .84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 180ms var(--ease-out-quint), background 180ms ease;
+}
+
+.skipPage.relayBrand .skip-nav-cta:hover {
+  background: #245a82;
+  transform: translateY(-1px);
+}
+
+.skipPage.relayBrand .skip-nav-cta:active { transform: scale(.97); }
+.skipPage.relayBrand .skip-nav-cta:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+
+.skipPage.relayBrand .hero {
+  border-color: var(--line);
+  padding-top: clamp(112px, 13vh, 136px);
+  background:
+    radial-gradient(circle at 50% 44%, rgba(193, 103, 75, .06), transparent 35rem),
+    linear-gradient(90deg, transparent calc(50% - 561px), var(--line) calc(50% - 561px), var(--line) calc(50% - 560px), transparent calc(50% - 560px)),
+    linear-gradient(90deg, transparent calc(50% + 560px), var(--line) calc(50% + 560px), var(--line) calc(50% + 561px), transparent calc(50% + 561px)),
+    var(--page);
+}
+
+.skipPage.relayBrand .hero h1 {
+  max-width: 14ch;
+  color: var(--ink);
+  font-weight: 560;
+  letter-spacing: -.065em;
+}
+
+.skipPage.relayBrand .agent-name { color: var(--ink); }
+.skipPage.relayBrand .agent-name-logo-codex { background: var(--accent); }
+
+.skipPage.relayBrand :is(.button, .footer-cta) { border-radius: var(--r-sm); }
+
+.skipPage.relayBrand .button-primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.skipPage.relayBrand :is(.button-primary, .skip-nav-cta):hover { background: #245a82; }
+
+.skipPage.relayBrand .hero-work-scene::before {
+  border-color: var(--line);
+  background: var(--soft);
+}
+
+.skipPage.relayBrand :is(.hero-terminal, .hero-briefing, .coordination-scene, .judgment-scene, .ghostty-app, .codex-desktop, .drift-scene, .team-scene) {
+  border-radius: var(--r-md);
+}
+
+.skipPage.relayBrand .hero-briefing {
+  border-color: #d4c7b4;
+  background: #f3eee5;
+  color: #17242c;
+  box-shadow: 0 28px 70px rgba(73, 62, 45, .16);
+}
+
+.skipPage.relayBrand .hero-briefing img {
+  border-color: #cdbfa9;
+  background: #fbfaf7;
+}
+
+.skipPage.relayBrand .hero-briefing small { color: #6e685f; }
+.skipPage.relayBrand .hero-briefing-action { border-radius: var(--r-sm-in); }
+
+.skipPage.relayBrand .investor-strip {
+  border-color: var(--line);
+  background: var(--paper);
+}
+
+.skipPage.relayBrand .investor-logo {
+  color: var(--ink);
+  filter: none;
+  opacity: .92;
+}
+
+.skipPage.relayBrand .routing-section {
+  border-color: var(--line);
+  background: #102131;
+}
+
+.skipPage.relayBrand .feature-oatmeal {
+  border-color: var(--line);
+  background: #f5f1e8;
+  color: var(--ink);
+}
+
+.skipPage.relayBrand .feature-white {
+  border-color: var(--line);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.skipPage.relayBrand .feature-blue {
+  border-color: var(--line);
+  background: #102534;
+}
+
+.skipPage.relayBrand :is(.feature-oatmeal, .feature-white) .onboarding-copy p { color: var(--muted); }
+.skipPage.relayBrand .feature-blue .onboarding-copy p { color: #a8bbc7; }
+
+.skipPage.relayBrand .waitlist-panel {
+  border-color: var(--line-strong);
+  background: var(--paper);
+  box-shadow: 0 32px 90px rgba(27, 51, 66, .22);
+}
+
+.skipPage.relayBrand .waitlist-close,
+.skipPage.relayBrand .waitlist-field input {
+  border-color: var(--line-strong);
+  background: var(--page);
+  color: var(--ink);
+}
+
+.skipPage.relayBrand .waitlist-field input:focus { background: var(--paper); }
+
+@media (max-width: 960px) {
+  .skipPage.relayBrand .hero::before,
+  .skipPage.relayBrand .hero::after { display: none; }
+}
+
+@media (max-width: 760px) {
+  .skipPage.relayBrand .hero { padding-top: 76px; }
+  .skipPage.relayBrand .skip-nav-wordmark { gap: 7px; font-size: .98rem; }
+  .skipPage.relayBrand .skip-nav-wordmark::before { height: 20px; }
+  .skipPage.relayBrand .skip-nav-avatar { width: 27px; height: 27px; }
+}

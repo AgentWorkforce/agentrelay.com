@@ -1,8 +1,9 @@
 import Image from 'next/image';
+import { SiteFooter } from '../../components/SiteFooter';
+import { SiteNav } from '../../components/SiteNav';
 import { CoordinationScene } from './coordination-scene';
 import { HeroWorkScene } from './hero-work-scene';
 import { OnboardingSequence } from './onboarding-sequence';
-import { SiteFooter, SiteHeader } from './site-chrome';
 import { WaitlistButton, WaitlistProvider } from './waitlist';
 
 function InvestorLogos({ decorative = false }: { decorative?: boolean }) {
@@ -50,6 +51,13 @@ function InvestorMarquee() {
 }
 
 export default function Home() {
+  const navAction = <WaitlistButton className="skip-nav-cta">Join waitlist</WaitlistButton>;
+  const skipWordmark = (
+    <span className="skip-nav-wordmark" aria-label="Skip">
+      <Image className="skip-nav-avatar" src="/skip-assets/skip-avatar.png" alt="" width={30} height={30} priority />
+      <span>skip</span>
+    </span>
+  );
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -65,7 +73,7 @@ export default function Home() {
     <WaitlistProvider>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, '\\u003c') }} />
 
-      <SiteHeader />
+      <SiteNav brandAddon={skipWordmark} actions={navAction} mobileMenuContent={navAction} hideDocsLink />
 
       <main id="top">
         <section className="hero" aria-labelledby="hero-title">
@@ -117,7 +125,7 @@ export default function Home() {
         <OnboardingSequence />
       </main>
 
-      <SiteFooter />
+      <SiteFooter hideRelayCloud />
     </WaitlistProvider>
   );
 }

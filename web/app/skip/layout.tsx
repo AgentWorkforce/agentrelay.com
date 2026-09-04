@@ -43,5 +43,5 @@ export const viewport: Viewport = {
 };
 
 export default function SkipLayout({ children }: { children: ReactNode }) {
-  return <div className={`${geist.variable} skipPage`}>{children}</div>;
+  return <div className={`${geist.variable} skipPage relayBrand`}>{children}</div>;
 }
