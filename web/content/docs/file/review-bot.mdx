@@ -6,7 +6,7 @@ description: 'End-to-end: connect GitHub with one command, add the rest of your 
 A PR review bot is the shape Relayfile fits best: several agents, several providers, one shared state. This guide runs the whole flow end to end — from an empty machine to a bot whose orchestrator and specialists all read the same PR, coordinate through files, and post the finished review back to GitHub without any of them holding a provider token.
 
 <Note>
-  Every command, path, and payload below was run against a live workspace on `relayfile` **0.10.41**. The review in step 7 was posted by writing the file this guide tells you to write — [`agentrelay.com#59` review 5112118049](https://github.com/AgentWorkforce/agentrelay.com/pull/59#pullrequestreview-5112118049). Where a path or flag is version-dependent, it says so.
+  Every command, path, and payload below was run against a live workspace on `relayfile` **0.10.53**. The review in step 7 was posted by writing the file this guide tells you to write — [`agentrelay.com#59` review 5112118049](https://github.com/AgentWorkforce/agentrelay.com/pull/59#pullrequestreview-5112118049). Where a path or flag is version-dependent, it says so.
 </Note>
 
 ## What you're building
@@ -387,14 +387,31 @@ If an op dead-letters, its record under `$MOUNT/.relay/dead-letter/<opId>.json` 
 
 The bot doesn't need a GitHub App endpoint of its own. A provider webhook is already normalized into a file event on a canonical path, and the file is materialized *before* the event fires — so the handler starts with state on disk, not a payload to parse.
 
-Subscribe in-process with the SDK — `connectWebSocket({ onEvent })`, or the glob-filtered `onWrite` from step 6 pointed at `/github/repos/<owner>/<repo>/pulls/**`. To fan events out to a channel instead of a process, the CLI binds a path glob to a webhook:
+From the CLI, `relayfile listen` streams the feed and runs a command per event:
 
 ```bash
-relayfile integration bind github "/github/repos/acme/api/pulls/**" \
-  --channel reviews --webhook "$WEBHOOK_ID" --webhook-token "$WEBHOOK_TOKEN"
+relayfile listen default \
+  --path "/github/repos/acme/api/pulls/**" \
+  --event file.created \
+  --run "review-bot start {{path}}"
 ```
 
-Either way the reviewer wakes on provider state changing rather than on a request arriving — see [Events and webhooks](/docs/file/events). In the cloud, keep the subscriber in one long-lived orchestrator that spawns a sandbox per PR; a subscriber that reconnects with a cursor gets the events it missed while it was down.
+Its full surface is `relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]`. A delivered event carries `eventId`, `type`, `path`, `revision`, `provider`, `origin`, `correlationId`, and — for small files — the content inlined, so the handler usually needs no follow-up read:
+
+```json
+{"type":"file.created","path":"/runs/pr-59/findings/security.json","revision":"rev_2935117",
+ "eventId":"evt_2507297","provider":"runs","origin":"agent_write","inlineContent":true,"content":"{}"}
+```
+
+`origin` is what keeps a bot from reacting to itself: `provider_sync` is a webhook from the provider, `agent_write` is another agent's write.
+
+Alternatives: subscribe in-process with the SDK (`connectWebSocket({ onEvent })`, or the glob-filtered `onWrite` from step 6), or fan events out to a channel with `relayfile integration bind <provider> <glob> --channel … --webhook … --webhook-token …`.
+
+<Warning>
+  Supervise the subscriber. On a busy workspace the event stream drops within seconds — either mid-message or on a frame EOF — and reconnecting too fast earns a `429` on the WebSocket handshake. Run it with `--background` or under `relayfile supervisor install`, and back off between reconnects. A subscriber that reconnects with a cursor gets the events it missed.
+</Warning>
+
+Either way the reviewer wakes on provider state changing rather than on a request arriving — see [Events and webhooks](/docs/file/events). In the cloud, keep the subscriber in one long-lived orchestrator that spawns a sandbox per PR.
 
 ## Tear down
 

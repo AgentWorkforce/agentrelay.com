@@ -14,12 +14,11 @@ What if you could do this with just a few lines of code and your agent wakes wit
 Relayfile materializes your full provider state as a file tree and keeps it current with webhooks. When an event fires, `/linear/issues/ENG-123.json` is already there. `/linear/issues/by-state/triage/` is already there. No API calls needed.
 
 
-```ts
-import { onWrite } from '@relayfile/sdk';
-
-onWrite('/linear/issues/by-state/triage/**', async (event) => {
-  await agent.run(`Triage this: ${event.path}`);
-}, { client, workspaceId, operations: ['create'] });
+```bash
+relayfile listen \
+  --path "/linear/issues/by-state/triage/**" \
+  --event file.created \
+  --run "claude --print 'Triage this: {{path}}'"
 ```
 
 

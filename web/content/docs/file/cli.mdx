@@ -83,6 +83,32 @@ relayfile tree my-workspace / --depth 2
 
 Prints a compact human-readable tree by default; `--json` is for scripts. `relayfile read <workspace> <path>` (alias `relayfile cat`) reads a single file the same way.
 
+## `relayfile listen`
+
+Stream the workspace event feed, optionally running a command per event.
+
+```bash
+relayfile listen \
+  --path "/linear/issues/by-state/triage/**" \
+  --event file.created \
+  --run "claude --print 'Triage this: {{path}}'"
+```
+
+| Flag | Default | Description |
+|---|---|---|
+| `--provider` | all | Only events from one provider |
+| `--path` | all | Path glob to filter on |
+| `--event` | all | Event type (`file.created`, `file.updated`, `file.deleted`) |
+| `--run` | (none) | Command to execute per event; `{{path}}` is substituted |
+| `--format` | `text` | `text` or `json` (one event object per line) |
+| `--background` | `false` | Detach and keep listening |
+
+Events carry `eventId`, `type`, `path`, `revision`, `provider`, `origin`, `correlationId`, and — for small files — the content inlined. See [Events and webhooks](/docs/file/events).
+
+<Note>
+  `listen` is missing from `relayfile --help` and `relayfile help listen` prints the generic help, but `relayfile listen --help` shows its usage. Expect to supervise it: on a busy workspace the stream can end mid-message, and reconnecting immediately earns a `429` on the WebSocket handshake — run it with `--background` or under `relayfile supervisor install`, and back off between reconnects.
+</Note>
+
 ## `relayfile mount`
 
 Mount a workspace to a local directory, syncing changes in real time. This replaces the standalone daemon for end users.
@@ -144,6 +170,7 @@ See [Run locally](/docs/file/run-locally) for the daemon in context and [Local d
 | `relayfile ops list / replay` | Inspect and replay dead-lettered writeback ops |
 | `relayfile restart` / `relayfile supervisor` | Restart a mount, or install it as a launchd/systemd service |
 | `relayfile stop` / `relayfile logs` | Control and read a background mount daemon |
+| `relayfile observer` | Open the hosted file observer for a workspace |
 
 <Note>
   There is no `relayfile permissions` command. To find out what a path expects, read the provider's `.adapter.md` and `.schema.json` under `/discovery/<provider>/…`; to see what was denied, read `.relay/state.json` → `deniedPaths` in the mirror.
