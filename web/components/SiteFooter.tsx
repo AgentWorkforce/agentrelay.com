@@ -21,6 +21,7 @@ const footerColumns: FooterColumn[] = [
     title: 'Products',
     links: [
       { label: 'Relay Cloud', href: 'https://agentrelay.com/cloud' },
+      { label: 'Skip', href: '/skip' },
       { label: 'Enterprise', href: '/enterprise' },
       { label: 'Reflex', href: '/reflex' },
       { label: 'Pear', href: '/pear' },
@@ -90,7 +91,7 @@ function FooterTextLink({ href, label, showExternalIcon }: FooterLink) {
   );
 }
 
-export function SiteFooter() {
+export function SiteFooter({ hideRelayCloud = false }: { hideRelayCloud?: boolean } = {}) {
   return (
     <footer className={s.footer}>
       <div className={s.inner}>
@@ -106,9 +107,11 @@ export function SiteFooter() {
           {footerColumns.map((column) => (
             <div className={s.col} key={column.title}>
               <h4 className={s.colTitle}>{column.title}</h4>
-              {column.links.map((link) => (
-                <FooterTextLink key={`${column.title}-${link.label}`} {...link} />
-              ))}
+              {column.links
+                .filter((link) => !(hideRelayCloud && link.label === 'Relay Cloud'))
+                .map((link) => (
+                  <FooterTextLink key={`${column.title}-${link.label}`} {...link} />
+                ))}
             </div>
           ))}
         </div>
