@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { factorySection, fileSection, getProductSearchIndex } from '../product-docs';
+import {
+  factorySection,
+  fileSection,
+  getProductDocSlugs,
+  getProductSearchIndex,
+} from '../product-docs';
 
 describe('Factory product docs', () => {
   it('publishes issue routing in navigation and scoped search', () => {
@@ -24,13 +29,20 @@ describe('Factory product docs', () => {
 });
 
 describe('Relayfile product docs', () => {
-  it('publishes both review-bot guides in a Guides group', () => {
+  it('lists only the human guide in the sidebar', () => {
     const guides = fileSection.nav.find((group) => group.title === 'Guides');
 
-    expect(guides?.items).toEqual([
-      { title: 'Build a PR review bot', slug: 'review-bot' },
-      { title: 'Review bot agent brief', slug: 'review-bot-brief' },
-    ]);
+    expect(guides?.items).toEqual([{ title: 'Build a PR review bot', slug: 'review-bot' }]);
+  });
+
+  it('still builds and indexes the agent brief, unlisted', () => {
+    const navSlugs = fileSection.nav.flatMap((group) => group.items.map((item) => item.slug));
+
+    expect(navSlugs).not.toContain('review-bot-brief');
+    expect(fileSection.unlistedSlugs).toContain('review-bot-brief');
+    // getProductDocSlugs drives the page, og and markdown routes, so the .md
+    // endpoint the guide links to must stay in it.
+    expect(getProductDocSlugs(fileSection)).toContain('review-bot-brief');
   });
 
   it('indexes the review-bot guide, including the cloud path', () => {

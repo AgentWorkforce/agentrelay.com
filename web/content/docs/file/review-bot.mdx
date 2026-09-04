@@ -50,7 +50,7 @@ The integration stack is hosted either way — what changes is where the bot's p
 
 ## 1. Connect GitHub
 
-One command logs you into Cloud, creates the workspace, runs the provider OAuth, waits for the first sync, and mounts the result:
+One command logs you into Cloud, creates the workspace, runs the provider OAuth, and waits for the first sync. This is **provisioning** — a human does it once, on a machine with a browser, because the provider OAuth needs one:
 
 ```bash
 relayfile setup \
@@ -61,6 +61,8 @@ relayfile setup \
 ```
 
 `--no-open` prints the login and connect URLs instead of launching a browser — always pass it when an agent (or CI) is driving the command, since a headless browser launch burns the OAuth state.
+
+The local mirror it leaves behind is for *you*: somewhere to `ls`, `cat` and `grep` the tree and see exactly what your agents will see. It is not how a deployed bot reads the workspace — cloud sandboxes mount per run in [step 5](#5-give-every-sandbox-the-same-workspace), and short-lived functions skip the mount entirely. `--local-dir` is required here only because `--skip-mount` still prompts for a directory ([relayfile#461](https://github.com/AgentWorkforce/relayfile/pull/461)).
 
 <Note>
   Both URLs are short-lived. A Cloud device code expires in minutes and the Nango connect URL has its own TTL, so complete them while the command is still waiting. If it exits first, re-run the same line — a re-run reuses the workspace and only opens a new connect flow when the provider isn't connected yet.
@@ -413,6 +415,16 @@ Alternatives: subscribe in-process with the SDK (`connectWebSocket({ onEvent })`
 
 Either way the reviewer wakes on provider state changing rather than on a request arriving — see [Events and webhooks](/docs/file/events). In the cloud, keep the subscriber in one long-lived orchestrator that spawns a sandbox per PR.
 
+## Give your agent a guide for this
+
+Everything above is written for you. The same contract written for the agent — its environment, the orient-before-acting rules, its ACL boundaries, the `/runs` run protocol, discovery-first writeback, and how to confirm a write actually landed — is one markdown file you can hand it directly:
+
+```bash
+curl -o AGENTS.md https://agentrelay.com/docs/file/markdown/review-bot-brief.md
+```
+
+Drop it in as `AGENTS.md`, `CLAUDE.md`, or a skill. Replace the `<angle-bracket>` placeholders before handing it over: `<owner>/<repo>` and the specialist name are set once, while `<run-id>`, `<pr-dir>`, `<pull-number>`, `<TICKET>`, `<sha>` and `<opId>` are filled per run.
+
 ## Tear down
 
 ```bash
@@ -426,9 +438,6 @@ rm -rf ./relayfile-mount
   `relayfile workspace join <id> --name <name>` **renames an existing local entry** for that workspace id rather than adding a second one. If you're scripting workspace setup, check `relayfile workspace list` before and after.
 </Warning>
 
-<BannerLink href="/docs/file/review-bot-brief" icon="bot">
-  Copy-paste agent brief — the same contract written for the agent itself, ready to drop in as `AGENTS.md`.
-</BannerLink>
 
 <CardGroup cols={2}>
   <Card title="Mounting from a sandbox" href="/docs/file/mounting">
@@ -440,7 +449,7 @@ rm -rf ./relayfile-mount
   <Card title="Real-time sync" href="/docs/file/realtime-sync">
     Why the orchestrator sees a specialist's write on the next read.
   </Card>
-  <Card title="Review bot agent brief" href="/docs/file/review-bot-brief">
-    The copy-paste operating document to hand the agent.
+  <Card title="CLI reference" href="/docs/file/cli">
+    Every flag used in this guide.
   </Card>
 </CardGroup>
