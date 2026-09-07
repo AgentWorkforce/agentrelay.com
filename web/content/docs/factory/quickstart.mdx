@@ -1,49 +1,57 @@
 ---
 title: 'Quickstart'
-description: 'Six steps from nothing to Factory opening its first pull request.'
+description: 'Set up the current checkout for Factory, then preview and dispatch its first GitHub issue.'
 ---
 
-Follow these in order. Steps 1–4 touch nothing; the first real dispatch is step 6.
+Run these from the Git checkout you want Factory to work in. Setup creates only
+`factory.config.json`; the first real dispatch is step 5.
 
 ## 1. Install
 
 ```bash
-npm install -g @agent-relay/factory
+npm install -g @agent-relay/factory agent-relay relayfile
 ```
 
-Factory talks to a relay broker through the `agent-relay` sidecar. Install and sign in to that separately — it's a peer, not a dependency.
+Factory uses `agent-relay` for its local broker and `relayfile` for the connected
+workspace and local mount. They are peers of Factory, so install all three CLIs.
 
-## 2. Connect GitHub to your relay workspace
+## 2. Initialize this checkout
 
-Give it push access to the repos you want worked on. Factory publishes branches and opens PRs through that workspace connection — a local `gh` login is **not** required.
-
-## 3. Write a config
-
-`factory.config.json`. A repo route is the only thing you truly need:
-
-```json
-{
-  "repos": {
-    "byLabel": { "pear": "AgentWorkforce/pear" },
-    "clonePaths": { "AgentWorkforce/pear": "/path/to/your/pear/checkout" },
-    "default": "AgentWorkforce/pear"
-  }
-}
+```bash
+factory init
 ```
 
-`byLabel` maps an issue label to a repo. `clonePaths` tells the agent where that repo lives locally, so it has somewhere to make changes. Add `workspaceId` only to pin a workspace other than your active one.
+`factory init` is the normal onboarding command for a single GitHub repository.
+It derives the repository from `origin`, checks that `agent-relay` and
+`relayfile` are available, finds the active Relay workspace, starts the local
+mount, verifies GitHub access, and writes a GitHub-native `factory.config.json`.
+It refuses to overwrite an existing config, and writes nothing if a check fails.
 
-For a GitHub-only setup, add `"issueSource": "github"` — or leave it out and Factory picks GitHub automatically when `/linear/issues` isn't connected.
+If the checkout has no GitHub `origin`, provide the repository explicitly:
 
-<Note>
-  Don't hand-write this. `npx prpm install @agent-relay/factory-config` and let your coding agent author it — see [Configuration](/docs/factory/configuration).
-</Note>
+```bash
+factory init owner/repo
+```
 
-## 4. Mark an issue for Factory
+Use `--workspace <id>` only when you need to select a workspace other than the
+active one. If Init says GitHub is not connected, connect it with push access,
+wait for the repository to sync, then run Init again:
 
-Nothing is picked up until it passes the [safety scope](/docs/factory/safety-scope). By default that means the title starts with the configured prefix, it carries the `factory` label, and it belongs to the configured team.
+```bash
+relayfile setup --provider github --workspace your-team-workspace --skip-mount
+```
 
-## 5. Dry run
+Factory runs locally. The Relay workspace supplies the GitHub connection that
+lets it read issues, publish branches, and open pull requests; it does not move
+your agents or checkout to the cloud.
+
+## 3. Mark an issue for Factory
+
+For the GitHub-native configuration that Init creates, add the `factory` label to
+an open GitHub issue. Nothing is picked up until it passes the
+[safety scope](/docs/factory/safety-scope).
+
+## 4. Dry run
 
 Discovers and triages, writes nothing, spawns nothing:
 
@@ -55,7 +63,7 @@ factory run-once --config ./factory.config.json --dry-run
   Pulled some issues but dispatched none? That's the safety gate working. The issues are real but outside your scope.
 </Note>
 
-## 6. Let it work
+## 5. Let it work
 
 ```bash
 # one discovery → dispatch cycle, then exit

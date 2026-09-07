@@ -5,6 +5,20 @@ description: 'factory.config.json — repo routing, issue source, models, states
 
 One JSON file, passed with `--config`. It's validated at load time, so an invalid config fails fast with a field-level error rather than misbehaving at runtime.
 
+## Start with Init
+
+For one GitHub repository, do not write the first config by hand:
+
+```bash
+factory init
+```
+
+Init derives the repository from the current checkout, verifies the active
+Relay workspace and GitHub connection, then writes a GitHub-native config with
+the checkout as its `clonePaths` entry. It is intentionally conservative: it
+will not overwrite an existing `factory.config.json`. Use this page when you
+need to add repositories, Linear, Slack, custom routing, or role settings.
+
 ## Use the skill
 
 Don't hand-write the config from memory — install the skill and let your coding agent author and validate it:
