@@ -131,6 +131,8 @@ const nextConfig = {
         permanent: false,
       },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
+      { source: '/chief', destination: '/skip', permanent: true },
+      { source: '/chief/:path*', destination: '/skip', permanent: true },
       { source: '/relayfile', destination: '/primitives#file', permanent: true },
       { source: '/relayfile/:path*', destination: '/primitives#file', permanent: true },
       { source: '/relayauth', destination: '/primitives#auth', permanent: true },
