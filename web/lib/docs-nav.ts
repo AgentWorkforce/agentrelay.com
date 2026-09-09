@@ -19,6 +19,10 @@ export const docsNav: NavGroup[] = [
     ],
   },
   {
+    title: 'Guides',
+    items: [{ title: 'Fleet setup', slug: 'fleet-setup' }],
+  },
+  {
     title: 'Messaging',
     items: [
       { title: 'Overview', slug: 'messaging' },
