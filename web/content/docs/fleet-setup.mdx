@@ -119,6 +119,54 @@ Do not remove the human identity to make room for the broker.
 
 The broker registers with Relaycast on start. If registration fails, retry.
 
+### macOS: start the broker from a keychain-unlocked session
+
+On macOS, start the broker from a session where the login keychain is unlocked.
+Workers inherit the security session of the process that spawned them, so a
+broker started from a locked session hands every worker a locked keychain.
+
+This matters for any harness that stores credentials in the Keychain — including
+`cursor-agent` and the RelayFile CLI. They fail with errors that look like
+authentication problems but are not:
+
+```text
+Error: Your macOS login keychain is locked.
+error: resolve delegated relayfile credentials: mint delegated relayfile
+       credentials: http 401 unauthorized: Unauthorized
+```
+
+Three properties make this easy to misdiagnose:
+
+- Unlocking the keychain in the macOS GUI does **not** unlock it for SSH. They
+  are separate security sessions.
+- Unlocking it in one SSH session does not carry to the next one.
+- `agent-relay` itself does not need the keychain, so `agent-relay status` and
+  `agent-relay workspace active` keep working while `cursor-agent` and
+  `relayfile` fail. A working `agent-relay` is not evidence that the keychain is
+  available.
+
+Unlock and start the broker in a single interactive session. `ssh -t` is
+required so `security` can prompt:
+
+```bash
+ssh -t mini-node-2
+security unlock-keychain "$HOME/Library/Keychains/login.keychain-db"
+security set-keychain-settings "$HOME/Library/Keychains/login.keychain-db"
+cd "$HOME/fleet/mini-node-2"
+agent-relay node up --no-spawn --background --broker-name mini-node-2
+```
+
+`set-keychain-settings` with no flags clears the idle timeout and the
+lock-on-sleep behaviour, so the keychain stays unlocked while the machine is up.
+It does not survive a reboot — nothing can, without storing the password
+somewhere it should not be.
+
+<Warning>
+  After a reboot, repeat this before starting the broker. A broker that
+  auto-starts unattended will be in a locked session, and every worker it spawns
+  inherits that.
+</Warning>
+
 ## 4. Verify the node is connected
 
 ```bash
@@ -256,6 +304,28 @@ Complete the browser flow, then release the failed worker and spawn it again wit
 the original task and working directory. During the observed fleet setup, Claude
 sessions needed this intervention; Codex and Cursor sessions stayed authenticated.
 That observation is not a guarantee that their credentials cannot expire.
+
+### A worker fails with "login keychain is locked"
+
+```text
+Error: Your macOS login keychain is locked.
+Run security unlock-keychain and try again.
+```
+
+The broker was started from a session with a locked keychain, and the worker
+inherited it. Unlocking the keychain now in a separate SSH session will not fix
+the running worker — the broker has to be restarted from an unlocked session.
+See [Start the broker from a keychain-unlocked
+session](#macos-start-the-broker-from-a-keychain-unlocked-session).
+
+The same cause produces `http 401 unauthorized` from `relayfile status`. Check
+the keychain before treating that as an authentication or account problem:
+
+```bash
+security show-keychain-info "$HOME/Library/Keychains/login.keychain-db"
+```
+
+A locked keychain reports `User interaction is not allowed.`
 
 ### The machine runs out of disk space
 
