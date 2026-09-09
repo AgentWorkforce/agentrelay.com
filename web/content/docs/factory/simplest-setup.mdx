@@ -1,0 +1,74 @@
+---
+title: 'Simplest setup'
+description: 'One command on one machine turns a Linear issue into a pull request — the minimal on-ramp before the full Factory.'
+---
+
+Before the full [Factory](/docs/factory/quickstart) — triage, multiple agents, a reviewer, and a merge gate — there's a one-command version you can run on a single machine (a Mac mini, your laptop, a sandbox). A new issue comes in, one agent implements it and opens a PR. You review and merge.
+
+This is the fastest way to feel the loop. Graduate to the full Factory when you want review agents, a babysitter that keeps PRs green, and a merge gate.
+
+## What you need
+
+- **relayfile ≥ 0.10.57** — `npm i -g relayfile` (check with `relayfile --version`).
+- Linear and GitHub connected to your relay workspace:
+
+  ```bash
+  relayfile integration connect linear
+  relayfile integration connect github
+  ```
+
+  The first `connect` runs an initial background sync of your existing issues — leave it running until `relayfile status` shows the provider `healthy`. You don't need the full backfill to finish before the next step; a *new* issue shows up within ~30s of being filed.
+- On the machine that runs it: **`claude` and `gh` installed and signed in**, and you launch the command **from inside the repo** you want worked on (so the agent has the right working directory and push access).
+
+<Note>
+  This local path uses your machine's `claude` and `gh`. The full [Factory](/docs/factory/quickstart) instead opens PRs through your workspace's GitHub connection — no local `gh` required — and adds triage, a reviewer, and a merge gate. That's the reason to graduate once this feels useful, not the reason to skip it now.
+</Note>
+
+## The one command
+
+Run this from inside your repo. When a new Linear issue is filed, one agent implements it and opens a PR:
+
+```bash
+relayfile listen --path "/linear/issues/by-uuid/**" --event file.created \
+  --run "claude --print --dangerously-skip-permissions \
+    'Read the new Linear issue with: relayfile read {{path}} — then implement it, \
+     create a branch, commit, push, and open a PR with: gh pr create --fill'"
+```
+
+`Ctrl+C` to stop. Add `--background` to detach it (logs to `~/.relayfile/listen.log`).
+
+### Why `by-uuid` and not `--provider linear`?
+
+A single new issue materializes several files in the tree (`by-uuid`, `by-id`, `by-title`, `by-state/…`, plus indexes). Scoping the listener to the canonical `by-uuid` record fires the agent **once per issue** instead of once per file. Matching on `--provider linear` alone would run the agent — and open a PR — several times for one issue.
+
+## Only act on a specific status
+
+Prefer a human gate — act only when an issue reaches, say, a "Ready for Agent" column — instead of on every new issue. Scope to that status view:
+
+```bash
+relayfile listen --path "/linear/issues/by-state/ready-for-agent/**" --event file.created \
+  --run "claude --print --dangerously-skip-permissions '…same prompt as above…'"
+```
+
+This fires once when an issue is created in **or** moved into that status. Use your own status's slug (lowercase, hyphenated); list what's available with `relayfile tree /linear/issues/by-state`.
+
+## Watch first, no agent
+
+To confirm events land before wiring in `--run`:
+
+```bash
+relayfile listen --provider linear
+```
+
+You'll see `Listening on /linear/** — Ctrl+C to stop`, then events print as they arrive. See [Events](/docs/file/events) for the full event model.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Full Factory quickstart" href="/docs/factory/quickstart">
+    Config, triage, multiple agents, a reviewer, and a merge gate.
+  </Card>
+  <Card title="Safety scope" href="/docs/factory/safety-scope">
+    Control exactly what an agent is allowed to touch.
+  </Card>
+</CardGroup>

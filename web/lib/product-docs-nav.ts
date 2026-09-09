@@ -185,6 +185,7 @@ export const factorySection: ProductDocSection = {
       items: [
         { title: 'Introduction', slug: 'introduction' },
         { title: 'Quickstart', slug: 'quickstart' },
+        { title: 'Simplest setup', slug: 'simplest-setup' },
       ],
     },
     {
