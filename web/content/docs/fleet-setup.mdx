@@ -1,0 +1,317 @@
+---
+title: 'Adding a machine to a multi-machine fleet'
+description: 'Install Relay, enroll a second machine, start its broker, and verify a worker can join the fleet. Includes recovery steps for the failures that slow setup down.'
+---
+
+Run these steps on the machine you are adding, in a terminal or over SSH. You need
+access to the fleet's existing Cloud workspace and at least one installed,
+authenticated coding harness. Each machine runs a broker; agents communicate
+through the shared Relaycast service.
+
+Commands were checked against **Agent Relay 11.10.4 on September 9, 2026**. The
+troubleshooting notes include failures observed during a real fleet setup. A
+working service and harness login are prerequisites for a quick setup.
+
+## 1. Install and check which binary runs
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/AgentWorkforce/relay/main/install.sh | bash
+command -v agent-relay
+agent-relay --version
+```
+
+The installer puts its launcher in `~/.local/bin` and the standalone binaries in
+`~/.agentworkforce/relay/bin`. Ensure the launcher is on your shell's PATH:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+hash -r
+command -v agent-relay
+agent-relay --version
+```
+
+Add that PATH export to your shell startup file if it is not already there. Open a
+new terminal and check again; a PATH change inside the installer cannot update its
+parent shell.
+
+<Warning>
+  An older `npm i -g agent-relay` install can shadow the new launcher. On Apple
+  Silicon Macs its symlink is often `/opt/homebrew/bin/agent-relay`. If
+  `command -v agent-relay` selects that path, the version can stay old even after
+  a successful install. This is an npm global, not a Homebrew formula:
+  `brew uninstall agent-relay` fails with “No available formula”.
+</Warning>
+
+If you have the old npm global, remove it with the npm installation that owns it,
+then check the launcher again:
+
+```bash
+npm uninstall -g agent-relay
+hash -r
+command -v agent-relay
+agent-relay --version
+```
+
+Keep fleet machines on the same current release. During setup, an old CLI hid a
+handshake failure behind `Max retries exceeded`; the newer release exposed
+`code=database_overloaded`, which identified the service problem immediately.
+
+## 2. Choose the broker root and enroll
+
+Give this node a stable directory and a name unique within the workspace. The
+examples use `mini-node-2`. Reuse the same directory for every broker command.
+
+```bash
+mkdir -p "$HOME/fleet/mini-node-2/.agentworkforce/relay"
+cd "$HOME/fleet/mini-node-2"
+agent-relay cloud login --device
+agent-relay cloud workspaces
+```
+
+Complete the browser login, then select the **existing workspace used by the first
+machine**. Replace `your-fleet-workspace` below with its name or ID from the list:
+
+```bash
+agent-relay cloud enroll --workspace your-fleet-workspace --name mini-node-2
+```
+
+Creating `.agentworkforce/relay` in that directory makes it a broker root; otherwise
+project discovery can walk up to an ancestor, including your home directory.
+
+Enrollment saves this node's credential locally. Expect an `Enrolled node` message
+with the intended workspace. Run enrollment in the broker root too: an existing
+project workspace pin can affect which enrollment startup selects. A fresh directory
+avoids accidentally inheriting an unrelated project's pin. If enrollment reports a
+pin conflict, resolve that binding before starting the broker; do not delete another
+node's credentials to work around it.
+
+This path uses your Cloud login without copying workspace keys or enrollment tokens
+into commands. If an administrator already enrolled this context, use that context's
+directory and name and skip enrollment. See [Nodes and providers](/docs/nodes-and-providers)
+for the distinction between a machine and a node.
+
+## 3. Start the broker with an explicit name
+
+```bash
+cd "$HOME/fleet/mini-node-2"
+agent-relay node up --no-spawn --background --broker-name mini-node-2
+```
+
+| Flag | Purpose |
+| --- | --- |
+| `--no-spawn` | Start the broker without automatically launching agents from `teams.json`. |
+| `--background` | Leave the broker running after the command returns. |
+| `--broker-name` | Give this node an explicit workspace identity. |
+
+<Warning>
+  Use `agent-relay node up`. The installer checked for this guide still prints
+  `agent-relay up --background` in its quickstart, but `agent-relay up` fails in
+  11.10.4 with `error: unknown command 'up'`.
+</Warning>
+
+Without an explicit name, startup uses the enrolled node name when available,
+otherwise the project directory basename. Starting from `~` can therefore try to
+register the broker as your username. If that name already belongs to a human,
+registration can fail with:
+
+```text
+agent name X is already registered and this registration did not prove ownership
+```
+
+Choose a machine-specific name such as `mini-node-2`, then rerun the startup command.
+Do not remove the human identity to make room for the broker.
+
+## 4. Verify the node is connected
+
+```bash
+cd "$HOME/fleet/mini-node-2"
+agent-relay node status
+```
+
+Look for all three indicators in the output; other lines are omitted here:
+
+```text
+Status: RUNNING
+Node delivery: CONNECTED
+Node: mini-node-2 (...)
+```
+
+`RUNNING` alone is insufficient: the process can be alive while node delivery is
+down. Confirm the node also appears in your existing fleet's node view, under the
+workspace you selected. This catches enrollment into a separate workspace.
+
+If startup is still settling, give the readiness check a bounded wait:
+
+```bash
+agent-relay node status --wait-for 10
+```
+
+<Note>
+  Status depends on the current project's connection metadata. A `STOPPED` result
+  does not prove every broker process has exited. Check the recovery steps below
+  before starting another copy.
+</Note>
+
+## 5. Spawn a worker and attach
+
+Install and authenticate the harness on this machine, under the same OS user that
+runs the broker. Supported harnesses include `codex`, `claude`, `cursor-agent`,
+`gemini`, and `droid`. Authenticate interactively before assigning unattended work.
+
+Create a lane directory, or substitute the absolute path to an existing checkout
+or worktree:
+
+```bash
+mkdir -p "$HOME/lanes/fleet-smoke"
+cd "$HOME/fleet/mini-node-2"
+agent-relay node agent spawn codex \
+  --name mini-node-2-smoke \
+  --cwd "$HOME/lanes/fleet-smoke" \
+  --channels general \
+  --task "Send a short ready message to #general through Agent Relay, then wait for instructions."
+agent-relay node agent list --pretty
+```
+
+<Warning>
+  Run spawn from the **broker's project root**, even when the worker will use a
+  different directory. Spawn resolves `.agentworkforce/relay/connection.json` from
+  the caller's current directory, not the value of `--cwd`. Running from the lane
+  directory fails with `No running broker found`.
+</Warning>
+
+Attach from the same broker root:
+
+```bash
+agent-relay node agent attach mini-node-2-smoke --mode view
+```
+
+`view` is the default for `agent-relay node agent attach mini-node-2-smoke`; it
+shows the worker without forwarding input. To type into the worker's terminal:
+
+```bash
+agent-relay node agent attach mini-node-2-smoke --mode drive
+```
+
+In either mode, Ctrl+C detaches and leaves the worker running. Confirm its ready
+message reaches `#general` and is visible from the first machine's workspace.
+That checks communication across the fleet, beyond local process startup. Release
+the smoke-test worker when finished:
+
+```bash
+agent-relay node agent release mini-node-2-smoke
+```
+
+## Troubleshooting
+
+### Status says STOPPED but broker processes are alive
+
+**Symptom:** `node status` reports `STOPPED`, yet processes remain or a fresh start
+collides with an existing broker.
+
+**Fix:** First return to the directory where the broker was started. By default,
+its metadata is `<broker-root>/.agentworkforce/relay/connection.json`. When the
+broker root is `~`, that is `~/.agentworkforce/relay/connection.json`. If you used
+`--state-dir` at startup, pass the same directory to status and shutdown.
+
+Inspect file existence and process names without dumping credentials or full
+process arguments:
+
+```bash
+cd "$HOME/fleet/mini-node-2"
+test -f .agentworkforce/relay/connection.json && echo "connection file present"
+ps -eo pid,ppid,comm | grep -E 'agent-relay|PID'
+```
+
+A missing connection file can make status report `STOPPED` even with live broker
+processes. Before recovery, save active work and stop assigning tasks to this node.
+From the affected broker root, clear its orphaned processes and stale state:
+
+```bash
+agent-relay node down --force
+```
+
+Recheck the process list before restarting. Orphan cleanup is best-effort: if a
+process remains, identify its working directory and parent in your OS process
+tools, then terminate only the confirmed orphan with SIGTERM; use SIGKILL only if
+it will not exit. Do not kill other nodes or active workers. The CLI's `--all`
+shutdown option affects the entire machine and is inappropriate when other nodes
+are doing work. Do not delete the whole `~/.agentworkforce/relay` directory; it
+also holds installed binaries and other state.
+
+Once the affected broker's processes are gone, rerun the startup and status
+commands from steps 3 and 4.
+
+### Handshake fails with database_overloaded or HTTP 503
+
+**Symptom:** Startup fails during the Relaycast handshake with
+`code=database_overloaded`, HTTP 503, or an older CLI's `Max retries exceeded`.
+
+**Fix:** Check the selected CLI version first. `database_overloaded` means the
+shared Relaycast service is degraded. Allow any reported retry interval to pass,
+then retry startup until the service recovers. Clear leftover broker processes
+using the previous section if needed. Changing harnesses or repeatedly reinstalling
+Relay will not repair a service outage.
+
+There is **no offline or degraded broker mode** in 11.10.4. Setting
+`AGENT_RELAY_DISABLE_RELAYCAST` fails with:
+
+```text
+AGENT_RELAY_DISABLE_RELAYCAST is no longer supported; broker requires Relaycast
+```
+
+The default service is `https://cast.agentrelay.com`. Version 11.10.4 does support
+`RELAYCAST_BASE_URL` and `RELAY_BASE_URL` overrides, with the former taking
+precedence. The URL is not immutable. An override still needs a working Relaycast
+deployment and credentials for it; it does not provide offline operation or move
+your existing workspace to another service. For the hosted fleet, wait for the
+shared service to recover.
+
+### A Claude worker cannot refresh its login
+
+**Symptom:** A non-interactive lane fails with
+`OAuth session expired and could not be refreshed`.
+
+**Fix:** Open an interactive terminal on the fleet machine as the broker's OS user
+and sign in again:
+
+```bash
+claude auth login
+```
+
+Complete the browser flow, then release the failed worker and spawn it again with
+the original task and working directory. During the observed fleet setup, Claude
+sessions needed this intervention; Codex and Cursor sessions stayed authenticated.
+That observation is not a guarantee that their credentials cannot expire.
+
+### The machine runs out of disk space
+
+**Symptom:** Installs, builds, worktree creation, or agent startup fail with
+`No space left on device`.
+
+**Fix:** Check free space and identify the large lane directories:
+
+```bash
+df -h .
+du -sh "$HOME/lanes"/*
+```
+
+Agent worktrees and repeated dependency installs accumulate quickly. Build caches,
+Cargo `target/` directories, and stale `node_modules` are usually reproducible and
+can be reclaimed after the jobs using them have stopped. Keep lockfiles and source
+so dependencies and builds can be recreated.
+
+Before removing a checkout or worktree, inspect its Git status for modified and
+untracked files. Preserve anything with uncommitted work, unpublished commits, or
+outputs you still need. Do not treat a directory as disposable just because its
+agent is no longer running.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Broker lifecycle" href="/docs/cli-broker-lifecycle">
+    Broker startup, state directories, shutdown, and status commands.
+  </Card>
+  <Card title="Agent management" href="/docs/cli-agent-management">
+    Spawn, attach, and manage workers on the node.
+  </Card>
+</CardGroup>
