@@ -5,12 +5,10 @@ description: 'Install Relay, enroll a second machine, start its broker, and veri
 
 Run these steps on the machine you are adding, in a terminal or over SSH. You need
 access to the fleet's existing Cloud workspace and at least one installed,
-authenticated coding harness. Each machine runs a broker; agents communicate
-through the shared Relaycast service.
+authenticated coding harness. Each machine runs a broker.
 
 Commands were checked against **Agent Relay 11.10.4 on September 9, 2026**. The
-troubleshooting notes include failures observed during a real fleet setup. A
-working service and harness login are prerequisites for a quick setup.
+troubleshooting notes cover setup, harness authentication, and disk hygiene.
 
 ## 1. Install and check which binary runs
 
@@ -52,9 +50,7 @@ command -v agent-relay
 agent-relay --version
 ```
 
-Keep fleet machines on the same current release. During setup, an old CLI hid a
-handshake failure behind `Max retries exceeded`; the newer release exposed
-`code=database_overloaded`, which identified the service problem immediately.
+Keep fleet machines on the same current release.
 
 ## 2. Choose the broker root and enroll
 
@@ -121,6 +117,8 @@ agent name X is already registered and this registration did not prove ownership
 Choose a machine-specific name such as `mini-node-2`, then rerun the startup command.
 Do not remove the human identity to make room for the broker.
 
+The broker registers with Relaycast on start. If registration fails, retry.
+
 ## 4. Verify the node is connected
 
 ```bash
@@ -155,8 +153,9 @@ agent-relay node status --wait-for 10
 ## 5. Spawn a worker and attach
 
 Install and authenticate the harness on this machine, under the same OS user that
-runs the broker. Supported harnesses include `codex`, `claude`, `cursor-agent`,
-`gemini`, and `droid`. Authenticate interactively before assigning unattended work.
+runs the broker. Harnesses verified on a fleet machine are `codex`, `claude`,
+`cursor-agent`, `grok`, `gemini`, and `droid`. Authenticate interactively before
+assigning unattended work.
 
 Create a lane directory, or substitute the absolute path to an existing checkout
 or worktree:
@@ -240,31 +239,6 @@ also holds installed binaries and other state.
 
 Once the affected broker's processes are gone, rerun the startup and status
 commands from steps 3 and 4.
-
-### Handshake fails with database_overloaded or HTTP 503
-
-**Symptom:** Startup fails during the Relaycast handshake with
-`code=database_overloaded`, HTTP 503, or an older CLI's `Max retries exceeded`.
-
-**Fix:** Check the selected CLI version first. `database_overloaded` means the
-shared Relaycast service is degraded. Allow any reported retry interval to pass,
-then retry startup until the service recovers. Clear leftover broker processes
-using the previous section if needed. Changing harnesses or repeatedly reinstalling
-Relay will not repair a service outage.
-
-There is **no offline or degraded broker mode** in 11.10.4. Setting
-`AGENT_RELAY_DISABLE_RELAYCAST` fails with:
-
-```text
-AGENT_RELAY_DISABLE_RELAYCAST is no longer supported; broker requires Relaycast
-```
-
-The default service is `https://cast.agentrelay.com`. Version 11.10.4 does support
-`RELAYCAST_BASE_URL` and `RELAY_BASE_URL` overrides, with the former taking
-precedence. The URL is not immutable. An override still needs a working Relaycast
-deployment and credentials for it; it does not provide offline operation or move
-your existing workspace to another service. For the hosted fleet, wait for the
-shared service to recover.
 
 ### A Claude worker cannot refresh its login
 
