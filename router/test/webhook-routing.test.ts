@@ -32,6 +32,7 @@ function buildEnv(opts: {
   webhookOriginFlag?: string;
   cloudWebWorker?: WorkerBinding;
   webhookWorker?: WorkerBinding;
+  relayfileCloudWorker?: WorkerBinding;
 }) {
   const routerConfig = new MemoryKV();
   if (opts.webhookOriginFlag !== undefined) {
@@ -42,6 +43,7 @@ function buildEnv(opts: {
     ROUTER_CONFIG: asKV(routerConfig),
     CLOUD_WEB_WORKER: opts.cloudWebWorker,
     WEBHOOK_WORKER: opts.webhookWorker,
+    RELAYFILE_CLOUD_WORKER: opts.relayfileCloudWorker,
   } as unknown as Parameters<typeof worker.fetch>[1];
 }
 
@@ -130,6 +132,111 @@ describe("router webhook routing", () => {
 
     expect(webhookWorker.fetch).toHaveBeenCalledOnce();
     expect(cloudWebWorker.fetch).not.toHaveBeenCalled();
+  });
+
+  it("routes /api/v1/webhooks/nango to relayfile-cloud when WEBHOOK_ORIGIN=relayfile-cloud and body is allowlisted ingest", async () => {
+    const cloudWebWorker = makeBinding();
+    const webhookWorker = makeBinding();
+    const relayfileCloudWorker = makeBinding();
+    const env = buildEnv({
+      webhookOriginFlag: "relayfile-cloud",
+      cloudWebWorker,
+      webhookWorker,
+      relayfileCloudWorker,
+    });
+
+    const request = new Request(
+      "https://origin.agentrelay.cloud/cloud/api/v1/webhooks/nango",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "forward", providerConfigKey: "github-relay" }),
+      },
+    );
+
+    await worker.fetch(request, env, buildCtx());
+
+    expect(relayfileCloudWorker.fetch).toHaveBeenCalledOnce();
+    expect(cloudWebWorker.fetch).not.toHaveBeenCalled();
+    expect(webhookWorker.fetch).not.toHaveBeenCalled();
+  });
+
+  it("routes auth event to cloud-web even when WEBHOOK_ORIGIN=relayfile-cloud (lifecycle events must stay in cloud)", async () => {
+    const cloudWebWorker = makeBinding();
+    const webhookWorker = makeBinding();
+    const relayfileCloudWorker = makeBinding();
+    const env = buildEnv({
+      webhookOriginFlag: "relayfile-cloud",
+      cloudWebWorker,
+      webhookWorker,
+      relayfileCloudWorker,
+    });
+
+    const request = new Request(
+      "https://origin.agentrelay.cloud/cloud/api/v1/webhooks/nango",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "auth", providerConfigKey: "github-relay" }),
+      },
+    );
+
+    await worker.fetch(request, env, buildCtx());
+
+    expect(cloudWebWorker.fetch).toHaveBeenCalledOnce();
+    expect(relayfileCloudWorker.fetch).not.toHaveBeenCalled();
+    expect(webhookWorker.fetch).not.toHaveBeenCalled();
+  });
+
+  it("routes non-allowlisted provider to cloud-web even when WEBHOOK_ORIGIN=relayfile-cloud", async () => {
+    const cloudWebWorker = makeBinding();
+    const relayfileCloudWorker = makeBinding();
+    const env = buildEnv({
+      webhookOriginFlag: "relayfile-cloud",
+      cloudWebWorker,
+      relayfileCloudWorker,
+    });
+
+    const request = new Request(
+      "https://origin.agentrelay.cloud/cloud/api/v1/webhooks/nango",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "forward", providerConfigKey: "unknown-provider" }),
+      },
+    );
+
+    await worker.fetch(request, env, buildCtx());
+
+    expect(cloudWebWorker.fetch).toHaveBeenCalledOnce();
+    expect(relayfileCloudWorker.fetch).not.toHaveBeenCalled();
+  });
+
+  it("bypasses relayfile-cloud when request carries x-cloud-webhook-relayfile-cloud-forwarded header (loop break)", async () => {
+    const cloudWebWorker = makeBinding();
+    const relayfileCloudWorker = makeBinding();
+    const env = buildEnv({
+      webhookOriginFlag: "relayfile-cloud",
+      cloudWebWorker,
+      relayfileCloudWorker,
+    });
+
+    const request = new Request(
+      "https://origin.agentrelay.cloud/cloud/api/v1/webhooks/nango",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-cloud-webhook-relayfile-cloud-forwarded": "relayfile-cloud",
+        },
+        body: JSON.stringify({ type: "forward", providerConfigKey: "github-relay" }),
+      },
+    );
+
+    await worker.fetch(request, env, buildCtx());
+
+    expect(cloudWebWorker.fetch).toHaveBeenCalledOnce();
+    expect(relayfileCloudWorker.fetch).not.toHaveBeenCalled();
   });
 
   it("routes to cloud-web when WEBHOOK_ORIGIN flag is unset (regression: still works without flag)", async () => {
