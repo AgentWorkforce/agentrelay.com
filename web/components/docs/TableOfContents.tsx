@@ -14,6 +14,8 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   const { language, setLanguage } = useDocsLanguage();
   const pathname = usePathname() ?? '/docs';
   const productSection = getProductSectionForPath(pathname);
+  const secondaryLanguage = productSection?.id === 'relayflows' ? 'yaml' : 'python';
+  const secondaryLanguageLabel = secondaryLanguage === 'yaml' ? 'YAML' : 'Python';
 
   useEffect(() => {
     const headings = items.map((item) => document.getElementById(item.id)).filter(Boolean) as HTMLElement[];
@@ -43,11 +45,11 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
           <select
             className={styles.tocSelect}
             aria-label="Select docs language"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as 'typescript' | 'python')}
+            value={language === secondaryLanguage ? secondaryLanguage : 'typescript'}
+            onChange={(event) => setLanguage(event.target.value as 'typescript' | 'python' | 'yaml')}
           >
             <option value="typescript">TypeScript</option>
-            <option value="python">Python</option>
+            <option value={secondaryLanguage}>{secondaryLanguageLabel}</option>
           </select>
         </label>
       </div>

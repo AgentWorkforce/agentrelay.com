@@ -18,7 +18,7 @@ steps:
   - id: plan
     type: agent
     agent: planner
-    instruction: 'Plan the implementation for: {{input.task}}'
+    instruction: 'Plan the implementation for: add OAuth2 support'
 
   - id: implement
     type: agent
@@ -37,6 +37,14 @@ steps:
 ```
 
 Each step's `agent:` selector resolves to that named `{ cli, model }` pair at compile time — the kernel never guesses a default. An unused or step-shadowed named agent is linted by `flows check`, so a stale declaration doesn't quietly rot in the spec.
+
+<Note>
+  The named-agent map (`agents:` + a step's `agent:` selector) is YAML/JSON
+  authoring today; the matching TypeScript header type ships separately.
+  `f.agent(name, options)` in TypeScript takes `{ task, workspace }` — the
+  `name` labels the call for the journal, it doesn't yet select a `cli`/`model`
+  pair the way a YAML `agent:` selector does.
+</Note>
 
 ## Asking a human, then handing off
 

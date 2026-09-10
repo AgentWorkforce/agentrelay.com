@@ -7,9 +7,22 @@ Start with the job in one sentence: what runs, in what order, and what proves ea
 
 ## Two ways to author the same thing
 
-**YAML** is the deterministic-DAG path: steps, dependencies, verification, and permissions as data. It's what a `flows check` or a CI gate reads without executing anything.
+**YAML** is the deterministic-DAG path: steps, dependencies, and verification as data. It's what `flows check` or a CI gate reads without executing anything. **TypeScript** is the programmatic path — the same primitives, called imperatively. Both compile to the same journal protocol.
 
-```yaml
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+export default flow('hello-agent', async (f) => {
+  const greeting = await f.run('printf hello');
+  const edit = await f.agent('edit', {
+    task: 'Produce the hello artifact.',
+  });
+  const finish = await f.run('printf done');
+  f.done('success');
+});
+```
+```yaml YAML
 version: '0.1.0'
 name: hello-agent
 steps:
@@ -24,16 +37,6 @@ steps:
     type: agent
     dependsOn: [greet]
     instruction: 'Produce the hello artifact.'
-    recoveryMode: reset
-    maxIterations: 2
-    surfaces:
-      workspace:
-        - surface: repo
-      streams:
-        - stream: agent-notes
-    permissions:
-      fileGlobs: ['artifacts/**']
-      accessPreset: readwrite
     verification:
       type: output_contains
       value: agent-ok
@@ -42,28 +45,18 @@ steps:
     type: deterministic
     dependsOn: [edit]
     command: 'printf done'
-
-budget:
-  maxTokensIn: 64
-  maxTokensOut: 32
-  maxDollars: '0.02'
 ```
+</CodeGroup>
 
-**TypeScript** is the programmatic path — the same primitives, called imperatively:
+Reach for YAML when the shape is a fixed DAG you want readable at a glance and preflightable in CI; reach for TypeScript when a step's next move depends on what a previous one returned — a `f.human` approval, an `f.dispatch` to a child flow, ordinary `if`/`for` control flow around `await`.
 
-```ts
-import { flow } from '@relayflows/surface';
-
-export default flow('release-note', async (f) => {
-  const diff = await f.run('git diff main');
-  const note = await f.llm`One-line release note for: ${diff}`;
-  const ok = await f.human(`Ship this note?\n${note}`, { to: 'khaliq' });
-  if (!ok) return f.done('canceled');
-  f.done('success');
-});
-```
-
-Both compile to the same journal protocol. Reach for YAML when the shape is a fixed DAG you want readable at a glance; reach for TypeScript when a step's next move depends on what a previous one returned.
+<Note>
+  `recoveryMode`, `permissions`, `surfaces`, and `budget` — the richer
+  control-plane fields in the next section — are authored directly in
+  YAML/JSON today. TypeScript's `Ctx.agent` takes `{ task, workspace }` and
+  doesn't expose them yet; reach for the fuller YAML shape below when a step
+  needs them, or have a TypeScript flow `f.dispatch` to one.
+</Note>
 
 ## The context a flow body gets
 
@@ -93,11 +86,31 @@ A step that fails its check doesn't get to report success. It's `verification_fa
 
 An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit:
 
+```yaml
+- id: edit
+  type: agent
+  dependsOn: [greet]
+  instruction: 'Produce the hello artifact through the deterministic test stub.'
+  recoveryMode: reset
+  maxIterations: 2
+  surfaces:
+    workspace:
+      - surface: repo
+    streams:
+      - stream: agent-notes
+  permissions:
+    fileGlobs: ['artifacts/**']
+    accessPreset: readwrite
+  verification:
+    type: output_contains
+    value: agent-ok
+```
+
 - **`reset`** (the default) — the next attempt starts from the pinned workspace revision. Clean slate, no half-finished edit left lying around.
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
 - **`manual`** — parks the run as `needs_human` with a diff of the pinned revision against whatever's actually there.
 
-`maxIterations` bounds how many attempts a step gets before that decision is made for it.
+`maxIterations` bounds how many attempts a step gets before that decision is made for it. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) bounds the whole flow the same way — declared once, enforced by the kernel, not tracked by hand.
 
 ## Next
 

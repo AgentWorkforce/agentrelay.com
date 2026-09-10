@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from 'react';
 
-export type DocsLanguage = 'typescript' | 'python';
+export type DocsLanguage = 'typescript' | 'python' | 'yaml';
 
 type DocsLanguageContextValue = {
   language: DocsLanguage;
@@ -32,6 +32,10 @@ export function normalizeDocsLanguageLabel(label: string): DocsLanguage | null {
     return 'python';
   }
 
+  if (normalized === 'yaml' || normalized === 'yml') {
+    return 'yaml';
+  }
+
   return null;
 }
 
@@ -40,7 +44,7 @@ export function DocsLanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === 'typescript' || stored === 'python') {
+    if (stored === 'typescript' || stored === 'python' || stored === 'yaml') {
       setLanguageState(stored);
     }
   }, []);

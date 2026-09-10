@@ -17,10 +17,12 @@ flows observer [--data-dir <dir>]
 ## Check
 
 ```bash
-flows check my-flow.flow.ts
+flows check my-flow.flow.yaml
 ```
 
 Validates the spec — schema, step graph, verification blocks, and whether every declared CLI actually exists and is authenticated. Nothing runs; nothing is spawned. This is the same preflight a run does before its first step, exposed on its own so a broken spec fails in CI, not at minute 27 of a real run.
+
+`check` takes a declarative `flow.yaml` or `spec.json` — it validates data, so an authored `.flow.ts` file isn't a valid argument here. A TypeScript flow gets the same preflight automatically, run inline at the top of `flows run`.
 
 ## Run
 

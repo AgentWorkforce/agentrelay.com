@@ -20,7 +20,8 @@ Most flows on day one are just `run` and `llm`. `agent` is the rung you climb to
 
 ## A whole flow
 
-```ts
+<CodeGroup>
+```typescript TypeScript
 import { flow } from '@relayflows/surface';
 
 export default flow('hello', async (f) => {
@@ -35,8 +36,21 @@ export default flow('hello', async (f) => {
   f.done('success');
 });
 ```
+```yaml YAML
+version: '0.1.0'
+name: hello
+steps:
+  - id: greeting
+    type: deterministic
+    command: 'echo "Hello from Relayflows"'
+  - id: greeter
+    type: agent
+    dependsOn: [greeting]
+    instruction: 'Reply with one short hello sentence. Do not use tools or modify files.'
+```
+</CodeGroup>
 
-`f.run` executes a shell command and returns its output. `f.agent` hands a task to a real coding-agent CLI in a workspace and returns `{ summary, artifacts }` — not a raw transcript. `f.done` closes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option a caller has to guess about.
+`f.run`/a `deterministic` step executes a shell command and returns its output. `f.agent`/an `agent` step hands a task to a real coding-agent CLI in a workspace and returns a summary — not a raw transcript. TypeScript's `f.done` closes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option a caller has to guess about.
 
 ## Verification instead of vibes
 

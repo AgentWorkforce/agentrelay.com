@@ -1,69 +1,99 @@
 ---
 title: 'Quickstart'
-description: 'From zero to a verified, resumable run: scaffold a flow, run it for real, and pick it back up after a crash.'
+description: 'From zero to a verified, resumable run: write a flow, run it, and pick it back up after a crash.'
 ---
 
-This walks you from a fresh install to a real run in a few commands: scaffold a flow, run it, and resume it after killing the process mid-way. Everything here runs on your machine against your own agent CLI.
+This walks you from a fresh install to a real run in a few commands, using nothing but the published `relayflows` CLI — no scaffolder, no project template.
 
 ## 1. Install
 
-```bash
+<CodeGroup>
+```bash TypeScript
+npm init -y
+npm install @relayflows/surface relayflows
+```
+```bash YAML
 npm install -g relayflows
 ```
+</CodeGroup>
 
-## 2. Scaffold a flow
+TypeScript flows import `@relayflows/surface` at runtime, so it's a project dependency. YAML is data — the global `relayflows` install is all you need.
 
-```bash
-npx create-flow@latest my-flow
-cd my-flow
-npm install
+## 2. Write a flow
+
+<CodeGroup>
+```typescript TypeScript
+// hello.flow.ts
+import { flow } from '@relayflows/surface';
+
+export default flow('hello', async (f) => {
+  const greeting = await f.run('printf "Hello from Relayflows"');
+  console.log(greeting.trim());
+  f.done('success');
+});
 ```
+```yaml YAML
+# hello.flow.yaml
+version: '0.1.0'
+name: hello
+steps:
+  - id: greeting
+    type: deterministic
+    command: "printf 'Hello from Relayflows'"
+    verification:
+      type: output_contains
+      value: Hello
+  - id: finish
+    type: deterministic
+    dependsOn: [greeting]
+    command: "printf done"
+```
+</CodeGroup>
 
-This writes the flow file, a `flows.json` project config, and an npm project with its dependencies already declared. Pass `--cli codex` to target Codex instead of Claude, or `--template deterministic` for a starter that makes no model call at all.
+YAML is canonical — the compiler can check it without running anything. TypeScript is the power tool: the same primitives, called imperatively, with the full authored-operation lifecycle behind `await`.
 
 ## 3. Run it
 
-```bash
-npm start
+<CodeGroup>
+```bash TypeScript
+npx flows run hello.flow.ts --input '{}'
 ```
-
-Which runs the generated command directly:
-
-```bash
-flows run my-flow.flow.ts --local-agent --input '{}'
+```bash YAML
+npx flows check hello.flow.yaml   # preflight only — nothing runs
+npx flows run hello.flow.yaml
 ```
+</CodeGroup>
 
-`--local-agent` attaches the SDK's agent worker to your local daemon and runs your already-authenticated `claude` or `codex` with its own access — nothing extra to configure. Here's a real, captured run of the starter, not a mockup:
+That's a real, captured run:
 
-```text
-○ run-1 (deterministic) 0.00s
-✓ run-1 (deterministic) 1.02s completionReason: success
+<CodeGroup>
+```text TypeScript
 Hello from Relayflows
-○ agent-2 (agent) [agent: preparing] 0.00s
-↻ agent-2 (agent) [agent: running] 12.51s
-✓ agent-2 (agent) [agent: completed] 28.95s completionReason: success
-Hello! How can I help you today?
-
-RUN 01M20JYM4T9FNGNFX4NQCK34JK completed (3 steps) completionReason: success
+RUN 01M26JC2VPAGFVTCVWFT3GSCXQ completed (2 steps) completionReason: success
 ```
+```text YAML
+CHECK PASSED hello.flow.yaml
+RUN 01M26HYJNS6A4K5Q64FH6D0SG9 completed (2 steps) completionReason: success
+```
+</CodeGroup>
 
-Want to check a flow before spending a model call on it? `npx flows check my-flow.flow.ts` validates the spec — schema, step graph, verification — with nothing spawned.
+Every step's outcome is in the journal now, keyed by that run ID. `flows check` only takes a declarative `flow.yaml` or `spec.json` — a TypeScript flow gets the same preflight automatically, run inline at the top of `flows run`.
 
-## 4. Kill it and resume it
+## 4. If it gets interrupted
 
-Interrupt the process mid-run (`Ctrl-C`, or `kill -9` the daemon) and pick it back up:
+The journal lives in `relayflowd`, the daemon `run` starts for you — not in the CLI process you typed the command into. Close the terminal, lose power, or kill the daemon itself mid-run, and nothing is lost:
 
 ```bash
-npx flows resume <run-id>
+flows resume 01M26JC2VPAGFVTCVWFT3GSCXQ
 ```
 
-The step the journal already recorded as complete doesn't run again — the resumed run picks up exactly where it stopped.
+`resume` starts a fresh daemon if none is up, reads the journal from disk, and continues from the first step that never recorded a `completionReason` — the step already marked done doesn't run again.
 
 ## Next
 
 <CardGroup cols={3}>
   <Card title="Build a flow" href="/docs/relayflows/build">
-    Write your own steps, verification, and permissions.
+    Write your own steps, verification, and permissions — YAML or TypeScript.
   </Card>
   <Card title="Multi-agent flows" href="/docs/relayflows/multi-agent">
     Several named agents, different CLIs, one flow.
