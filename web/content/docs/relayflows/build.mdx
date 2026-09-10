@@ -1,0 +1,111 @@
+---
+title: 'Build a flow'
+description: 'Write your own steps, verification, and permissions — TypeScript or YAML, same journal underneath.'
+---
+
+Start with the job in one sentence: what runs, in what order, and what proves each step actually did its job. If a step needs a check you can't state yet, that's the sign it needs one before you wire it up, not after.
+
+## Two ways to author the same thing
+
+**YAML** is the deterministic-DAG path: steps, dependencies, verification, and permissions as data. It's what a `flows check` or a CI gate reads without executing anything.
+
+```yaml
+version: '0.1.0'
+name: hello-agent
+steps:
+  - id: greet
+    type: deterministic
+    command: 'printf hello'
+    verification:
+      type: output_contains
+      value: hello
+
+  - id: edit
+    type: agent
+    dependsOn: [greet]
+    instruction: 'Produce the hello artifact.'
+    recoveryMode: reset
+    maxIterations: 2
+    surfaces:
+      workspace:
+        - surface: repo
+      streams:
+        - stream: agent-notes
+    permissions:
+      fileGlobs: ['artifacts/**']
+      accessPreset: readwrite
+    verification:
+      type: output_contains
+      value: agent-ok
+
+  - id: finish
+    type: deterministic
+    dependsOn: [edit]
+    command: 'printf done'
+
+budget:
+  maxTokensIn: 64
+  maxTokensOut: 32
+  maxDollars: '0.02'
+```
+
+**TypeScript** is the programmatic path — the same primitives, called imperatively:
+
+```ts
+import { flow } from '@relayflows/surface';
+
+export default flow('release-note', async (f) => {
+  const diff = await f.run('git diff main');
+  const note = await f.llm`One-line release note for: ${diff}`;
+  const ok = await f.human(`Ship this note?\n${note}`, { to: 'khaliq' });
+  if (!ok) return f.done('canceled');
+  f.done('success');
+});
+```
+
+Both compile to the same journal protocol. Reach for YAML when the shape is a fixed DAG you want readable at a glance; reach for TypeScript when a step's next move depends on what a previous one returned.
+
+## The context a flow body gets
+
+```ts
+interface Ctx {
+  run(command: string): Step<string>;
+  llm(strings: TemplateStringsArray, ...values: unknown[]): Step<string>;
+  agent(name: string, options: { task: string; workspace?: string }): Step<{ summary: string; artifacts: string[] }>;
+  human(question: string, options: { to: string }): Promise<boolean>;
+  dispatch<T>(flow: string, input: unknown): Promise<T>;
+  done(reason: 'success' | 'step_failed' | 'canceled' | 'budget_exceeded'): void;
+}
+```
+
+That's the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work; `human`, `dispatch`, `done` for control. `human` parks the run on a durable await — it isn't a blocking call that ties up a process, it's a wait the journal can survive a restart across. `dispatch` hands work to a named child flow and returns its typed result.
+
+## Verification, not vibes
+
+Every step's exit code is checked automatically. On top of that:
+
+- **`output_contains`** — an opt-in string match against the step's output. Fast to write, good for a smoke check.
+- **`json_schema`** on an `llm` step — the model's reply must parse and validate against the schema before anything downstream sees it.
+
+A step that fails its check doesn't get to report success. It's `verification_failed`, journaled with exactly which check failed — never a silent pass because the agent said it was fine.
+
+## Permissions and recovery
+
+An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit:
+
+- **`reset`** (the default) — the next attempt starts from the pinned workspace revision. Clean slate, no half-finished edit left lying around.
+- **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
+- **`manual`** — parks the run as `needs_human` with a diff of the pinned revision against whatever's actually there.
+
+`maxIterations` bounds how many attempts a step gets before that decision is made for it.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/relayflows/quickstart">
+    Scaffold one and run it end to end.
+  </Card>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    check, run, resume — every flag.
+  </Card>
+</CardGroup>

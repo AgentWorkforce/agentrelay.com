@@ -1,0 +1,71 @@
+---
+title: 'Quickstart'
+description: 'From nothing to a resumed, verified run — five steps, no model credential needed until step 4.'
+---
+
+Follow these in order. Steps 1–3 touch nothing that costs money; step 4 makes a real model call.
+
+## 1. Install
+
+```bash
+npm install -g relayflows
+```
+
+<Note>
+  Not published yet — `relayflows` and `create-flow` are pre-release. Until
+  they land on npm, clone the SDK and build it locally to run the commands
+  below against your own checkout.
+</Note>
+
+## 2. Scaffold a flow
+
+```bash
+npx create-flow@latest my-flow
+cd my-flow
+npm install
+```
+
+This writes the flow file, a `flows.json` project config, and an npm project with its dependencies already declared. Pass `--cli codex` to target Codex instead of Claude, or `--template deterministic` for a starter that makes no model call at all — useful if you don't have an agent CLI authenticated yet.
+
+## 3. Check it before running it
+
+```bash
+npx flows check my-flow.flow.ts
+```
+
+Validates the spec — schema, step graph, verification blocks — without spawning a shell command or a model. This is the same check a CI gate would run.
+
+## 4. Run it
+
+```bash
+npm start
+```
+
+Which runs the generated command directly:
+
+```bash
+flows run my-flow.flow.ts --local-agent --input '{}'
+```
+
+`--local-agent` attaches the existing SDK agent worker to your local daemon and runs your authenticated CLI with its own access — no separate credential to configure. Requires Node 22.18+ and a signed-in `claude` or `codex` on `PATH`.
+
+## 5. Kill it and resume it
+
+Interrupt the process mid-run (`Ctrl-C`, or `kill -9` the daemon) and pick it back up:
+
+```bash
+npx flows resume <run-id>
+```
+
+Steps the journal already recorded as complete don't run again — you'll see the run pick up exactly where it stopped, not from the top.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Build a flow" href="/docs/relayflows/build">
+    Write your own steps, verification, and permissions.
+  </Card>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    Every command: check, run, resume, tick, observe.
+  </Card>
+</CardGroup>

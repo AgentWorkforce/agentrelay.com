@@ -1,0 +1,66 @@
+---
+title: 'CLI'
+description: 'Check a spec, run it, resume it, watch it — the flows command surface.'
+---
+
+```text
+flows check [--json] <flow.yaml|spec.json>
+flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] <flow.yaml|spec.json>
+flows run --cloud [--json] [--wait] <flow.yaml|spec.json>
+flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] <flow.ts> --input <inline-json-or-file>
+flows resume [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] <run-id>
+flows tick start --schedule-id <id> --interval-ms <ms> [--epoch-ms <ms>] [--max-catch-up <n>] [--poll-interval-ms <ms>] [--data-dir <dir>] <spec.json>
+flows hn-monitor start [--data-dir <dir>] [--poll-interval-ms <n>] <spec.json>
+flows observer [--data-dir <dir>]
+```
+
+## Check
+
+```bash
+flows check my-flow.flow.ts
+```
+
+Validates the spec — schema, step graph, verification blocks, and whether every declared CLI actually exists and is authenticated. Nothing runs; nothing is spawned. This is the same preflight a run does before its first step, exposed on its own so a broken spec fails in CI, not at minute 27 of a real run.
+
+## Run
+
+```bash
+flows run my-flow.flow.ts --local-agent --input '{}'   # TypeScript flow, local CLI
+flows run workflow.yaml                                  # YAML/spec.json flow
+flows run --cloud --wait workflow.yaml                   # dispatch to the hosted engine, block for the result
+```
+
+`--local-agent` attaches the existing SDK agent worker to your local daemon and runs the declared CLI (`claude`, `codex`, …) with its own local access. It's what makes an authored TypeScript flow's `agent` steps runnable without a separate credential path.
+
+By default `run` spawns a daemon for the run if one isn't already up. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole environment) asserts a daemon is already present instead — the lever CI uses to fail loudly on a missing daemon rather than silently start one.
+
+`--data-dir <dir>` points at the journal's storage directory; it defaults to `.relayflowd` in the current project.
+
+## Resume
+
+```bash
+flows resume <run-id>
+```
+
+Picks a run back up from its journal. Completed steps aren't re-executed; only the work that never finished, or never got a recorded outcome, runs again.
+
+## Observer links
+
+```bash
+flows observer
+```
+
+Mints a read-only link for watching a run's activity in real time. Minting is best-effort — a failed mint never fails the run — so `--no-observer-link` is there for anyone who wants to skip it outright (CI, for instance).
+
+## Triggers
+
+```bash
+flows tick start --schedule-id daily --interval-ms 86400000 spec.json
+flows hn-monitor start spec.json
+```
+
+`tick` is the general-purpose durable schedule: a deterministic-id claim on each interval, with catch-up bounded by `--max-catch-up` if the process was down when an interval fired. `hn-monitor` is a named, narrower proactive trigger built the same way. Both are the same idea underneath: a schedule that reports whether it's still alive, not one that silently stops firing for weeks and reports nothing.
+
+## `--json`
+
+Every command accepts `--json` for structured output instead of the human-readable progress line — the shape a CI step or another program should read, not the terminal renderer.
