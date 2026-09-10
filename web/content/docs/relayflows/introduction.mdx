@@ -90,17 +90,11 @@ RUN 01M20JYM4T9FNGNFX4NQCK34JK completed (3 steps) completionReason: success
 
 That's a real captured run, not a mockup — every step carries a `completionReason` from a closed vocabulary (`success`, `verification_failed`, `retries_exhausted`, `lease_expired`, `crashed`, `timeout`, `worker_error`, `budget_exceeded`, `canceled`), so a run's journal always says which of those it was. No raw stack trace ever stands in for one.
 
-<Note>
-  The CLI and scaffolder aren't published to npm yet — the commands on this
-  page are the intended entry point. Until they land, build the SDK from
-  source to try a flow locally.
-</Note>
-
 ## Start here
 
 <CardGroup cols={3}>
   <Card title="Quickstart" href="/docs/relayflows/quickstart">
-    From nothing to a resumed run, five steps.
+    From nothing to a resumed run in a few commands.
   </Card>
   <Card title="Build a flow" href="/docs/relayflows/build">
     TypeScript or YAML — the same journal underneath.
@@ -109,3 +103,7 @@ That's a real captured run, not a mockup — every step carries a `completionRea
     check, run, resume, observe.
   </Card>
 </CardGroup>
+
+<BannerLink href="/docs/relayflows/multi-agent" icon="compass">
+  See how far the ladder goes: named agents, cloud dispatch, memory, and integrations.
+</BannerLink>

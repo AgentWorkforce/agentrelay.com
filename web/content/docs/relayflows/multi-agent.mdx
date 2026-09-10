@@ -1,0 +1,73 @@
+---
+title: 'Multi-agent flows'
+description: 'Several named agents, different CLIs and models, one flow — plus durable human approval and handoff to child flows.'
+---
+
+A flow isn't locked to one CLI or one model. Name as many agents as the task needs, give each one its own `cli` and `model`, and assign them to steps — the planning step can run on Opus, the edit can go to Codex, and the review can come back to Claude, all in one run, each step's identity and cost accounted separately.
+
+## Named agents
+
+```yaml
+name: ship-feature
+agents:
+  planner: { cli: claude, model: claude-opus-4-6 }
+  implementer: { cli: codex, model: gpt-5.6-codex }
+  reviewer: { cli: claude, model: claude-sonnet-4-6 }
+
+steps:
+  - id: plan
+    type: agent
+    agent: planner
+    instruction: 'Plan the implementation for: {{input.task}}'
+
+  - id: implement
+    type: agent
+    agent: implementer
+    dependsOn: [plan]
+    instruction: 'Implement the plan from the previous step.'
+
+  - id: review
+    type: agent
+    agent: reviewer
+    dependsOn: [implement]
+    instruction: 'Review the diff for correctness and security.'
+    verification:
+      type: output_contains
+      value: 'APPROVED'
+```
+
+Each step's `agent:` selector resolves to that named `{ cli, model }` pair at compile time — the kernel never guesses a default. An unused or step-shadowed named agent is linted by `flows check`, so a stale declaration doesn't quietly rot in the spec.
+
+## Asking a human, then handing off
+
+```ts
+import { flow } from '@relayflows/surface';
+
+export default flow('ship-feature', async (f) => {
+  const plan = await f.agent('planner', {
+    task: 'Plan implementation for: add OAuth2 support',
+  });
+
+  const ok = await f.human(`Ship this?\n${plan.summary}`, { to: 'khaliq' });
+  if (!ok) return f.done('canceled');
+
+  const pr = await f.dispatch('garden/implement', plan);
+  f.done('success');
+});
+```
+
+`f.human` parks the run on a durable wait — nothing sits there blocking a thread, and the wait survives a restart exactly like a crash mid-step does. `f.dispatch` hands the plan to a named child flow and returns its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
+
+## Next
+
+<CardGroup cols={3}>
+  <Card title="Cloud" href="/docs/relayflows/cloud">
+    Run the same flow on hosted infrastructure.
+  </Card>
+  <Card title="Memory & integrations" href="/docs/relayflows/memory-and-integrations">
+    Recall past runs; reach Slack, GitHub, and Linear.
+  </Card>
+  <Card title="Reliability" href="/docs/relayflows/reliability">
+    The crash-resume contract and the closed failure vocabulary.
+  </Card>
+</CardGroup>

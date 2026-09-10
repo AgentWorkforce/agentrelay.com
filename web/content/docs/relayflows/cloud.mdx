@@ -1,0 +1,50 @@
+---
+title: 'Cloud'
+description: 'Run a flow on hosted infrastructure instead of your own machine — the same verification, the same journal.'
+---
+
+A flow doesn't need your laptop up to run. `flows run --cloud` submits the exact same spec to hosted infrastructure — the Rust runtime still executes and verifies every step; only where it runs changes.
+
+## Run it
+
+```bash
+flows run --cloud examples/ship-feature.flow.yaml
+flows run --cloud --wait --json examples/ship-feature.flow.yaml
+```
+
+Without `--wait`, exit `0` means the run was **accepted**, not completed — you get a run ID back and the run continues on its own. With `--wait`, exit `0` means Cloud reported the run `completed` with a validated `success` reason. A failed or cancelled run, or an observation failure, exits `1`.
+
+## From the SDK
+
+```ts
+import { runInCloud, waitForCloudFlowRun } from '@relayflows/sdk';
+
+const accepted = await runInCloud(
+  { path: './flow.yaml' },
+  { token: process.env.FLOWS_CLOUD_TOKEN }
+);
+console.log(accepted.runId); // accepted, not completed
+
+const finished = await waitForCloudFlowRun(accepted.runId);
+console.log(finished.status, finished.completionReason);
+```
+
+Set `FLOWS_CLOUD_TOKEN` to a Cloud API token authorized for `workflow:invoke:write` and `workflow:runs:read`. `FLOWS_CLOUD_URL` points at a different Cloud deployment if you're not using the default.
+
+## What's different about a cloud run
+
+- **Only declarative flows.** `--cloud` accepts `flow.yaml` / `spec.json`, not an authored `.flow.ts` file — the SDK refuses those before making an HTTP call rather than uploading code that can't run there.
+- **Accepted isn't completed.** An interruption after submission but before the acceptance receipt reports `admission_unknown` — the server may already have started a non-idempotent run. Don't resubmit blindly; check the run ID you already have first.
+- **One-hour execution ceiling.** Cloud's current executor has a one-hour deadline per run, independent of any local timeout you'd otherwise configure.
+- **Step-level journal evidence stays local to this API.** The completion reason you get back is validated against the same closed vocabulary as a local run, but per-step journal detail isn't exposed through this endpoint yet.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Multi-agent flows" href="/docs/relayflows/multi-agent">
+    Named agents, different CLIs, one spec.
+  </Card>
+  <Card title="Reliability" href="/docs/relayflows/reliability">
+    What a completion reason actually guarantees.
+  </Card>
+</CardGroup>

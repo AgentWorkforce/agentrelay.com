@@ -1,21 +1,15 @@
 ---
 title: 'Quickstart'
-description: 'From nothing to a resumed, verified run — five steps, no model credential needed until step 4.'
+description: 'From zero to a verified, resumable run: scaffold a flow, run it for real, and pick it back up after a crash.'
 ---
 
-Follow these in order. Steps 1–3 touch nothing that costs money; step 4 makes a real model call.
+This walks you from a fresh install to a real run in a few commands: scaffold a flow, run it, and resume it after killing the process mid-way. Everything here runs on your machine against your own agent CLI.
 
 ## 1. Install
 
 ```bash
 npm install -g relayflows
 ```
-
-<Note>
-  Not published yet — `relayflows` and `create-flow` are pre-release. Until
-  they land on npm, clone the SDK and build it locally to run the commands
-  below against your own checkout.
-</Note>
 
 ## 2. Scaffold a flow
 
@@ -25,17 +19,9 @@ cd my-flow
 npm install
 ```
 
-This writes the flow file, a `flows.json` project config, and an npm project with its dependencies already declared. Pass `--cli codex` to target Codex instead of Claude, or `--template deterministic` for a starter that makes no model call at all — useful if you don't have an agent CLI authenticated yet.
+This writes the flow file, a `flows.json` project config, and an npm project with its dependencies already declared. Pass `--cli codex` to target Codex instead of Claude, or `--template deterministic` for a starter that makes no model call at all.
 
-## 3. Check it before running it
-
-```bash
-npx flows check my-flow.flow.ts
-```
-
-Validates the spec — schema, step graph, verification blocks — without spawning a shell command or a model. This is the same check a CI gate would run.
-
-## 4. Run it
+## 3. Run it
 
 ```bash
 npm start
@@ -47,9 +33,23 @@ Which runs the generated command directly:
 flows run my-flow.flow.ts --local-agent --input '{}'
 ```
 
-`--local-agent` attaches the existing SDK agent worker to your local daemon and runs your authenticated CLI with its own access — no separate credential to configure. Requires Node 22.18+ and a signed-in `claude` or `codex` on `PATH`.
+`--local-agent` attaches the SDK's agent worker to your local daemon and runs your already-authenticated `claude` or `codex` with its own access — nothing extra to configure. Here's a real, captured run of the starter, not a mockup:
 
-## 5. Kill it and resume it
+```text
+○ run-1 (deterministic) 0.00s
+✓ run-1 (deterministic) 1.02s completionReason: success
+Hello from Relayflows
+○ agent-2 (agent) [agent: preparing] 0.00s
+↻ agent-2 (agent) [agent: running] 12.51s
+✓ agent-2 (agent) [agent: completed] 28.95s completionReason: success
+Hello! How can I help you today?
+
+RUN 01M20JYM4T9FNGNFX4NQCK34JK completed (3 steps) completionReason: success
+```
+
+Want to check a flow before spending a model call on it? `npx flows check my-flow.flow.ts` validates the spec — schema, step graph, verification — with nothing spawned.
+
+## 4. Kill it and resume it
 
 Interrupt the process mid-run (`Ctrl-C`, or `kill -9` the daemon) and pick it back up:
 
@@ -57,13 +57,16 @@ Interrupt the process mid-run (`Ctrl-C`, or `kill -9` the daemon) and pick it ba
 npx flows resume <run-id>
 ```
 
-Steps the journal already recorded as complete don't run again — you'll see the run pick up exactly where it stopped, not from the top.
+The step the journal already recorded as complete doesn't run again — the resumed run picks up exactly where it stopped.
 
 ## Next
 
-<CardGroup cols={2}>
+<CardGroup cols={3}>
   <Card title="Build a flow" href="/docs/relayflows/build">
     Write your own steps, verification, and permissions.
+  </Card>
+  <Card title="Multi-agent flows" href="/docs/relayflows/multi-agent">
+    Several named agents, different CLIs, one flow.
   </Card>
   <Card title="CLI" href="/docs/relayflows/cli">
     Every command: check, run, resume, tick, observe.

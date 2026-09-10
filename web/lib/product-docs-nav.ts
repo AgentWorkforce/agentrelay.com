@@ -232,6 +232,15 @@ export const relayflowsSection: ProductDocSection = {
       title: 'Run',
       items: [{ title: 'CLI', slug: 'cli' }],
     },
+    {
+      title: 'Going further',
+      items: [
+        { title: 'Multi-agent flows', slug: 'multi-agent' },
+        { title: 'Cloud', slug: 'cloud' },
+        { title: 'Memory & integrations', slug: 'memory-and-integrations' },
+        { title: 'Reliability', slug: 'reliability' },
+      ],
+    },
   ],
 };
 

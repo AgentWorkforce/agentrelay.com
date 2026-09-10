@@ -1,0 +1,65 @@
+---
+title: 'Reliability'
+description: 'The crash-resume contract, the closed failure vocabulary, and the rules that make a flow finishing mean something.'
+---
+
+An agent's failure mode is wrong output, not no output — a retry built for "it crashed" doesn't catch "it returned something plausible and wrong." Every mechanism on this page exists to close that gap: a flow's completion is something the kernel can prove, not something an agent has to be trusted to report.
+
+## A run's exit code is a contract
+
+```text
+0   completionReason: success
+1   a declared completionReason failure, or an unknown outcome from a transport/runtime/protocol error
+2   refused before any journal write: invalid input, failed preflight, unreachable daemon
+3   parked — waiting on an llm/agent worker or a needs_human recovery wait
+```
+
+Exit `2` is the important one to build on: a bad spec, a missing CLI, or an unauthenticated agent fails **before a journal entry is ever written** — at `flows check` time, or at the top of `flows run`, never at minute 27 of a real run. Preflight proves what it can prove up front so a run either starts clean or doesn't start.
+
+## The closed completion vocabulary
+
+Every step, and every run, ends in one reason from a fixed set — never a raw stack trace standing in for one:
+
+```text
+Step:  success · verification_failed · retries_exhausted · lease_expired ·
+       crashed · timeout · worker_error · budget_exceeded · canceled
+
+Run:   success · step_failed · canceled · budget_exceeded
+```
+
+A caller with an exhaustive switch over these values never hits a case that isn't there. A step that fails its verification is `verification_failed`, journaled with which check failed — it doesn't get to report success because an agent said it was fine.
+
+## Kill it mid-step. Resume it. Nothing doubles.
+
+The crash contract for an agent step is specific: on crash or lease expiry, the workspace is left **dirty, not undone** — the kernel never rolls back an edit that was already made. What happens on the next attempt is a declared recovery mode:
+
+- **`reset`** (default) — the next attempt restores the pinned workspace revision and starts clean.
+- **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
+- **`manual`** — the run parks as `needs_human` with a diff of the pinned revision against whatever's actually there.
+
+Effects are deduped independently of any of that: a writeback — a Slack post, a PR, a file write — is journaled as a fact keyed by `(step id, idempotency key, surface path)`. Two attempts producing the same writeback still produce one provider call. **Exactly-once means exactly-once effects, not exactly-once execution** — an attempt can run more than once; what it's not allowed to do is have that show up twice on the other end.
+
+## A flow body can't lie about finishing
+
+Three rules govern an authored TypeScript body, enforced by the runtime rather than left to convention:
+
+1. **Await every step you create.** `f.run(...)` created and never awaited is `unawaited_step` — a step that might still be running when the flow reports done isn't something the journal can vouch for.
+2. **A step's failure is yours whether or not you catch it.** A root failure is recorded before your code can see it; a `catch` can't quietly swallow one.
+3. **Finish your derived work before `done()`.** If something chained onto a step is still in flight when the body returns, the run is refused as `unsettled_derived_work` rather than recorded as a success nobody can actually verify.
+
+Together these mean a run that reports `completionReason: success` really did finish everything it started — not "everything that happened to settle before the process moved on."
+
+## The daemon doesn't leave you guessing either
+
+`flows run` and `flows resume` attach to the daemon already serving your data directory, or start one. Concurrent invocations are safe — the daemon holds an exclusive lock, so a redundant one exits without touching anything and its CLI attaches to the winner instead. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole CI environment) asserts a daemon is already present rather than conjuring one — the lever for asserting infrastructure is up, not silently patching around its absence.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    check, run, resume — every exit code in practice.
+  </Card>
+  <Card title="Build a flow" href="/docs/relayflows/build">
+    Verification and permissions, from the author's side.
+  </Card>
+</CardGroup>
