@@ -3,7 +3,7 @@ title: 'Quickstart'
 description: 'From zero to a verified, resumable run: write a flow, run it, and pick it back up after a crash.'
 ---
 
-This walks you from a fresh install to a real run in a few commands, using nothing but the published `relayflows` CLI — no scaffolder, no project template.
+This walks you from a fresh install to a real run in a few commands, using nothing but the published `relayflows` CLI. No scaffolder, no project template.
 
 ## 1. Install
 
@@ -64,7 +64,7 @@ npx flows run hello.flow.yaml
 ```
 </CodeGroup>
 
-That's a real, captured run:
+This is a real, captured run:
 
 <CodeGroup>
 ```text TypeScript
@@ -81,7 +81,7 @@ Every step's outcome is in the journal now, keyed by that run ID. `flows check` 
 
 ## 4. If it gets interrupted
 
-`flows run` starts a background daemon, `relayflowd`, and that's where the journal actually lives — not in the CLI process you typed the command into. Close the terminal, lose power, or kill the daemon itself mid-run, and nothing is lost:
+`flows run` starts a background daemon, `relayflowd`. The journal lives there, not in the CLI process you typed the command into. Close the terminal, lose power, or kill the daemon itself mid-run: nothing is lost.
 
 ```bash
 flows resume 01M26JC2VPAGFVTCVWFT3GSCXQ

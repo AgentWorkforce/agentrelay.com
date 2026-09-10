@@ -3,11 +3,11 @@ title: 'Build a flow'
 description: 'Write your own steps, verification, and permissions — TypeScript or YAML, same journal underneath.'
 ---
 
-Start with the job in one sentence: what runs, in what order, and what proves each step actually did its job. If you can't state that proof yet, figure it out before you wire the step up, not after.
+Start with the job in one sentence: what runs, in what order, and what proves each step did its job. If you can't state that proof yet, figure it out first, before wiring the step up.
 
 ## Two ways to author the same thing
 
-**YAML** describes a fixed set of steps and their dependencies as data — nothing runs, so `flows check` or a CI gate can read and validate it. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
+**YAML** describes a fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -48,14 +48,14 @@ steps:
 ```
 </CodeGroup>
 
-Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned — an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
+Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
 
 <Note>
-  `recoveryMode`, `permissions`, `surfaces`, and `budget` — the richer
-  fields covered in the next section — are YAML/JSON fields only today.
-  TypeScript's `Ctx.agent` takes just `{ task, workspace }`. If a step needs
-  them, author it in YAML and either run it directly or have a TypeScript
-  flow reach it with `f.dispatch`.
+  `recoveryMode`, `permissions`, `surfaces`, and `budget`, the richer
+  fields covered further down, are YAML/JSON fields only today.
+  TypeScript's `Ctx.agent` takes just `{ task, workspace }`. If a step
+  needs them, author it in YAML and either run it directly or have a
+  TypeScript flow reach it with `f.dispatch`.
 </Note>
 
 ## The context a flow body gets
@@ -71,16 +71,16 @@ interface Ctx {
 }
 ```
 
-That's the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work; `human`, `dispatch`, `done` for control. `human` parks the run on a durable await — it isn't a blocking call that ties up a process, it's a wait the journal can survive a restart across. `dispatch` hands work to a named child flow and returns its typed result.
+This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control. `human` parks the run on a durable await instead of a blocking call — it's a wait the journal can survive a restart across. `dispatch` hands work to a named child flow and returns its typed result.
 
-## Verification, not vibes
+## Verification
 
 Every step's exit code is checked automatically. On top of that:
 
 - **`output_contains`** — an opt-in string match against the step's output. Fast to write, good for a smoke check.
 - **`json_schema`** on an `llm` step — the model's reply must parse and validate against the schema before anything downstream sees it.
 
-A step that fails its check doesn't get to report success. It's `verification_failed`, journaled with exactly which check failed — never a silent pass because the agent said it was fine.
+A step that fails its check is recorded as `verification_failed`, with exactly which check failed. The agent insisting it went fine doesn't override that.
 
 ## Permissions and recovery
 
@@ -106,11 +106,11 @@ An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPres
     value: agent-ok
 ```
 
-- **`reset`** (the default) — the next attempt starts from the pinned workspace revision. Clean slate, no half-finished edit left lying around.
+- **`reset`** (the default) — the next attempt starts fresh from the pinned workspace revision, with no half-finished edit left behind.
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
 - **`manual`** — parks the run as `needs_human` with a diff of the pinned revision against whatever's actually there.
 
-`maxIterations` caps how many attempts a step gets before one of those three outcomes has to happen. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) caps the whole flow the same way — declared once, enforced by the kernel, not tracked by hand.
+`maxIterations` caps how many attempts a step gets before one of those three outcomes has to happen. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) caps the whole flow the same way, declared once and enforced by the kernel instead of tracked by hand.
 
 ## Next
 

@@ -3,7 +3,7 @@ title: 'Reliability'
 description: 'The crash-resume contract, the closed failure vocabulary, and the rules that make a flow finishing mean something.'
 ---
 
-Everything on this page answers one question: when a run says it's done, what makes that true? Not "an agent said so" — a flow's completion is something the kernel can prove, checked the same way whether the run finished cleanly or got killed and picked back up.
+This page covers what makes a run's completion trustworthy: not an agent's own report, but something the kernel checks and can prove, whether the run finished cleanly or got killed and picked back up partway through.
 
 ## A run's exit code is a contract
 
@@ -14,11 +14,11 @@ Everything on this page answers one question: when a run says it's done, what ma
 3   parked — waiting on an llm/agent worker or a needs_human recovery wait
 ```
 
-Exit `2` is the important one to build on: a bad spec, a missing CLI, or an unauthenticated agent fails **before a journal entry is ever written** — at `flows check` time, or at the top of `flows run`, never at minute 27 of a real run. Preflight proves what it can prove up front so a run either starts clean or doesn't start.
+Exit `2` is the important one to build on: a bad spec, a missing CLI, or an unauthenticated agent fails before a journal entry is ever written, at `flows check` time or at the top of `flows run` — never at minute 27 of a real run. Preflight checks what it can check up front, so a run either starts clean or doesn't start.
 
 ## The closed completion vocabulary
 
-Every step, and every run, ends in one reason from a fixed set — never a raw stack trace standing in for one:
+Every step, and every run, ends in one reason from a fixed set:
 
 ```text
 Step:  success · verification_failed · retries_exhausted · lease_expired ·
@@ -27,31 +27,31 @@ Step:  success · verification_failed · retries_exhausted · lease_expired ·
 Run:   success · step_failed · canceled · budget_exceeded
 ```
 
-Handle every value in that list and there's no case left over to surprise you later. A step that fails its verification is `verification_failed`, journaled with exactly which check failed — it doesn't get to report success just because the agent said it was fine.
+Handle every value in that list and there's no case left over to surprise you later. A step that fails verification is recorded as `verification_failed`, with exactly which check failed. The agent reporting that it went fine doesn't change the outcome.
 
-## Kill it mid-step. Resume it. Nothing doubles.
+## Crashing mid-step
 
-The crash contract for an agent step is specific: on crash or lease expiry, the workspace is left **dirty, not undone** — the kernel never rolls back an edit that was already made. What happens on the next attempt is a declared recovery mode:
+If an agent step crashes or its lease expires, the workspace is left dirty. The kernel doesn't roll back an edit that already happened. What runs next depends on the step's declared recovery mode:
 
 - **`reset`** (default) — the next attempt restores the pinned workspace revision and starts clean.
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
 - **`manual`** — the run parks as `needs_human` with a diff of the pinned revision against whatever's actually there.
 
-Separately from recovery mode, every external effect gets deduped on its own: a writeback — a Slack post, a PR, a file write — is journaled as a fact keyed by `(step id, idempotency key, surface path)`. Two attempts that both try the same writeback still result in one provider call. **Exactly-once means exactly-once effects, not exactly-once execution** — a step can run more than once; it just can't have that show up twice on the other end.
+Effects are deduped on a separate track from all of that. A writeback — a Slack post, a PR, a file write — is journaled as a fact keyed by `(step id, idempotency key, surface path)`, so two attempts at the same writeback still produce one provider call. A step can run more than once. What it can't do is have an effect land twice on the other end.
 
-## A flow body can't lie about finishing
+## A flow can't fake finishing
 
-Three rules govern an authored TypeScript body, enforced by the runtime rather than left to convention:
+An authored TypeScript body runs under three rules, enforced by the runtime rather than left to convention:
 
-1. **Await every step you create.** `f.run(...)` created and never awaited is `unawaited_step` — a step that might still be running when the flow reports done isn't something the journal can vouch for.
-2. **A step's failure is yours whether or not you catch it.** A root failure is recorded before your code can see it; a `catch` can't quietly swallow one.
+1. **Await every step you create.** An `f.run(...)` call that's created and never awaited is `unawaited_step`. If it might still be running when the flow reports done, the journal has no way to vouch for it.
+2. **A step's failure is yours whether or not you catch it.** A root failure is recorded before your code can even see it, so a `catch` can't quietly swallow one.
 3. **Finish your derived work before `done()`.** If something chained onto a step is still in flight when the body returns, the run is refused as `unsettled_derived_work` rather than recorded as a success nobody can actually verify.
 
-Together these mean a run that reports `completionReason: success` really did finish everything it started — not "everything that happened to settle before the process moved on."
+Together, these rules mean a run reporting `completionReason: success` really did finish everything it started, rather than everything that happened to settle before the process moved on.
 
-## The daemon doesn't leave you guessing either
+## The daemon
 
-`flows run` and `flows resume` attach to the daemon already serving your data directory, or start one if there isn't one. Run two at once and that's safe too — the daemon holds an exclusive lock, so the second one just attaches to the first instead of starting a competing one. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole CI environment) turns that convenience off: it fails loudly if no daemon is already up, instead of quietly starting one for you.
+`flows run` and `flows resume` attach to the daemon already serving your data directory, or start one if there isn't one. Run two at once and that's fine — the daemon holds an exclusive lock, so the second one just attaches to the first instead of starting a competing one. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole CI environment) turns that convenience off: it fails loudly if no daemon is already up, instead of quietly starting one for you.
 
 ## Next
 

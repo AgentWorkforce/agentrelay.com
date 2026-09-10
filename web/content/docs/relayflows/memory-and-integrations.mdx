@@ -5,9 +5,9 @@ description: 'Relayhistory-backed memory and Relayfile-backed integrations — t
 
 A flow doesn't carry its own database or its own Slack client. Two existing systems back it instead: [Relayloop](/docs/loop) for memory across runs, and [Relayfile](/docs/file) for everything a flow reads from or writes to outside itself.
 
-## Memory: recall, cite, learn
+## Memory
 
-A step declares what it needs from prior runs, and whatever comes back is charged to that step's own budget, itemized in its own journal entry — never pulled from some shared pool:
+A step declares what it needs from prior runs, and whatever comes back is charged to that step's own budget, itemized in its own journal entry. There's no shared pool it draws from:
 
 ```ts
 export default flow('triage', async (f) => {
@@ -26,15 +26,15 @@ export default flow('triage', async (f) => {
 Under the hood this is [Relayloop](/docs/loop)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
 
 <Note>
-  Retrieval quality is the acceptance bar here, not the wiring: the target is
+  What this feature is judged on is retrieval quality, not the plumbing:
   an agent visibly avoiding a mistake a prior run already made, citation
   included. Today's shipped provider is a fixed stub while real `ai-hist
-  pack` retrieval lands — the `memory.injected` journal entry and its
+  pack` retrieval lands. The `memory.injected` journal entry and its
   per-step budget accounting are real regardless of which provider answers
   the query.
 </Note>
 
-## Integrations: a SaaS is a directory, not an API client
+## Integrations
 
 Reaching Slack, GitHub, or Linear from a flow doesn't mean writing a provider SDK call and hoping the token scope is right. [Relayfile](/docs/file) mounts each provider as a directory a flow reads and writes:
 

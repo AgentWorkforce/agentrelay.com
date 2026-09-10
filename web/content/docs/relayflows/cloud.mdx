@@ -3,7 +3,7 @@ title: 'Cloud'
 description: 'Run a flow on hosted infrastructure instead of your own machine — the same verification, the same journal.'
 ---
 
-A flow doesn't need your laptop up to run. `flows run --cloud` submits the exact same spec to hosted infrastructure — the Rust runtime still executes and verifies every step; only where it runs changes.
+A flow doesn't need your laptop up to run. `flows run --cloud` submits the exact same spec to hosted infrastructure. The Rust runtime still executes and verifies every step; only where it runs is different.
 
 ## Run it
 
@@ -12,7 +12,7 @@ flows run --cloud examples/ship-feature.flow.yaml
 flows run --cloud --wait --json examples/ship-feature.flow.yaml
 ```
 
-Without `--wait`, exit `0` means the run was **accepted**, not completed — you get a run ID back and the run continues on its own. With `--wait`, exit `0` means Cloud reported the run `completed` with a validated `success` reason. A failed or cancelled run, or an observation failure, exits `1`.
+Without `--wait`, exit `0` means the run was **accepted**. You get a run ID back and the run continues on its own; it hasn't completed yet. With `--wait`, exit `0` means Cloud reported the run `completed` with a validated `success` reason. A failed or cancelled run, or an observation failure, exits `1`.
 
 ## From the SDK
 

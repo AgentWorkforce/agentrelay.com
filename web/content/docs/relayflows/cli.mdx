@@ -20,7 +20,7 @@ flows observer [--data-dir <dir>]
 flows check my-flow.flow.yaml
 ```
 
-Validates the spec — schema, step graph, verification blocks, and whether every declared CLI actually exists and is authenticated. Nothing runs; nothing is spawned. This is the same preflight a run does before its first step, exposed on its own so a broken spec fails in CI, not at minute 27 of a real run.
+Validates the spec: schema, step graph, verification blocks, and whether every declared CLI actually exists and is authenticated. Nothing runs and nothing is spawned. This is the same preflight a run does before its first step, exposed on its own so a broken spec fails in CI instead of at minute 27 of a real run.
 
 `check` takes a declarative `flow.yaml` or `spec.json` — it validates data, so an authored `.flow.ts` file isn't a valid argument here. A TypeScript flow gets the same preflight automatically, run inline at the top of `flows run`.
 
@@ -61,7 +61,7 @@ flows tick start --schedule-id daily --interval-ms 86400000 spec.json
 flows hn-monitor start spec.json
 ```
 
-`tick` is a durable schedule: each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named trigger built the same way. Both report whether they're still alive — neither can silently stop firing for weeks and go unnoticed.
+`tick` is a durable schedule. Each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named trigger built the same way. Both report whether they're still alive, instead of quietly going dark for weeks without anyone noticing.
 
 ## `--json`
 

@@ -1,22 +1,22 @@
 ---
 title: 'Relayflows'
-description: 'A deterministic script over agentic primitives — steps you can inspect, verify, and resume, not a prompt and a hope.'
+description: 'A deterministic script over agentic primitives: steps you can inspect, verify, and resume.'
 ---
 
-Relayflows turns a coding-agent task into steps you can inspect and verify. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed. Start with a small local flow; add verification as the task grows.
+Relayflows turns a coding-agent task into steps you can inspect and verify. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed. Start with a small local flow, then add verification as the task grows.
 
-Every effect is journaled before it's real. If a step's write to that journal fails, the step fails — there's no silent fallback and no "it probably worked." That's the trade Relayflows makes everywhere: less magic, more evidence.
+Every effect is journaled before it's treated as real. If a step's journal write fails, the step fails. There's no silent fallback and no "it probably worked." Relayflows makes that trade everywhere: less magic, more evidence.
 
 ## The ladder
 
 Every flow is built from the same small set of rungs, and you only climb as high as the task needs:
 
-1. **`run`** — a shell command. No model anywhere.
-2. **`llm`** — a bare model call. Prompt in, verified output out — no workspace, no tool use.
+1. **`run`** — a shell command. No model involved.
+2. **`llm`** — a bare model call. Prompt in, verified output out, no workspace, no tool use.
 3. **`agent`** — a harnessed coding agent in a workspace. Returns an artifact, not just text.
 4. **`human` / `dispatch` / `done`** — durable approval, handing work to a child flow, and a typed finish.
 
-Most flows on day one are just `run` and `llm`. `agent` is the rung you climb to when the step needs hands on a real workspace.
+Most flows only need `run` and `llm`. Climb to `agent` once a step needs hands on a real workspace.
 
 ## A whole flow
 
@@ -50,11 +50,11 @@ steps:
 ```
 </CodeGroup>
 
-Running a shell command (`f.run` in TypeScript, a `deterministic` step in YAML) returns its output. Handing a task to a coding agent (`f.agent` / an `agent` step) returns a summary, not a raw transcript. And finishing closes the run with one reason from a closed set — `success`, `step_failed`, `canceled`, or `budget_exceeded` — so there's no fifth option a caller has to guess about.
+`f.run` (a `deterministic` step in YAML) executes a shell command and returns its output. `f.agent` (an `agent` step) hands a task to a coding agent and returns a summary rather than a raw transcript. `f.done` finishes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option to guess about.
 
-## Verification instead of vibes
+## Verification
 
-An agent's failure mode is wrong output, not no output — a retry built for "it crashed" doesn't catch "it returned something plausible and wrong." So a step's completion isn't the agent's opinion; it's a check the kernel runs on what came back.
+An agent rarely fails by crashing. It fails by returning something plausible and wrong, which a plain retry-on-error never catches. So a step's completion is decided by a check the kernel runs against the real output, not by the agent's own account of what happened.
 
 ```yaml
 version: '0.1.0'
@@ -81,13 +81,13 @@ steps:
       value: agent-ok
 ```
 
-Every step's exit code is checked automatically. On top of that, `output_contains` is an opt-in string match, and an `llm` step can instead require its output to match a `json_schema`. Either way, a step that fails verification doesn't get to report success — it's `verification_failed`, journaled and visible.
+The exit code is always checked. On top of that, `output_contains` adds an opt-in string match, and an `llm` step can require its output to match a `json_schema` instead. A step that fails verification is recorded as `verification_failed` in the journal — it doesn't get to report success on its own say.
 
-`recoveryMode: reset` is the agent step's crash contract: if this step dies mid-edit, the next attempt starts from the pinned workspace revision, not from whatever half-finished state was left behind. `permissions` bounds what that attempt can touch while it runs.
+`recoveryMode: reset` governs what happens if this step dies mid-edit: the next attempt starts over from the pinned workspace revision instead of picking up whatever half-finished state got left behind. `permissions` limits what that attempt is allowed to touch while it runs.
 
 ## Resumable by construction
 
-Kill the process mid-run and start it again — completed steps aren't re-executed, and their effects aren't re-sent:
+Kill the process mid-run and start it again. Steps that already completed don't run a second time, and their effects don't get resent.
 
 ```text
 $ npx --no-install flows run hello.flow.ts --local-agent --input '{}'
@@ -102,7 +102,7 @@ Hello! How can I help you today?
 RUN 01M20JYM4T9FNGNFX4NQCK34JK completed (3 steps) completionReason: success
 ```
 
-That's a real captured run, not a mockup. Every step carries a `completionReason` from a closed, nine-value vocabulary — the journal always says which one it was, and no raw stack trace ever stands in for it.
+This is a real run, captured directly from the terminal. Every step carries a `completionReason` from a closed, nine-value vocabulary, so the journal always says exactly which one applied — no raw stack trace has to stand in for an answer.
 
 ## Start here
 
