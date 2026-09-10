@@ -7,7 +7,7 @@ A flow doesn't carry its own database or its own Slack client. Two existing syst
 
 ## Memory: recall, cite, learn
 
-A step declares what it needs from prior runs, and the pack that comes back is charged to that step's own budget — itemized, in that step's journal entry, never a shared pool:
+A step declares what it needs from prior runs, and whatever comes back is charged to that step's own budget, itemized in its own journal entry — never pulled from some shared pool:
 
 ```ts
 export default flow('triage', async (f) => {
@@ -23,7 +23,7 @@ export default flow('triage', async (f) => {
 });
 ```
 
-Under the hood this is [Relayloop](/docs/loop)'s `ai-hist pack` — the same searchable, local-first history your team already builds by using Claude Code, Codex, and Agent Relay. A flow's memory queries land in the same corpus as everyone's terminal sessions, so a fix an engineer already worked out by hand is something an agent step can cite, not rediscover.
+Under the hood this is [Relayloop](/docs/loop)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
 
 <Note>
   Retrieval quality is the acceptance bar here, not the wiring: the target is
@@ -48,7 +48,7 @@ export default flow('release-note', async (f) => {
 });
 ```
 
-`f.slack`, `f.github`, `f.linear`, and every other generated helper compile to a mount write against Relayfile's [adapter catalog](/docs/file/adapters-and-providers) — the same 50-provider surface Relayfile ships today, projected into flow-native verbs. The receipt a helper returns *is* the journaled effect record: post the same Slack message twice on resume and the mount write dedupes it, so a retried step can't double-send.
+`f.slack`, `f.github`, `f.linear`, and every other generated helper compile to a write against Relayfile's [adapter catalog](/docs/file/adapters-and-providers) — the same 50 providers Relayfile ships today, each turned into a flow-native verb. The receipt a helper returns *is* the journaled effect record, so if a step retries and posts the same Slack message twice, the second write gets deduped instead of double-sending.
 
 ## Next
 

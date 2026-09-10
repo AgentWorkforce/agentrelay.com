@@ -36,14 +36,13 @@ steps:
       value: 'APPROVED'
 ```
 
-Each step's `agent:` selector resolves to that named `{ cli, model }` pair at compile time — the kernel never guesses a default. An unused or step-shadowed named agent is linted by `flows check`, so a stale declaration doesn't quietly rot in the spec.
+Each step's `agent:` selector resolves to that named `{ cli, model }` pair at compile time — the kernel never guesses a default. `flows check` also flags a named agent nobody ever selects, and one that a step overrides without using, so a stale declaration doesn't quietly rot in the spec.
 
 <Note>
-  The named-agent map (`agents:` + a step's `agent:` selector) is YAML/JSON
-  authoring today; the matching TypeScript header type ships separately.
-  `f.agent(name, options)` in TypeScript takes `{ task, workspace }` — the
-  `name` labels the call for the journal, it doesn't yet select a `cli`/`model`
-  pair the way a YAML `agent:` selector does.
+  The named-agent map (`agents:` plus a step's `agent:` selector) is
+  YAML/JSON authoring only today. In TypeScript, `f.agent(name, options)`
+  takes `{ task, workspace }` — `name` just labels the call in the journal.
+  It doesn't select a `cli`/`model` pair the way a YAML `agent:` selector does.
 </Note>
 
 ## Asking a human, then handing off

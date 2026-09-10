@@ -36,7 +36,7 @@ Set `FLOWS_CLOUD_TOKEN` to a Cloud API token authorized for `workflow:invoke:wri
 - **Only declarative flows.** `--cloud` accepts `flow.yaml` / `spec.json`, not an authored `.flow.ts` file — the SDK refuses those before making an HTTP call rather than uploading code that can't run there.
 - **Accepted isn't completed.** An interruption after submission but before the acceptance receipt reports `admission_unknown` — the server may already have started a non-idempotent run. Don't resubmit blindly; check the run ID you already have first.
 - **One-hour execution ceiling.** Cloud's current executor has a one-hour deadline per run, independent of any local timeout you'd otherwise configure.
-- **Step-level journal evidence stays local to this API.** The completion reason you get back is validated against the same closed vocabulary as a local run, but per-step journal detail isn't exposed through this endpoint yet.
+- **You get the completion reason, not the step-by-step journal.** It's validated against the same closed vocabulary as a local run, but this API doesn't expose per-step detail yet.
 
 ## Next
 

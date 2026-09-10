@@ -50,7 +50,7 @@ steps:
 ```
 </CodeGroup>
 
-YAML is canonical — the compiler can check it without running anything. TypeScript is the power tool: the same primitives, called imperatively, with the full authored-operation lifecycle behind `await`.
+YAML is canonical — the compiler can check it without running anything. TypeScript is the power tool: the same primitives, called imperatively, with ordinary `if`/`for` control flow around each `await`.
 
 ## 3. Run it
 
@@ -77,11 +77,11 @@ RUN 01M26HYJNS6A4K5Q64FH6D0SG9 completed (2 steps) completionReason: success
 ```
 </CodeGroup>
 
-Every step's outcome is in the journal now, keyed by that run ID. `flows check` only takes a declarative `flow.yaml` or `spec.json` — a TypeScript flow gets the same preflight automatically, run inline at the top of `flows run`.
+Every step's outcome is in the journal now, keyed by that run ID. `flows check` only takes a `flow.yaml` or `spec.json` — a TypeScript flow gets the same preflight for free, as the first thing `flows run` does.
 
 ## 4. If it gets interrupted
 
-The journal lives in `relayflowd`, the daemon `run` starts for you — not in the CLI process you typed the command into. Close the terminal, lose power, or kill the daemon itself mid-run, and nothing is lost:
+`flows run` starts a background daemon, `relayflowd`, and that's where the journal actually lives — not in the CLI process you typed the command into. Close the terminal, lose power, or kill the daemon itself mid-run, and nothing is lost:
 
 ```bash
 flows resume 01M26JC2VPAGFVTCVWFT3GSCXQ

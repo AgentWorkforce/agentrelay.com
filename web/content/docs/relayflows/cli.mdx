@@ -32,7 +32,7 @@ flows run workflow.yaml                                  # YAML/spec.json flow
 flows run --cloud --wait workflow.yaml                   # dispatch to the hosted engine, block for the result
 ```
 
-`--local-agent` attaches the existing SDK agent worker to your local daemon and runs the declared CLI (`claude`, `codex`, …) with its own local access. It's what makes an authored TypeScript flow's `agent` steps runnable without a separate credential path.
+`--local-agent` runs each declared CLI (`claude`, `codex`, …) using whatever login it already has on your machine — no separate credentials to configure. It's what makes an authored TypeScript flow's `agent` steps runnable at all.
 
 By default `run` spawns a daemon for the run if one isn't already up. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole environment) asserts a daemon is already present instead — the lever CI uses to fail loudly on a missing daemon rather than silently start one.
 
@@ -61,7 +61,7 @@ flows tick start --schedule-id daily --interval-ms 86400000 spec.json
 flows hn-monitor start spec.json
 ```
 
-`tick` is the general-purpose durable schedule: a deterministic-id claim on each interval, with catch-up bounded by `--max-catch-up` if the process was down when an interval fired. `hn-monitor` is a named, narrower proactive trigger built the same way. Both are the same idea underneath: a schedule that reports whether it's still alive, not one that silently stops firing for weeks and reports nothing.
+`tick` is a durable schedule: each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named trigger built the same way. Both report whether they're still alive — neither can silently stop firing for weeks and go unnoticed.
 
 ## `--json`
 

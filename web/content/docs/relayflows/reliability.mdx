@@ -3,7 +3,7 @@ title: 'Reliability'
 description: 'The crash-resume contract, the closed failure vocabulary, and the rules that make a flow finishing mean something.'
 ---
 
-An agent's failure mode is wrong output, not no output — a retry built for "it crashed" doesn't catch "it returned something plausible and wrong." Every mechanism on this page exists to close that gap: a flow's completion is something the kernel can prove, not something an agent has to be trusted to report.
+Everything on this page answers one question: when a run says it's done, what makes that true? Not "an agent said so" — a flow's completion is something the kernel can prove, checked the same way whether the run finished cleanly or got killed and picked back up.
 
 ## A run's exit code is a contract
 
@@ -27,7 +27,7 @@ Step:  success · verification_failed · retries_exhausted · lease_expired ·
 Run:   success · step_failed · canceled · budget_exceeded
 ```
 
-A caller with an exhaustive switch over these values never hits a case that isn't there. A step that fails its verification is `verification_failed`, journaled with which check failed — it doesn't get to report success because an agent said it was fine.
+Handle every value in that list and there's no case left over to surprise you later. A step that fails its verification is `verification_failed`, journaled with exactly which check failed — it doesn't get to report success just because the agent said it was fine.
 
 ## Kill it mid-step. Resume it. Nothing doubles.
 
@@ -37,7 +37,7 @@ The crash contract for an agent step is specific: on crash or lease expiry, the 
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
 - **`manual`** — the run parks as `needs_human` with a diff of the pinned revision against whatever's actually there.
 
-Effects are deduped independently of any of that: a writeback — a Slack post, a PR, a file write — is journaled as a fact keyed by `(step id, idempotency key, surface path)`. Two attempts producing the same writeback still produce one provider call. **Exactly-once means exactly-once effects, not exactly-once execution** — an attempt can run more than once; what it's not allowed to do is have that show up twice on the other end.
+Separately from recovery mode, every external effect gets deduped on its own: a writeback — a Slack post, a PR, a file write — is journaled as a fact keyed by `(step id, idempotency key, surface path)`. Two attempts that both try the same writeback still result in one provider call. **Exactly-once means exactly-once effects, not exactly-once execution** — a step can run more than once; it just can't have that show up twice on the other end.
 
 ## A flow body can't lie about finishing
 
@@ -51,7 +51,7 @@ Together these mean a run that reports `completionReason: success` really did fi
 
 ## The daemon doesn't leave you guessing either
 
-`flows run` and `flows resume` attach to the daemon already serving your data directory, or start one. Concurrent invocations are safe — the daemon holds an exclusive lock, so a redundant one exits without touching anything and its CLI attaches to the winner instead. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole CI environment) asserts a daemon is already present rather than conjuring one — the lever for asserting infrastructure is up, not silently patching around its absence.
+`flows run` and `flows resume` attach to the daemon already serving your data directory, or start one if there isn't one. Run two at once and that's safe too — the daemon holds an exclusive lock, so the second one just attaches to the first instead of starting a competing one. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole CI environment) turns that convenience off: it fails loudly if no daemon is already up, instead of quietly starting one for you.
 
 ## Next
 

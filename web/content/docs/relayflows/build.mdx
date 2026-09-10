@@ -3,11 +3,11 @@ title: 'Build a flow'
 description: 'Write your own steps, verification, and permissions — TypeScript or YAML, same journal underneath.'
 ---
 
-Start with the job in one sentence: what runs, in what order, and what proves each step actually did its job. If a step needs a check you can't state yet, that's the sign it needs one before you wire it up, not after.
+Start with the job in one sentence: what runs, in what order, and what proves each step actually did its job. If you can't state that proof yet, figure it out before you wire the step up, not after.
 
 ## Two ways to author the same thing
 
-**YAML** is the deterministic-DAG path: steps, dependencies, and verification as data. It's what `flows check` or a CI gate reads without executing anything. **TypeScript** is the programmatic path — the same primitives, called imperatively. Both compile to the same journal protocol.
+**YAML** describes a fixed set of steps and their dependencies as data — nothing runs, so `flows check` or a CI gate can read and validate it. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -48,14 +48,14 @@ steps:
 ```
 </CodeGroup>
 
-Reach for YAML when the shape is a fixed DAG you want readable at a glance and preflightable in CI; reach for TypeScript when a step's next move depends on what a previous one returned — a `f.human` approval, an `f.dispatch` to a child flow, ordinary `if`/`for` control flow around `await`.
+Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned — an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
 
 <Note>
   `recoveryMode`, `permissions`, `surfaces`, and `budget` — the richer
-  control-plane fields in the next section — are authored directly in
-  YAML/JSON today. TypeScript's `Ctx.agent` takes `{ task, workspace }` and
-  doesn't expose them yet; reach for the fuller YAML shape below when a step
-  needs them, or have a TypeScript flow `f.dispatch` to one.
+  fields covered in the next section — are YAML/JSON fields only today.
+  TypeScript's `Ctx.agent` takes just `{ task, workspace }`. If a step needs
+  them, author it in YAML and either run it directly or have a TypeScript
+  flow reach it with `f.dispatch`.
 </Note>
 
 ## The context a flow body gets
@@ -110,7 +110,7 @@ An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPres
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
 - **`manual`** — parks the run as `needs_human` with a diff of the pinned revision against whatever's actually there.
 
-`maxIterations` bounds how many attempts a step gets before that decision is made for it. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) bounds the whole flow the same way — declared once, enforced by the kernel, not tracked by hand.
+`maxIterations` caps how many attempts a step gets before one of those three outcomes has to happen. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) caps the whole flow the same way — declared once, enforced by the kernel, not tracked by hand.
 
 ## Next
 

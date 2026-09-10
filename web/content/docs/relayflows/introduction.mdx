@@ -50,7 +50,7 @@ steps:
 ```
 </CodeGroup>
 
-`f.run`/a `deterministic` step executes a shell command and returns its output. `f.agent`/an `agent` step hands a task to a real coding-agent CLI in a workspace and returns a summary — not a raw transcript. TypeScript's `f.done` closes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option a caller has to guess about.
+Running a shell command (`f.run` in TypeScript, a `deterministic` step in YAML) returns its output. Handing a task to a coding agent (`f.agent` / an `agent` step) returns a summary, not a raw transcript. And finishing closes the run with one reason from a closed set — `success`, `step_failed`, `canceled`, or `budget_exceeded` — so there's no fifth option a caller has to guess about.
 
 ## Verification instead of vibes
 
@@ -81,7 +81,7 @@ steps:
       value: agent-ok
 ```
 
-Every step's exit code is checked automatically; `output_contains` is an opt-in accelerator on top of it, and an `llm` step can require its output to match a `json_schema` instead. A step that fails verification doesn't get to report success — it's `verification_failed`, journaled, visible.
+Every step's exit code is checked automatically. On top of that, `output_contains` is an opt-in string match, and an `llm` step can instead require its output to match a `json_schema`. Either way, a step that fails verification doesn't get to report success — it's `verification_failed`, journaled and visible.
 
 `recoveryMode: reset` is the agent step's crash contract: if this step dies mid-edit, the next attempt starts from the pinned workspace revision, not from whatever half-finished state was left behind. `permissions` bounds what that attempt can touch while it runs.
 
@@ -102,7 +102,7 @@ Hello! How can I help you today?
 RUN 01M20JYM4T9FNGNFX4NQCK34JK completed (3 steps) completionReason: success
 ```
 
-That's a real captured run, not a mockup — every step carries a `completionReason` from a closed vocabulary (`success`, `verification_failed`, `retries_exhausted`, `lease_expired`, `crashed`, `timeout`, `worker_error`, `budget_exceeded`, `canceled`), so a run's journal always says which of those it was. No raw stack trace ever stands in for one.
+That's a real captured run, not a mockup. Every step carries a `completionReason` from a closed, nine-value vocabulary — the journal always says which one it was, and no raw stack trace ever stands in for it.
 
 ## Start here
 
