@@ -29,22 +29,20 @@ const finished = await waitForCloudFlowRun(accepted.runId);
 console.log(finished.status, finished.completionReason);
 ```
 
-`FLOWS_CLOUD_TOKEN` needs a Cloud API token; the `flows` CLI never logs in for you. Get one with the `agent-relay` CLI, a separate tool from `flows`:
+`FLOWS_CLOUD_TOKEN` needs a Cloud API token; the `flows` CLI never logs in for you. Provision one from the [Cloud dashboard](https://cloud.agentrelay.com/dashboard/settings), the same place you'd create a deployment token or a Relayfile agent key:
+
+1. Open **Settings → Workspace API tokens**.
+2. Under **Purpose**, pick **Relayflows Cloud token**.
+3. Name it, set an expiry, and create it.
+4. Copy the one-time `cld_at_...` value — it's shown once — and export it:
 
 ```bash
-agent-relay cloud login              # opens a browser; add --device on a headless/SSH host
-agent-relay cloud session --json --reveal-token
+export FLOWS_CLOUD_TOKEN="cld_at_..."
 ```
 
-`session --json --reveal-token` prints the session as JSON, including the real `accessToken` (masked without `--reveal-token`, the same convention as `agent-relay workspace key`). Export that value:
+This mints a token scoped to exactly `workflow:invoke:read`, `workflow:invoke:write`, `workflow:runs:read`, and `workflow:logs:read` — nothing else — which covers both submitting and polling a run on this page. It's a workspace-level credential: anyone with dashboard access to the workspace can create or revoke one, no CLI or special access needed.
 
-```bash
-export FLOWS_CLOUD_TOKEN="$(agent-relay cloud session --json --reveal-token | jq -r .accessToken)"
-```
-
-This token carries a `cli:auth` scope, not the literal `workflow:invoke:write` / `workflow:runs:read` strings — but Cloud's workflow-run endpoints accept `cli:auth` for both submitting and polling a run, so it works for everything on this page. It's tied to your own login and one Cloud workspace; anyone with their own Cloud account can mint their own this way, no special access needed.
-
-A separate, narrower-scoped token — one that literally carries only `workflow:invoke:write` and `workflow:runs:read`, nothing else `cli:auth` would also unlock — exists for unattended CI and requires direct database access to mint (`cloud`'s `npm run mint-ci-token` with `CI_TOKEN_PROFILE=workflow-invoke`; see that repo's `docs/runbooks/relay-ci-workflow-credential.md`). That path is for Agent Relay's own CI, not something a typical `flows` user needs — `agent-relay cloud login` above is the one to use.
+Prefer a CLI instead (headless/SSH host, no browser to click through)? `agent-relay cloud login` (`--device` for headless) plus `agent-relay cloud session --json --reveal-token` gets you a token too, though that one carries a broader `cli:auth` scope rather than the four scopes above — Cloud's workflow-run endpoints accept either.
 
 `FLOWS_CLOUD_URL` points at a different Cloud deployment if you're not using the default.
 
