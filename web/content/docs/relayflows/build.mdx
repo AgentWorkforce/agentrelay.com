@@ -5,6 +5,10 @@ description: 'Write your own steps, verification, and permissions — TypeScript
 
 Start with the job in one sentence: what runs, in what order, and what proves each step did its job. If you can't state that proof yet, figure it out first, before wiring the step up.
 
+<BannerLink href="https://github.com/AgentWorkforce/skills/blob/main/skills/writing-relayflows/SKILL.md" icon="bot">
+  Give your coding agent the writing-relayflows skill instead of pasting this page into its context: `npx skills add https://github.com/agentworkforce/skills --skill writing-relayflows`
+</BannerLink>
+
 ## Two ways to author the same thing
 
 **YAML** describes a fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
