@@ -47,10 +47,23 @@ steps:
     type: agent
     dependsOn: [greeting]
     instruction: 'Reply with one short hello sentence. Do not use tools or modify files.'
+    cli: claude
+    model: claude-sonnet-4-6
 ```
 </CodeGroup>
 
 `f.run` (a `deterministic` step in YAML) executes a shell command and returns its output. `f.agent` (an `agent` step) hands a task to a coding agent and returns a summary rather than a raw transcript. `f.done` finishes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option to guess about.
+
+The YAML step above names its own `cli` and `model` directly. TypeScript's `f.agent` has no `cli`/`model` fields at all — it resolves both from the nearest `flows.json`:
+
+```json
+{
+  "cli": "claude",
+  "models": ["claude-sonnet-4-6"]
+}
+```
+
+Without one, an authored agent step refuses to run as `agent_cli_unresolved` rather than guessing a CLI.
 
 ## Verification
 
