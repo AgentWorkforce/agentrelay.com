@@ -17,6 +17,19 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   const secondaryLanguage = productSection?.id === 'relayflows' ? 'yaml' : 'python';
   const secondaryLanguageLabel = secondaryLanguage === 'yaml' ? 'YAML' : 'Python';
 
+  // The select can only show 'typescript' or this section's secondaryLanguage.
+  // A stored preference from a different section (e.g. 'python' while viewing
+  // a relayflows page) falls back to displaying 'typescript' without this
+  // effect, but the underlying language state stays unchanged — so the
+  // dropdown and the actual CodeGroup selection drift apart, and reselecting
+  // the already-displayed option produces no onChange to correct it. Write
+  // the fallback back to real state so display and state always agree.
+  useEffect(() => {
+    if (language !== 'typescript' && language !== secondaryLanguage) {
+      setLanguage('typescript');
+    }
+  }, [language, secondaryLanguage, setLanguage]);
+
   useEffect(() => {
     const headings = items.map((item) => document.getElementById(item.id)).filter(Boolean) as HTMLElement[];
 

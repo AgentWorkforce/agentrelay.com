@@ -65,4 +65,4 @@ flows hn-monitor start spec.json
 
 ## `--json`
 
-Every command accepts `--json` for structured output instead of the human-readable progress line — the shape a CI step or another program should read, not the terminal renderer.
+`check`, `run`, and `resume` accept `--json` for structured output instead of the human-readable progress line — the shape a CI step or another program should read, not the terminal renderer. `tick start`, `hn-monitor start`, and `observer` don't take it.

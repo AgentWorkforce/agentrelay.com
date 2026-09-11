@@ -61,6 +61,7 @@ const nextConfig = {
       '/docs/factory/markdown/:path*',
       '/docs/file/markdown/:path*',
       '/docs/loop/markdown/:path*',
+      '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
     ];
