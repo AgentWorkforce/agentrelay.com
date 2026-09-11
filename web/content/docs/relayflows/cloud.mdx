@@ -34,10 +34,10 @@ console.log(finished.status, finished.completionReason);
 1. Open **Settings → Workspace API tokens**.
 2. Under **Purpose**, pick **Relayflows Cloud token**.
 3. Name it, set an expiry, and create it.
-4. Copy the one-time `cld_at_...` value — it's shown once — and export it:
+4. Copy the one-time `cld_at_...` value — it's shown once — and export it, replacing the placeholder below with what you copied:
 
 ```bash
-export FLOWS_CLOUD_TOKEN="cld_at_..."
+export FLOWS_CLOUD_TOKEN="cld_at_paste-your-copied-token-here"
 ```
 
 This mints a token scoped to exactly `workflow:invoke:read`, `workflow:invoke:write`, `workflow:runs:read`, and `workflow:logs:read` — nothing else — which covers both submitting and polling a run on this page. It's a workspace-level credential: anyone with dashboard access to the workspace can create or revoke one, no CLI or special access needed.
