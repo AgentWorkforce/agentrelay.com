@@ -40,11 +40,14 @@ steps:
 Each step's `agent:` selector resolves to that named `{ cli, model }` pair at compile time, from an explicit declaration. `flows check` also flags a named agent nobody ever selects, and one that a step overrides without using, so a stale declaration doesn't quietly rot in the spec.
 
 <Note>
-  The named-agent map (`agents:` plus a step's `agent:` selector) is
-  YAML/JSON authoring only today. In TypeScript, `f.agent(name, options)`
-  takes `{ task, workspace }`. The `name` argument just labels the call in
-  the journal; it doesn't select a `cli`/`model` pair the way YAML's
-  `agent:` selector does.
+  The named-agent **map** (`agents:` plus a step's `agent:` selector,
+  reused across steps by name) is YAML/JSON authoring only today. In
+  TypeScript, `f.agent(name, options)` takes `{ task, workspace?, cli?,
+  model? }` ([flows#310](https://github.com/AgentWorkforce/flows/issues/310))
+  — so a call can set its own `cli`/`model` directly, but the `name`
+  argument still just labels the call in the journal; there's no map to
+  select a declared pair from, or to reuse across multiple calls, the
+  way YAML's `agent:` selector does ([flows#300](https://github.com/AgentWorkforce/flows/issues/300)).
 </Note>
 
 ## Asking a human, then handing off

@@ -30,6 +30,8 @@ export default flow('hello', async (f) => {
 
   const answer = await f.agent('greeter', {
     task: 'Reply with one short hello sentence. Do not use tools or modify files.',
+    cli: 'claude',
+    model: 'claude-sonnet-4-6',
   });
   console.log(answer.summary);
 
@@ -54,13 +56,7 @@ steps:
 
 `f.run` (a `deterministic` step in YAML) executes a shell command and returns its output. `f.agent` (an `agent` step) hands a task to a coding agent and returns a summary rather than a raw transcript. `f.done` finishes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option to guess about.
 
-The YAML step above names its own `cli` and `model` directly. TypeScript can't do that yet — `Ctx.agent`'s options are just `{ task, workspace? }`, with no `cli` or `model` at all ([tracked upstream](https://github.com/AgentWorkforce/flows/issues/310)). Today, an authored `f.agent` call gets its CLI from a project-wide `flows.json` default instead, and has no way to pin a model:
-
-```json
-{ "cli": "claude" }
-```
-
-Without a `flows.json` (or one with no `cli`), the step has no CLI at step, flow, or project level, and `flows run` refuses before anything is journaled — exit `2`, `REFUSED [invalid_spec]`.
+Both steps above name their own `cli` and `model` directly — `Ctx.agent`'s options are `{ task, workspace?, cli?, model? }`, matching the YAML step's fields ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required: omit `cli` and a step falls back to its flow's `cli`, then the nearest `flows.json`'s project-wide default; omit `model` and it just runs whatever model its resolved CLI defaults to, since there's no flow or project default for that. Without a `cli` at step, flow, or project level, `flows run` refuses before anything is journaled — exit `2`, `REFUSED [invalid_spec]`.
 
 ## Verification
 

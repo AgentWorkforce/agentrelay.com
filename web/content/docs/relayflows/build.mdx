@@ -17,6 +17,8 @@ export default flow('hello-agent', async (f) => {
   const greeting = await f.run('printf hello');
   const edit = await f.agent('edit', {
     task: 'Produce the hello artifact.',
+    cli: 'claude',
+    model: 'claude-sonnet-4-6',
   });
   const finish = await f.run('printf done');
   f.done('success');
@@ -52,14 +54,14 @@ steps:
 
 Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
 
-The YAML `edit` step above names its own `cli` and `model`. TypeScript has no such fields to set on an `f.agent` call yet ([tracked upstream](https://github.com/AgentWorkforce/flows/issues/310)) — it needs a `flows.json` with a project-level `cli` next to `hello-agent.flow.ts`, or `flows run` refuses it before anything runs. See [Introduction](/docs/relayflows/introduction#a-whole-flow) for exactly how that resolution works.
+Both `edit` steps above name their own `cli` and `model` directly, the same way in either language ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required in TypeScript: omit them and the step falls back to the flow's `cli`, then the nearest `flows.json`'s project-wide default, the same resolution [Introduction](/docs/relayflows/introduction#a-whole-flow) covers.
 
 <Note>
   `recoveryMode`, `permissions`, `surfaces`, and `budget`, the richer
   fields covered further down, are YAML/JSON fields only today.
-  TypeScript's `Ctx.agent` takes just `{ task, workspace }`. If a step
-  needs them, author it in YAML and either run it directly or have a
-  TypeScript flow reach it with `f.dispatch`.
+  TypeScript's `Ctx.agent` doesn't have them. If a step needs them,
+  author it in YAML and either run it directly or have a TypeScript
+  flow reach it with `f.dispatch`.
 </Note>
 
 ## The context a flow body gets
@@ -68,7 +70,7 @@ The YAML `edit` step above names its own `cli` and `model`. TypeScript has no su
 interface Ctx {
   run(command: string): Step<string>;
   llm(strings: TemplateStringsArray, ...values: unknown[]): Step<string>;
-  agent(name: string, options: { task: string; workspace?: string }): Step<{ summary: string; artifacts: string[] }>;
+  agent(name: string, options: { task: string; workspace?: string; cli?: string; model?: string }): Step<{ summary: string; artifacts: string[] }>;
   human(question: string, options: { to: string }): Promise<boolean>;
   dispatch<T>(flow: string, input: unknown): Promise<T>;
   done(reason: 'success' | 'step_failed' | 'canceled' | 'budget_exceeded'): void;
