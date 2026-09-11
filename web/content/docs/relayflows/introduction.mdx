@@ -3,7 +3,7 @@ title: 'Relayflows'
 description: 'A deterministic script over agentic primitives: steps you can inspect, verify, and resume.'
 ---
 
-Relayflows turns a coding-agent task into steps you can inspect and verify. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed. Start with a small local flow, then add verification as the task grows.
+Relayflows turns a coding-agent task into steps you can inspect and verify. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed.
 
 Every effect is journaled before it's treated as real. If a step's journal write fails, the step fails. There's no silent fallback and no "it probably worked." Relayflows makes that trade everywhere: less magic, more evidence.
 
@@ -16,9 +16,7 @@ Every flow is built from the same small set of rungs, and you only climb as high
 3. **`agent`** — a harnessed coding agent in a workspace. Returns an artifact, not just text.
 4. **`human` / `dispatch` / `done`** — durable approval, handing work to a child flow, and a typed finish.
 
-Most flows only need `run` and `llm`. Climb to `agent` once a step needs hands on a real workspace.
-
-## A whole flow
+## Simple Example Flow
 
 <CodeGroup>
 ```typescript TypeScript
