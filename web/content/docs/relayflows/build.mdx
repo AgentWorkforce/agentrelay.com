@@ -11,11 +11,6 @@ Start with the job in one sentence: what runs, in what order, and what proves ea
 
 <CodeGroup>
 ```typescript TypeScript
-// flows.json — next to hello-agent.flow.ts. f.agent has no cli/model
-// options of its own, so this is where its CLI comes from.
-// { "cli": "claude" }
-
-// hello-agent.flow.ts
 import { flow } from '@relayflows/surface';
 
 export default flow('hello-agent', async (f) => {
@@ -57,7 +52,7 @@ steps:
 
 Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
 
-The YAML `edit` step above names its own `cli` and `model`. The TypeScript `edit` step has no such fields to set, so it takes its CLI from the `flows.json` shown above instead — without one, `flows run` refuses it before anything runs. See [Introduction](/docs/relayflows/introduction#a-whole-flow) for exactly how that resolution works.
+The YAML `edit` step above names its own `cli` and `model`. TypeScript has no such fields to set on an `f.agent` call yet ([tracked upstream](https://github.com/AgentWorkforce/flows/issues/310)) — it needs a `flows.json` with a project-level `cli` next to `hello-agent.flow.ts`, or `flows run` refuses it before anything runs. See [Introduction](/docs/relayflows/introduction#a-whole-flow) for exactly how that resolution works.
 
 <Note>
   `recoveryMode`, `permissions`, `surfaces`, and `budget`, the richer
