@@ -17,6 +17,7 @@ export {
   factorySection,
   fileSection,
   loopSection,
+  relayflowsSection,
   productSections,
   getProductSection,
   getProductSectionForPath,

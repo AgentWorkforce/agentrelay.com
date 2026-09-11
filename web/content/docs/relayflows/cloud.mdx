@@ -1,0 +1,67 @@
+---
+title: 'Cloud'
+description: 'Run a flow on hosted infrastructure instead of your own machine — the same verification, the same journal.'
+---
+
+A flow doesn't need your laptop up to run. `flows run --cloud` submits the exact same spec to hosted infrastructure. The Rust runtime still executes and verifies every step; only where it runs is different.
+
+## Run it
+
+```bash
+flows run --cloud examples/ship-feature.flow.yaml
+flows run --cloud --wait --json examples/ship-feature.flow.yaml
+```
+
+Without `--wait`, exit `0` means the run was **accepted**. You get a run ID back and the run continues on its own; it hasn't completed yet. With `--wait`, exit `0` means Cloud reported the run `completed` with a validated `success` reason. A failed or cancelled run, or an observation failure, exits `1`.
+
+## From the SDK
+
+```ts
+import { runInCloud, waitForCloudFlowRun } from '@relayflows/sdk';
+
+const accepted = await runInCloud(
+  { path: './flow.yaml' },
+  { token: process.env.FLOWS_CLOUD_TOKEN }
+);
+console.log(accepted.runId); // accepted, not completed
+
+const finished = await waitForCloudFlowRun(accepted.runId);
+console.log(finished.status, finished.completionReason);
+```
+
+`FLOWS_CLOUD_TOKEN` needs a Cloud API token; the `flows` CLI never logs in for you. Get one with the `agent-relay` CLI, a separate tool from `flows`:
+
+```bash
+agent-relay cloud login              # opens a browser; add --device on a headless/SSH host
+agent-relay cloud session --json --reveal-token
+```
+
+`session --json --reveal-token` prints the session as JSON, including the real `accessToken` (masked without `--reveal-token`, the same convention as `agent-relay workspace key`). Export that value:
+
+```bash
+export FLOWS_CLOUD_TOKEN="$(agent-relay cloud session --json --reveal-token | jq -r .accessToken)"
+```
+
+This token carries a `cli:auth` scope, not the literal `workflow:invoke:write` / `workflow:runs:read` strings — but Cloud's workflow-run endpoints accept `cli:auth` for both submitting and polling a run, so it works for everything on this page. It's tied to your own login and one Cloud workspace; anyone with their own Cloud account can mint their own this way, no special access needed.
+
+A separate, narrower-scoped token — one that literally carries only `workflow:invoke:write` and `workflow:runs:read`, nothing else `cli:auth` would also unlock — exists for unattended CI and requires direct database access to mint (`cloud`'s `npm run mint-ci-token` with `CI_TOKEN_PROFILE=workflow-invoke`; see that repo's `docs/runbooks/relay-ci-workflow-credential.md`). That path is for Agent Relay's own CI, not something a typical `flows` user needs — `agent-relay cloud login` above is the one to use.
+
+`FLOWS_CLOUD_URL` points at a different Cloud deployment if you're not using the default.
+
+## What's different about a cloud run
+
+- **Only declarative flows.** `--cloud` accepts `flow.yaml` / `spec.json`, not an authored `.flow.ts` file — the SDK refuses those before making an HTTP call rather than uploading code that can't run there.
+- **Accepted isn't completed.** An interruption after submission but before the acceptance receipt reports `admission_unknown` — the server may already have started a non-idempotent run. Don't resubmit blindly; check the run ID you already have first.
+- **One-hour execution ceiling.** Cloud's current executor has a one-hour deadline per run, independent of any local timeout you'd otherwise configure.
+- **You get the completion reason, not the step-by-step journal.** It's validated against the same closed vocabulary as a local run, but this API doesn't expose per-step detail yet.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Multi-agent flows" href="/docs/relayflows/multi-agent">
+    Named agents, different CLIs, one spec.
+  </Card>
+  <Card title="Reliability" href="/docs/relayflows/reliability">
+    What a completion reason actually guarantees.
+  </Card>
+</CardGroup>

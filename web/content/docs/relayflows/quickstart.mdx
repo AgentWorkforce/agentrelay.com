@@ -1,0 +1,104 @@
+---
+title: 'Quickstart'
+description: 'From zero to a verified, resumable run: write a flow, run it, and pick it back up after a crash.'
+---
+
+This walks you from a fresh install to a real run in a few commands, using nothing but the published `relayflows` CLI. No scaffolder, no project template.
+
+## 1. Install
+
+<CodeGroup>
+```bash TypeScript
+npm init -y
+npm install @relayflows/surface relayflows
+```
+```bash YAML
+npm install -g relayflows
+```
+</CodeGroup>
+
+TypeScript flows import `@relayflows/surface` at runtime, so it's a project dependency. YAML is data — the global `relayflows` install is all you need.
+
+## 2. Write a flow
+
+<CodeGroup>
+```typescript TypeScript
+// hello.flow.ts
+import { flow } from '@relayflows/surface';
+
+export default flow('hello', async (f) => {
+  const greeting = await f.run('printf "Hello from Relayflows"');
+  console.log(greeting.trim());
+  f.done('success');
+});
+```
+```yaml YAML
+# hello.flow.yaml
+version: '0.1.0'
+name: hello
+steps:
+  - id: greeting
+    type: deterministic
+    command: "printf 'Hello from Relayflows'"
+    verification:
+      type: output_contains
+      value: Hello
+  - id: finish
+    type: deterministic
+    dependsOn: [greeting]
+    command: "printf done"
+```
+</CodeGroup>
+
+YAML is canonical — the compiler can check it without running anything. TypeScript is the power tool: the same primitives, called imperatively, with ordinary `if`/`for` control flow around each `await`.
+
+## 3. Run it
+
+<CodeGroup>
+```bash TypeScript
+npx flows run hello.flow.ts --input '{}'
+```
+```bash YAML
+npx flows check hello.flow.yaml   # preflight only — nothing runs
+npx flows run hello.flow.yaml
+```
+</CodeGroup>
+
+This is a real, captured run:
+
+<CodeGroup>
+```text TypeScript
+Hello from Relayflows
+RUN 01M26JC2VPAGFVTCVWFT3GSCXQ completed (2 steps) completionReason: success
+```
+```text YAML
+CHECK PASSED hello.flow.yaml
+RUN 01M26HYJNS6A4K5Q64FH6D0SG9 completed (2 steps) completionReason: success
+```
+</CodeGroup>
+
+Every step's outcome is in the journal now, keyed by that run ID. `flows check` only takes a `flow.yaml` or `spec.json` — a TypeScript flow gets the same preflight for free, as the first thing `flows run` does.
+
+## 4. If it gets interrupted
+
+`flows run` starts a background daemon, `relayflowd`. The journal lives there, not in the CLI process you typed the command into. Close the terminal, lose power, or kill the daemon itself mid-run: nothing is lost.
+
+```bash
+flows resume 01M26JC2VPAGFVTCVWFT3GSCXQ
+```
+
+`resume` starts a fresh daemon if none is up, reads the journal from disk, and continues from the first step that never recorded a `completionReason` — the step already marked done doesn't run again.
+
+## Next
+
+<CardGroup cols={3}>
+  <Card title="Build a flow" href="/docs/relayflows/build">
+    Write your own steps, verification, and permissions — YAML or TypeScript.
+  </Card>
+  <Card title="Multi-agent flows" href="/docs/relayflows/multi-agent">
+    Several named agents, different CLIs, one flow.
+  </Card>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    Every command: check, run, resume, tick, observe.
+  </Card>
+</CardGroup>

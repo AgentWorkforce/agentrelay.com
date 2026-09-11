@@ -1,0 +1,65 @@
+---
+title: 'Reliability'
+description: 'The crash-resume contract, the closed failure vocabulary, and the rules that make a flow finishing mean something.'
+---
+
+This page covers what makes a run's completion trustworthy: not an agent's own report, but something the kernel checks and can prove, whether the run finished cleanly or got killed and picked back up partway through.
+
+## A run's exit code is a contract
+
+```text
+0   completionReason: success
+1   a declared completionReason failure, or an unknown outcome from a transport/runtime/protocol error
+2   refused before any journal write: invalid input, failed preflight, unreachable daemon
+3   parked — waiting on an llm/agent worker or a needs_human recovery wait
+```
+
+Exit `2` is the important one to build on: a bad spec, a missing CLI, or an unauthenticated agent fails before a journal entry is ever written, at `flows check` time or at the top of `flows run` — never at minute 27 of a real run. Preflight checks what it can check up front, so a run either starts clean or doesn't start.
+
+## The closed completion vocabulary
+
+Every step, and every run, ends in one reason from a fixed set:
+
+```text
+Step:  success · verification_failed · retries_exhausted · lease_expired ·
+       crashed · timeout · worker_error · budget_exceeded · canceled
+
+Run:   success · step_failed · canceled · budget_exceeded
+```
+
+Handle every value in that list and there's no case left over to surprise you later. A step that fails verification is recorded as `verification_failed`, with exactly which check failed. The agent reporting that it went fine doesn't change the outcome.
+
+## Crashing mid-step
+
+If an agent step crashes or its lease expires, the workspace is left dirty. The kernel doesn't roll back an edit that already happened. What runs next depends on the step's declared recovery mode:
+
+- **`reset`** (default) — the next attempt restores the pinned workspace revision and starts clean.
+- **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
+- **`manual`** — the run parks as `needs_human` with a diff of the pinned revision against whatever's actually there.
+
+Effects are deduped on a separate track from all of that. A writeback — a Slack post, a PR, a file write — is journaled as a fact keyed by `(step id, idempotency key, surface path)`, so two attempts at the same writeback still produce one provider call. A step can run more than once. What it can't do is have an effect land twice on the other end.
+
+## A flow can't fake finishing
+
+An authored TypeScript body runs under three rules, enforced by the runtime rather than left to convention:
+
+1. **Await every step you create.** An `f.run(...)` call that's created and never awaited is `unawaited_step`. If it might still be running when the flow reports done, the journal has no way to vouch for it.
+2. **A step's failure is yours whether or not you catch it.** A root failure is recorded before your code can even see it, so a `catch` can't quietly swallow one.
+3. **Finish your derived work before `done()`.** If something chained onto a step is still in flight when the body returns, the run is refused as `unsettled_derived_work` rather than recorded as a success nobody can actually verify.
+
+Together, these rules mean a run reporting `completionReason: success` really did finish everything it started, rather than everything that happened to settle before the process moved on.
+
+## The daemon
+
+`flows run` and `flows resume` attach to the daemon already serving your data directory, or start one if there isn't one. Run two at once and that's fine — the daemon holds an exclusive lock, so the second one just attaches to the first instead of starting a competing one. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole CI environment) turns that convenience off: it fails loudly if no daemon is already up, instead of quietly starting one for you.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    check, run, resume — every exit code in practice.
+  </Card>
+  <Card title="Build a flow" href="/docs/relayflows/build">
+    Verification and permissions, from the author's side.
+  </Card>
+</CardGroup>

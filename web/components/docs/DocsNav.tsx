@@ -25,6 +25,7 @@ import {
   Smile,
   Terminal,
   Users,
+  Workflow,
   Zap,
 } from 'lucide-react';
 import { BsChatRightText } from 'react-icons/bs';
@@ -53,6 +54,7 @@ const productSectionIcons: Record<string, NavIcon> = {
   agents: Bot,
   file: FolderOpenIcon,
   loop: Repeat,
+  relayflows: Workflow,
 };
 
 const currentRelayDocsVersion = docsVersions.find((version) => version.id === currentDocsVersion)?.shortLabel;

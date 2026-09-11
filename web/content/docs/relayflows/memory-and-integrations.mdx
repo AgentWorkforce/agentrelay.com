@@ -1,0 +1,62 @@
+---
+title: 'Memory & integrations'
+description: 'Relayhistory-backed memory and Relayfile-backed integrations — the two substrates a flow reaches without hand-rolling either.'
+---
+
+A flow doesn't carry its own database or its own Slack client. Two existing systems back it instead: [Relayloop](/docs/loop) for memory across runs, and [Relayfile](/docs/file) for everything a flow reads from or writes to outside itself.
+
+## Memory
+
+A step declares what it needs from prior runs, and whatever comes back is charged to that step's own budget, itemized in its own journal entry. There's no shared pool it draws from:
+
+```ts
+export default flow('triage', async (f) => {
+  const priorArt = await f.memory.recall('similar bugs in the billing module');
+  const why = await f.memory.why('fix the billing race condition');
+
+  const fix = await f.agent('fixer', {
+    task: `Fix the race condition.\n\nRelevant history:\n${priorArt}`,
+  });
+
+  await f.memory.learn(`Root cause: ${fix.summary}`);
+  f.done('success');
+});
+```
+
+Under the hood this is [Relayloop](/docs/loop)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
+
+<Note>
+  What this feature is judged on is retrieval quality, not the plumbing:
+  an agent visibly avoiding a mistake a prior run already made, citation
+  included. Today's shipped provider is a fixed stub while real `ai-hist
+  pack` retrieval lands. The `memory.injected` journal entry and its
+  per-step budget accounting are real regardless of which provider answers
+  the query.
+</Note>
+
+## Integrations
+
+Reaching Slack, GitHub, or Linear from a flow doesn't mean writing a provider SDK call and hoping the token scope is right. [Relayfile](/docs/file) mounts each provider as a directory a flow reads and writes:
+
+```ts
+export default flow('release-note', async (f) => {
+  const diff = await f.run('git diff main');
+  const note = await f.llm`One-line release note for: ${diff}`;
+
+  const receipt = await f.slack.post('#releases', note);
+  f.done('success');
+});
+```
+
+`f.slack`, `f.github`, `f.linear`, and every other generated helper compile to a write against Relayfile's [adapter catalog](/docs/file/adapters-and-providers) — the same 50 providers Relayfile ships today, each turned into a flow-native verb. The receipt a helper returns *is* the journaled effect record, so if a step retries and posts the same Slack message twice, the second write gets deduped instead of double-sending.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Relayfile" href="/docs/file">
+    The full integration catalog a flow can reach.
+  </Card>
+  <Card title="Reliability" href="/docs/relayflows/reliability">
+    How an effect stays exactly-once across a crash.
+  </Card>
+</CardGroup>

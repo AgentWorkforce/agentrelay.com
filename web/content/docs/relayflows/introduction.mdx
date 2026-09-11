@@ -1,0 +1,127 @@
+---
+title: 'Relayflows'
+description: 'A deterministic script over agentic primitives: steps you can inspect, verify, and resume.'
+---
+
+Relayflows turns a coding-agent task into steps you can inspect and verify. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed.
+
+Every effect is journaled before it's treated as real. If a step's journal write fails, the step fails. There's no silent fallback and no "it probably worked." Relayflows makes that trade everywhere: less magic, more evidence.
+
+## The ladder
+
+Every flow is built from the same small set of rungs, and you only climb as high as the task needs:
+
+1. **`run`** — a shell command. No model involved.
+2. **`llm`** — a bare model call. Prompt in, verified output out, no workspace, no tool use.
+3. **`agent`** — a harnessed coding agent in a workspace. Returns an artifact, not just text.
+4. **`human` / `dispatch` / `done`** — durable approval, handing work to a child flow, and a typed finish.
+
+## Simple Example Flow
+
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+export default flow('hello', async (f) => {
+  const greeting = await f.run('echo "Hello from Relayflows"');
+  console.log(greeting.trim());
+
+  const answer = await f.agent('greeter', {
+    task: 'Reply with one short hello sentence. Do not use tools or modify files.',
+    cli: 'claude',
+    model: 'claude-sonnet-4-6',
+  });
+  console.log(answer.summary);
+
+  f.done('success');
+});
+```
+```yaml YAML
+version: '0.1.0'
+name: hello
+steps:
+  - id: greeting
+    type: deterministic
+    command: 'echo "Hello from Relayflows"'
+  - id: greeter
+    type: agent
+    dependsOn: [greeting]
+    instruction: 'Reply with one short hello sentence. Do not use tools or modify files.'
+    cli: claude
+    model: claude-sonnet-4-6
+```
+</CodeGroup>
+
+`f.run` (a `deterministic` step in YAML) executes a shell command and returns its output. `f.agent` (an `agent` step) hands a task to a coding agent and returns a summary rather than a raw transcript. `f.done` finishes the run with one reason from a closed set: `success`, `step_failed`, `canceled`, or `budget_exceeded`. There's no fifth option to guess about.
+
+Both steps above name their own `cli` and `model` directly — `Ctx.agent`'s options are `{ task, workspace?, cli?, model? }`, matching the YAML step's fields ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required: omit `cli` and a step falls back to its flow's `cli`, then the nearest `flows.json`'s project-wide default; omit `model` and it just runs whatever model its resolved CLI defaults to, since there's no flow or project default for that. Without a `cli` at step, flow, or project level, `flows run` refuses before anything is journaled — exit `2`, `REFUSED [invalid_spec]`.
+
+## Verification
+
+An agent rarely fails by crashing. It fails by returning something plausible and wrong, which a plain retry-on-error never catches. So a step's completion is decided by a check the kernel runs against the real output, not by the agent's own account of what happened.
+
+```yaml
+version: '0.1.0'
+name: hello-agent
+steps:
+  - id: greet
+    type: deterministic
+    command: 'printf hello'
+    verification:
+      type: output_contains
+      value: hello
+
+  - id: edit
+    type: agent
+    dependsOn: [greet]
+    instruction: 'Produce the hello artifact.'
+    recoveryMode: reset
+    maxIterations: 2
+    permissions:
+      fileGlobs: ['artifacts/**']
+      accessPreset: readwrite
+    verification:
+      type: output_contains
+      value: agent-ok
+```
+
+The exit code is always checked. On top of that, `output_contains` adds an opt-in string match, and an `llm` step can require its output to match a `json_schema` instead. A step that fails verification is recorded as `verification_failed` in the journal — it doesn't get to report success on its own say.
+
+`recoveryMode: reset` governs what happens if this step dies mid-edit: the next attempt starts over from the pinned workspace revision instead of picking up whatever half-finished state got left behind. `permissions` limits what that attempt is allowed to touch while it runs.
+
+## Resumable by construction
+
+Kill the process mid-run and start it again. Steps that already completed don't run a second time, and their effects don't get resent.
+
+```text
+$ npx --no-install flows run hello.flow.ts --local-agent --input '{}'
+○ run-1 (deterministic) 0.00s
+✓ run-1 (deterministic) 1.02s completionReason: success
+Hello from Relayflows
+○ agent-2 (agent) [agent: preparing] 0.00s
+↻ agent-2 (agent) [agent: running] 12.51s
+✓ agent-2 (agent) [agent: completed] 28.95s completionReason: success
+Hello! How can I help you today?
+
+RUN 01M20JYM4T9FNGNFX4NQCK34JK completed (3 steps) completionReason: success
+```
+
+This is a real run, captured directly from the terminal. Every step carries a `completionReason` from a closed, nine-value vocabulary, so the journal always says exactly which one applied — no raw stack trace has to stand in for an answer.
+
+## Start here
+
+<CardGroup cols={3}>
+  <Card title="Quickstart" href="/docs/relayflows/quickstart">
+    From nothing to a resumed run in a few commands.
+  </Card>
+  <Card title="Build a flow" href="/docs/relayflows/build">
+    TypeScript or YAML — the same journal underneath.
+  </Card>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    check, run, resume, observe.
+  </Card>
+</CardGroup>
+
+<BannerLink href="/docs/relayflows/multi-agent" icon="compass">
+  See how far the ladder goes: named agents, cloud dispatch, memory, and integrations.
+</BannerLink>

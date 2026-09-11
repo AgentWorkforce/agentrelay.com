@@ -211,11 +211,45 @@ export const factorySection: ProductDocSection = {
   ],
 };
 
+export const relayflowsSection: ProductDocSection = {
+  id: 'relayflows',
+  label: 'Relayflows',
+  tagline: 'Deterministic scripts over agentic primitives — every step verified, every crash resumable.',
+  repo: 'AgentWorkforce/flows',
+  nav: [
+    {
+      title: 'Start',
+      items: [
+        { title: 'Introduction', slug: 'introduction' },
+        { title: 'Quickstart', slug: 'quickstart' },
+      ],
+    },
+    {
+      title: 'Author',
+      items: [{ title: 'Build a flow', slug: 'build' }],
+    },
+    {
+      title: 'Run',
+      items: [{ title: 'CLI', slug: 'cli' }],
+    },
+    {
+      title: 'Going further',
+      items: [
+        { title: 'Multi-agent flows', slug: 'multi-agent' },
+        { title: 'Cloud', slug: 'cloud' },
+        { title: 'Memory & integrations', slug: 'memory-and-integrations' },
+        { title: 'Reliability', slug: 'reliability' },
+      ],
+    },
+  ],
+};
+
 export const productSections: ProductDocSection[] = [
   fileSection,
   agentsSection,
   factorySection,
   loopSection,
+  relayflowsSection,
 ];
 
 export function getProductSection(id: string): ProductDocSection | null {

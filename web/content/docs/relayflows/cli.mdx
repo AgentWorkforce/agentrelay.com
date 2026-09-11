@@ -1,0 +1,68 @@
+---
+title: 'CLI'
+description: 'Check a spec, run it, resume it, watch it — the flows command surface.'
+---
+
+```text
+flows check [--json] <flow.yaml|spec.json>
+flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] <flow.yaml|spec.json>
+flows run --cloud [--json] [--wait] <flow.yaml|spec.json>
+flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] <flow.ts> --input <inline-json-or-file>
+flows resume [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] <run-id>
+flows tick start --schedule-id <id> --interval-ms <ms> [--epoch-ms <ms>] [--max-catch-up <n>] [--poll-interval-ms <ms>] [--data-dir <dir>] <spec.json>
+flows hn-monitor start [--data-dir <dir>] [--poll-interval-ms <n>] <spec.json>
+flows observer [--data-dir <dir>]
+```
+
+## Check
+
+```bash
+flows check my-flow.flow.yaml
+```
+
+Validates the spec: schema, step graph, verification blocks, and whether every declared CLI actually exists and is authenticated. Nothing runs and nothing is spawned. This is the same preflight a run does before its first step, exposed on its own so a broken spec fails in CI instead of at minute 27 of a real run.
+
+`check` takes a declarative `flow.yaml` or `spec.json` — it validates data, so an authored `.flow.ts` file isn't a valid argument here. A TypeScript flow gets the same preflight automatically, run inline at the top of `flows run`.
+
+## Run
+
+```bash
+flows run my-flow.flow.ts --local-agent --input '{}'   # TypeScript flow, local CLI
+flows run workflow.yaml                                  # YAML/spec.json flow
+flows run --cloud --wait workflow.yaml                   # dispatch to the hosted engine, block for the result
+```
+
+`--local-agent` runs each declared CLI (`claude`, `codex`, …) using whatever login it already has on your machine — no separate credentials to configure. It's what makes an authored TypeScript flow's `agent` steps runnable at all.
+
+By default `run` spawns a daemon for the run if one isn't already up. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole environment) asserts a daemon is already present instead — the lever CI uses to fail loudly on a missing daemon rather than silently start one.
+
+`--data-dir <dir>` points at the journal's storage directory; it defaults to `.relayflowd` in the current project.
+
+## Resume
+
+```bash
+flows resume <run-id>
+```
+
+Picks a run back up from its journal. Completed steps aren't re-executed; only the work that never finished, or never got a recorded outcome, runs again.
+
+## Observer links
+
+```bash
+flows observer
+```
+
+Mints a read-only link for watching a run's activity in real time. Minting is best-effort — a failed mint never fails the run — so `--no-observer-link` is there for anyone who wants to skip it outright (CI, for instance).
+
+## Triggers
+
+```bash
+flows tick start --schedule-id daily --interval-ms 86400000 spec.json
+flows hn-monitor start spec.json
+```
+
+`tick` is a durable schedule. Each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named trigger built the same way. Both report whether they're still alive, instead of quietly going dark for weeks without anyone noticing.
+
+## `--json`
+
+`check`, `run`, and `resume` accept `--json` for structured output instead of the human-readable progress line — the shape a CI step or another program should read, not the terminal renderer. `tick start`, `hn-monitor start`, and `observer` don't take it.

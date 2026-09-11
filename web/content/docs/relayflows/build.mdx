@@ -1,0 +1,144 @@
+---
+title: 'Build a flow'
+description: 'Write your own steps, verification, and permissions — TypeScript or YAML, same journal underneath.'
+---
+
+Start with the job in one sentence: what runs, in what order, and what proves each step did its job. If you can't state that proof yet, figure it out first, before wiring the step up.
+
+## Use the skill
+
+Don't paste this page into your agent's context — install the [writing-relayflows](https://github.com/AgentWorkforce/skills/blob/main/skills/writing-relayflows/SKILL.md) skill and let it author flows directly:
+
+```bash
+# with prpm
+npx prpm install @agent-relay/writing-relayflows
+
+# with skills.sh
+npx skills add https://github.com/agentworkforce/skills --skill writing-relayflows
+```
+
+The rest of this page is what the skill encodes — worth reading so you can tell whether what it wrote is right.
+
+## Two ways to author the same thing
+
+**YAML** describes a fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
+
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+export default flow('hello-agent', async (f) => {
+  const greeting = await f.run('printf hello');
+  const edit = await f.agent('edit', {
+    task: 'Produce the hello artifact.',
+    cli: 'claude',
+    model: 'claude-sonnet-4-6',
+  });
+  const finish = await f.run('printf done');
+  f.done('success');
+});
+```
+```yaml YAML
+version: '0.1.0'
+name: hello-agent
+steps:
+  - id: greet
+    type: deterministic
+    command: 'printf hello'
+    verification:
+      type: output_contains
+      value: hello
+
+  - id: edit
+    type: agent
+    dependsOn: [greet]
+    instruction: 'Produce the hello artifact.'
+    cli: claude
+    model: claude-sonnet-4-6
+    verification:
+      type: output_contains
+      value: agent-ok
+
+  - id: finish
+    type: deterministic
+    dependsOn: [edit]
+    command: 'printf done'
+```
+</CodeGroup>
+
+Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
+
+Both `edit` steps above name their own `cli` and `model` directly, the same way in either language ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required in TypeScript: omit them and the step falls back to the flow's `cli`, then the nearest `flows.json`'s project-wide default, the same resolution [Introduction](/docs/relayflows/introduction#a-whole-flow) covers.
+
+<Note>
+  `recoveryMode`, `permissions`, `surfaces`, and `budget`, the richer
+  fields covered further down, are YAML/JSON fields only today.
+  TypeScript's `Ctx.agent` doesn't have them. If a step needs them,
+  author it in YAML and either run it directly or have a TypeScript
+  flow reach it with `f.dispatch`.
+</Note>
+
+## The context a flow body gets
+
+```ts
+interface Ctx {
+  run(command: string): Step<string>;
+  llm(strings: TemplateStringsArray, ...values: unknown[]): Step<string>;
+  agent(name: string, options: { task: string; workspace?: string; cli?: string; model?: string }): Step<{ summary: string; artifacts: string[] }>;
+  human(question: string, options: { to: string }): Promise<boolean>;
+  dispatch<T>(flow: string, input: unknown): Promise<T>;
+  done(reason: 'success' | 'step_failed' | 'canceled' | 'budget_exceeded'): void;
+}
+```
+
+This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control. `human` parks the run on a durable await instead of a blocking call — it's a wait the journal can survive a restart across. `dispatch` hands work to a named child flow and returns its typed result.
+
+## Verification
+
+Every step's exit code is checked automatically. On top of that:
+
+- **`output_contains`** — an opt-in string match against the step's output. Fast to write, good for a smoke check.
+- **`json_schema`** on an `llm` step — the model's reply must parse and validate against the schema before anything downstream sees it.
+
+A step that fails its check is recorded as `verification_failed`, with exactly which check failed. The agent insisting it went fine doesn't override that.
+
+## Permissions and recovery
+
+An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit:
+
+```yaml
+- id: edit
+  type: agent
+  dependsOn: [greet]
+  instruction: 'Produce the hello artifact through the deterministic test stub.'
+  recoveryMode: reset
+  maxIterations: 2
+  surfaces:
+    workspace:
+      - surface: repo
+    streams:
+      - stream: agent-notes
+  permissions:
+    fileGlobs: ['artifacts/**']
+    accessPreset: readwrite
+  verification:
+    type: output_contains
+    value: agent-ok
+```
+
+- **`reset`** (the default) — the next attempt starts fresh from the pinned workspace revision, with no half-finished edit left behind.
+- **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
+- **`manual`** — parks the run as `needs_human` with a diff of the pinned revision against whatever's actually there.
+
+`maxIterations` caps how many attempts a step gets before one of those three outcomes has to happen. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) caps the whole flow the same way, declared once and enforced by the kernel instead of tracked by hand.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/relayflows/quickstart">
+    Scaffold one and run it end to end.
+  </Card>
+  <Card title="CLI" href="/docs/relayflows/cli">
+    check, run, resume — every flag.
+  </Card>
+</CardGroup>
