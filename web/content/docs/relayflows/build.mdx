@@ -37,6 +37,8 @@ steps:
     type: agent
     dependsOn: [greet]
     instruction: 'Produce the hello artifact.'
+    cli: claude
+    model: claude-sonnet-4-6
     verification:
       type: output_contains
       value: agent-ok
@@ -49,6 +51,8 @@ steps:
 </CodeGroup>
 
 Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
+
+The YAML `edit` step above names its own `cli` and `model`. The TypeScript `edit` step has no such fields to set — it needs a `flows.json` with a project-level `cli` next to `hello-agent.flow.ts`, or `flows run` refuses it before anything runs. See [Introduction](/docs/relayflows/introduction#a-whole-flow) for exactly how that resolution works.
 
 <Note>
   `recoveryMode`, `permissions`, `surfaces`, and `budget`, the richer
