@@ -1,0 +1,155 @@
+---
+title: 'Promptgramming: Stop Babysitting Your Agents'
+description: "Frantically prompting an agent at 1am makes a great demo and a bad product. Script the prompts into a workflow, gate the outcomes against the filesystem, and stop babysitting the run. This is promptgramming."
+date: '2026-09-12'
+author: 'Khaliq Gant'
+category: 'Opinion'
+tags:
+  - Promptgramming
+  - Relayflows
+  - Agent Relay
+  - Workflows
+  - Multi-agent orchestration
+coverImage: '/blog-images/promptgramming-cover.png'
+coverImageAlt: 'A developer slumped over a keyboard at night while a chat agent cheerfully claims the fix is one deploy away'
+---
+
+I've been a developer for over 15 years. Back in my day we used to write code by hand, before agents started putting their slimy little hands all over the codebase. At this point most of us agree that the process of creating software has changed — and as a result, the whole industry is having to rethink first principles and reinvent a lot of age-old practices. As the pendulum swings and starts to settle on how we build software best, I want to push us all toward scripting out our prompts. I'm calling it **promptgramming**.
+
+![A developer slumped over a keyboard at night while a chat agent cheerfully claims the fix is one deploy away](/blog-images/promptgramming-cover.png)
+
+## The frantic prompting loop
+
+This is a lot of us today: frantically prompting and steering agents while they keep telling us the fix is just one deploy away, and that we're "right to push back on that." It's a frustratingly exhilarating roller coaster that makes for a great-looking demo, but anyone who has gone deep knows that a high-quality product takes real work and real iteration. Agents are confidently wrong, and as my fellow AI vampires know, when it hits 1 or 2am, the urge to say yes to every question an agent asks gets stronger with every underslept minute.
+
+You make an amazing plan, you're hyped about it, and three hours into the agent session it has drifted so far from that plan that even you've forgotten the original intent. Or maybe you're the CTO of a nursing platform. Your customer success team has three different LLM tools — one tags tickets, one drafts replies, one handles voicemail callbacks — and between them are six humans copy-pasting text from one window to the next, with no verification, just a "system" that's been glued together.
+
+## Stop babysitting, start scripting
+
+Many people have said this before: **stop babysitting your agents**, and stop shipping glued-together systems. Instead, script your agents. Script your systems. Turn prompts into part of a deterministic script, and gate the outcomes with deterministic checks.
+
+A skill is a suggestion, a recommendation — and my three-year-old happily takes a suggestion and tosses it straight in the trash. A gate is a hard line: a mandatory requirement that fails the entire operation when it isn't met. A plan that isn't enforced isn't a plan at all — it's just an outdated artifact nobody follows.
+
+Promptgram your agents and you don't just get deterministic checks. You get to bring in different agents, from different models and harnesses, to verify and review each other's work. All those things you find yourself telling your agent, over and over, at 1am? Stop doing that. Script it out, and let your agent run the script autonomously.
+
+## What this looks like
+
+It looks like a workflow. Claude [released dynamic workflows](https://code.claude.com/docs/en/workflows) earlier this year, which is a genuinely powerful abstraction — but I'm talking about something more deliberate: writing workflows ahead of time, with real planning, and even stacking workflows to build rich applications.
+
+```ts
+export default flow<SocialPostInput>(
+  "social-post-pipeline",
+  { budget: "$5/run" },
+  async (f, input) => {
+    const research = await f
+      .agent("researcher", {
+        task:
+          `Research current, verifiable facts about "${input.topic}" for ` +
+          `${input.brand}. Cite a source for every claim. Write your findings ` +
+          `to research/notes.md.`,
+        workspace: "research/: readwrite",
+      })
+      .gate(
+        (r) => r.artifacts.includes("research/notes.md"),
+        "the researcher must write research/notes.md, not just summarize in chat",
+      );
+
+    const draft = await f
+      .agent("writer", {
+        task:
+          `Read research/notes.md and draft one social post for ${input.brand} ` +
+          `about "${input.topic}". Do not state anything the research does not ` +
+          `support. Write the draft to drafts/post.md.`,
+        workspace: "drafts/: readwrite",
+      })
+      .gate(
+        (r) => r.artifacts.includes("drafts/post.md"),
+        "the writer must write drafts/post.md",
+      );
+  },
+);
+```
+
+The flow is multi-agent and supports any model and harness. The gate is a runtime check against the actual filesystem — not against the agent's own account of what it did. Most other systems gate on the agent's own output instead: a substring in the message, or a schema match on its reply. That's asking the agent to grade its own homework. A file either exists on disk or it doesn't.
+
+## Building an autonomous software factory
+
+Workflows are the underpinning of a lot of our infrastructure. Imagine building an autonomous software factory: a sequence of steps an agent (or agents) works through to pick up a ticket and satisfy its requirements. You could try to pull that off with a single agent and a pile of skills — but why prompt and pray? Promptgram, and profit.
+
+```ts
+import { flow } from "@relayflows/surface";
+
+export interface TicketInput {
+  repo: string;                 // "owner/repo"
+  ticketId: string;
+  requirements: string;
+  baseBranch: string;
+}
+
+export default flow<TicketInput>(
+  "software-factory",
+  { budget: "$8/run" },
+  async (f, input) => {
+    await f
+      .agent("planner", {
+        model: "claude-sonnet-5",
+        task:
+          `Decompose the ticket. Each step names the file it touches and ` +
+          `the test that proves it works. Write plan/plan.md.\n\n` +
+          `${input.requirements}`,
+        workspace: "plan/: readwrite",
+      })
+      .gate((r) => r.artifacts.includes("plan/plan.md"), "no plan, no code");
+
+    await f
+      .agent("implementer", {
+        model: "claude-opus-5",
+        harness: "claude-code",
+        task:
+          `Follow plan/plan.md. Branch feat/${input.ticketId} off ` +
+          `${input.baseBranch}. Write code, tests, and a PR body in ` +
+          `impl/summary.md. Record the branch in impl/branch.txt.`,
+        workspace: "impl/: readwrite, src/: readwrite, tests/: readwrite",
+      })
+      .gate((r) => r.artifacts.includes("impl/branch.txt"), "no branch, no PR");
+
+    // The runtime runs the tests. The agent cannot lie about the exit code.
+    await f
+      .run(`git checkout $(cat impl/branch.txt) && npm test`)
+      .gate((out) => /failed:\s*0/.test(out), "tests must pass");
+
+    // Different model. Its only job is to break the PR.
+    await f
+      .agent("adversary", {
+        model: "gpt-5",
+        task:
+          `Try to sink branch $(cat impl/branch.txt). Find one concrete ` +
+          `failure the tests miss. If you can't after honest effort, ` +
+          `write adversary/clean.`,
+        workspace: "adversary/: readwrite",
+      })
+      .gate((r) => r.artifacts.includes("adversary/clean"), "adversary found an issue");
+
+    // Deterministic step, not an agent decision. Journal-backed and idempotent.
+    await f.github.createPullRequest({
+      repo: input.repo,
+      title: input.ticketId,
+      head: `feat/${input.ticketId}`,
+      base: input.baseBranch,
+      bodyPath: "impl/summary.md",
+    });
+
+    f.done("success");
+  },
+);
+```
+
+Notice what isn't an agent's call here: whether the tests pass, whether the branch exists, whether the PR actually gets opened. Those are deterministic steps and deterministic gates. The agents own the judgment calls — decomposing the ticket, writing the code, trying to break it — and the runtime owns the truth.
+
+## Hard constraints win
+
+If a task is well defined and can be decomposed into a series of well-defined steps, you should be reaching for a relayflow. Hard constraints beat soft ones every time.
+
+Let's get back to programming — but with agents. Promptgramming.
+
+[Get started with Relayflows](https://agentrelay.com/docs/relayflows/introduction).
