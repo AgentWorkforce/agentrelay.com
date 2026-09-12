@@ -27,6 +27,13 @@ Many have said this before but STOP BABYSITTING YOUR AGENTS and stop using glued
 So what does this look like? It is a workflow. Claude released [dynamic workflows](https://code.claude.com/docs/en/workflows) earlier this year which is a super powerful abstraction but I'm talking about writing workflows intentionally ahead of time with proper planning and even stack workflows to create rich applications.
 
 ```ts
+import { flow } from "@relayflows/surface";
+
+export interface SocialPostInput {
+  topic: string;
+  brand: string;
+}
+
 export default flow<SocialPostInput>(
   "social-post-pipeline",
   { budget: "$5/run" },
@@ -105,10 +112,12 @@ export default flow<TicketInput>(
       })
       .gate((r) => r.artifacts.includes("impl/branch.txt"), "no branch, no PR");
 
-    // The runtime runs the tests. The agent cannot lie about the exit code.
-    await f
-      .run(`git checkout $(cat impl/branch.txt) && npm test`)
-      .gate((out) => /failed:\s*0/.test(out), "tests must pass");
+    // The runtime runs the tests and checks the exit code. The agent cannot lie about it.
+    await f.run(
+      `branch=$(cat impl/branch.txt); ` +
+      `case "$branch" in feat/*) ;; *) exit 1 ;; esac; ` +
+      `git checkout "$branch" && npm test`,
+    );
 
     // Different model. Its only job is to break the PR.
     await f
