@@ -47,7 +47,7 @@ export default flow<SocialPostInput>(
           `Research current, verifiable facts about "${input.topic}" for ` +
           `${input.brand}. Cite a source for every claim. Write your findings ` +
           `to research/notes.md.`,
-        workspace: "research/: readwrite",
+        permissions: { fileGlobs: ["research/**"], accessPreset: "readwrite" },
       })
       .gate(
         (r) => r.artifacts.includes("research/notes.md"),
@@ -60,7 +60,7 @@ export default flow<SocialPostInput>(
           `Read research/notes.md and draft one social post for ${input.brand} ` +
           `about "${input.topic}". Do not state anything the research does not ` +
           `support. Write the draft to drafts/post.md.`,
-        workspace: "drafts/: readwrite",
+        permissions: { fileGlobs: ["drafts/**"], accessPreset: "readwrite" },
       })
       .gate(
         (r) => r.artifacts.includes("drafts/post.md"),
@@ -80,7 +80,8 @@ Workflows are the underpinning of a lot of our infrastructure. Imagine building 
 import { flow } from "@relayflows/surface";
 
 export interface TicketInput {
-  repo: string;                 // "owner/repo"
+  owner: string;
+  repo: string;
   ticketId: string;
   requirements: string;
   baseBranch: string;
@@ -97,19 +98,22 @@ export default flow<TicketInput>(
           `Decompose the ticket. Each step names the file it touches and ` +
           `the test that proves it works. Write plan/plan.md.\n\n` +
           `${input.requirements}`,
-        workspace: "plan/: readwrite",
+        permissions: { fileGlobs: ["plan/**"], accessPreset: "readwrite" },
       })
       .gate((r) => r.artifacts.includes("plan/plan.md"), "no plan, no code");
 
     await f
       .agent("implementer", {
         model: "claude-opus-5",
-        harness: "claude-code",
+        cli: "claude",
         task:
           `Follow plan/plan.md. Branch feat/${input.ticketId} off ` +
           `${input.baseBranch}. Write code, tests, and a PR body in ` +
           `impl/summary.md. Record the branch in impl/branch.txt.`,
-        workspace: "impl/: readwrite, src/: readwrite, tests/: readwrite",
+        permissions: {
+          fileGlobs: ["impl/**", "src/**", "tests/**"],
+          accessPreset: "readwrite",
+        },
       })
       .gate((r) => r.artifacts.includes("impl/branch.txt"), "no branch, no PR");
 
@@ -126,17 +130,19 @@ export default flow<TicketInput>(
           `Try to sink branch $(cat impl/branch.txt). Find one concrete ` +
           `failure the tests miss. If you can't after honest effort, ` +
           `write adversary/clean.`,
-        workspace: "adversary/: readwrite",
+        permissions: { fileGlobs: ["adversary/**"], accessPreset: "readwrite" },
       })
       .gate((r) => r.artifacts.includes("adversary/clean"), "adversary found an issue");
 
     // Deterministic step, not an agent decision. Journal-backed and idempotent.
+    const summary = await f.run("cat impl/summary.md");
     await f.github.createPullRequest({
+      owner: input.owner,
       repo: input.repo,
       title: input.ticketId,
       head: `feat/${input.ticketId}`,
       base: input.baseBranch,
-      bodyPath: "impl/summary.md",
+      body: summary,
     });
 
     f.done("success");
