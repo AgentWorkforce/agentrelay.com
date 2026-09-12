@@ -1,6 +1,6 @@
 ---
-title: 'Promptgramming: Stop Babysitting Your Agents'
-description: "Frantically prompting an agent at 1am makes a great demo and a bad product. Script the prompts into a workflow, gate the outcomes against the filesystem, and stop babysitting the run. This is promptgramming."
+title: 'Promptgramming'
+description: 'Many have said this before but STOP BABYSITTING YOUR AGENTS and stop using glued together systems. Instead script your agents. Script your systems.'
 date: '2026-09-12'
 author: 'Khaliq Gant'
 category: 'Opinion'
@@ -11,30 +11,20 @@ tags:
   - Workflows
   - Multi-agent orchestration
 coverImage: '/blog-images/promptgramming-cover.png'
-coverImageAlt: 'A developer slumped over a keyboard at night while a chat agent cheerfully claims the fix is one deploy away'
+coverImageAlt: 'A frustrated developer at a desk staring at a terminal chat agent'
 ---
 
-I've been a developer for over 15 years. Back in my day we used to write code by hand, before agents started putting their slimy little hands all over the codebase. At this point most of us agree that the process of creating software has changed — and as a result, the whole industry is having to rethink first principles and reinvent a lot of age-old practices. As the pendulum swings and starts to settle on how we build software best, I want to push us all toward scripting out our prompts. I'm calling it **promptgramming**.
+I have been a developer for over 15 years. Back in my day we used to write the code by hand! Before agents started putting their slimy hands all in the codebase! At this point most agree that the process of creating software has changed, but also as a result the entire industry is having to rethink first principles and reinvent a lot of age old practices. As the pendulum continues to swing and settle on how to best create software I'd like to try and push us all towards scripting out prompts or what I'd like to call promptgramming.
 
-![A developer slumped over a keyboard at night while a chat agent cheerfully claims the fix is one deploy away](/blog-images/promptgramming-cover.png)
+![A frustrated developer at a desk staring at a terminal chat agent](/blog-images/promptgramming-cover.png)
 
-## The frantic prompting loop
+This is a lot of us today, frantically prompting and steering agents as they keep telling us the fix is just one deploy away and that we're "right to push back on that". It's a frustratingly exhilarating roller coaster of an experience that very quickly makes for a nice looking demo but anyone that has gone deep knows that to make a high quality product takes real work and iterations. Agents are confidently wrong and as my fellow AI Vampires know when it gets to 1 or 2 am, the inclination to tell the agent yes to every question gets higher with every underslept minute.
 
-This is a lot of us today: frantically prompting and steering agents while they keep telling us the fix is just one deploy away, and that we're "right to push back on that." It's a frustratingly exhilarating roller coaster that makes for a great-looking demo, but anyone who has gone deep knows that a high-quality product takes real work and real iteration. Agents are confidently wrong, and as my fellow AI vampires know, when it hits 1 or 2am, the urge to say yes to every question an agent asks gets stronger with every underslept minute.
+You make an amazing plan and are feeling super hyped about it and three hours into the agent session it has deviated away from it so far that you even yourself forgot what the original intent was. Or maybe you're CTO of a nursing platform. The customer success team has three different LLM tools, one tags tickets, one drafts replies, and one handles voicemail callbacks. Between these tools are six humans copy-pasting text from one window to the next, with no verification but rather humans using a "system" that has been glued together.
 
-You make an amazing plan, you're hyped about it, and three hours into the agent session it has drifted so far from that plan that even you've forgotten the original intent. Or maybe you're the CTO of a nursing platform. Your customer success team has three different LLM tools — one tags tickets, one drafts replies, one handles voicemail callbacks — and between them are six humans copy-pasting text from one window to the next, with no verification, just a "system" that's been glued together.
+Many have said this before but STOP BABYSITTING YOUR AGENTS and stop using glued together systems. Instead script your agents. Script your systems. Produce prompts that are part of a deterministic script and gate the outcomes with deterministic checks. A skill is a suggestion, a recommendation and my three year happily takes a suggestion and tosses it right into the trash. A hard line, a gate is a mandatory requirement that if doesn't get met fails the entire operation. A plan that isn't enforced isn't a plan at all but just an outdated artifact that doesn't get followed. If you promptgram your agents you can not only add in deterministic checks but also add in different agents from different models and harnesses to verify and review the agents work. Those things you end up always telling your agent? Stop doing that and script it out and let your agent run in a script autonomously.
 
-## Stop babysitting, start scripting
-
-Many people have said this before: **stop babysitting your agents**, and stop shipping glued-together systems. Instead, script your agents. Script your systems. Turn prompts into part of a deterministic script, and gate the outcomes with deterministic checks.
-
-A skill is a suggestion, a recommendation — and my three-year-old happily takes a suggestion and tosses it straight in the trash. A gate is a hard line: a mandatory requirement that fails the entire operation when it isn't met. A plan that isn't enforced isn't a plan at all — it's just an outdated artifact nobody follows.
-
-Promptgram your agents and you don't just get deterministic checks. You get to bring in different agents, from different models and harnesses, to verify and review each other's work. All those things you find yourself telling your agent, over and over, at 1am? Stop doing that. Script it out, and let your agent run the script autonomously.
-
-## What this looks like
-
-It looks like a workflow. Claude [released dynamic workflows](https://code.claude.com/docs/en/workflows) earlier this year, which is a genuinely powerful abstraction — but I'm talking about something more deliberate: writing workflows ahead of time, with real planning, and even stacking workflows to build rich applications.
+So what does this look like? It is a workflow. Claude released [dynamic workflows](https://code.claude.com/docs/en/workflows) earlier this year which is a super powerful abstraction but I'm talking about writing workflows intentionally ahead of time with proper planning and even stack workflows to create rich applications.
 
 ```ts
 export default flow<SocialPostInput>(
@@ -70,11 +60,9 @@ export default flow<SocialPostInput>(
 );
 ```
 
-The flow is multi-agent and supports any model and harness. The gate is a runtime check against the actual filesystem — not against the agent's own account of what it did. Most other systems gate on the agent's own output instead: a substring in the message, or a schema match on its reply. That's asking the agent to grade its own homework. A file either exists on disk or it doesn't.
+The flow is multi-agent and also supports any model and harness. The gate is a runtime verification against the actual filesystem. Many other systems gate on the agent's own output, for instance a substring in the message, or a specific schema in its reply.
 
-## Building an autonomous software factory
-
-Workflows are the underpinning of a lot of our infrastructure. Imagine building an autonomous software factory: a sequence of steps an agent (or agents) works through to pick up a ticket and satisfy its requirements. You could try to pull that off with a single agent and a pile of skills — but why prompt and pray? Promptgram, and profit.
+Workflows are the underpinnings of a lot of our infrastructure. Imagine you're building an autonomous software factory. There are a sequence of steps that the agent or agents will go through to successfully pick up a ticket and satisfy the requirements. You could try and achieve this with a single agent and skills but why prompt and pray? Promptgram and profit, I say.
 
 ```ts
 import { flow } from "@relayflows/surface";
@@ -150,12 +138,4 @@ export default flow<TicketInput>(
 );
 ```
 
-Notice what isn't an agent's call here: whether the tests pass, whether the branch exists, whether the PR actually gets opened. Those are deterministic steps and deterministic gates. The agents own the judgment calls — decomposing the ticket, writing the code, trying to break it — and the runtime owns the truth.
-
-## Hard constraints win
-
-If a task is well defined and can be decomposed into a series of well-defined steps, you should be reaching for a relayflow. Hard constraints beat soft ones every time.
-
-Let's get back to programming — but with agents. Promptgramming.
-
-[Get started with Relayflows](https://agentrelay.com/docs/relayflows/introduction).
+If a task is well defined and can be decomposed into a series of well defined steps then you should be reaching for a relayflow. Hard constraints win over soft ones every time. Let's get back to programming, but with agents aka promptgramming. Get started: https://agentrelay.com/docs/relayflows/introduction
