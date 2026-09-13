@@ -1,0 +1,70 @@
+---
+title: 'Grading our own homework'
+description: 'We benchmarked RelayFlow against a raw coding agent on Terminal-Bench 2.0. The first result was a tie, and the reason was two bugs, both of which were quietly working against us. Here is what we found, what we fixed, and the honest number that came out the other side.'
+date: '2026-09-13'
+author: 'Khaliq Gant'
+category: 'Engineering'
+tags:
+  - Relayflows
+  - Agent Relay
+  - Benchmarks
+  - Terminal-Bench
+  - Evaluator-optimizer
+---
+
+If you build a workflow product, at some point someone is going to ask the obvious question: does wrapping an agent in your thing actually make it better, or is it just more steps? The honest way to answer that is to run a benchmark you didn't write, grade it with a check you didn't invent, and publish the number even if it isn't the one you wanted.
+
+So that's what we did. We took Terminal-Bench 2.0 — the 89-task agentic coding benchmark from the Terminal-Bench maintainers, run through [Harbor](https://harborframework.com), the same framework Anthropic and "virtually all frontier labs" use for agentic evals — and ran two arms against a fixed sample of its tasks. Arm A: a stock coding agent (`cursor-cli`), raw. Arm B: the exact same agent, wrapped in a RelayFlow that runs the task's own official test before declaring victory, and retries once with the real failure if it doesn't pass. Same model, same container spec, same tasks, same grading. The only difference is whether a bounded check-and-repair loop sits around the attempt.
+
+That check-and-repair loop is not a new idea we're claiming credit for. It's Anthropic's own **evaluator-optimizer** pattern from ["Building Effective Agents"](https://www.anthropic.com/engineering/building-effective-agents): generate, check against a real validator, revise, repeat, bounded. RelayFlow just makes that pattern deterministic and journaled instead of leaving it to the model's discretion about whether to bother checking its own work.
+
+## The first result was a tie, and that should have been a red flag
+
+Twelve tasks, one trial each, both arms: 9/12 passed. Exactly tied. Wilson 95% confidence interval identical for both arms: `[46.8%, 91.1%]`. On paper that's a clean "no difference detected" result, and if we'd stopped there and written it up, it would have been a defensible-looking, completely wrong story.
+
+It was wrong for two reasons, and digging into them was more useful than the number itself.
+
+**The check was sharing a clock with the work it was checking.** Harbor wraps an agent's entire turn — for us, that's both attempts and both mid-run checks — in a single timeout. For the raw arm, that timeout only ever has to cover one model turn. For RelayFlow, the same window has to cover up to two attempts *and* up to two runs of the task's own test suite. We measured the actual cost of that: on one task, the official test took 169 seconds per run; on another, a genuine second attempt needed real extra model time on top of that. Both showed up as RelayFlow-only timeouts, on tasks the raw arm's single attempt fit inside the same nominal budget. Not a loss. An artifact of asking one arm to do bounded extra work inside a clock it didn't control.
+
+**Timeouts were erasing our own bookkeeping.** When a round failed, our code was supposed to record what happened and preserve whatever cost/token data it had before re-raising. It didn't, because a Harbor timeout arrives as `asyncio.CancelledError` — a `BaseException` since Python 3.8, not an `Exception`. Our own `except Exception` block never saw it. Every timed-out trial silently lost its own explanation.
+
+Neither bug helped us. If anything, both quietly penalized the thing we were trying to measure fairly. That's the part worth sitting with: we weren't tempted to tune a benchmark in our favor, and we still shipped a wrong result on the first pass, because infrastructure bugs don't check which side they're biased against before they fire.
+
+## The fix, applied the same way to both arms
+
+For the shared clock, the fix is one flag: `--agent-timeout-multiplier 1.5`, passed identically to both arms. The raw arm never uses the extra headroom — it only ever makes one attempt — so this can't inflate RelayFlow's score. It just stops a mechanism that's supposed to do bounded extra work from being punished for doing it.
+
+```bash
+harbor run \
+  --dataset terminal-bench@2.0 \
+  --override-cpus 4 --override-memory-mb 8192 \
+  --agent-timeout-multiplier 1.5 \
+  --agent relayflow_cursor_cli:RelayFlowCursorAgent \
+  --include-task-name mcmc-sampling-stan \
+  --include-task-name schemelike-metacircular-eval
+```
+
+For the bookkeeping bug, we rewrote the RelayFlow agent's exception handling to catch `BaseException`, record which phase failed — the agent call or the check — attempt a bounded 20-second salvage read of whatever transcript exists, and always re-raise. Harbor's own exception handling sees exactly what it always saw. We just stopped throwing away the explanation on the way out.
+
+We verified both fixes the boring way: re-ran the two tasks that broke under the old code, watched them pass cleanly with the new code, and only then trusted the fix enough to scale up.
+
+## The real run: 36 trials per arm, not 12
+
+A tied 9/12 with a `±22pp` confidence interval isn't evidence of anything except "run more trials." Anthropic's own infrastructure-noise research used 227 problems times 10 samples to detect real, non-noise effects on this exact benchmark. We didn't have the budget for the full 89-task set at that depth — real per-trial cost on this pilot ranged from $0.16 to $9.82 for the *same* model and arm, so a comparable-depth run on all 89 tasks would have been a $150–300+, many-hour-per-arm commitment. Instead we ran 3 independent trials per task on the same fixed 12-task sample: 36 trials per arm, 72 total, real API calls, real Docker containers, real official grading.
+
+| | pass rate | Wilson 95% CI |
+|---|---|---|
+| raw | 28/36 = 77.8% | [61.9%, 88.3%] |
+| RelayFlow | 33/36 = 91.7% | [78.2%, 97.1%] |
+
+Cost ratio, RelayFlow over raw: **1.14x**. Mean attempts used by RelayFlow: **1.11** — it almost never needed its one allowed retry, and it never used both attempts and still failed the gate. Every RelayFlow loss in this run was a timeout, not "tried twice, still couldn't do it."
+
+## What we're actually claiming, and what we're not
+
+The confidence intervals still overlap — `[78.2%, 88.3%]` is the overlap zone. Per our own stated rule going into this (borrowed straight from Anthropic's skepticism threshold on this benchmark), that alone is not a win. We're not going to round it up to one.
+
+What we will say: across all 12 tasks, RelayFlow never scored lower than raw on a single one, and scored strictly higher on 5 of them, tying on the other 7. That monotonic pattern — never behind, sometimes ahead — is a more informative shape than the pooled interval, even though any single task's jump from 2/3 to 3/3 is well within noise on its own. The clearest individual case is `path-tracing`: raw failed all three attempts, even with the same extended timeout headroom RelayFlow got. RelayFlow passed one of three. That's closer to "the check-and-repair loop found something raw genuinely couldn't" than to a timeout artifact.
+
+The next lever, if we want a claim tight enough to stop hedging, is the same one Anthropic used: more tasks, more trials, or both. We know what that costs now, because we measured it, instead of guessing.
+
+If you want to poke holes in the setup — the resource spec, the timeout multiplier, the task sample, any of it — we'd rather you find them than we bury them. [Get in touch](https://agentrelay.com/enterprise).
