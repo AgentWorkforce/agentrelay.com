@@ -52,15 +52,19 @@ export function LogoWordmark() {
 
 export function SiteNav({
   center,
+  brandAddon,
   actions,
   mobileMenuContent,
   hideLinks,
+  hideDocsLink,
   hideMobileDocsLink,
 }: {
   center?: React.ReactNode;
+  brandAddon?: React.ReactNode;
   actions?: React.ReactNode;
   mobileMenuContent?: React.ReactNode;
   hideLinks?: boolean;
+  hideDocsLink?: boolean;
   hideMobileDocsLink?: boolean;
 } = {}) {
   const pathname = usePathname();
@@ -82,21 +86,26 @@ export function SiteNav({
     <div className={s.navOuter}>
       <header className={`${s.navBar} ${scrolled ? s.navBarScrolled : ''}`}>
         <nav className={s.nav}>
-          <Link href="/" className={s.logo} aria-label="Agent Relay home">
-            <LogoIcon />
-            <LogoWordmark />
-          </Link>
+          <div className={s.brandGroup}>
+            <Link href="/" className={s.logo} aria-label="Agent Relay home">
+              <LogoIcon />
+              <LogoWordmark />
+            </Link>
+            {brandAddon}
+          </div>
 
           {center && <div className={s.navCenter}>{center}</div>}
 
           <div className={s.navRight}>
             {!hideLinks && (
               <ul className={s.links}>
-                <li>
-                  <Link href="/docs" className={s.link}>
-                    Docs
-                  </Link>
-                </li>
+                {!hideDocsLink && (
+                  <li>
+                    <Link href="/docs" className={s.link}>
+                      Docs
+                    </Link>
+                  </li>
+                )}
                 <li>
                   <Link href="/blog" className={s.link}>
                     Blog
@@ -158,7 +167,7 @@ export function SiteNav({
               }
             }}
           >
-            {!hideLinks && !hideMobileDocsLink && (
+            {!hideLinks && !hideDocsLink && !hideMobileDocsLink && (
               <Link href="/docs" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                 Docs
               </Link>
