@@ -83,7 +83,7 @@ export function FlowGatePreview() {
   const camera = useRef(0);
   const markerId = useId();
   const [paused, setPaused] = useState(false);
-  const [speed, setSpeed] = useState<1 | 2 | 5>(1);
+  const [speed, setSpeed] = useState<1 | 2 | 5>(2);
   const [reduced, setReduced] = useState(false);
   const [phaseIndex, setPhaseIndex] = useState(0);
   const phase = workflowPhases[phaseIndex];
