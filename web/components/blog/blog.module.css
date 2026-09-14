@@ -5,7 +5,7 @@
   --blog-band-bg:
     radial-gradient(circle at 18% 24%, rgba(116, 184, 226, 0.16), transparent 32%),
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
-  --blog-shell-bg: #08111a;
+  --blog-shell-bg: #0b1c2a;
   --blog-post-hero-bg: #0b1c2a;
   min-height: 100vh;
   background: var(--blog-band-bg);
