@@ -57,7 +57,7 @@ export function SourcePicker({ draft, onChange }: { draft: FactoryDraft; onChang
         <input type="checkbox" checked={settings.mentioned ?? false} onChange={event => update({ mentioned: event.target.checked })} />
         Only when the app is mentioned
       </label>}
-      <p className={s.sourceNote}>{source.id === 'markdown' ? 'Uses tasks.md if left blank. Your file stays in your repository.' : `Your filters are saved. You’ll connect ${source.label} after building your flow.`}</p>
+      {source.id === 'markdown' && <p className={s.sourceNote}>Uses tasks.md if left blank. Your file stays in your repository.</p>}
     </section>}
   </>;
 }
