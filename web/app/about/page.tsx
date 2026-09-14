@@ -6,7 +6,7 @@ import { HomePosterText } from '../../components/home/HomePosterText';
 import { ScribbleUnderline } from '../../components/home/icons';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { HOME_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
+import { DEFAULT_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import s from '../landing.module.css';
 
@@ -53,14 +53,14 @@ export const metadata: Metadata = {
       'Communication infrastructure for software teams moving from human-centered tools to agent-centered engineering.',
     url: absoluteUrl('/about'),
     type: 'website',
-    images: [ogImage(HOME_OG_IMAGE_PATH, 'Agent Relay')],
+    images: [ogImage(DEFAULT_OG_IMAGE_PATH, 'Agent Relay')],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Agent Relay',
     description:
       'Communication infrastructure for software teams moving from human-centered tools to agent-centered engineering.',
-    images: [absoluteUrl(HOME_OG_IMAGE_PATH)],
+    images: [absoluteUrl(DEFAULT_OG_IMAGE_PATH)],
   },
 };
 

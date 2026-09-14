@@ -1204,7 +1204,7 @@
 .integrationWindow { overflow: hidden; }
 .integrationTrack { display: flex; width: max-content; animation: integrationScroll 55s linear infinite; }
 .integrationTrack + .integrationTrack { margin-top: 0.5rem; animation-direction: reverse; animation-duration: 65s; }
-.integrationGroup { display: flex; gap: 0.5rem; list-style: none; padding: 0 0.5rem 0 0; margin: 0; }
+.integrationGroup { flex-shrink: 0; display: flex; gap: 0.5rem; list-style: none; padding: 0 0.5rem 0 0; margin: 0; }
 .integrationLogo {
   display: flex;
   flex-direction: column;
@@ -1222,7 +1222,7 @@
 .integrationLogo img, .integrationLogo > svg { width: 28px; height: 28px; }
 .integrationLogo span { color: var(--flows-muted); font-size: 0.75rem; white-space: nowrap; }
 .integrationWindow:hover .integrationTrack { animation-play-state: paused; }
-@keyframes integrationScroll { to { transform: translateX(-50%); } }
+@keyframes integrationScroll { to { transform: translateX(calc(-100% / var(--integration-copies, 2))); } }
 @media (max-width: 680px) {
   .integrationLogo { width: 112px; min-height: 88px; }
 }
