@@ -16,7 +16,8 @@
   --flows-band-dark: #0b1c2a;
   --flows-band-deep: #081723;
   min-height: 100vh;
-  overflow-x: hidden;
+  /* Clip decoration without creating a scroll container for the sticky nav. */
+  overflow-x: clip;
   background: linear-gradient(180deg, #10273a 0%, #0d2638 38%, #0b1c2a 100%);
   color: var(--flows-text);
 }
