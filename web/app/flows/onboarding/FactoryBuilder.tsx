@@ -244,7 +244,6 @@ export function FactoryBuilder() {
               </fieldset>
               </details>
               {comingSoonOnly && <p className={s.selectionNote}>You can still build an example with Claude Code while support for your tools is on the way.</p>}
-              {draft.agents.filter(id => id === 'claude' || id === 'codex').length > 1 && <p className={s.selectionNote}>{agentLabel(builder)} will write the code. You’ll choose the reviewer next.</p>}
             </>}
 
             {draft.step === 2 && <div className={s.taskChoice}>
