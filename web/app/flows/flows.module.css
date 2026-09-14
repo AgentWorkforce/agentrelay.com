@@ -299,6 +299,24 @@
   max-width: 48rem;
 }
 
+.openSourceSection {
+  --section-bg: var(--flows-band-deep);
+  --section-pattern: radial-gradient(ellipse at 50% 100%, rgba(116, 184, 226, 0.12), transparent 65%);
+  --section-pattern-size: 100% 100%;
+  --section-pattern-opacity: 1;
+  text-align: center;
+}
+
+.openSourceSection .sectionIntro {
+  margin: 0 auto;
+  justify-items: center;
+  gap: 1.5rem;
+}
+
+.openSourceSection .sectionIntro p {
+  max-width: 36rem;
+}
+
 .sectionIntro h2,
 .assetCopy h2,
 .planCopy h2,

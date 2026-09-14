@@ -1,6 +1,6 @@
 import { FlowLandingAnalytics } from './FlowLandingAnalytics';
 import { DeploymentCall } from '../../components/home/DeploymentCall';
-import { WaveDivider } from '../../components/home/icons';
+import { GitHubIcon, WaveDivider } from '../../components/home/icons';
 import { FlowGatePreview } from '../../components/home/FlowGatePreview';
 import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
@@ -166,6 +166,22 @@ export default function FlowsPage() {
 
         <section className={s.workflowSection} aria-label="Durable. Observable. Repeatable.">
           <DurableWorkflowFeature title="Durable. Observable. Repeatable." showCapabilities={false} />
+        </section>
+
+        <section className={`${s.sectionBand} ${s.openSourceSection}`} aria-labelledby="flows-open-source">
+          <div className={s.sectionIntro}>
+            <h2 id="flows-open-source">Open source.<br />Run it anywhere.</h2>
+            <p>
+              Your laptop, your servers, or your cloud. Agent Relay runs where your work lives,
+              with the source code in your hands.
+            </p>
+            <div className={s.ctaRow}>
+              <a href="https://github.com/agentworkforce/relay" className={s.ctaSecondary}>
+                <GitHubIcon />
+                Github
+              </a>
+            </div>
+          </div>
         </section>
 
         <WaveBreak />
