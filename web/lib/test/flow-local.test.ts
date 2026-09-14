@@ -64,7 +64,10 @@ describe('local flow starter kit', () => {
         done: (reason: string) => { finish = reason; },
       }, localInput(selected));
       expect(finish).toBe('needs_human');
-      expect(commands.indexOf('npm test')).toBeLessThan(commands.findIndex(command => command.startsWith('gh pr create')));
+      const testIndex = commands.indexOf('npm test');
+      const createIndex = commands.findIndex(command => command.startsWith('gh pr create'));
+      expect(testIndex).toBeGreaterThanOrEqual(0);
+      expect(createIndex).toBeGreaterThan(testIndex);
       expect(localKitFiles(selected)['START-HERE.txt']).toContain('require a pull request, an approving review, and passing CI status checks');
     }
   });
@@ -82,6 +85,30 @@ describe('local flow starter kit', () => {
       expect(commands.some(command => command.startsWith('git push') || command.startsWith('gh pr create'))).toBe(false);
       expect(finish).toBe('');
     }
+  });
+
+  it.each([false, true])('pushes fixer revisions only after passing tests (failure: %s)', async (fail) => {
+    const calls: string[] = [];
+    let checks = 0;
+    const run = compile(factorySource(draft, 'local'))({
+      agent: async (name: string, options: { task: string }) => {
+        calls.push(name);
+        if (name === 'fixer') expect(options.task).toContain('Commit fixes without pushing');
+      },
+      run: async (command: string) => {
+        calls.push(command);
+        if (command === 'npm test' && ++checks === 2 && fail) throw Error('revision failed');
+        return command.startsWith('test -f') ? 'no' : '';
+      },
+      done: () => {},
+    }, localInput(draft));
+    if (fail) await expect(run).rejects.toThrow('revision failed');
+    else await run;
+    const fixer = calls.indexOf('fixer');
+    expect(fixer).toBeGreaterThan(0);
+    expect(calls[fixer + 1]).toBe('npm test');
+    if (fail) expect(calls).not.toContain('git push');
+    else expect(calls[fixer + 2]).toBe('git push');
   });
 
   it('generates valid local source for every preset with an explicit runtime limit', () => {

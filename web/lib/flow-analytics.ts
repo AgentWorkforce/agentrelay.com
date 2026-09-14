@@ -4,6 +4,7 @@ export const FLOW_ANALYTICS_VERSION = 2;
 export const FLOW_STAGES = ['intro', 'sources', 'agents', 'task', 'connections'] as const;
 export type FlowStage = typeof FLOW_STAGES[number];
 export type FlowTrack = (event: string, properties?: Record<string, string | number | boolean | string[] | null>) => void;
+export const JOURNEY_TIMEOUT_MS = 30 * 60_000;
 export const JOURNEY_STORAGE_KEY = 'agentrelay:flows:analytics:v2';
 
 export function flowMetrics(draft: FactoryDraft) {
@@ -25,7 +26,7 @@ export function lengthBucket(length: number): string {
 export function journeyId(storage: Pick<Storage, 'getItem' | 'setItem'>, createId: () => string, now = Date.now()) {
   try {
     const saved = JSON.parse(storage.getItem(JOURNEY_STORAGE_KEY) ?? 'null');
-    if (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(saved?.id) && Number.isFinite(saved.updatedAt) && now >= saved.updatedAt && now - saved.updatedAt < 30 * 60_000) {
+    if (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(saved?.id) && Number.isFinite(saved.updatedAt) && now >= saved.updatedAt && now - saved.updatedAt < JOURNEY_TIMEOUT_MS) {
       storage.setItem(JOURNEY_STORAGE_KEY, JSON.stringify({ id: saved.id, updatedAt: now }));
       return saved.id as string;
     }
@@ -82,5 +83,35 @@ export class FlowJourneyTracker {
     if (!this.current || this.current.left) return;
     this.track('step_left', { reason, exit_signal: reason !== 'route_change' }, reason === 'pagehide');
     this.current.left = true;
+  }
+}
+
+/** Keeps mounted tabs and persisted journeys on the same inactivity boundary. */
+export class FlowJourneySession {
+  private tracker: FlowJourneyTracker | null = null;
+  private stage: FlowStage = 'intro';
+  private updatedAt: number | null = null;
+  constructor(private sink: AnalyticsSink, private storage: Pick<Storage, 'getItem' | 'setItem'>,
+    private createId: () => string, private now = Date.now, private metrics: () => Record<string, unknown> = () => ({})) {}
+  private activity() {
+    const now = this.now();
+    if (!this.tracker || this.updatedAt === null || now < this.updatedAt || now - this.updatedAt >= JOURNEY_TIMEOUT_MS) {
+      const id = this.tracker ? this.createId() : journeyId(this.storage, this.createId, now);
+      this.tracker = new FlowJourneyTracker(this.sink, id, this.now, this.metrics);
+      this.tracker.view(this.stage);
+    }
+    this.updatedAt = now;
+    try { this.storage.setItem(JOURNEY_STORAGE_KEY, JSON.stringify({ id: this.tracker.id, updatedAt: now })); } catch { /* Optional. */ }
+    return this.tracker;
+  }
+  get id() { return this.activity().id; }
+  view(stage: FlowStage) { this.stage = stage; this.activity().view(stage); }
+  track(event: string, properties: Record<string, unknown> = {}) { this.activity().track(event, properties); }
+  markOutcome(outcome: 'cloud_handoff' | 'local_kit_downloaded') { this.activity().markOutcome(outcome); }
+  pause() { this.activity().pause(); }
+  resume() { this.activity().resume(); }
+  leave(reason: 'route_change' | 'pagehide' | 'unmount') {
+    // A second exit signal must not extend inactivity after the tab was hidden.
+    this.tracker?.leave(reason);
   }
 }

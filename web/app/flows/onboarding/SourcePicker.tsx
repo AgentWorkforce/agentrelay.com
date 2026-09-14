@@ -44,9 +44,13 @@ export function SourcePicker({ draft, onChange, onTrack, actions }: { draft: Fac
     {actions}
     {source && <details className={s.sourceSettings} open={filtersOpen} onToggle={event => {
       setFiltersOpen(event.currentTarget.open);
-      onTrack('help_toggled', { section: 'source_filters', open: event.currentTarget.open, source: source.id });
     }}>
-      <summary className={s.filterSummary}>
+      <summary className={s.filterSummary} onClick={event => {
+        event.preventDefault();
+        const open = !event.currentTarget.parentElement!.hasAttribute('open');
+        setFiltersOpen(open);
+        onTrack('help_toggled', { section: 'source_filters', open, source: source.id });
+      }}>
         <ListFilter size={17} aria-hidden="true" />
         <span>{draft.sources.length > 1 ? 'Source filters and settings' : source.id === 'markdown' ? 'Markdown file settings' : `${source.label} filters`}</span>
         <small>Optional</small><ChevronDown size={16} className={s.filterChevron} aria-hidden="true" />

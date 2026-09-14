@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { FlowJourneyTracker, flowMetrics, journeyId, JOURNEY_STORAGE_KEY, lengthBucket } from '../flow-analytics';
+import { FlowJourneySession, JOURNEY_TIMEOUT_MS, FlowJourneyTracker, flowMetrics, journeyId, JOURNEY_STORAGE_KEY, lengthBucket } from '../flow-analytics';
 import { cloudConnectionsHref, DEFAULT_FACTORY } from '../flow-onboarding';
 
 const id = '00000000-0000-4000-8000-000000000001';
@@ -85,5 +85,40 @@ describe('safe analytics payloads and correlation', () => {
     expect(url.search).toBe('');
     expect(JSON.parse(decodeURIComponent(url.hash.slice(1))).analytics).toEqual({ journeyId: id });
     expect(JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(draft, freshId)).hash.slice(1))).analytics).toBeUndefined();
+  });
+});
+
+describe('mounted journey expiration', () => {
+  it('resumes short absences, refreshes activity, and replaces expired trackers', () => {
+    let now = 0;
+    let saved: string | null = null;
+    const sink = vi.fn();
+    const createId = vi.fn().mockReturnValueOnce(id).mockReturnValue(freshId);
+    const storage = { getItem: () => saved, setItem: (_key: string, value: string) => { saved = value; } };
+    const session = new FlowJourneySession(sink, storage, createId, () => now);
+    session.view('task');
+    now = 1000; session.pause();
+    now += JOURNEY_TIMEOUT_MS - 1; session.resume();
+    expect(session.id).toBe(id);
+    expect(JSON.parse(saved!)).toEqual({ id, updatedAt: now });
+    expect(sink.mock.lastCall?.[1]).toMatchObject({ stage: 'task', journey_id: id, active_ms: 1000 });
+    now += 1000; session.track('choice_changed');
+    expect(JSON.parse(saved!).updatedAt).toBe(now);
+    session.pause();
+    now += JOURNEY_TIMEOUT_MS; session.resume();
+    expect(session.id).toBe(freshId);
+    expect(sink.mock.lastCall?.[1]).toMatchObject({ stage: 'task', journey_id: freshId, visit_number: 1, active_ms: 0, choice_changes: 0 });
+    session.resume();
+    expect(createId).toHaveBeenCalledTimes(2);
+  });
+  it('expires even when browser storage is unavailable', () => {
+    let now = 0;
+    const createId = vi.fn().mockReturnValueOnce(id).mockReturnValue(freshId);
+    const blocked = () => { throw Error('blocked'); };
+    const session = new FlowJourneySession(vi.fn(), { getItem: blocked, setItem: blocked }, createId, () => now);
+    session.view('agents'); session.pause();
+    now += JOURNEY_TIMEOUT_MS;
+    session.resume();
+    expect(session.id).toBe(freshId);
   });
 });

@@ -2,23 +2,22 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { usePostHog } from '@posthog/next';
-import { FlowJourneyTracker, flowMetrics, journeyId, type FlowStage, type FlowTrack } from '../../../lib/flow-analytics';
+import { FlowJourneySession, flowMetrics, type FlowStage, type FlowTrack } from '../../../lib/flow-analytics';
 import type { FactoryDraft } from '../../../lib/flow-onboarding';
 
 export function useFlowAnalytics(draft: FactoryDraft, stage: FlowStage, enabled: boolean) {
   const ph = usePostHog();
-  const tracker = useRef<FlowJourneyTracker | null>(null);
+  const tracker = useRef<FlowJourneySession | null>(null);
   const mounted = useRef<object | null>(null);
   const currentDraft = useRef(draft);
   currentDraft.current = draft;
   useEffect(() => {
     if (!enabled || !process.env.NEXT_PUBLIC_POSTHOG_KEY || !ph || ph.has_opted_out_capturing()) return;
     if (!tracker.current) {
-      let id: string;
-      try { id = journeyId(sessionStorage, () => crypto.randomUUID()); } catch { id = crypto.randomUUID(); }
-      tracker.current = new FlowJourneyTracker((event, properties, beacon) => {
+      tracker.current = new FlowJourneySession((event, properties, beacon) => {
         ph.capture(event, properties, beacon ? { transport: 'sendBeacon' } : undefined);
-      }, id, Date.now, () => flowMetrics(currentDraft.current));
+      }, { getItem: key => sessionStorage.getItem(key), setItem: (key, value) => sessionStorage.setItem(key, value) },
+      () => crypto.randomUUID(), Date.now, () => flowMetrics(currentDraft.current));
     }
     tracker.current.view(stage);
     const linger = window.setTimeout(() => {

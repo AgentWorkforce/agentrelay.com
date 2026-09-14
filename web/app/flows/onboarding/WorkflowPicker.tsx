@@ -42,9 +42,13 @@ export function WorkflowPicker({ draft, onChange, onTrack, actions }: { draft: F
     {actions}
     <details className={s.extraInstructions} open={instructionsOpen} onToggle={event => {
       setInstructionsOpen(event.currentTarget.open);
-      onTrack('help_toggled', { section: 'extra_instructions', open: event.currentTarget.open });
     }}>
-      <summary>Extra instructions <span>Optional</span></summary>
+      <summary onClick={event => {
+        event.preventDefault();
+        const open = !event.currentTarget.parentElement!.hasAttribute('open');
+        setInstructionsOpen(open);
+        onTrack('help_toggled', { section: 'extra_instructions', open });
+      }}>Extra instructions <span>Optional</span></summary>
       <div className={s.taskChoice}>
         <label htmlFor="factory-task">Anything your agents should keep in mind?</label>
         <textarea id="factory-task" maxLength={600} rows={3} placeholder="e.g. Follow our existing patterns and add regression tests"

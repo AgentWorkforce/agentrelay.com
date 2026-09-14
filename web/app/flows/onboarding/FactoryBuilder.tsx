@@ -51,15 +51,11 @@ function SyntaxLine({ text }: { text: string }) {
 export function FactoryBuilder() {
   const [answers, setDraft] = useState<FactoryDraft>(DEFAULT_FACTORY);
   const [hydrated, setHydrated] = useState(false);
-  const [hasChosenWorkflow, setHasChosenWorkflow] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const routeStep = ONBOARDING_STAGES.findIndex((_, index) => pathname === onboardingPath(index));
   const started = routeStep >= 0;
-  const draft = { ...answers, step: started ? routeStep : answers.step,
-    // Saved choices can resume a completed flow, but must not preselect a card
-    // when the user first opens the workflow question in this visit.
-    workflow: routeStep === 2 && !hasChosenWorkflow ? null : answers.workflow };
+  const draft = { ...answers, step: started ? routeStep : answers.step };
   const accessibleStep = accessibleOnboardingStep(answers, routeStep);
   const loadingStage = started && (!hydrated || accessibleStep !== routeStep);
   const [notice, setNotice] = useState('');
@@ -134,7 +130,7 @@ export function FactoryBuilder() {
 
   function showQuestions() {
     track('intro_completed');
-    goToStep(0);
+    goToStep(accessibleOnboardingStep(answers, answers.step));
   }
 
   function goToStep(step: number) {
@@ -144,7 +140,6 @@ export function FactoryBuilder() {
 
   function updateDraft(next: FactoryDraft) {
     if (draft.step === 2 && next.workflow !== draft.workflow && next.workflow !== null) {
-      setHasChosenWorkflow(true);
       if (!draft.workflow && previewMode !== 'plan') {
         setPreviewMode('plan');
         track('preview_changed', { mode: 'plan', interaction: 'workflow_selected' });

@@ -20,7 +20,7 @@ export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): strin
     case 'comparator': return 'Compare the implementations and test results in the provided worktrees. Read their code and prototype-notes.md. Write comparison.md with each prototype path, strengths, weaknesses, and which ideas to combine. Do not modify the prototypes or implement yet.';
     case 'implementer': return (workflow === 'traditional' ? 'Follow reviewed-plan.md. ' : workflow === 'prototype' ? 'Read comparison.md and inspect the prototype implementations it references. Combine the strongest ideas into the final implementation on the current branch, not in the prototype worktrees. ' : '') + 'Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.';
     case 'adversary': return 'Review the PR diff, tests, and all PR comments. ' + (workflow === 'prototype' ? 'Read comparison.md to check that the final implementation combines the strongest ideas. ' : '') + 'Find bugs and edge cases. Write review.md. Create review.clean only if no issues remain.';
-    case 'fixer': return 'Read review.md and gh pr view --comments. Address every issue. Commit and push fixes.';
+    case 'fixer': return 'Read review.md and gh pr view --comments. Address every issue. Commit fixes without pushing. The workflow runs tests and pushes only after they pass.';
     default: return '';
   }
 }

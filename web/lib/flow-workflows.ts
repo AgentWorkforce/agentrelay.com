@@ -93,6 +93,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
         ${options('fixer', 'builder')}
       });
       await f.run("npm test", { timeout: "15m" });
+      await f.run("git push");
     }` : ''}
   }
   // Unresolved feedback stops the flow.

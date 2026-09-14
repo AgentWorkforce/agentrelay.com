@@ -158,3 +158,7 @@
 .graph[data-running='false'] .terminalOutput > span { clip-path: inset(0) !important; opacity: 1 !important; }
 @keyframes terminalWrite { 0%, 8% { opacity: .25; clip-path: inset(0 100% 0 0); } 35%, 90% { opacity: 1; clip-path: inset(0); } 100% { opacity: .25; clip-path: inset(0); } }
 @media (prefers-reduced-motion: reduce) { .nodeGroup .codingTerminal * { animation: none !important; } }
+
+@media (hover: none), (pointer: coarse) {
+  .footer { opacity: 1; pointer-events: auto; }
+}
