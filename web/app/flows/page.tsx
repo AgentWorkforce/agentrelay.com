@@ -75,7 +75,7 @@ export default function FlowsPage() {
 
   return (
     <div className={s.page}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} />
 
       <main className={s.main}>
         <section className={s.hero}>
