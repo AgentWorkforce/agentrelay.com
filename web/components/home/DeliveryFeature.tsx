@@ -50,10 +50,12 @@ export function DeliveryFeature({
   title = 'The hard parts of delivery, handled',
   items = DEFAULT_ITEMS,
   previewVariant = 'delivery',
+  showCapabilities = true,
 }: {
   title?: string;
   items?: readonly string[];
   previewVariant?: 'delivery' | 'workflow';
+  showCapabilities?: boolean;
 } = {}) {
   return (
     <FadeIn direction="up" delay={120} className={`${s.featureCol} ${s.deliveryFeature}`}>
@@ -96,7 +98,26 @@ export function DeliveryFeature({
         </ul>
       </div>
 
-      <ContextCapabilities />
+      {showCapabilities && <ContextCapabilities />}
     </FadeIn>
+  );
+}
+
+export function DurableWorkflowFeature({
+  showCapabilities = true,
+  title = 'Build durable workflows',
+}: { showCapabilities?: boolean; title?: string }) {
+  return (
+    <DeliveryFeature
+      title={title}
+      previewVariant="workflow"
+      showCapabilities={showCapabilities}
+      items={[
+        'Persist every transition so long-running work survives restarts and deploys.',
+        'Retry individual steps without repeating successful work or duplicating side effects.',
+        'Trace every input, output, model action, artifact, and intervention in one run history.',
+        'Trigger workflows from schedules and events, then execute them close to your systems.',
+      ]}
+    />
   );
 }

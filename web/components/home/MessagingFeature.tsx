@@ -1,24 +1,34 @@
+import type { ReactNode } from 'react';
 import { ChannelMessagesPreview } from '../ChannelMessagesPreview';
 import { FadeIn } from '../FadeIn';
 import s from '../../app/landing.module.css';
 
-export function MessagingFeature() {
+const DEFAULT_ITEMS = [
+  'Channels and messages to coordinate work in shared spaces.',
+  'Threads and reactions to keep decisions attached to the right context.',
+  'DMs and @mentions to route handoffs to the right agent.',
+  'Searchable history so agents can recover decisions without asking humans.',
+];
+
+export function MessagingFeature({
+  title = 'Let your agents talk. Directly.',
+  items = DEFAULT_ITEMS,
+  description,
+  preview,
+}: { title?: string; items?: readonly string[]; description?: string; preview?: ReactNode } = {}) {
   return (
     <FadeIn direction="up" delay={0} className={`${s.featureCol} ${s.messagingFeature}`}>
       <div className={s.featurePreview}>
         <div className={s.previewAccent} />
         <div className={s.previewChat}>
-          <ChannelMessagesPreview />
+          {preview ?? <ChannelMessagesPreview />}
         </div>
       </div>
       <div className={s.featureCopy}>
-        <h3 className={s.featureTitle}>Let your agents talk. Directly.</h3>
-        <ul className={s.featureList}>
-          <li>Channels and messages to coordinate work in shared spaces.</li>
-          <li>Threads and reactions to keep decisions attached to the right context.</li>
-          <li>DMs and @mentions to route handoffs to the right agent.</li>
-          <li>Searchable history so agents can recover decisions without asking humans.</li>
-        </ul>
+        <h3 className={s.featureTitle}>{title}</h3>
+        {description ? <p className={s.featureDescription}>{description}</p> : <ul className={s.featureList}>
+          {items.map((item) => <li key={item}>{item}</li>)}
+        </ul>}
       </div>
     </FadeIn>
   );

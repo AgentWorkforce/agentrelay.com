@@ -32,7 +32,7 @@ const footerColumns: FooterColumn[] = [
       { label: 'Relay', href: '/messaging' },
       { label: 'RelayFile', href: 'https://github.com/AgentWorkforce/relayfile' },
       { label: 'RelayAuth', href: 'https://github.com/AgentWorkforce/relayauth' },
-      { label: 'RelayFlows', href: 'https://github.com/AgentWorkforce/relayflows' },
+      { label: 'RelayFlows', href: 'https://github.com/agentworkforce/flows' },
       { label: 'Agents', href: '/agents' },
     ],
   },
