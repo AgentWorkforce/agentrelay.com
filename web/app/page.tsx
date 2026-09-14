@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { MessagingLandingPage } from '../components/home/MessagingLandingPage';
 import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../lib/home-copy';
-import { HOME_OG_IMAGE_PATH, ogImage } from '../lib/og-meta';
+import { HOME_OG_ALT, HOME_OG_IMAGE_PATH, ogImage } from '../lib/og-meta';
 import { absoluteUrl } from '../lib/site';
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     description: HOME_HERO_DESCRIPTION,
     url: absoluteUrl('/'),
     type: 'website',
-    images: [ogImage(HOME_OG_IMAGE_PATH, HOME_HERO_TITLE)],
+    images: [ogImage(HOME_OG_IMAGE_PATH, HOME_OG_ALT)],
   },
   twitter: {
     card: 'summary_large_image',
@@ -27,5 +27,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <MessagingLandingPage />;
+  return <MessagingLandingPage showInvestors />;
 }

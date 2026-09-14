@@ -1,0 +1,18 @@
+.section {
+  --enterprise-line: rgba(116, 184, 226, 0.2);
+  --enterprise-line-strong: rgba(116, 184, 226, 0.34);
+  --enterprise-text: #edf4fb;
+  --enterprise-muted: #a8b8c8;
+  --enterprise-faint: #77879a;
+  --enterprise-accent: #74b8e2;
+  width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  box-sizing: border-box;
+}
+
+.owner { flex-wrap: wrap; }
+.owner > img { flex-shrink: 0; }
+.bookCall { margin-left: auto; }
+@media (max-width: 420px) { .bookCall { margin-left: 0; } }
+
+section.section { background: #0B1C2A; }

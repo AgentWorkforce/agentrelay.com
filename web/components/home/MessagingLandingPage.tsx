@@ -1,3 +1,4 @@
+import { DurableWorkflowFeature } from './DeliveryFeature';
 import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
@@ -5,7 +6,6 @@ import {
   A2AFeature,
   AgentToolsFeature,
   Deploy,
-  DeliveryFeature,
   Hero,
   HowItWorks,
   MessagingFeature,
@@ -15,7 +15,7 @@ import {
 } from './index';
 import s from '../../app/landing.module.css';
 
-export function MessagingLandingPage() {
+export function MessagingLandingPage({ showInvestors = false }: { showInvestors?: boolean }) {
   return (
     <div className={`${s.page} ${s.messagingPage}`}>
       <a className="skip-link" href="#main">
@@ -25,22 +25,13 @@ export function MessagingLandingPage() {
       <SiteNav actions={<GitHubStarsBadge />} />
 
       <main id="main">
-        <Hero />
+        <Hero showInvestors={showInvestors} />
 
         <div className={s.featuresWrapper}>
           <section className={s.featuresSection}>
             <MessagingFeature />
             <HowItWorks />
-            <DeliveryFeature
-              title="Build durable workflows"
-              previewVariant="workflow"
-              items={[
-                'Persist every transition so long-running work survives restarts and deploys.',
-                'Retry individual steps without repeating successful work or duplicating side effects.',
-                'Trace every input, output, model action, artifact, and intervention in one run history.',
-                'Trigger workflows from schedules and events, then execute them close to your systems.',
-              ]}
-            />
+            <DurableWorkflowFeature />
             <QuickStart />
             <WaveDivider variant="feature" />
             <AgentToolsFeature />

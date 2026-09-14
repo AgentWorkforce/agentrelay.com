@@ -104,6 +104,12 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // Mirror the router's calendar alias for direct Next.js and local dev requests.
+      {
+        source: '/khaliq',
+        destination: 'https://calendly.com/khaliq-agent-relay/30min',
+        permanent: false,
+      },
       // In-person event banner QR code → homepage, tagged so the traffic is
       // attributable to the physical banner at the current event. Temporary
       // (not permanent) so /banner can be repointed at the next event without

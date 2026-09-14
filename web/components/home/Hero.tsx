@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { InvestorStrip } from '../InvestorStrip';
 import { ArrowRight } from 'lucide-react';
 
 import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../../lib/home-copy';
@@ -6,7 +7,7 @@ import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
 import { GitHubIcon } from './icons';
 
-export function Hero() {
+export function Hero({ showInvestors = false }: { showInvestors?: boolean }) {
   return (
     <div className={s.heroSection}>
       <section className={s.heroCenter}>
@@ -35,6 +36,7 @@ export function Hero() {
         </div>
       </section>
 
+      {showInvestors && <InvestorStrip />}
       <HeroTerminalMarquee />
     </div>
   );

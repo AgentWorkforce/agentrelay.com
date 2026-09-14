@@ -1955,6 +1955,7 @@
 /* ---- HERO ---- */
 
 .heroSection {
+  --investor-strip-padding-top: 3rem;
   position: relative;
   background: var(--agent-tools-band-bg);
   transition: background 0.3s ease;
@@ -8022,7 +8023,7 @@
   }
 }
 
-/* ---- WORKS WITH EVERY AGENT (pyramid diagram) ---- */
+/* ---- ALL AGENTS WORK ON THE RELAY ---- */
 
 /* Same band fill + separation as the surrounding feature bands. */
 .howItWorks {
@@ -8031,7 +8032,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 88px 0 92px;
+  padding: 64px 0 68px;
   isolation: isolate;
 }
 
@@ -8051,8 +8052,8 @@
 }
 
 .howHeader {
-  max-width: 660px;
-  margin: 0 0 48px;
+  max-width: 800px;
+  margin: 0 0 32px;
   text-align: center;
 }
 
@@ -8074,387 +8075,29 @@
   max-width: 56ch;
 }
 
-/* pyramid: relay (top) -> connector pipes -> two agent groups (bottom) */
-.howStage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 680px;
-  margin: 0 auto;
-}
-
-/* apex zone: relay box (top) over the connector; wires + dots span both so a
-   message can travel up behind the relay box and pop back out */
-.howApex {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 100%;
-}
-
-/* --- relay hub at the apex (sits above the dots so they hide behind it) --- */
-.howCore {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  justify-content: center;
-}
-
-.howCoreNode {
-  position: relative;
+.howIconList {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 14px;
-  height: 72px;
-  padding: 0 28px;
-  border-radius: 18px;
-  border: 1px solid color-mix(in srgb, var(--primary) 42%, transparent);
-  background:
-    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--primary) 22%, transparent), transparent 72%),
-    #0e2031;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--primary) 6%, transparent),
-    0 16px 44px color-mix(in srgb, #04101c 52%, transparent);
-}
-
-/* A close, low halo that separates the hub from the band without blooming. */
-.howCoreNode::before {
-  content: '';
-  position: absolute;
-  inset: -14px;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--primary) 9%, transparent), transparent 70%);
-  pointer-events: none;
-}
-
-.howCoreMark {
-  width: 40px;
-  height: auto;
-}
-
-.howCoreWordmark {
-  width: 138px;
-  height: auto;
-}
-
-/* --- connector spacer: fixed height so pipes + dots align at any width.
-       Combined with the 72px relay box, the apex zone is a known height. --- */
-.howLink {
-  width: 100%;
-  height: 72px;
-}
-
-.howWires {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.howWire {
-  fill: none;
-  stroke: color-mix(in srgb, var(--primary) 38%, transparent);
-  stroke-width: 1.5;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.howMsgs {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  /* Size container so the dots can be positioned with container-query units
-     (cqw/cqh) driven through GPU-composited transforms instead of animating
-     left/top. The box is sized by `inset: 0` (not its contents), so size
-     containment is safe here. */
-  container-type: size;
-}
-
-.howMsg {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 10px;
-  height: 10px;
-  margin: -5px 0 0 -5px;
-  border-radius: 50%;
-  background: var(--c);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent),
-    0 0 7px 1px color-mix(in srgb, var(--c) 55%, transparent);
-  opacity: 0;
-  /* Position is driven by the individual `translate` property and the size is
-     driven by the individual `scale` property; both composite on the GPU and
-     interpolate independently, mirroring the old left/top vs transform split. */
-  will-change: translate, scale, opacity;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .howMsg {
-    animation: none;
-  }
-}
-
-/* Three messages, each its own colour, routed up to the relay and back down. */
-.howMsg1 {
-  --c: #74b8e2; /* blue — CLI -> custom */
-  animation: howMsg_m1 4.6s linear 0s infinite;
-}
-.howMsg2 {
-  --c: #d97757; /* Claude orange — custom -> CLI */
-  animation: howMsg_m2 5s linear 1.8s infinite;
-}
-.howMsg3 {
-  --c: #a6d388; /* green — CLI -> CLI */
-  animation: howMsg_m3 4.4s linear 3.6s infinite;
-}
-
-@keyframes howMsg_m1 {
-  0% {
-    translate: 25cqw 100cqh;
-    opacity: 0;
-    scale: 1;
-  }
-  4% {
-    opacity: 1;
-  }
-  9% {
-    translate: 25cqw 75cqh;
-  }
-  22% {
-    translate: 50cqw 75cqh;
-    animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.2);
-  }
-  37% {
-    translate: 50cqw 50cqh;
-    opacity: 1;
-    scale: 0.5;
-  }
-  43% {
-    translate: 50cqw 40cqh;
-    opacity: 0;
-    scale: 0.25;
-  }
-  49% {
-    translate: 50cqw 40cqh;
-    opacity: 0;
-    scale: 0.25;
-  }
-  50% {
-    translate: 50cqw 50cqh;
-    opacity: 1;
-    scale: 1.55;
-    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
-  }
-  56% {
-    translate: 50cqw 57cqh;
-    scale: 1;
-  }
-  66% {
-    translate: 50cqw 75cqh;
-  }
-  82% {
-    translate: 75cqw 75cqh;
-  }
-  86% {
-    opacity: 1;
-  }
-  91% {
-    translate: 75cqw 100cqh;
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes howMsg_m2 {
-  0% {
-    translate: 75cqw 100cqh;
-    opacity: 0;
-    scale: 1;
-  }
-  4% {
-    opacity: 1;
-  }
-  9% {
-    translate: 75cqw 75cqh;
-  }
-  22% {
-    translate: 50cqw 75cqh;
-    animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.2);
-  }
-  37% {
-    translate: 50cqw 50cqh;
-    opacity: 1;
-    scale: 0.5;
-  }
-  43% {
-    translate: 50cqw 40cqh;
-    opacity: 0;
-    scale: 0.25;
-  }
-  49% {
-    translate: 50cqw 40cqh;
-    opacity: 0;
-    scale: 0.25;
-  }
-  50% {
-    translate: 50cqw 50cqh;
-    opacity: 1;
-    scale: 1.55;
-    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
-  }
-  56% {
-    translate: 50cqw 57cqh;
-    scale: 1;
-  }
-  66% {
-    translate: 50cqw 75cqh;
-  }
-  82% {
-    translate: 25cqw 75cqh;
-  }
-  86% {
-    opacity: 1;
-  }
-  91% {
-    translate: 25cqw 100cqh;
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes howMsg_m3 {
-  0% {
-    translate: 25cqw 100cqh;
-    opacity: 0;
-    scale: 1;
-  }
-  4% {
-    opacity: 1;
-  }
-  9% {
-    translate: 25cqw 75cqh;
-  }
-  22% {
-    translate: 50cqw 75cqh;
-    animation-timing-function: cubic-bezier(0.6, 0, 0.9, 0.2);
-  }
-  37% {
-    translate: 50cqw 50cqh;
-    opacity: 1;
-    scale: 0.5;
-  }
-  43% {
-    translate: 50cqw 40cqh;
-    opacity: 0;
-    scale: 0.25;
-  }
-  49% {
-    translate: 50cqw 40cqh;
-    opacity: 0;
-    scale: 0.25;
-  }
-  50% {
-    translate: 50cqw 50cqh;
-    opacity: 1;
-    scale: 1.55;
-    animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
-  }
-  56% {
-    translate: 50cqw 57cqh;
-    scale: 1;
-  }
-  66% {
-    translate: 50cqw 75cqh;
-  }
-  82% {
-    translate: 25cqw 75cqh;
-  }
-  86% {
-    opacity: 1;
-  }
-  91% {
-    translate: 25cqw 100cqh;
-    opacity: 0;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* --- agent groups at the base --- */
-.howRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(16px, 4vw, 40px);
-  width: 100%;
-}
-
-.howCol {
-  display: flex;
-  justify-content: center;
-}
-
-.howGroup {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 22px 18px;
-  border-radius: 18px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--card-bg) 92%, #07111c 8%);
-  box-shadow: 0 14px 38px color-mix(in srgb, #04101c 36%, transparent);
-}
-
-.howGroupLabel {
-  font-family: var(--font-heading), sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--fg);
-  text-align: center;
-}
-
-.howGroupLogos {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  max-width: 100%;
 }
 
-.howChip {
-  display: inline-flex;
+.howIcon {
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 44px;
   height: 44px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--card-bg) 55%, #060f1a 45%);
-  /* Mono brand marks (Codex, OpenCode, Cursor, GitHub, Hermes) inherit this. */
   color: #e6edf5;
-  transition:
-    transform 0.2s,
-    border-color 0.2s;
 }
 
-.howChip:hover {
-  transform: translateY(-2px);
-  border-color: var(--card-hover-border);
+.howIcon > span {
+  display: flex;
 }
 
 .howChipSvg {
@@ -8462,90 +8105,21 @@
   height: 24px;
 }
 
-.howGroupCaption {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  color: var(--fg-faint);
-  text-align: center;
-}
-
 @media (max-width: 600px) {
   .howItWorks {
-    padding: 64px 0 72px;
+    padding: 48px 0;
   }
 
-  .howHeader {
-    margin-bottom: 38px;
-  }
-
-  .howCoreWordmark {
-    width: 120px;
-  }
-
-  /* Keep the relay box and connector equal so the apex coordinate math
-     (relay bottom 50%, bus 75%) holds at this breakpoint too. */
-  .howCoreNode {
-    height: 60px;
-  }
-
-  .howLink {
-    height: 60px;
-  }
-
-  .howRow {
-    gap: 12px;
-  }
-
-  .howGroup {
-    padding: 16px 8px;
-    gap: 10px;
-  }
-
-  /* Cap the logo row at three chips wide so the five icons wrap evenly to a
-     3-over-2 grid (the bottom two stay centred). */
-  .howGroupLogos {
-    gap: 8px;
-    max-width: 140px;
-    margin: 0 auto;
-  }
-
-  .howChip {
-    width: 41px;
-    height: 41px;
-  }
-
-  .howChipSvg {
-    width: 24px;
-    height: 24px;
-  }
-
-  .howGroupLabel {
-    font-size: 0.95rem;
-  }
-
-  .howGroupCaption {
-    font-size: 0.74rem;
+  .howIconList {
+    display: grid;
+    grid-template-columns: repeat(5, 44px);
+    gap: 8px 12px;
   }
 }
 
-/* Reduced motion: park the three messages on the pipes instead of animating. */
-@media (prefers-reduced-motion: reduce) {
-  .howMsg {
-    animation: none;
-    opacity: 1;
-    transform: none;
-  }
-  .howMsg1 {
-    left: 25%;
-    top: 88%;
-  }
-  .howMsg2 {
-    left: 50%;
-    top: 62%;
-  }
-  .howMsg3 {
-    left: 75%;
-    top: 88%;
-  }
+.featureDescription {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 1.05rem;
+  line-height: 1.7;
 }

@@ -1,0 +1,55 @@
+.backers {
+  width: min(calc(100% - 2rem), 1140px);
+  margin-inline: auto;
+  position: relative;
+  z-index: 2;
+  padding: var(--investor-strip-padding-top, 1.5rem) 0 3.5rem;
+  text-align: center;
+}
+
+.backers > p {
+  margin: 0 0 1.75rem;
+  color: #a8b8c8;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.investorGroup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 1.75rem clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.investorGroup > img { display: block; height: auto; object-fit: contain; }
+.investorHustle { width: 148px; }
+.investorActive { width: 140px; }
+.investorCortical { width: 155px; filter: grayscale(1) brightness(0) invert(1); }
+.investorYc,
+.investorYonder { display: inline-flex; align-items: center; gap: 0.5rem; white-space: nowrap; }
+.investorYc > span {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  background: #ff5a1f;
+  color: white;
+  font: 22px/1 Arial, sans-serif;
+}
+.investorYc strong { color: #ff936f; font: 17px/1 Arial, sans-serif; }
+.investorYonder { color: #6acf95; }
+.investorYonder svg { width: 25px; height: 25px; }
+.investorYonder strong { font-size: 1rem; font-weight: 720; letter-spacing: 0.015em; }
+
+@media (max-width: 680px) {
+  .backers { padding-bottom: 3rem; }
+  .investorGroup { gap: 1.5rem 1.25rem; }
+  .investorHustle { width: 125px; }
+  .investorActive { width: 122px; }
+  .investorCortical { width: 130px; }
+  .investorYc strong { font-size: 15px; }
+  .investorYonder strong { font-size: 0.9rem; }
+}
