@@ -3,12 +3,10 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { usePostHog } from '@posthog/next';
-import { ArrowLeft, ArrowRight, Check, CheckCheck, Code2, Copy, Download, Info,
-  GitPullRequest, LockKeyhole, ShieldCheck, ChevronDown, Terminal, Pi as PiIcon, Ellipsis } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Code2, Copy, Download, Info,
+  ChevronDown, Terminal, Pi as PiIcon, Ellipsis } from 'lucide-react';
 import Claude from '@lobehub/icons/es/Claude';
 import Codex from '@lobehub/icons/es/Codex';
-import Google from '@lobehub/icons/es/Google';
 import Gemini from '@lobehub/icons/es/Gemini';
 import OpenCode from '@lobehub/icons/es/OpenCode';
 import Cursor from '@lobehub/icons/es/Cursor';
@@ -17,23 +15,24 @@ import Windsurf from '@lobehub/icons/es/Windsurf';
 import Goose from '@lobehub/icons/es/Goose';
 import Grok from '@lobehub/icons/es/Grok';
 import { LogoIcon, LogoWordmark } from '../../../components/SiteNav';
-import { agentLabel, canContinue, cloudConnectionsHref, CODING_AGENTS, DEFAULT_FACTORY,
-  FACTORY_DRAFT_KEY, LEGACY_FACTORY_DRAFT_KEY, factoryCodeSections, factorySource, primaryAgent, readFactoryDraft,
+import { canContinue, isCodingAgent, CODING_AGENTS, DEFAULT_FACTORY,
+  FACTORY_DRAFT_KEY, PREVIOUS_FACTORY_DRAFT_KEY, LEGACY_FACTORY_DRAFT_KEY, factoryCodeSections, factorySource, readFactoryDraft,
   ONBOARDING_STAGES, onboardingPath, accessibleOnboardingStep, otherAgentIsSelected,
   type AgentId, type FactoryDraft } from '../../../lib/flow-onboarding';
+import { WORKFLOWS } from '../../../lib/flow-workflows';
+import { RunOptions } from './RunOptions';
+import { WorkflowPicker, WorkflowPlan } from './WorkflowPicker';
 import { SourcePicker, SourceIcon } from './SourcePicker';
 import { sourceLabel, sourceSummary } from '../../../lib/flow-sources';
 import s from './onboarding.module.css';
+import { useFlowAnalytics } from './useFlowAnalytics';
+import { FLOW_STAGES, lengthBucket } from '../../../lib/flow-analytics';
 
 const questions = [
   { title: 'Where should your issues and tickets come from?', description: 'Choose your sources, or start with a Markdown file. Connect any accounts later.' },
-  { title: 'Which agents do you use?', description: 'Choose the tools you use. No accounts to connect yet.' },
-  { title: 'How should your agent handle each ticket?', description: 'Your agent reads the incoming ticket. Add instructions for how it should approach the work.' },
-  { title: 'Who should challenge the code?', description: 'A separate reviewer looks for bugs before the PR reaches you.' },
-  { title: 'How persistent should it be?', description: 'Let your coding agent fix review comments and try again.' },
-  { title: 'Keep the final say.', description: 'Your agents do the work. Nothing ships until you approve it.' },
+  { title: 'Which agents do you use?', description: 'Choose the agents you have access to. You’ll need these installed wherever you run the flow, either on the computer or in the cloud. We’ll help with that later.' },
+  { title: 'Choose your workflow.', description: 'How much planning and review does each ticket need? These are just examples. You can always make your own by editing the flow code.' },
 ];
-const suggestions = ['Implement the ticket and add regression tests', 'Start with a plan, then implement the ticket', 'Keep changes small and update the tests'];
 
 function AgentIcon({ id, size = 22 }: { id: AgentId; size?: number }) {
   const icons = { claude: Claude.Color, codex: Codex.Color, gemini: Gemini.Color, opencode: OpenCode,
@@ -52,45 +51,63 @@ function SyntaxLine({ text }: { text: string }) {
 export function FactoryBuilder() {
   const [answers, setDraft] = useState<FactoryDraft>(DEFAULT_FACTORY);
   const [hydrated, setHydrated] = useState(false);
+  const [hasChosenWorkflow, setHasChosenWorkflow] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const routeStep = ONBOARDING_STAGES.findIndex((_, index) => pathname === onboardingPath(index));
   const started = routeStep >= 0;
-  const draft = { ...answers, step: started ? routeStep : answers.step };
+  const draft = { ...answers, step: started ? routeStep : answers.step,
+    // Saved choices can resume a completed flow, but must not preselect a card
+    // when the user first opens the workflow question in this visit.
+    workflow: routeStep === 2 && !hasChosenWorkflow ? null : answers.workflow };
   const accessibleStep = accessibleOnboardingStep(answers, routeStep);
   const loadingStage = started && (!hydrated || accessibleStep !== routeStep);
   const [notice, setNotice] = useState('');
   const [copied, setCopied] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [previewModes, setPreviewModes] = useState<Record<string, 'plan' | 'code'>>({});
+  const previewMode = previewModes[pathname] ?? (routeStep === 0 || routeStep === 1 || (routeStep === 2 && !draft.workflow) ? 'code' : 'plan');
+  const setPreviewMode = (mode: 'plan' | 'code') => setPreviewModes(current => ({ ...current, [pathname]: mode }));
   const editor = useRef<HTMLDivElement>(null);
   const questionHeading = useRef<HTMLHeadingElement>(null);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousStep = useRef<number | null>(null);
-  const posthog = usePostHog();
-  const ready = draft.step === 6;
+  const { track, getJourneyId, markOutcome } = useFlowAnalytics(draft, FLOW_STAGES[Math.max(0, routeStep + 1)], hydrated && !loadingStage);
+  const fieldStart = useRef<Record<string, number>>({});
+  const storageStatus = useRef({ restored: false, failed: false, reported: false });
+  const ready = draft.step === 3;
+  const workflow = WORKFLOWS.find(option => option.id === draft.workflow);
   const emptyPreview = !started || loadingStage || !draft.sources.length;
-  const question = questions[Math.min(draft.step, 5)];
+  const hasPlanPreview = started && !loadingStage;
+  const showingPlan = hasPlanPreview && previewMode === 'plan';
+  const question = questions[Math.min(draft.step, 2)];
   const source = factorySource(draft);
   const sections = factoryCodeSections(emptyPreview ? DEFAULT_FACTORY : draft);
   const otherSelected = otherAgentIsSelected(draft);
-  const requestedAgentCount = draft.agents.filter(id => id !== 'claude' && id !== 'codex').length + (otherSelected ? 1 : 0);
-  const comingSoonOnly = requestedAgentCount > 0 && !draft.agents.some(id => id === 'claude' || id === 'codex');
-  const builder = primaryAgent(draft);
-  const activeSection = draft.step === 0 && draft.sources.length ? 'sources' : sections.filter(section => section.id !== 'end').at(-1)?.id;
+  const requestedAgentCount = draft.agents.filter(id => !isCodingAgent(id)).length + (otherSelected ? 1 : 0);
+  const comingSoonOnly = requestedAgentCount > 0 && !draft.agents.some(isCodingAgent);
+  const activeSection = draft.step >= 2 ? 'task' : draft.step === 0 && draft.sources.length ? 'sources' : sections.filter(section => section.id !== 'end').at(-1)?.id;
   let lineNumber = 0;
 
   useEffect(() => {
-    try { setDraft(readFactoryDraft(localStorage.getItem(FACTORY_DRAFT_KEY)) ?? readFactoryDraft(localStorage.getItem(LEGACY_FACTORY_DRAFT_KEY)) ?? DEFAULT_FACTORY); }
-    catch { /* Browser storage is optional. */ }
+    try {
+      const saved = readFactoryDraft(localStorage.getItem(FACTORY_DRAFT_KEY)) ?? readFactoryDraft(localStorage.getItem(PREVIOUS_FACTORY_DRAFT_KEY)) ?? readFactoryDraft(localStorage.getItem(LEGACY_FACTORY_DRAFT_KEY));
+      storageStatus.current.restored = Boolean(saved);
+      setDraft(saved ?? DEFAULT_FACTORY);
+    } catch { storageStatus.current.failed = true; }
     setHydrated(true);
     return () => { if (copyTimeout.current) clearTimeout(copyTimeout.current); };
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
+    if (!storageStatus.current.reported && !loadingStage) {
+      track('draft_loaded', { restored: storageStatus.current.restored, storage_available: !storageStatus.current.failed });
+      storageStatus.current.reported = true;
+    }
     try { localStorage.setItem(FACTORY_DRAFT_KEY, JSON.stringify({ ...answers, step: started ? accessibleStep : answers.step })); }
-    catch { setNotice('Browser storage unavailable. Download to keep your draft.'); }
-  }, [answers, hydrated, started, accessibleStep]);
+    catch { if (!storageStatus.current.failed) track('storage_failed', { operation: 'save' }); storageStatus.current.failed = true; setNotice('Browser storage unavailable. Download to keep your draft.'); }
+  }, [answers, hydrated, started, accessibleStep, loadingStage, track]);
 
   useEffect(() => {
     if (hydrated && started && accessibleStep !== routeStep) {
@@ -100,13 +117,7 @@ export function FactoryBuilder() {
 
   useEffect(() => {
     if (!hydrated || loadingStage) return;
-    if (!started) {
-      if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-        try { posthog?.capture('flows_onboarding_intro_viewed'); }
-        catch { /* Measurement is optional. */ }
-      }
-      return;
-    }
+    if (!started) return;
     questionHeading.current?.focus({ preventScroll: true });
     if (previousStep.current !== null && previousStep.current !== draft.step &&
       window.matchMedia('(max-width: 760px)').matches) {
@@ -114,60 +125,67 @@ export function FactoryBuilder() {
     }
     previousStep.current = draft.step;
     setNotice('');
-    if (hydrated && draft.step < 6 && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      try { posthog?.capture('flows_onboarding_step_viewed', { step: draft.step + 1 }); }
-      catch { /* Measurement is optional. */ }
-    }
-  }, [draft.step, hydrated, posthog, started, loadingStage]);
+  }, [draft.step, hydrated, started, loadingStage]);
 
   useEffect(() => {
     const section = editor.current?.querySelector<HTMLElement>(`[data-section="${activeSection}"]`);
     if (section && editor.current) editor.current.scrollTop = section.offsetTop - 20;
-  }, [activeSection, draft.step, started]);
+  }, [activeSection, draft.step, draft.workflow, started, emptyPreview]);
 
   function showQuestions() {
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      try { posthog?.capture('flows_onboarding_intro_completed'); }
-      catch { /* Starting the wizard must not depend on analytics. */ }
-    }
+    track('intro_completed');
     goToStep(0);
   }
 
   function goToStep(step: number) {
+    track('navigation_clicked', { target_stage: FLOW_STAGES[Math.max(0, step + 1)], direction: step < routeStep ? 'back' : 'forward' });
     router.push(onboardingPath(step) + window.location.search);
   }
 
+  function updateDraft(next: FactoryDraft) {
+    if (draft.step === 2 && next.workflow !== draft.workflow && next.workflow !== null) {
+      setHasChosenWorkflow(true);
+      if (!draft.workflow && previewMode !== 'plan') {
+        setPreviewMode('plan');
+        track('preview_changed', { mode: 'plan', interaction: 'workflow_selected' });
+      }
+    }
+    for (const field of ['sources', 'agents'] as const) {
+      if (JSON.stringify(next[field]) !== JSON.stringify(draft[field])) {
+        track('choice_changed', { field, selected: next[field], selected_count: next[field].length });
+      }
+    }
+    if (next.workflow !== draft.workflow) track('choice_changed', { field: 'workflow', from: draft.workflow, to: next.workflow });
+    if (otherAgentIsSelected(next) !== otherSelected) track('choice_changed', { field: 'other_agent', selected: otherAgentIsSelected(next) });
+    if (next.sourceSettings.slack?.mentioned !== draft.sourceSettings.slack?.mentioned) track('filter_configured', { source: 'slack', field: 'mentioned', enabled: Boolean(next.sourceSettings.slack?.mentioned) });
+    setDraft(next);
+  }
+
   function toggleAgent(id: AgentId) {
-    setDraft(current => ({ ...current, agents: current.agents.includes(id)
-      ? current.agents.filter(agent => agent !== id) : [...current.agents, id] }));
+    updateDraft({ ...draft, agents: draft.agents.includes(id)
+      ? draft.agents.filter(agent => agent !== id) : [...draft.agents, id] });
   }
 
   function next() {
-    if (!canContinue(draft)) return;
-    // Record only product preferences, never the user's task text.
-    if (draft.step === 1 && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      try { posthog?.capture('flows_onboarding_agents_selected', {
-        agents: draft.agents,
-        requested_agents: draft.agents.filter(id => !CODING_AGENTS.find(agent => agent.id === id)!.available),
-        other_agent: otherSelected ? draft.otherAgent?.trim() || undefined : undefined,
-      }); } catch { /* Optional analytics must not block the wizard. */ }
+    if (!canContinue(draft)) {
+      const reason = draft.step === 0 ? 'source_required' : draft.step === 1 ? 'agent_required' : 'workflow_required';
+      track('continue_blocked', { reason });
+      setNotice(draft.step === 0 ? 'Choose at least one source to continue.' : draft.step === 1 ? 'Choose an agent, or enter one under Other.' : 'Choose a workflow to create your flow.');
+      return;
     }
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      try {
-        posthog?.capture('flows_onboarding_step_completed', { step: draft.step + 1 });
-        if (draft.step === 5) posthog?.capture('flows_onboarding_completed');
-      } catch { /* Measurement must not block completion. */ }
-    }
+    track('step_completed');
+    if (draft.step === 2) track('flow_created');
     goToStep(draft.step + 1);
   }
 
   async function copyCode() {
     try {
       await navigator.clipboard.writeText(source);
+      track('code_copied', { result: 'success' });
       setCopied(true); setNotice('Flow copied to clipboard.');
       if (copyTimeout.current) clearTimeout(copyTimeout.current);
       copyTimeout.current = setTimeout(() => setCopied(false), 2200);
-    } catch { setNotice('Clipboard unavailable. Use Download to save your flow.'); }
+    } catch { track('code_copied', { result: 'error', error_code: 'clipboard_unavailable' }); setNotice('Clipboard unavailable. Use Download to save your flow.'); }
   }
 
   function downloadCode() {
@@ -175,8 +193,25 @@ export function FactoryBuilder() {
     const a = document.createElement('a');
     a.href = url; a.download = 'software-factory.flow.ts'; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    track('code_downloaded', { result: 'initiated' });
     setNotice('Downloaded software-factory.flow.ts.');
   }
+
+  const navigation = <div className={`${s.navigation} ${draft.step === 2 ? s.workflowNavigation : ''}`}>
+              <button type="button" className={s.previous} onClick={() => goToStep(draft.step - 1)}><ArrowLeft size={15} /> Back</button>
+              <button type="button" className={s.primary} disabled={!hydrated} aria-disabled={!canContinue(draft)} onClick={next}>{draft.step === 2 ? 'Create my flow' : 'Continue'}<ArrowRight size={17} /></button>
+            </div>;
+
+  const codePanel = <section className={`ph-no-capture ph-sensitive ${s.codePanel} ${emptyPreview ? s.codePanelEmpty : ''}`} aria-label="Your flow taking shape">
+          <div className={s.editorHeader}><div><Code2 size={15} /><span>software-factory.flow.ts</span></div>{started && ready && <span className={s.live}>Ready</span>}</div>
+          <div className={s.editor} ref={editor} tabIndex={0} aria-label="Flow source code">
+            <pre><code>{sections.map(({ id, code }) => <span key={id} data-section={id} className={`${s.codeSection} ${!emptyPreview && activeSection === id ? s.highlighted : ''}`}>{(code + '\n').split('\n').map((line, index) => {
+              lineNumber++;
+              return <span className={s.codeLine} key={`${index}:${line}`} style={{ '--line': Math.min(index, 20) } as CSSProperties}><span className={s.lineNumber} aria-hidden="true">{lineNumber}</span><span><SyntaxLine text={line} /></span>{'\n'}</span>;
+            })}</span>)}</code></pre>
+          </div>
+          <div className={s.editorFooter}><span>{ready && <><Check size={13} /> Ready</>}</span><div><button type="button" disabled={emptyPreview} onClick={copyCode} aria-label="Copy flow code">{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? 'Copied' : 'Copy'}</button><button type="button" disabled={emptyPreview} onClick={downloadCode}><Download size={15} /> Download</button></div></div>
+        </section>;
 
   return <div className={s.page}>
     <div className={s.headerOuter}>
@@ -191,7 +226,16 @@ export function FactoryBuilder() {
         </div>
       </header>
     </div>
-    <main className={s.main}>
+    <main className={s.main} onFocusCapture={event => {
+      const field = event.target as HTMLInputElement;
+      if (!/^(source-[a-z]+-[a-z]+|factory-task|other-coding-agent)$/.test(field.id)) return;
+      fieldStart.current[field.id] = Date.now();
+      track('field_focused', { field: field.id });
+    }} onBlurCapture={event => {
+      const field = event.target as HTMLInputElement;
+      if (!/^(source-[a-z]+-[a-z]+|factory-task|other-coding-agent)$/.test(field.id)) return;
+      track('field_completed', { field: field.id, filled: Boolean(field.value?.trim()), length_bucket: lengthBucket(field.value?.length ?? 0), editing_ms: Date.now() - (fieldStart.current[field.id] ?? Date.now()) });
+    }}>
       <div className={s.workspace}>
       {!started ? <section className={s.welcome} aria-labelledby="welcome-title">
         <h1 id="welcome-title">Let’s build your first flow on Agent Relay.</h1>
@@ -205,7 +249,7 @@ export function FactoryBuilder() {
             <p className={s.description}>{question.description}</p>
             {comingSoonOnly && draft.step > 1 && <p className={s.exampleNote}>You’re building a Claude Code example. Your coming-soon preferences are saved.</p>}
 
-            {draft.step === 0 && <SourcePicker draft={draft} onChange={setDraft} />}
+            {draft.step === 0 && <SourcePicker draft={draft} onChange={updateDraft} onTrack={track} actions={navigation} />}
 
             {draft.step === 1 && <>
               <fieldset className={s.agentGroup}><legend>Select all you use</legend>
@@ -216,11 +260,11 @@ export function FactoryBuilder() {
                   </label>
                 )}</div>
               </fieldset>
-              <details className={s.otherAgents}>
-                <summary>Use another agent?<ChevronDown size={15} /><span>{requestedAgentCount > 0 ? `${requestedAgentCount} selected` : 'See more'}</span></summary>
+              <details className={s.otherAgents} onToggle={event => track('help_toggled', { section: 'other_agents', open: event.currentTarget.open })}>
+                <summary>Use another agent?<ChevronDown size={15} /></summary>
               <fieldset className={`${s.agentGroup} ${s.soonGroup}`}><legend>Coming soon
-                <span className={s.infoWrap} onMouseEnter={() => setShowInfo(true)} onMouseLeave={() => setShowInfo(false)}>
-                  <button type="button" className={s.infoButton} aria-label="About coming soon agents" aria-describedby="coming-soon-info" onClick={() => setShowInfo(true)} onFocus={() => setShowInfo(true)} onBlur={() => setShowInfo(false)} onKeyDown={event => { if (event.key === 'Escape') setShowInfo(false); }}><Info size={14} /></button>
+                <span className={s.infoWrap} onMouseEnter={() => { if (!showInfo) track('help_opened', { section: 'coming_soon', interaction: 'hover' }); setShowInfo(true); }} onMouseLeave={() => setShowInfo(false)}>
+                  <button type="button" className={s.infoButton} aria-label="About coming soon agents" aria-describedby="coming-soon-info" onClick={() => setShowInfo(true)} onFocus={() => { if (!showInfo) track('help_opened', { section: 'coming_soon', interaction: 'focus' }); setShowInfo(true); }} onBlur={() => setShowInfo(false)} onKeyDown={event => { if (event.key === 'Escape') setShowInfo(false); }}><Info size={14} /></button>
                   <span id="coming-soon-info" role="tooltip" className={`${s.tooltip} ${showInfo ? s.tooltipOpen : ''}`}>We’ll use this answer to prioritize which coding agents we add.</span>
                 </span>
               </legend><div className={s.soonGrid}>{CODING_AGENTS.filter(agent => !agent.available).map(agent =>
@@ -231,13 +275,13 @@ export function FactoryBuilder() {
               )}
                 <label className={`${s.agent} ${s.soonAgent} ${otherSelected ? s.agentSelected : ''}`}>
                   <span className={s.agentIcon}><Ellipsis size={18} aria-hidden="true" /></span><span>Other</span>
-                  <input type="checkbox" checked={otherSelected} onChange={event => setDraft({ ...draft, otherAgentSelected: event.target.checked })} aria-controls="other-agent-field" />
+                  <input type="checkbox" checked={otherSelected} onChange={event => updateDraft({ ...draft, otherAgentSelected: event.target.checked })} aria-controls="other-agent-field" />
                 </label>
               </div>
                 {otherSelected && <div id="other-agent-field" className={s.otherAgentField}>
                   <label htmlFor="other-coding-agent">Other agent</label>
                   <input id="other-coding-agent" type="text" maxLength={100} placeholder="Enter an agent’s name"
-                    value={draft.otherAgent ?? ''} onChange={event => setDraft({ ...draft, otherAgent: event.target.value })}
+                    value={draft.otherAgent ?? ''} onChange={event => updateDraft({ ...draft, otherAgent: event.target.value })}
                     aria-describedby="other-agent-help" />
                   <p id="other-agent-help">Tell us which coding agent you’d like us to support.</p>
                 </div>}
@@ -246,70 +290,39 @@ export function FactoryBuilder() {
               {comingSoonOnly && <p className={s.selectionNote}>You can still build an example with Claude Code while support for your tools is on the way.</p>}
             </>}
 
-            {draft.step === 2 && <div className={s.taskChoice}>
-              <label htmlFor="factory-task">Instructions for your agent</label>
-              <textarea id="factory-task" maxLength={600} rows={4} placeholder="e.g. Implement the ticket, follow the existing patterns, and add tests" value={draft.task} onChange={event => setDraft({ ...draft, task: event.target.value })} />
-              <span className={s.suggestionLabel}>Or start with an example</span>
-              <div className={s.suggestions}>{suggestions.map(task => <button type="button" key={task} onClick={() => setDraft({ ...draft, task })}>{task}<ArrowRight size={14} /></button>)}</div>
-            </div>}
+            {draft.step === 2 && <WorkflowPicker draft={draft} onChange={updateDraft} onTrack={track} actions={navigation} />}
 
-            {draft.step === 3 && <fieldset className={s.reviewerGroup}><legend>Choose a reviewer</legend>
-              {(['claude', 'codex'] as const).map(id => <label key={id} className={`${s.option} ${draft.reviewer === id ? s.optionSelected : ''}`}>
-                <AgentIcon id={id} size={26} /><span><strong>{agentLabel(id)}</strong><small>{id === builder ? 'A separate session with fresh context' : 'A different agent from your implementer'}</small></span>
-                <input type="radio" name="reviewer" value={id} checked={draft.reviewer === id} onChange={() => setDraft({ ...draft, reviewer: id })} />
-              </label>)}
-            </fieldset>}
-
-            {draft.step === 4 && <fieldset className={s.roundsGroup}><legend>Maximum review rounds</legend>
-              {([{ rounds: 1, label: 'Just one review', detail: 'Stop and hand it to me if there’s feedback.' },
-                { rounds: 3, label: 'Work through the feedback', detail: 'Up to 3 reviews, with fixes in between.' },
-                { rounds: 5, label: 'Keep working at it', detail: 'Up to 5 reviews for a more involved change.' }] as const).map(({ rounds, label, detail }) =>
-                <label key={rounds} className={`${s.option} ${draft.rounds === rounds ? s.optionSelected : ''}`}><span className={s.roundNumber}>{rounds}</span><span><strong>{label}</strong><small>{detail}</small></span><input type="radio" name="rounds" checked={draft.rounds === rounds} onChange={() => setDraft({ ...draft, rounds })} /></label>
-              )}
-            </fieldset>}
-
-            {draft.step === 5 && <div className={s.approvalChoice}>
-              <div className={s.approvalVisual} aria-hidden="true"><Code2 /><span /><ShieldCheck /><span /><LockKeyhole /></div>
-              <label className={`${s.option} ${draft.approval ? s.optionSelected : ''}`}><LockKeyhole size={27} /><span><strong>Require my approval</strong><small>Pause for me before the PR can be merged.</small></span><input type="checkbox" checked={draft.approval} onChange={event => setDraft({ ...draft, approval: event.target.checked })} /></label>
-              <p>The flow prepares the PR. You review the result and merge it in GitHub when you’re ready.</p>
-            </div>}
-
-            <div className={s.navigation}>
-              <button type="button" className={s.previous} onClick={() => goToStep(draft.step - 1)}><ArrowLeft size={15} /> Back</button>
-              <button type="button" className={s.primary} disabled={!hydrated || !canContinue(draft)} onClick={next}>{draft.step === 5 ? 'Finish my flow' : 'Continue'}<ArrowRight size={17} /></button>
-            </div>
+            {draft.step === 1 && navigation}
           </div> : <div className={s.ready}>
-            <span className={s.readyIcon}><CheckCheck size={30} /></span>
-            <h1 tabIndex={-1} ref={questionHeading}>You just built your first flow.</h1>
-            <p>{agentLabel(builder)} builds. {agentLabel(draft.reviewer!)} reviews. The feedback loop handles revisions, and you give the final approval.</p>
-            <div className={s.readySummary}><GitPullRequest size={20} /><span>From incoming tickets to reviewed pull requests.</span></div>
-            <section className={s.connectionChecklist} aria-label="Your connections to set up">
-              <h2>{draft.sources.every(id => id === 'markdown') ? 'Your source is ready' : 'Your sources for this flow'}</h2>
-              <ul>{draft.sources.map(id => <li key={id}>
-                <SourceIcon id={id} /><div><strong>{sourceLabel(id)}</strong><p>{sourceSummary(id, draft.sourceSettings[id] ?? {})}</p></div><span>{id === 'markdown' ? 'No connection needed' : 'Not connected'}</span>
-              </li>)}</ul>
-              <p>We’ve saved your choices and filters in this browser and your flow file.</p>
-            </section>
-            <a href={cloudConnectionsHref()} className={s.google} onClick={() => {
-              if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-                try { posthog?.capture('flows_onboarding_sign_in_clicked'); }
-                catch { /* Sign-in must remain available without analytics. */ }
-              }
-            }}><Google.Color size={18} /> Continue with Google <ArrowRight size={17} /></a>
-            <p className={s.handoffNote}>{draft.sources.every(id => id === 'markdown') ? 'Download your flow to run it with your Markdown file, or continue in Cloud to set up your coding tools.' : 'Next: sign in to Cloud and connect your tools. Download your flow to bring it with you.'}</p>
-            <button type="button" className={s.previous} onClick={() => goToStep(0)}><ArrowLeft size={14} /> Review my answers</button>
+            <h1 tabIndex={-1} ref={questionHeading}>Let’s run your first flow.</h1>
+            <p className={s.runDescription}>Your software factory is built. Choose where to put it to work.</p>
+            <RunOptions draft={draft} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} markOutcome={markOutcome} />
+            <details className={s.flowReview} onToggle={event => track('help_toggled', { section: 'review_flow', open: event.currentTarget.open })}>
+              <summary>Review your flow<ChevronDown size={16} /></summary>
+              <div className={s.reviewContent}>
+                <div className={s.reviewHeading}><span>{workflow?.label}</span><button type="button" onClick={() => goToStep(2)}>Edit workflow</button></div>
+                <section className={`ph-no-capture ph-sensitive ${s.connectionChecklist}`} aria-label="Your sources to connect">
+                  <ul>{draft.sources.map(id => <li key={id}>
+                    <SourceIcon id={id} /><div><strong>{sourceLabel(id)}</strong><p>{sourceSummary(id, draft.sourceSettings[id] ?? {})}</p></div><span>{id === 'markdown' ? 'No connection needed' : 'Connect in Cloud'}</span>
+                  </li>)}</ul>
+                  {comingSoonOnly && <p>This example uses Claude Code while support for your selected agents is on the way.</p>}
+                  <button type="button" className={s.previous} onClick={() => goToStep(0)}>Edit sources and agents<ArrowRight size={13} /></button>
+                </section>
+              </div>
+            </details>
           </div>}
         </section>}
-        <section className={`${s.codePanel} ${emptyPreview ? s.codePanelEmpty : ''}`} aria-label="Your flow taking shape">
-          <div className={s.editorHeader}><div><Code2 size={15} /><span>software-factory.flow.ts</span></div>{started && ready && <span className={s.live}>Ready</span>}</div>
-          <div className={s.editor} ref={editor} tabIndex={0} aria-label="Flow source code">
-            <pre><code>{sections.map(({ id, code }) => <span key={id} data-section={id} className={`${s.codeSection} ${!emptyPreview && activeSection === id ? s.highlighted : ''}`}>{(code + '\n').split('\n').map((line, index) => {
-              lineNumber++;
-              return <span className={s.codeLine} key={`${index}:${line}`} style={{ '--line': Math.min(index, 20) } as CSSProperties}><span className={s.lineNumber} aria-hidden="true">{lineNumber}</span><span><SyntaxLine text={line} /></span>{'\n'}</span>;
-            })}</span>)}</code></pre>
+        {hasPlanPreview ? <section className={`ph-no-capture ph-sensitive ${s.previewPane}`} aria-label="Workflow preview">
+          <div className={s.previewSwitch} role="group" aria-label="Preview display">
+            {(['plan', 'code'] as const).map(mode => <button key={mode} type="button" aria-pressed={previewMode === mode} aria-controls={`workflow-preview-${mode}`} onClick={() => {
+              if (previewMode !== mode) { setPreviewMode(mode); track('preview_changed', { mode }); }
+            }}>{mode === 'plan' ? 'Preview' : 'Code'}</button>)}
           </div>
-          <div className={s.editorFooter}><span>{ready && <><Check size={13} /> Ready</>}</span><div><button type="button" disabled={emptyPreview} onClick={copyCode} aria-label="Copy flow code">{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? 'Copied' : 'Copy'}</button><button type="button" disabled={emptyPreview} onClick={downloadCode}><Download size={15} /> Download</button></div></div>
-        </section>
+          <div id="workflow-preview-plan" className={s.planPreview} hidden={!showingPlan} tabIndex={0} aria-label="Plan preview">
+            <WorkflowPlan key={draft.workflow} draft={draft} onChange={updateDraft} onTrack={track} />
+          </div>
+          <div id="workflow-preview-code" hidden={showingPlan}>{codePanel}</div>
+        </section> : codePanel}
       </div>
       <p className={s.notice} role="status">{notice}</p>
     </main>

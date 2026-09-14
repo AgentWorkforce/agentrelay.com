@@ -1,50 +1,38 @@
+import { validFlowAgentSettings, type FlowAgentSettings } from './flow-agent-settings';
+import { WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
 import { ISSUE_SOURCES, issueSourceCode, validSourcePreferences, type IssueSourceId, type SourcePreferences } from './flow-sources';
 
-// Availability reflects Relayflows' direct CLI adapters, not Relay's broader
-// fleet spawn vocabulary. Keep interest-only choices out of executable code.
-export const CODING_AGENTS = [
-  { id: 'claude', label: 'Claude Code', available: true },
-  { id: 'codex', label: 'Codex', available: true },
-  { id: 'gemini', label: 'Gemini CLI', available: false },
-  { id: 'opencode', label: 'OpenCode', available: false },
-  { id: 'cursor', label: 'Cursor', available: false },
-  { id: 'copilot', label: 'GitHub Copilot', available: false },
-  { id: 'windsurf', label: 'Windsurf', available: false },
-  { id: 'aider', label: 'Aider', available: false },
-  { id: 'goose', label: 'Goose', available: false },
-  { id: 'grok', label: 'Grok', available: false },
-  { id: 'pi', label: 'Pi', available: false },
-] as const;
-export type AgentId = (typeof CODING_AGENTS)[number]['id'];
-export type CodingAgent = 'claude' | 'codex';
+import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
+export { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
+
 export type FactoryDraft = {
-  version: 3;
+  version: 4;
   sources: IssueSourceId[];
   sourceSettings: SourcePreferences;
   agents: AgentId[];
   otherAgent: string;
+  agentSettings?: FlowAgentSettings;
   otherAgentSelected?: boolean;
   task: string;
-  reviewer: CodingAgent | null;
-  rounds: 1 | 3 | 5 | null;
-  approval: boolean;
+  workflow: WorkflowId | null;
   step: number;
 };
 export const LEGACY_FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v2';
-export const FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v3';
-export const DEFAULT_FACTORY: FactoryDraft = { version: 3, sources: [], sourceSettings: {}, agents: [], otherAgent: '', task: '', reviewer: null, rounds: null, approval: false, step: 0 };
+export const PREVIOUS_FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v3';
+export const FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v4';
+export const DEFAULT_FACTORY: FactoryDraft = { version: 4, sources: [], sourceSettings: {}, agents: [], otherAgent: '', task: '', workflow: null, step: 0 };
 export const agentLabel = (id: AgentId) => CODING_AGENTS.find(agent => agent.id === id)!.label;
 export function primaryAgent(draft: FactoryDraft): CodingAgent {
-  return draft.agents.find((agent): agent is CodingAgent => agent === 'claude' || agent === 'codex') ?? 'claude';
+  return workflowAgents(draft.agents).builder;
 }
 export function otherAgentIsSelected(draft: FactoryDraft): boolean {
   return draft.otherAgentSelected ?? Boolean(draft.otherAgent?.trim());
 }
 export function canContinue(draft: FactoryDraft, step = draft.step): boolean {
-  return [draft.sources.length > 0, draft.agents.length > 0 || (otherAgentIsSelected(draft) && Boolean(draft.otherAgent?.trim())), draft.task.trim().length > 0, draft.reviewer !== null, draft.rounds !== null, draft.approval][step] ?? true;
+  return [draft.sources.length > 0, draft.agents.length > 0 || (otherAgentIsSelected(draft) && Boolean(draft.otherAgent?.trim())), WORKFLOWS.some(workflow => workflow.id === draft.workflow)][step] ?? true;
 }
 
-export const ONBOARDING_STAGES = ['sources', 'agents', 'task', 'reviewer', 'reviews', 'approval', 'connections'] as const;
+export const ONBOARDING_STAGES = ['sources', 'agents', 'task', 'connections'] as const;
 export function onboardingPath(step: number): string {
   return step < 0 ? '/flows/onboarding' : `/flows/onboarding/${ONBOARDING_STAGES[step]}`;
 }
@@ -57,21 +45,21 @@ export function accessibleOnboardingStep(draft: FactoryDraft, requestedStep: num
 export function readFactoryDraft(raw: string | null): FactoryDraft | null {
   try {
     const value = JSON.parse(raw ?? 'null');
-    if (![2, 3].includes(value?.version) || !Array.isArray(value.agents) ||
+    if (!validFlowAgentSettings(value?.agentSettings) || ![2, 3, 4].includes(value?.version) || !Array.isArray(value.agents) ||
       !value.agents.every((id: unknown) => CODING_AGENTS.some(agent => agent.id === id)) ||
       (value.otherAgent !== undefined && (typeof value.otherAgent !== 'string' || value.otherAgent.length > 100)) ||
       (value.otherAgentSelected !== undefined && typeof value.otherAgentSelected !== 'boolean') ||
       typeof value.task !== 'string' || value.task.length > 600 ||
-      ![null, 'claude', 'codex'].includes(value.reviewer) || ![null, 1, 3, 5].includes(value.rounds) ||
-      typeof value.approval !== 'boolean' || !Number.isInteger(value.step) || value.step < 0 || value.step > (value.version === 2 ? 5 : 6)) return null;
-    if (value.version === 3 && (!Array.isArray(value.sources) ||
+      (value.version === 4 && value.workflow !== null && !WORKFLOWS.some(workflow => workflow.id === value.workflow)) || !Number.isInteger(value.step) || value.step < 0 || value.step > (value.version === 2 ? 5 : value.version === 3 ? 6 : 3)) return null;
+    if (value.version >= 3 && (!Array.isArray(value.sources) ||
       !value.sources.every((id: unknown) => ISSUE_SOURCES.some(source => source.id === id)) ||
       !validSourcePreferences(value.sourceSettings))) return null;
-    const draft: FactoryDraft = { version: 3,
+    const draft: FactoryDraft = { version: 4,
       sources: value.version === 2 ? [] : [...new Set<IssueSourceId>(value.sources)],
       sourceSettings: value.version === 2 ? {} : value.sourceSettings, agents: [...new Set<AgentId>(value.agents)], otherAgent: value.otherAgent ?? '', task: value.task,
+      ...(value.agentSettings !== undefined ? { agentSettings: value.agentSettings } : {}),
       ...(value.otherAgentSelected !== undefined ? { otherAgentSelected: value.otherAgentSelected } : {}),
-      reviewer: value.reviewer, rounds: value.rounds, approval: value.approval, step: value.version === 2 ? 0 : value.step };
+      workflow: value.version === 4 ? value.workflow : null, step: value.version === 2 ? 0 : value.version === 3 ? Math.min(value.step, 2) : value.step };
     for (let step = 0; step < draft.step; step++) {
       if (!canContinue(draft, step)) { draft.step = step; break; }
     }
@@ -79,16 +67,23 @@ export function readFactoryDraft(raw: string | null): FactoryDraft | null {
   } catch { return null; }
 }
 
-export function cloudConnectionsHref(): string {
-  const params = new URLSearchParams({ next: '/integrations', ref: 'flows', utm_source: 'agentrelay.com', utm_medium: 'flows_onboarding', utm_campaign: 'flows' });
-  return `https://agentrelay.com/cloud/api/auth/google/start?${params}`;
+export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, journeyId?: string): string {
+  if (!canContinue(draft, 2)) throw new Error('Choose a workflow before continuing to Cloud.');
+  // The fragment is read only by Cloud's browser handoff page. Source code and
+  // ticket filters must not enter OAuth state, cookies, or server access logs.
+  const payload = { version: 1, handoffId, ...(journeyId ? { analytics: { journeyId } } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
+    workflow: draft.workflow, sources: draft.sources, sourceSettings: draft.sourceSettings,
+    agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
+  const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
+  return `${base.replace(/\/$/, '')}/flows/import#${encodeURIComponent(JSON.stringify(payload))}`;
 }
 
-export function factoryCodeSections(draft: FactoryDraft) {
+export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
+  const budget = target === 'local' ? '{ wallclock: "1h" }' : '"$8/run"';
   if (!draft.sources.length) return [{ id: 'empty', code: `import { flow } from "@relayflows/surface";
 
 export default flow("software-factory",
-  { budget: "$8/run" }, async (f) => {
+  { budget: ${budget} }, async (f) => {
 
 });` }];
   const agent = primaryAgent(draft);
@@ -99,13 +94,13 @@ export default flow("software-factory",
   const hasBuilder = draft.step >= 1 && canContinue(draft, 1);
   const sections = [{ id: 'setup', code: 'import { flow } from "@relayflows/surface";' },
     { id: 'sources', code: issueSourceCode(draft.sources, draft.sourceSettings) }];
-  if (hasBuilder) sections.push({ id: 'builder', code: `${draft.agents.some(id => id === 'claude' || id === 'codex') ? '// Your coding agent, ready to work.' : '// Claude Code example while your selected tools are coming soon.'}
+  if (hasBuilder) sections.push({ id: 'builder', code: `${draft.agents.some(isCodingAgent) ? '// Your coding agent, ready to work.' : '// Claude Code example while your selected tools are coming soon.'}
 const builder = "${agent}";` });
   sections.push({ id: 'input', code: `type Input = { issue${hasMarkdown ? '?' : ''}: Issue; approver: string };
 
 // Run in a connected repository, on a new branch.
 export default flow<Input>("software-factory",
-  { budget: "$8/run" }, async (f, input) => {${hasMarkdown ? `
+  { budget: ${budget} }, async (f, input) => {${hasMarkdown ? `
   // Without an incoming ticket, read your local Markdown task.
   const issue = input.issue ?? {
     source: "markdown", title: ${JSON.stringify(markdownPath)},
@@ -114,59 +109,12 @@ export default flow<Input>("software-factory",
   };` : '\n  const issue = input.issue;'}
   // Ignore items outside the sources and filters you chose.
   if (!matchesIssue(issue)) return f.done("canceled");` });
-  if (hasBuilder && draft.step >= 2 && draft.task.trim()) {
-    sections.push({ id: 'implement', code: `  // Turn your request into a tested pull request.
-  await f.agent("implementer", {
-    cli: builder,
-    task: issue.title + "\\n" + issue.body + "\\n" +
-      ${JSON.stringify(draft.task.trim())} +
-      " Implement on the current branch. Commit changes. " +
-      "Write a PR summary to summary.md.",
-  });
-  await f.run("npm test");
-  await f.run("git push --set-upstream origin HEAD");
-  await f.run('gh pr create --title "Software factory change" ' +
-    '--body-file summary.md');` });
+  if (hasBuilder && draft.step >= 2 && draft.workflow) {
+    sections.push(...workflowCode(draft.workflow, workflowAgents(draft.agents), draft.task, target, draft.agentSettings, draft.agents));
   }
-  const hasReview = hasBuilder && draft.step >= 3 && draft.reviewer;
-  const hasLoop = draft.step >= 4 && draft.rounds;
-  if (hasReview) {
-    sections.push({ id: 'review', code: `${hasLoop ? `  // Review, fix, repeat. Stop after ${draft.rounds} rounds.
-  let clean = false;
-  for (let round = 0; round < ${draft.rounds}; round++) {` : '  // A fresh pair of eyes challenges the change.'}
-    await f.run("rm -f review.clean");
-    await f.agent("adversary", {
-      cli: "${draft.reviewer}",
-      task: "Review the PR diff, tests, and all PR comments. " +
-        "Find bugs and edge cases. Write review.md. " +
-        "Create review.clean only if no issues remain.",
-    });
-    ${hasLoop ? '' : 'const '}clean = (await f.run(
-      "test -f review.clean && echo yes || echo no"
-    )).trim() === "yes";${hasLoop ? '\n    if (clean) break;' : '\n    if (!clean) return f.done("step_failed");'}` });
-  }
-  if (hasReview && hasLoop) sections.push({ id: 'loop', code: `    // Read feedback, make fixes, then test again.
-    if (round + 1 < ${draft.rounds}) {
-      await f.agent("fixer", {
-        cli: builder,
-        task: "Read review.md and gh pr view --comments. " +
-          "Address every issue. Commit and push the fixes.",
-      });
-      await f.run("npm test");
-    }
-  }
-  // Unresolved feedback never reaches approval.
-  if (!clean) return f.done("step_failed");` });
-  if (hasBuilder && draft.step >= 5 && draft.approval) sections.push({ id: 'gate', code: `  // You have the final say before anything ships.
-  const approved = await f.human("Approve this PR?", {
-    to: input.approver,
-  });
-  if (!approved) return f.done("canceled");
-  // Merge the approved PR in GitHub when ready.
-  f.done("success");` });
-  sections.push({ id: 'end', code: draft.step < 6 ? '  // Your next answer adds the next step.\n});' : '});' });
+  sections.push({ id: 'end', code: draft.step < 2 || !draft.workflow ? '  // Your next answer adds the next step.\n});' : '});' });
   return sections;
 }
-export function factorySource(draft: FactoryDraft): string {
-  return factoryCodeSections(draft).map(section => section.code).join('\n\n') + '\n';
+export function factorySource(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud'): string {
+  return factoryCodeSections(draft, target).map(section => section.code).join('\n\n') + '\n';
 }

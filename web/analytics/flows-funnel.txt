@@ -1,0 +1,153 @@
+FLOWS ONBOARDING MEASUREMENT — VERSION 2
+
+Status: implemented instrumentation and report definitions; no live PostHog
+project settings, dashboard, or production deployment changed by this work.
+
+PRIMARY QUESTIONS
+1. Which step loses the most journeys?
+2. Where do people hesitate, change their answers, go back, or ask for help?
+3. Do users prefer Cloud or local execution?
+4. Does Cloud sign-in successfully save the same flow and reach setup?
+5. Are failures caused by missing answers, storage, login, saving, or downloads?
+
+FUNNEL
+Use event property journey_id as the correlation key, not event counts.
+Filter funnel_version = 2 and exclude localhost, development, and staff traffic.
+Marketing and Cloud must send events to the same PostHog project for joined reports.
+A custom journey property does not automatically merge PostHog person identities:
+use a query/report grouped by journey_id for the cross-app funnel. Standard
+person-based funnels are appropriate only when identity continuity is verified.
+
+Acquisition (optional starting steps):
+  flows_landing_viewed
+  flows_onboarding_entry_clicked               placement = hero/nav/mobile_nav/other
+
+Core setup, in order:
+  flows_onboarding_step_viewed                 stage = intro
+  flows_onboarding_step_viewed                 stage = sources
+  flows_onboarding_step_viewed                 stage = agents
+  flows_onboarding_step_viewed                 stage = task
+  flows_onboarding_flow_created
+  flows_onboarding_step_viewed                 stage = connections
+
+Cloud branch:
+  flows_onboarding_cloud_handoff_started
+  flows_onboarding_cloud_import_received
+  flows_onboarding_google_redirect_started
+  flows_onboarding_google_login_completed
+  flows_onboarding_cloud_flow_saved
+  flows_onboarding_cloud_dashboard_viewed
+  flows_onboarding_connection_setup_clicked
+  flows_onboarding_connection_setup_viewed
+
+Local branch:
+  flows_onboarding_destination_selected        destination = local
+  flows_onboarding_local_kit_requested
+  flows_onboarding_local_kit_downloaded         result = initiated
+  flows_onboarding_command_copied              command = install/run, result = success/error
+
+Start the core report at intro, but also report direct entries to later steps
+separately. Restored drafts can skip earlier views; do not classify that as loss.
+
+REPORTS TO BUILD
+A. Setup conversion: unique journeys at each core step; conversion between steps
+   and from intro to flow_created. Count each journey once per milestone. Use
+   first timestamps in sequence, with a 30-minute conversion window initially.
+B. Cloud reliability: unique handoff_id from handoff start through dashboard;
+   breakdown by fixed error_code, workflow, sources, and agent_count. Compare
+   timestamps to see whether latency is at redirect, auth, or save.
+C. Local intent: kit requests versus initiated downloads, followed by install/run
+   command copies. A browser download/copy is not evidence the CLI executed.
+D. Step friction: per stage, percent with continue_blocked, help opened,
+   confusion_reported, a revisit, or repeated choice changes; median/p90 active_ms
+   from step_left (one exit per visit). Split by workflow and selected tools.
+E. Confusion reasons: confusion_reported counts and unique journeys by stage and
+   reason (choosing/setup/cost/next_step). Denominator: unique step viewers.
+F. Technical failures: trends and rates for storage_failed, cloud_import_failed,
+   google_login_failed, cloud_save_failed, handoff_failed, local_kit_failed, and
+   copy events with result=error. Pair each failure with its corresponding attempt.
+G. Abandonment candidates: journeys whose last recorded stage has no later
+   milestone after 30 minutes. Compare completed versus incomplete journeys by
+   stage and configuration. Exclude recent journeys whose window is still open.
+   Use step_left exit_signal as supporting evidence, not the definition.
+H. Replay review: inspect available sessions for high-friction cohorts before
+   changing copy or layout. Review a sample of successful sessions as a control.
+   Timing and extra clicks suggest confusion; use replay to investigate the cause.
+
+CORE EVENT PROPERTIES
+journey_id: random tab-scoped correlation ID; reused for recent visits (30-minute
+  inactivity window on acquisition/onboarding entry). Carried through Cloud in
+  the flow handoff, not as a query containing user content.
+funnel_version: 2; do not mix earlier event implementations into the same baseline.
+stage: intro/sources/agents/task/connections. Cloud events use surface=cloud.
+stage_index, visit_number, is_revisit: website stage progression.
+elapsed_ms: wall-clock time in this visit.
+active_ms: visible-tab time in this visit; excludes time while the tab is hidden.
+choice_changes: number of recorded selection changes in the visit.
+last_outcome: none/cloud_handoff/local_kit_downloaded.
+workflow, sources, agents, counts: known configuration enums and selection counts.
+configured_filters: filter field names only, such as github.labels; never values.
+other_agent_selected, has_extra_instructions: booleans only.
+handoff_id: correlates a particular Cloud attempt.
+flow_id: correlates a successfully saved Cloud flow.
+PostHog's normal device/browser/referrer/session properties remain available.
+
+DIAGNOSTIC EVENTS (all prefixed flows_onboarding_)
+step_completed, intro_completed, navigation_clicked (direction/target_stage)
+step_left (reason=route_change/pagehide/unmount, exit_signal)
+step_paused, step_resumed, step_lingered (60-second wall-clock threshold, visible
+  at the threshold; consult active_ms to avoid treating a hidden tab as hesitation)
+draft_loaded (restored/storage_available), storage_failed (operation)
+choice_changed (field/from/to or selected list/count)
+continue_blocked (source_required/agent_required/workflow_required)
+field_focused, field_completed (field/filled/length_bucket/editing_ms)
+source_settings_viewed (source), filter_configured (source/field/enabled)
+help_toggled (section/open), help_opened (section/interaction)
+destination_selected (from/destination)
+code_copied, code_downloaded, command_copied (result)
+preview_changed (mode: plan/code) records switching the workflow preview.
+local_kit_requested, local_kit_downloaded, local_kit_failed
+cloud_handoff_started, handoff_failed
+cloud_import_received, cloud_import_failed, google_redirect_started
+google_login_completed, google_login_failed
+cloud_save_started, cloud_flow_saved, cloud_save_failed, cloud_dashboard_viewed
+connection_setup_clicked, connection_setup_viewed (setup=agents/integrations)
+cloud_code_copied
+
+INTERPRETATION AND COVERAGE LIMITS
+- A pagehide can be a refresh, navigation, browser close, or temporary suspension.
+  Tabs can disappear without sending an event. Infer abandonment from missing
+  later milestones and a closed conversion window, not a definitive quit event.
+- Active time measures visibility, not attention. A backgrounded tab pauses the
+  active clock. Field editing_ms is wall-clock time, not active typing time.
+- Revisit counts are per mounted onboarding experience; reloads start fresh
+  counters even if journey_id persists. Count step_viewed events per journey to
+  detect revisits across reloads.
+- SDK blockers, opt-out, offline clients, or navigation can prevent delivery.
+  Terminal handoff/exit events use beacon transport where applicable.
+- Google cancellation that never returns is inferred from missing completion.
+  Returned login failures are captured with bounded error categories.
+- cloud_flow_saved means persistence succeeded. connection_setup_viewed means
+  the setup page opened, not that an integration or agent connected.
+- First-run start/success/failure requires runner-side events. The current Cloud
+  saved-flow dashboard has no executor; local CLI execution is outside this UI.
+  Do not label saves or downloads as activation/first-run success.
+- Session replay depends on PostHog project enablement and sampling. Inputs are
+  masked and code/configuration surfaces are blocked. Analytics do not collect
+  raw repository names, tickets, source filters, generated code, or write-in names.
+- Both web apps need NEXT_PUBLIC_POSTHOG_KEY and the intended host at build time.
+  PostHog project ingestion, replay enablement, and reports need a post-deployment
+  check by an authorized operator. None were verified against production here.
+
+RELEASE VALIDATION
+Use a nonproduction PostHog project first. Complete one fresh Cloud journey,
+one local journey, a backwards-navigation journey, a restored-draft entry, and
+a missing-answer attempt. Verify journey_id continuity and exactly one intended
+milestone per action. Test a hidden tab and blocked browser storage. Check event
+payloads and replay for user-entered content. Then verify OAuth and save failures
+with controlled fixtures. Compare counts before treating conversion as a baseline.
+
+Agent step configuration
+- agent_settings_opened: role identifies which step needed inspection.
+- agent_settings_saved: role, selected supported agent, custom_model and custom_prompt booleans. Raw model IDs and prompts are never sent.
+- Model and prompt overrides are stored per workflow and role in the browser draft and included in generated code for local kits and Cloud handoff.

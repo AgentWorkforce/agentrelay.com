@@ -1,3 +1,4 @@
+import { FlowLandingAnalytics } from './FlowLandingAnalytics';
 import { DeploymentCall } from '../../components/home/DeploymentCall';
 import { WaveDivider } from '../../components/home/icons';
 import { FlowGatePreview } from '../../components/home/FlowGatePreview';
@@ -71,6 +72,7 @@ export default function FlowsPage() {
 
   return (
     <div className={s.page}>
+      <FlowLandingAnalytics />
       <SiteNav hideLinks actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} />
 
       <main className={s.main}>
