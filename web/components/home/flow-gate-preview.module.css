@@ -63,3 +63,11 @@
 .branchNode small { white-space: normal; text-align: center; font-size: 8px; line-height: 1.3; width: 100%; }
 .agent { font-size: 10px; }
 @media (max-width: 600px) { .branchNode b { font-size: 9px; } .branchNode small { font-size: 7px; } .branchNode > span { width: 30px; height: 30px; margin-top: 3px; } }
+
+@media (max-width: 680px) {
+  .content { justify-content: center; }
+  .branchNodes { margin-bottom: 0; }
+  .agent,
+  .requirements,
+  .status { display: none; }
+}

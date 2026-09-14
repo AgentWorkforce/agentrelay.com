@@ -1350,6 +1350,7 @@
 
 .scriptViewport { position: relative; min-width: 0; }
 .scriptSizeReference { visibility: hidden; pointer-events: none; }
-.scriptScroll { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; }
+/* Let scrolling continue onto the page at the script's top and bottom edges. */
+.scriptScroll { position: absolute; inset: 0; overflow: auto; overscroll-behavior-x: contain; overscroll-behavior-y: auto; }
 .scriptScroll > pre { min-height: 100%; overflow: visible; box-sizing: border-box; }
 .scriptScroll:focus-visible { outline: 2px solid var(--flows-accent-strong); outline-offset: -2px; }
