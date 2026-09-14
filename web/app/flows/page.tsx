@@ -75,7 +75,7 @@ export default function FlowsPage() {
 
   return (
     <div className={s.page}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} />
 
       <main className={s.main}>
         <section className={s.hero}>
@@ -147,9 +147,9 @@ export default function FlowsPage() {
 
         <WaveBreak />
 
-        <section className={s.workflowSection} aria-label="Skills make suggestions. Flows enforce steps.">
+        <section className={s.workflowSection} aria-label="Agents can ignore instructions. Flows can’t.">
           <MessagingFeature
-            title="Skills make suggestions. Flows enforce steps."
+            title={<>Agents can ignore instructions.<br />Flows can’t.</>}
             preview={<FlowGatePreview />}
             items={[
               'Require files, run scripts, and check results before the next step starts.',

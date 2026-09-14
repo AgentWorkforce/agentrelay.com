@@ -16,7 +16,8 @@
   --flows-band-dark: #0b1c2a;
   --flows-band-deep: #081723;
   min-height: 100vh;
-  overflow-x: hidden;
+  /* Clip decoration without creating a scroll container for the sticky nav. */
+  overflow-x: clip;
   background: linear-gradient(180deg, #10273a 0%, #0d2638 38%, #0b1c2a 100%);
   color: var(--flows-text);
 }
@@ -88,9 +89,11 @@
 
 .hero h1 {
   max-width: 22ch;
-  font-size: clamp(2.25rem, 4.5vw, 3.8rem);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.25rem, 4.5vw, 4.2rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  opacity: 1;
 }
 
 .headlineLine {

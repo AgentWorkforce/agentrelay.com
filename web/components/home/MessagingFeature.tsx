@@ -15,7 +15,7 @@ export function MessagingFeature({
   items = DEFAULT_ITEMS,
   description,
   preview,
-}: { title?: string; items?: readonly string[]; description?: string; preview?: ReactNode } = {}) {
+}: { title?: ReactNode; items?: readonly string[]; description?: string; preview?: ReactNode } = {}) {
   return (
     <FadeIn direction="up" delay={0} className={`${s.featureCol} ${s.messagingFeature}`}>
       <div className={s.featurePreview}>
