@@ -8123,3 +8123,25 @@
   font-size: 1.05rem;
   line-height: 1.7;
 }
+
+/* Let the workflow timeline determine the orange frame's height. */
+.expandedPreviewFeature {
+  grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr);
+  gap: clamp(40px, 6vw, 84px);
+}
+.expandedPreviewFeature .featurePreview {
+  height: auto;
+  padding: 14px 0 0 34px;
+}
+.expandedPreviewFeature .previewChat {
+  position: relative;
+  inset: auto;
+  min-width: 0;
+  padding: 0;
+}
+@media (max-width: 960px) {
+  .expandedPreviewFeature { grid-template-columns: 1fr; gap: 12px; }
+}
+@media (max-width: 600px) {
+  .expandedPreviewFeature .featurePreview { padding: 12px 0 0 20px; }
+}

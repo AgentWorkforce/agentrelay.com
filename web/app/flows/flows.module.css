@@ -18,7 +18,7 @@
   min-height: 100vh;
   /* Clip decoration without creating a scroll container for the sticky nav. */
   overflow-x: clip;
-  background: linear-gradient(180deg, #10273a 0%, #0d2638 38%, #0b1c2a 100%);
+  background: linear-gradient(180deg, #0b1e2d 0%, #0d2638 38%, #0b1c2a 100%);
   color: var(--flows-text);
 }
 
@@ -59,12 +59,16 @@
 
 .hero::before {
   z-index: -2;
-  background: var(--flows-band-blue);
+  /* Carry the hero color behind the floating navigation to the page top. */
+  top: -100px;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(116, 184, 226, 0.11), transparent 32%),
+    linear-gradient(180deg, #0b1e2d 0%, #112a3c 52%, #0b1e2d 100%);
 }
 
 .hero::after {
   z-index: -1;
-  opacity: 0.22;
+  opacity: 0.16;
   background:
     linear-gradient(90deg, transparent 0%, rgba(116, 184, 226, 0.2) 48%, transparent 74%),
     linear-gradient(180deg, rgba(116, 184, 226, 0.09) 1px, transparent 1px);

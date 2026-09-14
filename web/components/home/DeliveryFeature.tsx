@@ -50,17 +50,19 @@ export function DeliveryFeature({
   title = 'The hard parts of delivery, handled',
   items = DEFAULT_ITEMS,
   previewVariant = 'delivery',
+  previewAccent = 'blue',
   showCapabilities = true,
 }: {
   title?: string;
   items?: readonly string[];
   previewVariant?: 'delivery' | 'workflow';
+  previewAccent?: 'blue' | 'orange';
   showCapabilities?: boolean;
 } = {}) {
   return (
     <FadeIn direction="up" delay={120} className={`${s.featureCol} ${s.deliveryFeature}`}>
       <div className={s.featurePreview}>
-        <div className={s.previewAccentBlue} />
+        <div className={previewAccent === 'orange' ? s.previewAccent : s.previewAccentBlue} />
         <div className={s.previewDashboard}>
           {previewVariant === 'workflow' ? <DurableWorkflowTrace /> : <DurableDeliveryTimeline />}
           <div className={s.deliveryTableHead}>
@@ -106,11 +108,13 @@ export function DeliveryFeature({
 export function DurableWorkflowFeature({
   showCapabilities = true,
   title = 'Build durable workflows',
-}: { showCapabilities?: boolean; title?: string }) {
+  previewAccent = 'blue',
+}: { showCapabilities?: boolean; title?: string; previewAccent?: 'blue' | 'orange' }) {
   return (
     <DeliveryFeature
       title={title}
       previewVariant="workflow"
+      previewAccent={previewAccent}
       showCapabilities={showCapabilities}
       items={[
         'Persist every transition so long-running work survives restarts and deploys.',

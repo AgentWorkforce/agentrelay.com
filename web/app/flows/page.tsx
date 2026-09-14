@@ -40,12 +40,8 @@ export const metadata: Metadata = {
   },
 };
 
-// The cloud app mounts its Google OAuth entry point under /cloud.
-const FLOWS_SIGN_IN_URL =
-  'https://agentrelay.com/cloud/api/auth/google/start?next=%2Fdashboard&ref=flows&utm_source=agentrelay.com&utm_medium=flows_landing&utm_campaign=flows';
-
 function flowsSignInHref(utmContent: string) {
-  return `${FLOWS_SIGN_IN_URL}&utm_content=${utmContent}`;
+  return `/flows/onboarding?ref=flows&utm_source=agentrelay.com&utm_medium=flows_landing&utm_campaign=flows&utm_content=${utmContent}`;
 }
 
 function WaveBreak({ tone = 'blue' }: { tone?: 'blue' | 'orange' }) {
@@ -75,7 +71,7 @@ export default function FlowsPage() {
 
   return (
     <div className={s.page}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} />
+      <SiteNav hideLinks actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} />
 
       <main className={s.main}>
         <section className={s.hero}>
@@ -85,8 +81,10 @@ export default function FlowsPage() {
               <span className={s.headlineLine}>Script them.</span>
             </h1>
             <p className={s.heroLead}>
-              Use Agent Relay Flows to define complex sequences of tasks instead
-              of relying on the vibes of an agent. Predictable, auditable and dependable.
+              Define complex sequences of tasks for agents instead of hoping they
+              follow the rules in your prompt.
+              <br />
+              Predictable, auditable and dependable.
             </p>
             <div className={s.ctaRow}>
               <a href={flowsSignInHref('hero')} className={s.ctaPrimary}>
@@ -151,6 +149,7 @@ export default function FlowsPage() {
           <MessagingFeature
             title={<>Agents can ignore instructions.<br />Flows can’t.</>}
             preview={<FlowGatePreview />}
+            expandedPreview
             items={[
               'Require files, run scripts, and check results before the next step starts.',
               'Enforce requirements in code instead of relying on an agent to follow markdown instructions.',
