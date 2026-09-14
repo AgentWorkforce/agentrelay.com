@@ -88,9 +88,11 @@
 
 .hero h1 {
   max-width: 22ch;
-  font-size: clamp(2.25rem, 4.5vw, 3.8rem);
-  line-height: 1.12;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.25rem, 4.5vw, 4.2rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  opacity: 1;
 }
 
 .headlineLine {
