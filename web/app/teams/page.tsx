@@ -82,7 +82,7 @@ export default function TeamsPage() {
           <section id="how-it-works" className={`${flows.sectionBand} ${flows.bandCode} ${s.activitySection}`} aria-labelledby="teams-setup-heading">
             <div className={s.activityIntro}>
               <h2 id="teams-setup-heading">Your whole team's coding agents, under one roof</h2>
-              <p>Connect your coding tools. Follow the work, understand the decisions, and share what’s worth repeating.</p>
+              <p>Work like you normally would. Agent sessions get shared automatically. Get a bird’s-eye view of all the work happening across the team.</p>
             </div>
             <figure className={s.productScreenshot}>
               <a href={dashboardConcept.src} target="_blank" rel="noreferrer" aria-label="View the full dashboard concept">
