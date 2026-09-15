@@ -36,7 +36,7 @@ export function SourcePicker({ draft, onChange, onTrack, actions }: { draft: Fac
       <legend>Select all you use</legend>
       <div className={s.sourceCards}>{ISSUE_SOURCES.map(item =>
         <label key={item.id} className={`${s.agent} ${s.sourceOption} ${draft.sources.includes(item.id) ? s.agentSelected : ''}`}>
-          <SourceIcon id={item.id} /><span>{item.label}{item.id === 'markdown' && <small>No integration</small>}</span>
+          <SourceIcon id={item.id} /><span>{item.label}</span>
           <input type="checkbox" aria-label={item.label} checked={draft.sources.includes(item.id)} onChange={() => toggle(item.id)} />
         </label>
       )}</div>

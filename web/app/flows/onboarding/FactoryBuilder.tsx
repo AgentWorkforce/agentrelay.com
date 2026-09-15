@@ -62,7 +62,7 @@ export function FactoryBuilder() {
   const [copied, setCopied] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [previewModes, setPreviewModes] = useState<Record<string, 'plan' | 'code'>>({});
-  const previewMode = previewModes[pathname] ?? (routeStep === 0 || routeStep === 1 || (routeStep === 2 && !draft.workflow) ? 'code' : 'plan');
+  const previewMode = !draft.sources.length ? 'code' : previewModes[pathname] ?? (routeStep === 0 || routeStep === 1 || (routeStep === 2 && !draft.workflow) ? 'code' : 'plan');
   const setPreviewMode = (mode: 'plan' | 'code') => setPreviewModes(current => ({ ...current, [pathname]: mode }));
   const editor = useRef<HTMLDivElement>(null);
   const questionHeading = useRef<HTMLHeadingElement>(null);
@@ -309,7 +309,7 @@ export function FactoryBuilder() {
         </section>}
         {hasPlanPreview ? <section className={`ph-no-capture ph-sensitive ${s.previewPane}`} aria-label="Workflow preview">
           <div className={s.previewSwitch} role="group" aria-label="Preview display">
-            {(['plan', 'code'] as const).map(mode => <button key={mode} type="button" aria-pressed={previewMode === mode} aria-controls={`workflow-preview-${mode}`} onClick={() => {
+            {(['plan', 'code'] as const).map(mode => <button key={mode} type="button" disabled={mode === 'plan' && emptyPreview} aria-pressed={previewMode === mode} aria-controls={`workflow-preview-${mode}`} onClick={() => {
               if (previewMode !== mode) { setPreviewMode(mode); track('preview_changed', { mode }); }
             }}>{mode === 'plan' ? 'Preview' : 'Code'}</button>)}
           </div>
