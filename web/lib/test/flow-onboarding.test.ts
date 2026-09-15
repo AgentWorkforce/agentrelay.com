@@ -162,7 +162,7 @@ describe('software factory onboarding', () => {
     const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'org/repo', labels: 'ready' } }, agents: ['codex'], task: 'Keep naïve input & labels', workflow: 'traditional', step: 3 };
     const url = new URL(cloudConnectionsHref(draft, '00000000-0000-4000-8000-000000000001'));
     expect(url.origin).toBe('https://agentrelay.com');
-    expect(url.pathname).toBe('/cloud/flows/import');
+    expect(url.pathname).toBe('/cloud/flows/deploy');
     expect(url.search).toBe('');
     const payload = JSON.parse(decodeURIComponent(url.hash.slice(1)));
     expect(payload.source).toBe(factorySource(draft));

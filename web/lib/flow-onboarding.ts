@@ -69,13 +69,14 @@ export function readFactoryDraft(raw: string | null): FactoryDraft | null {
 
 export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, journeyId?: string): string {
   if (!canContinue(draft, 2)) throw new Error('Choose a workflow before continuing to Cloud.');
-  // The fragment is read only by Cloud's browser handoff page. Source code and
-  // ticket filters must not enter OAuth state, cookies, or server access logs.
+  // The fragment is read only by Cloud's browser deploy page, which keeps it in
+  // localStorage across Google sign-in. Source code and ticket filters must not
+  // enter OAuth state, cookies, or server access logs.
   const payload = { version: 1, handoffId, ...(journeyId ? { analytics: { journeyId } } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
     workflow: draft.workflow, sources: draft.sources, sourceSettings: draft.sourceSettings,
     agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
   const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
-  return `${base.replace(/\/$/, '')}/flows/import#${encodeURIComponent(JSON.stringify(payload))}`;
+  return `${base.replace(/\/$/, '')}/flows/deploy#${encodeURIComponent(JSON.stringify(payload))}`;
 }
 
 export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
