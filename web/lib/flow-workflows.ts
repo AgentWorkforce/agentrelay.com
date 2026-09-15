@@ -28,9 +28,11 @@ export type WorkflowId = (typeof WORKFLOWS)[number]['id'];
  * Installs dependencies with the repository's own package manager (chosen by
  * lockfile) and runs its `test` script. Cloud sandboxes ship npm and corepack
  * but not pnpm or Yarn, so a bare `npm test` fails for pnpm/Yarn repositories
- * whose test script calls the package manager (AgentWorkforce/burn#540).
+ * whose test script calls the package manager (AgentWorkforce/burn#540). Yarn
+ * Berry (`.yarnrc.yml`) installs with `--immutable`; Yarn Classic with
+ * `--frozen-lockfile`.
  */
-export const FLOW_TEST_COMMAND = "if [ -f pnpm-lock.yaml ]; then mkdir -p \"$HOME/.local/bin\" && { corepack enable --install-directory \"$HOME/.local/bin\" pnpm 2>/dev/null || true; } && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm install --frozen-lockfile && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm test; elif [ -f yarn.lock ]; then mkdir -p \"$HOME/.local/bin\" && { corepack enable --install-directory \"$HOME/.local/bin\" yarn 2>/dev/null || true; } && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 yarn install --immutable && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 yarn test; elif [ -f bun.lock ] || [ -f bun.lockb ]; then bun install --frozen-lockfile && bun run test; else { [ -f package-lock.json ] && npm ci || npm install; } && npm test; fi";
+export const FLOW_TEST_COMMAND = "if [ -f pnpm-lock.yaml ]; then mkdir -p \"$HOME/.local/bin\" && { corepack enable --install-directory \"$HOME/.local/bin\" pnpm 2>/dev/null || true; } && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm install --frozen-lockfile && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm test; elif [ -f yarn.lock ]; then mkdir -p \"$HOME/.local/bin\" && { corepack enable --install-directory \"$HOME/.local/bin\" yarn 2>/dev/null || true; } && export PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 && { if [ -f .yarnrc.yml ]; then yarn install --immutable; else yarn install --frozen-lockfile; fi; } && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 yarn test; elif [ -f bun.lock ] || [ -f bun.lockb ]; then bun install --frozen-lockfile && bun run test; else { [ -f package-lock.json ] && npm ci || npm install; } && npm test; fi";
 
 export function workflowAgents(selected: readonly string[]) {
   const builder = selected.filter(isCodingAgent)[0] ?? 'claude';
