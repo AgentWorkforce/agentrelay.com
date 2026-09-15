@@ -12,6 +12,7 @@ import { InvestorStrip } from '../../components/InvestorStrip';
 import { GitHubIcon, WaveDivider } from '../../components/home/icons';
 import { SiteNav } from '../../components/SiteNav';
 import { SiteFooter } from '../../components/SiteFooter';
+import { TEAMS_OG_ALT, TEAMS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
 import home from '../landing.module.css';
@@ -23,6 +24,19 @@ export const metadata: Metadata = {
   title: 'Agent Relay Teams | Your team’s coding sessions',
   description: 'Connect your computer to Agent Relay and bring your team’s coding sessions into one shared history.',
   alternates: { canonical: absoluteUrl('/teams') },
+  openGraph: {
+    title: 'Agent Relay Teams | Your team’s coding sessions',
+    description: 'See what every agent is doing. Follow the work. Share what works.',
+    url: absoluteUrl('/teams'),
+    type: 'website',
+    images: [ogImage(TEAMS_OG_IMAGE_PATH, TEAMS_OG_ALT)],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Agent Relay Teams | Your team’s coding sessions',
+    description: 'See what every agent is doing. Follow the work. Share what works.',
+    images: [absoluteUrl(TEAMS_OG_IMAGE_PATH)],
+  },
 };
 
 export default function TeamsPage() {
