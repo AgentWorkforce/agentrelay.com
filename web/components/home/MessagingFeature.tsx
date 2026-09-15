@@ -15,9 +15,10 @@ export function MessagingFeature({
   items = DEFAULT_ITEMS,
   description,
   preview,
-}: { title?: ReactNode; items?: readonly string[]; description?: string; preview?: ReactNode } = {}) {
+  expandedPreview = false,
+}: { title?: ReactNode; items?: readonly string[]; description?: string; preview?: ReactNode; expandedPreview?: boolean } = {}) {
   return (
-    <FadeIn direction="up" delay={0} className={`${s.featureCol} ${s.messagingFeature}`}>
+    <FadeIn direction="up" delay={0} className={`${s.featureCol} ${s.messagingFeature} ${expandedPreview ? s.expandedPreviewFeature : ''}`}>
       <div className={s.featurePreview}>
         <div className={s.previewAccent} />
         <div className={s.previewChat}>

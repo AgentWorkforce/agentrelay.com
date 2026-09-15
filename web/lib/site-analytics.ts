@@ -1,4 +1,5 @@
 const TRACKED_ROUTE_PREFIXES = [
+  { prefix: '/flows', pageGroup: 'flows' },
   { prefix: '/docs', pageGroup: 'docs' },
   { prefix: '/blog', pageGroup: 'blog' },
   { prefix: '/primitives', pageGroup: 'primitives' },

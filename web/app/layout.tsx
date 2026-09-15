@@ -124,6 +124,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         autocapture: true,
         capture_exceptions: true,
         capture_heatmaps: true,
+        session_recording: { maskAllInputs: true, blockSelector: '.ph-sensitive' },
         capture_pageleave: true,
       }}
     >
