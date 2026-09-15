@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 75,
+  "count": 76,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -76,6 +76,7 @@
     "https://agentrelay.com/privacy",
     "https://agentrelay.com/skill",
     "https://agentrelay.com/skill.md",
+    "https://agentrelay.com/teams",
     "https://agentrelay.com/terms"
   ]
 }
