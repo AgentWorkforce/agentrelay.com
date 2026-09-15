@@ -109,19 +109,20 @@ export function DurableWorkflowFeature({
   showCapabilities = true,
   title = 'Build durable workflows',
   previewAccent = 'blue',
-}: { showCapabilities?: boolean; title?: string; previewAccent?: 'blue' | 'orange' }) {
+  items = [
+    'Persist every transition so long-running work survives restarts and deploys.',
+    'Retry individual steps without repeating successful work or duplicating side effects.',
+    'Trace every input, output, model action, artifact, and intervention in one run history.',
+    'Trigger workflows from schedules and events, then execute them close to your systems.',
+  ],
+}: { items?: string[]; showCapabilities?: boolean; title?: string; previewAccent?: 'blue' | 'orange' }) {
   return (
     <DeliveryFeature
       title={title}
       previewVariant="workflow"
       previewAccent={previewAccent}
       showCapabilities={showCapabilities}
-      items={[
-        'Persist every transition so long-running work survives restarts and deploys.',
-        'Retry individual steps without repeating successful work or duplicating side effects.',
-        'Trace every input, output, model action, artifact, and intervention in one run history.',
-        'Trigger workflows from schedules and events, then execute them close to your systems.',
-      ]}
+      items={items}
     />
   );
 }

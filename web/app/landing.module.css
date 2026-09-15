@@ -2220,6 +2220,16 @@
   border-bottom: 1px solid rgba(116, 184, 226, 0.14);
 }
 
+.heroTermAvatar {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin-left: auto;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(159, 212, 245, 0.4);
+}
+
 .heroTermTraffic {
   display: inline-flex;
   flex: none;

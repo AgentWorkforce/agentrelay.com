@@ -35,3 +35,6 @@ web/waitlist.json
 
 # Palate website-builder skill telemetry, written at the repo root during agent sessions
 build-manifest.json
+
+# Native probe builds are staged locally, not committed with the website.
+web/public/downloads/agent-relay-probe/

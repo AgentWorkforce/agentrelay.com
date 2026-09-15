@@ -14,6 +14,7 @@
     "dev": "npm --workspace web run dev",
     "build": "npm --workspace web run build",
     "test": "npm --workspaces run test",
-    "preview": "npm --workspace web run preview"
+    "preview": "npm --workspace web run preview",
+    "dev:teams": "CLOUD_DEV_ORIGIN=http://127.0.0.1:3101 npm --workspace web run dev -- --hostname 127.0.0.1 --port 3100"
   }
 }
