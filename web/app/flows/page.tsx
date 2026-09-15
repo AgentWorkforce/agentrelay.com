@@ -11,7 +11,7 @@ import { InvestorStrip } from '../../components/InvestorStrip';
 
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { HOME_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
+import { FLOWS_OG_ALT, FLOWS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import home from '../landing.module.css';
 import s from './flows.module.css';
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
       'Write the steps once. Relayflows runs your agents in order, checks their work, and pauses for human approval.',
     url: absoluteUrl('/flows'),
     type: 'website',
-    images: [ogImage(HOME_OG_IMAGE_PATH, 'Relayflows by Agent Relay')],
+    images: [ogImage(FLOWS_OG_IMAGE_PATH, FLOWS_OG_ALT)],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Relayflows: Script your agents',
     description: 'Write the steps once. Relayflows runs your agents and checks their work before moving on.',
-    images: [absoluteUrl(HOME_OG_IMAGE_PATH)],
+    images: [absoluteUrl(FLOWS_OG_IMAGE_PATH)],
   },
 };
 
