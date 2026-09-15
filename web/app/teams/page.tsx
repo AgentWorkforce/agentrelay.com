@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import dashboardConcept from '../../public/teams/teams-dashboard-concept.png';
 import sessionConcept from '../../public/teams/teams-session-overview-concept.png';
-import { ArrowRight } from 'lucide-react';
+import { FcGoogle } from 'react-icons/fc';
 import { HeroTerminalMarquee } from '../../components/home/HeroTerminalMarquee';
 import { DeploymentCall } from '../../components/home/DeploymentCall';
 import { MessagingFeature } from '../../components/home/MessagingFeature';
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 
 export default function TeamsPage() {
   const signupHref = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
-  const signupLabel = <>Sign up free <ArrowRight aria-hidden="true" size={17} /></>;
+  const signupLabel = <><span className={s.googleMark}><FcGoogle aria-hidden="true" size={18} /></span>Sign up with Google</>;
   const setupLink = (
     <a className={`${home.ctaPrimary} ${home.homeNavAction}`} href={signupHref}>
       {signupLabel}
