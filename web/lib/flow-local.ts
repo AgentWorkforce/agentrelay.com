@@ -38,7 +38,7 @@ Requirements
 - macOS on Apple silicon or Linux x64 (bundled runtime platforms).
 - ${names}, installed and signed in.
 - GitHub CLI (gh), signed in, and a repository with push access to origin.
-- Install your repository's dependencies and ensure npm test works. If your project uses another test command, update it in software-factory.flow.mts before running.
+- The flow installs your repository's dependencies with its package manager (pnpm, Yarn, Bun, or npm, chosen by lockfile) and runs its test script. If your project uses another test command, change testCommand in software-factory.flow.mts before running.
 
 1. Extract this kit into your repository root. Keep any existing files before replacing them. Open a terminal in that directory.
 
