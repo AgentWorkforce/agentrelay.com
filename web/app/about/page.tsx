@@ -7,7 +7,7 @@ import { ScribbleUnderline } from '../../components/home/icons';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { DEFAULT_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import s from '../landing.module.css';
 
 const problemCards = [
@@ -48,6 +48,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/about'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Agent Relay',
     description:
       'Communication infrastructure for software teams moving from human-centered tools to agent-centered engineering.',

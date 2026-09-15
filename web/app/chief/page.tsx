@@ -20,7 +20,7 @@ import { FadeIn } from '../../components/FadeIn';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import s from './chief.module.css';
 
 const pilotHref = 'https://agentrelay.com/will';
@@ -34,6 +34,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl('/chief') },
   robots: { index: true, follow: true },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Chief by Agent Relay | The Agent Software Manager',
     description,
     url: absoluteUrl('/chief'),

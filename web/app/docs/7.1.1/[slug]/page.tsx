@@ -19,7 +19,7 @@ import styles from '../../../../components/docs/docs.module.css';
 import { getDoc } from '../../../../lib/docs';
 import { getAllLegacyDocSlugs } from '../../../../lib/docs-nav';
 import { defaultOgImage } from '../../../../lib/og-meta';
-import { absoluteUrl } from '../../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../../lib/site';
 
 function slugify(text: string): string {
   return text
@@ -80,6 +80,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       canonical: absoluteUrl(`/docs/7.1.1/${slug}`),
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: seoTitle,
       description: doc.frontmatter.description,
       url: absoluteUrl(`/docs/7.1.1/${slug}`),
