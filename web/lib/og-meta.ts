@@ -49,8 +49,10 @@ export function ogImage(path: string, alt: string): OgImage {
 export const DEFAULT_OG_ALT = 'Agent Relay — Headless Slack for Agents';
 
 /** Static public card paths. Change the version suffix when the visual changes to bust social caches. */
-export const HOME_OG_ALT = 'Agent Relay Flows — a TypeScript script that runs agents and checks their work';
-export const HOME_OG_IMAGE_PATH = '/og/agent-relay-flows-v20260913.png';
+export const HOME_OG_ALT = 'Agent Relay — Turn coding agents into a working team';
+export const HOME_OG_IMAGE_PATH = '/og/agent-relay-home-v20260831.png';
+export const FLOWS_OG_ALT = 'Agent Relay Flows — a TypeScript script that runs agents and checks their work';
+export const FLOWS_OG_IMAGE_PATH = '/og/agent-relay-flows-v20260913.png';
 export const DEFAULT_OG_IMAGE_PATH = '/og/agent-relay-default-v20260610.png';
 
 /** The site-wide default card. */
