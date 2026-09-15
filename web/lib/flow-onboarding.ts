@@ -80,7 +80,10 @@ export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, jou
 }
 
 export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
-  const budget = target === 'local' ? '{ wallclock: "1h" }' : '"$8/run"';
+  // A wall-clock budget for every target: a dollar budget makes the Relayflow
+  // runtime refuse any agent step without a frozen-priced model (Codex has no
+  // default model), which stops the run before the first Codex step.
+  const budget = '{ wallclock: "1h" }';
   if (!draft.sources.length) return [{ id: 'empty', code: `import { flow } from "@relayflows/surface";
 
 export default flow("software-factory",
