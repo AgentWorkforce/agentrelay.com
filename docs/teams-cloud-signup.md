@@ -6,11 +6,6 @@ full browser navigation so Cloud can set OAuth cookies and redirect to Google.
 The post-auth `/teams/connect` destination preserves Teams signup attribution
 and then redirects to `/cloud/dashboard`.
 
-Old `/teams/onboarding` links redirect to `/cloud/teams/connect`. The former
-`/account`, `/install`, and `/sessions` routes also redirect for compatibility;
-they render no marketing onboarding UI. Machine, workspace, and account context
-is accepted only when it passes the ID allowlist. Arbitrary return URLs are discarded.
-
 Cloud handles Google auth and sends the user to `/cloud/dashboard`. Accounts
 created through this Teams flow are marked directly on Cloud's `users` table
 with `signup_source = teams` and `dashboard_version = 2`. They see the new Hello

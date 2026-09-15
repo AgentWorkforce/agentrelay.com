@@ -13,7 +13,7 @@ import { GitHubIcon, WaveDivider } from '../../components/home/icons';
 import { SiteNav } from '../../components/SiteNav';
 import { SiteFooter } from '../../components/SiteFooter';
 import { absoluteUrl } from '../../lib/site';
-import { teamsCloudUrl } from '../../lib/teams-onboarding';
+import { teamsCloudUrl } from '../../lib/teams-cloud';
 import home from '../landing.module.css';
 import flows from '../flows/flows.module.css';
 import { IntegrationMarquee } from '../flows/IntegrationMarquee';
