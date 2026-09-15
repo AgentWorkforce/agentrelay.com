@@ -7,7 +7,7 @@ import { SiteNav } from '../../components/SiteNav';
 import { WaitlistForm } from '../../components/WaitlistForm';
 import { WorksWithEveryAgent } from '../../components/home';
 import { ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import home from '../landing.module.css';
 import s from './pear.module.css';
 
@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/pear'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Pear by Agent Relay — Pair program with a team of agents',
     description:
       'A desktop workspace where multiple AI agents code alongside you, coordinate with each other, and run parallel workstreams.',

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import s from '../landing.module.css';
 
 export const metadata: Metadata = {
@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/company'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Company | Agent Relay',
     description: 'Agent Relay exists for an agent-centered future where software works through coordinated agents.',
     url: absoluteUrl('/company'),

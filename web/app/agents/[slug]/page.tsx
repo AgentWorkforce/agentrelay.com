@@ -5,7 +5,7 @@ import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import { agentAsset, allAgentSlugs, getAgent } from '../../../lib/agents';
-import { absoluteUrl } from '../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 import { AgentDetail } from './AgentDetail';
 
 type PageProps = {
@@ -30,6 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     description,
     alternates: { canonical },
     openGraph: {
+      siteName: SITE_NAME,
       title,
       description,
       url: canonical,

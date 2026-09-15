@@ -54,7 +54,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    siteName: 'Agent Relay',
+    siteName: SITE_NAME,
     type: 'website',
     locale: 'en_US',
     images: [defaultOgImage()],
