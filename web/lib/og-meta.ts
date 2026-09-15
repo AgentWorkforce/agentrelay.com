@@ -59,3 +59,6 @@ export const DEFAULT_OG_IMAGE_PATH = '/og/agent-relay-default-v20260610.png';
 export function defaultOgImage(): OgImage {
   return ogImage(DEFAULT_OG_IMAGE_PATH, DEFAULT_OG_ALT);
 }
+
+export const TEAMS_OG_ALT = 'Agent Relay Teams — your team’s coding agents in one shared view: Claude Code, Codex, OpenCode, Gemini CLI, Copilot, and Grok';
+export const TEAMS_OG_IMAGE_PATH = '/og/agent-relay-teams-v20260915.png';

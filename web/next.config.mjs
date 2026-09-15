@@ -87,7 +87,19 @@ const nextConfig = {
     ];
   },
   async rewrites() {
+    // Keep Cloud API calls and OAuth cookies on the marketing origin locally.
+    // Only the development server may proxy to a loopback Cloud process.
+    const cloudProxy = [];
+    if (process.env.NODE_ENV === 'development' && process.env.CLOUD_DEV_ORIGIN) {
+      const origin = new URL(process.env.CLOUD_DEV_ORIGIN);
+      if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) ||
+          origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) {
+        throw new Error('CLOUD_DEV_ORIGIN must be an HTTP loopback origin, for example http://127.0.0.1:3101');
+      }
+      cloudProxy.push({ source: '/cloud/:path*', destination: `${origin.origin}/cloud/:path*` });
+    }
     return {
+      beforeFiles: cloudProxy,
       afterFiles: [
         // Conventional llms.txt path under /docs resolves to the root route.
         { source: '/docs/llms.txt', destination: '/llms.txt' },
@@ -104,7 +116,12 @@ const nextConfig = {
   },
   async redirects() {
     return [
-      // Mirror the router's calendar alias for direct Next.js and local dev requests.
+      // Mirror the router's calendar aliases for direct Next.js and local dev requests.
+      {
+        source: '/will',
+        destination: 'https://calendar.app.google/RqLuQyT3dYe5e2YdA',
+        permanent: false,
+      },
       {
         source: '/khaliq',
         destination: 'https://calendly.com/khaliq-agent-relay/30min',

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import type { CSSProperties } from 'react';
 
 import Grok from '@lobehub/icons/es/Grok';
@@ -634,14 +635,23 @@ function ClaudeTerminalBody({ card }: { card: TerminalCard }) {
   );
 }
 
+const TEAM_AVATARS = [
+  { src: '/authors/will.png', name: 'Will Washburn' },
+  { src: '/authors/khaliq.jpeg', name: 'Khaliq Gant' },
+  { src: '/authors/mary.png', name: 'Mary' },
+  { src: '/authors/ingrid.png', name: 'Ingrid' },
+];
+
 function TerminalRow({
   cards,
   rowClass,
   rowKey,
+  showAvatars,
 }: {
   cards: TerminalCard[];
   rowClass: string;
   rowKey: string;
+  showAvatars: boolean;
 }) {
   // Four identical copies keep at least three full sequences beyond the loop
   // boundary. That prevents wide viewports from outrunning shorter rows while
@@ -655,6 +665,7 @@ function TerminalRow({
         {copies.map((copy, copyIndex) =>
           cards.map((card, index) => {
             const meta = AGENT_META[card.agent];
+            const avatar = TEAM_AVATARS[index % TEAM_AVATARS.length];
             const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
             const terminalStyle: TerminalStyle = {
               '--term-cycle': meta.cycle,
@@ -681,6 +692,15 @@ function TerminalRow({
                     />
                     {meta.label}
                   </span>
+                  {showAvatars && (
+                    <Image
+                      className={s.heroTermAvatar}
+                      src={avatar.src}
+                      alt={avatar.name}
+                      width={24}
+                      height={24}
+                    />
+                  )}
                 </header>
 
                 {card.agent === 'grok' ? (
@@ -731,13 +751,13 @@ function TerminalRow({
   );
 }
 
-export function HeroTerminalMarquee() {
+export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boolean }) {
   return (
     <div aria-hidden="true" className={s.heroMarquee} data-marquee-band="">
       <RelayNetwork />
-      <TerminalRow cards={ROW_ONE} rowClass={s.heroMarqueeTrackOne} rowKey="one" />
-      <TerminalRow cards={ROW_TWO} rowClass={s.heroMarqueeTrackTwo} rowKey="two" />
-      <TerminalRow cards={ROW_THREE} rowClass={s.heroMarqueeTrackThree} rowKey="three" />
+      <TerminalRow showAvatars={showAvatars} cards={ROW_ONE} rowClass={s.heroMarqueeTrackOne} rowKey="one" />
+      <TerminalRow showAvatars={showAvatars} cards={ROW_TWO} rowClass={s.heroMarqueeTrackTwo} rowKey="two" />
+      <TerminalRow showAvatars={showAvatars} cards={ROW_THREE} rowClass={s.heroMarqueeTrackThree} rowKey="three" />
     </div>
   );
 }
