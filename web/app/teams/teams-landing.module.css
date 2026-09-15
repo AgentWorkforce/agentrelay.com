@@ -104,4 +104,3 @@
 .page .signupCtas { flex-direction: column; align-items: center; gap: 12px; }
 .signupNote { margin: 0; color: var(--flows-muted); font-size: 13px; line-height: 1.5; }
 
-.googleMark { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; width: 26px; height: 26px; border-radius: 4px; background: #fff; }
