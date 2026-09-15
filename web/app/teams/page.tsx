@@ -101,7 +101,7 @@ export default function TeamsPage() {
 
           <section id="session-overview" className={`${flows.sectionBand} ${s.sessionSection}`} aria-labelledby="session-overview-heading">
             <div className={s.sessionIntro}>
-              <h2 id="session-overview-heading">Catch up on the work.<br />Understand the decisions.</h2>
+              <h2 id="session-overview-heading">Dig in when you need to</h2>
               <p>Open any agent session to see what it’s working toward, the constraints it’s following, and how long it’s been running. Read the conversation, or replay it from the start.</p>
             </div>
             <figure className={s.sessionScreenshot}>
