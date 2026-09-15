@@ -7822,9 +7822,11 @@
     line-height: 1.08;
   }
 
-  /* Phones: the same architecture, one step smaller. The headline is four
-     words on four lines at this width, so the column tightens and the band
-     comes up to meet it. */
+  .heroSection {
+    --investor-strip-padding-top: 2.5rem;
+  }
+
+  /* Give the mobile headline more emphasis while keeping the copy compact. */
   .heroCenter {
     padding: 34px 24px 0;
   }
@@ -7834,12 +7836,14 @@
   }
 
   .heroCenterColumn .heroCenterHeadline {
-    font-size: clamp(2.3rem, 10.2vw, 3.5rem);
+    font-size: clamp(2.75rem, 12vw, 4rem);
     max-width: none;
   }
 
   .heroCenterColumn .heroCenterSubtitle {
     max-width: 40ch;
+    font-size: 0.95rem;
+    line-height: 1.55;
   }
 
   .heroCenterCtas {
@@ -7847,6 +7851,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+    margin-top: 10px;
   }
 
   .heroMarquee {
