@@ -63,11 +63,11 @@ export default function TeamsPage() {
               <p className={`${home.subtitle} ${home.heroCenterSubtitle}`}>
                 Share your coding agent sessions with your team, find overlapping work, and discover whats working for everyone.
               </p>
-              <div className={home.heroCenterCtas}>
+              <div className={`${home.heroCenterCtas} ${s.signupCtas}`}>
                 <a className={home.ctaPrimary} href={signupHref}>
                   {signupLabel}
                 </a>
-                <a className={home.ctaSecondary} href="#how-it-works">How it works</a>
+                <p className={s.signupNote}>No credit card required</p>
               </div>
             </div>
           </section>
