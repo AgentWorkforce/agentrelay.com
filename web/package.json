@@ -13,8 +13,7 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "cf:build": "opennextjs-cloudflare build",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && wrangler deploy"
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {
     "@lobehub/icons": "^5.10.0",
