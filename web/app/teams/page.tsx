@@ -41,9 +41,10 @@ export const metadata: Metadata = {
 
 export default function TeamsPage() {
   const signupHref = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
+  const signupLabel = <>Sign up free <ArrowRight aria-hidden="true" size={17} /></>;
   const setupLink = (
     <a className={`${home.ctaPrimary} ${home.homeNavAction}`} href={signupHref}>
-      Sign up
+      {signupLabel}
     </a>
   );
 
@@ -64,7 +65,7 @@ export default function TeamsPage() {
               </p>
               <div className={home.heroCenterCtas}>
                 <a className={home.ctaPrimary} href={signupHref}>
-                  Sign Up Free <ArrowRight aria-hidden="true" size={17} />
+                  {signupLabel}
                 </a>
                 <a className={home.ctaSecondary} href="#how-it-works">How it works</a>
               </div>
