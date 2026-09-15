@@ -133,7 +133,7 @@ export default function TeamsPage() {
           <div className={flows.capabilityWaveBreak}><WaveDivider variant="capability" /></div>
 
           <section id="teams-agent-workflows" className={flows.workflowSection} aria-label="Let your agents talk. Directly.">
-            <MessagingFeature />
+            <MessagingFeature intro="Work together on the intents and constraints, but let the agents collaborate themselves." />
           </section>
 
           <section id="how-it-works-more" aria-label="Agents on the Relay have everything they need to collaborate">

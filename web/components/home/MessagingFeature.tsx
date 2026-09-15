@@ -14,9 +14,10 @@ export function MessagingFeature({
   title = 'Let your agents talk. Directly.',
   items = DEFAULT_ITEMS,
   description,
+  intro,
   preview,
   expandedPreview = false,
-}: { title?: ReactNode; items?: readonly string[]; description?: string; preview?: ReactNode; expandedPreview?: boolean } = {}) {
+}: { title?: ReactNode; items?: readonly string[]; description?: string; intro?: string; preview?: ReactNode; expandedPreview?: boolean } = {}) {
   return (
     <FadeIn direction="up" delay={0} className={`${s.featureCol} ${s.messagingFeature} ${expandedPreview ? s.expandedPreviewFeature : ''}`}>
       <div className={s.featurePreview}>
@@ -27,6 +28,7 @@ export function MessagingFeature({
       </div>
       <div className={s.featureCopy}>
         <h3 className={s.featureTitle}>{title}</h3>
+        {intro && <p className={s.featureDescription}>{intro}</p>}
         {description ? <p className={s.featureDescription}>{description}</p> : <ul className={s.featureList}>
           {items.map((item) => <li key={item}>{item}</li>)}
         </ul>}
