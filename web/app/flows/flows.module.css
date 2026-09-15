@@ -1074,15 +1074,31 @@
 
 @media (max-width: 680px) {
   .main {
+    --investor-strip-padding-top: 40px;
     padding-inline: 1rem;
   }
 
   .hero {
     gap: 2rem;
+    padding-bottom: 0;
+  }
+
+  .heroCopy {
+    gap: 14px;
+  }
+
+  .heroCopy .ctaRow {
+    gap: 10px;
+    margin-top: 14px;
   }
 
   .hero h1 {
-    font-size: clamp(2.15rem, 7.2vw, 3.1rem);
+    font-size: clamp(2.75rem, 12vw, 4rem);
+  }
+
+  .heroLead {
+    font-size: 0.95rem;
+    line-height: 1.55;
   }
 
   .headlineLine {

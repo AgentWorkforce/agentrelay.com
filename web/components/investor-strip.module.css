@@ -8,13 +8,15 @@
 }
 
 .backers > p {
-  margin: 0 0 1.75rem;
+  margin: 0 0 0.75rem;
   color: #a8b8c8;
   font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+.mobileInvestors { display: none; }
 
 .investorGroup {
   display: flex;
@@ -47,9 +49,28 @@
 @media (max-width: 680px) {
   .backers { padding-bottom: 3rem; }
   .investorGroup { gap: 1.5rem 1.25rem; }
+  .desktopInvestors { display: none; }
+  .mobileInvestors { display: grid; min-height: 32px; }
+  .investorPair {
+    grid-area: 1 / 1;
+    flex-wrap: nowrap;
+    opacity: 0;
+    animation: investorFade 25s ease-in-out infinite;
+  }
+  .investorPair > * { flex-shrink: 0; }
   .investorHustle { width: 125px; }
   .investorActive { width: 122px; }
   .investorCortical { width: 130px; }
   .investorYc strong { font-size: 15px; }
   .investorYonder strong { font-size: 0.9rem; }
+}
+
+@keyframes investorFade {
+  0%, 16%, 100% { opacity: 1; }
+  20%, 96% { opacity: 0; }
+}
+
+@media (max-width: 680px) and (prefers-reduced-motion: reduce) {
+  .mobileInvestors { display: none; }
+  .desktopInvestors { display: flex; }
 }
