@@ -53,7 +53,7 @@ ${LOCAL_RUN}
 The flows command starts the local runtime and attaches the local worker. Coding agents use their existing local sign-in; no Agent Relay Cloud account is needed. This flow edits code, runs tests, pushes the branch, and opens a pull request.
 
 Local runtime behavior
-This local version uses a one-hour wall-clock budget instead of the example $8/run budget, which requires declared model pricing. Model usage is billed by your coding-agent provider; this is not a dollar cap.
+This local version uses a one-hour wall-clock budget. Model usage is billed by your coding-agent provider; this is not a dollar cap.
 Every preset reports needs_human (exit code 3) after its checks and any agent reviews pass. This is the intended manual approval stop, not a failed run. Review and merge the PR in GitHub; the flow never merges automatically and does not resume automatically after approval.
 ${draft.workflow === 'prototype' ? 'Prototype worktrees remain available under the generated temporary directory for inspection.' : ''}
 

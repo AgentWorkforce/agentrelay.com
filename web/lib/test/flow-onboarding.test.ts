@@ -158,6 +158,14 @@ describe('software factory onboarding', () => {
     expect((await runFactory([true, true], true, { ...matchingIssue, labels: ['BUG', ' Ready '] })).finish).toBe('needs_human');
   });
 
+  it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
+    for (const agents of [['claude', 'codex'], ['codex'], ['claude']] as FactoryDraft['agents'][]) {
+      const source = factorySource({ ...completed, agents });
+      expect(source).toContain('{ budget: { wallclock: "1h" } }');
+      expect(source).not.toMatch(/budget: "\$\d/);
+    }
+  });
+
   it('carries the complete flow to Cloud without putting its contents in a query', () => {
     const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'org/repo', labels: 'ready' } }, agents: ['codex'], task: 'Keep naïve input & labels', workflow: 'traditional', step: 3 };
     const url = new URL(cloudConnectionsHref(draft, '00000000-0000-4000-8000-000000000001'));
