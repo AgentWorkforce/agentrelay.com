@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
+import { FLOW_TEST_COMMAND } from '../flow-workflows';
 import { cloudConnectionsHref, DEFAULT_FACTORY, factorySource, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 
 const matchingIssue = { source: 'github', title: 'Fix login', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app' };
@@ -211,7 +212,7 @@ describe('software factory onboarding', () => {
     const { calls, finish } = await runFactory([false, true]);
     expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
     expect(calls).toContain('fixer:claude');
-    expect(calls.filter(call => call === 'npm test')).toHaveLength(2);
+    expect(calls.filter(call => call === FLOW_TEST_COMMAND)).toHaveLength(2);
     expect(calls).not.toContain('human');
     expect(finish).toBe('needs_human');
   });
@@ -220,7 +221,7 @@ describe('software factory onboarding', () => {
     const { calls } = await runFactory([true]);
     const push = calls.indexOf('git push --set-upstream origin HEAD');
     const create = calls.findIndex(call => call.startsWith('gh pr create'));
-    expect(push).toBeGreaterThan(calls.indexOf('npm test'));
+    expect(push).toBeGreaterThan(calls.indexOf(FLOW_TEST_COMMAND));
     expect(create).toBeGreaterThan(push);
     expect(calls.indexOf('adversary-1:codex')).toBeGreaterThan(create);
   });
@@ -238,7 +239,7 @@ describe('software factory onboarding', () => {
       expect(finish).toBe('needs_human');
       expect(calls.some(call => call.includes('pr merge'))).toBe(false);
       expect(factorySource({ ...completed, workflow })).not.toContain('f.human(');
-      expect(calls).toContain('npm test');
+      expect(calls).toContain(FLOW_TEST_COMMAND);
       expect(calls.some(call => call.startsWith('gh pr create'))).toBe(true);
     }
   });

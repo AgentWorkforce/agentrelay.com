@@ -3,6 +3,7 @@ import { strFromU8, unzipSync } from 'fflate';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_RUN, localInput, localKitArchive, localKitFiles } from '../flow-local';
+import { FLOW_TEST_COMMAND } from '../flow-workflows';
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'bug, ready' } }, agents: ['claude', 'codex'], workflow: 'traditional', step: 3 };
 
@@ -64,7 +65,7 @@ describe('local flow starter kit', () => {
         done: (reason: string) => { finish = reason; },
       }, localInput(selected));
       expect(finish).toBe('needs_human');
-      const testIndex = commands.indexOf('npm test');
+      const testIndex = commands.indexOf(FLOW_TEST_COMMAND);
       const createIndex = commands.findIndex(command => command.startsWith('gh pr create'));
       expect(testIndex).toBeGreaterThanOrEqual(0);
       expect(createIndex).toBeGreaterThan(testIndex);
@@ -79,7 +80,7 @@ describe('local flow starter kit', () => {
       const selected = { ...draft, workflow };
       await expect(compile(factorySource(selected, 'local'))({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); if (command === 'npm test') throw Error('tests failed'); return ''; },
+        run: async (command: string) => { commands.push(command); if (command === FLOW_TEST_COMMAND) throw Error('tests failed'); return ''; },
         done: (reason: string) => { finish = reason; },
       }, localInput(selected))).rejects.toThrow('tests failed');
       expect(commands.some(command => command.startsWith('git push') || command.startsWith('gh pr create'))).toBe(false);
@@ -97,7 +98,7 @@ describe('local flow starter kit', () => {
       },
       run: async (command: string) => {
         calls.push(command);
-        if (command === 'npm test' && ++checks === 2 && fail) throw Error('revision failed');
+        if (command === FLOW_TEST_COMMAND && ++checks === 2 && fail) throw Error('revision failed');
         return command.startsWith('test -f') ? 'no' : '';
       },
       done: () => {},
@@ -106,7 +107,7 @@ describe('local flow starter kit', () => {
     else await run;
     const fixer = calls.indexOf('fixer');
     expect(fixer).toBeGreaterThan(0);
-    expect(calls[fixer + 1]).toBe('npm test');
+    expect(calls[fixer + 1]).toBe(FLOW_TEST_COMMAND);
     if (fail) expect(calls).not.toContain('git push');
     else expect(calls[fixer + 2]).toBe('git push');
   });
