@@ -108,4 +108,22 @@ describe('generated issue source filters', () => {
     expect(slack).toContain('mentioned?: boolean;');
     expect(slack).not.toContain('repository?');
   });
+
+  it('never reads a field the trimmed Issue type does not declare', () => {
+    // The kit tells people to run `npx flows check` before `flows run`, so the
+    // generated filter has to typecheck against the trimmed Issue. Slack is the
+    // only source that can carry a mention rule, so it is the only one allowed
+    // to read issue.mentioned.
+    const mentions = issueSourceCode(['slack'], { slack: { mentioned: true } }, 'local');
+    expect(mentions).toContain('mentioned?: boolean;');
+    expect(mentions).toContain('issue.mentioned');
+    // Slack without a mention rule still declares the field, but has nothing to check.
+    expect(issueSourceCode(['slack'], { slack: { channel: '#build' } }, 'local')).not.toContain('issue.mentioned');
+    const settings: SourcePreferences = { github: { repository: 'acme/app', labels: 'ready' }, markdown: { path: 'tasks.md' } };
+    for (const sources of [['github'], ['linear'], ['markdown']] as IssueSourceId[][]) {
+      const local = issueSourceCode(sources, settings, 'local');
+      expect(local).not.toContain('mentioned?:');
+      expect(local).not.toContain('issue.mentioned');
+    }
+  });
 });

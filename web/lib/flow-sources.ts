@@ -103,6 +103,14 @@ function issueFilterCode(rules: Record<string, Record<string, string | string[] 
     const fields = Object.entries(filters).map(([key, value]) => `${key}: ${literal(value)}`).join(', ');
     return `  ${id}: ${fields ? `{ ${fields} }` : '{}'},`;
   }).join('\n');
+  // Only Slack can carry a mention rule, and only then does Issue declare the
+  // field. Emitting this branch regardless would read issue.mentioned off a type
+  // that never declares it, which `flows check` rejects before the flow can run.
+  const mentionedBranch = Object.values(rules).some(filters => 'mentioned' in filters)
+    ? `
+    } else if (name === "mentioned") {
+      if (issue.mentioned !== true) return "the message does not mention your app";`
+    : '';
   return `// The filters you chose. Nothing screens tickets before a local run, so the flow
 // checks flow-input.json against them and explains anything it turns away.
 const filters: Record<string, Record<string, string | string[] | boolean>> = {
@@ -126,9 +134,7 @@ export function issueRejection(issue: Issue): string {
     if (name === "labels") {
       const missing = (want as string[]).filter(label =>
         !issue.labels.some(have => plain(have) === plain(label)));
-      if (missing.length) return "missing required label: " + missing.join(", ");
-    } else if (name === "mentioned") {
-      if (issue.mentioned !== true) return "the message does not mention your app";
+      if (missing.length) return "missing required label: " + missing.join(", ");${mentionedBranch}
     } else if (name === "contains") {
       if (!plain(issue.title + " " + issue.body).includes(plain(want as string))) {
         return \`the title and body do not contain "\${want}"\`;
