@@ -1,4 +1,5 @@
 import { validFlowAgentSettings, type FlowAgentSettings } from './flow-agent-settings';
+import { flowPreview } from './flow-preview';
 import { WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
 import { ISSUE_SOURCES, issueSourceCode, validSourcePreferences, type IssueSourceId, type SourcePreferences } from './flow-sources';
 
@@ -89,7 +90,7 @@ export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, jou
   // localStorage across Google sign-in. Source code and ticket filters must not
   // enter OAuth state, cookies, or server access logs.
   const payload = { version: 1, handoffId, ...(journeyId ? { analytics: { journeyId } } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
-    workflow: draft.workflow, sources: draft.sources, sourceSettings: draft.sourceSettings,
+    workflow: draft.workflow, preview: flowPreview(draft), sources: draft.sources, sourceSettings: draft.sourceSettings,
     agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
   const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
   return `${base.replace(/\/$/, '')}/flows/deploy#${encodeURIComponent(JSON.stringify(payload))}`;

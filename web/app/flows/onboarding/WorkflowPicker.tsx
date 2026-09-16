@@ -1,7 +1,7 @@
 import { AgentStepEditor } from './AgentStepEditor';
 import { resolveAgentSettings, rolesForStep, type AgentRole } from '../../../lib/flow-agent-settings';
-import { GitBranch, Layers3, Zap, UserRound, LockKeyhole, Terminal } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { GitBranch, Layers3, Zap, UserRound, LockKeyhole, Terminal, Settings } from 'lucide-react';
+import { useState } from 'react';
 import { WORKFLOWS, WORKFLOW_STEP_DETAILS, workflowAgents } from '../../../lib/flow-workflows';
 import { SiGithub } from 'react-icons/si';
 import Claude from '@lobehub/icons/es/Claude';
@@ -19,7 +19,7 @@ function ProcessAgent({ id }: { id: CodingAgent }) {
   return <span className={s.processAgent} role="img" aria-label={agentLabel(id)} title={agentLabel(id)}><Icon size={21} aria-hidden="true" /></span>;
 }
 
-export function WorkflowPicker({ draft, onChange, onTrack, actions }: { draft: FactoryDraft; onChange: (draft: FactoryDraft) => void; onTrack: FlowTrack; actions: ReactNode }) {
+export function WorkflowPicker({ draft, onChange, onTrack }: { draft: FactoryDraft; onChange: (draft: FactoryDraft) => void; onTrack: FlowTrack }) {
   const [instructionsOpen, setInstructionsOpen] = useState(Boolean(draft.workflow));
   const icons = { traditional: GitBranch, prototype: Layers3, simple: Zap };
   const labels = { traditional: 'Balanced', prototype: 'Best results, many tokens', simple: 'Best for simple tasks' };
@@ -39,7 +39,6 @@ export function WorkflowPicker({ draft, onChange, onTrack, actions }: { draft: F
         </label>;
       })}
     </fieldset>
-    {actions}
     <details className={s.extraInstructions} open={instructionsOpen} onToggle={event => {
       setInstructionsOpen(event.currentTarget.open);
     }}>
@@ -86,7 +85,7 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
                 <div className={s.processNode}>
                   <span className={s.processAvatars}><ProcessAgent id={builder} /></span>
                   <span className={s.processText}>
-                    <span className={s.processHeading}><strong>Coding agent</strong><small className={s.processOwner}>{agentLabel(builder)}</small></span>
+                    <span className={s.processHeading}><strong>Coding agent</strong><small className={s.processOwner}>Agent</small></span>
                     <span className={s.processDescription}>{draft.agents.some(isCodingAgent) ? 'Your agent is selected. Choose a workflow to define its steps.' : 'A Claude Code example while support for your agents is coming soon.'}</span>
                   </span>
                 </div>
@@ -108,9 +107,9 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
                       {human && <span className={s.processPerson}><UserRound size={21} aria-hidden="true" /></span>}
                     </span>
                     <span className={s.processText}>
-                      <span className={s.processHeading}><strong>{human ? 'Your approval' : review ? 'Adversarial review' : step}</strong><small className={s.processOwner}>{human ? 'You' : script ? 'Script' : step === '3 implementations' ? 'Parallel' : agentLabel(agents[0])}</small></span>
+                      <span className={s.processHeading}><strong>{human ? 'Your approval' : review ? 'Adversarial review' : step}</strong><small className={s.processOwner}>{human ? 'You' : script ? 'Script' : step === '3 implementations' ? 'Parallel' : 'Agent'}</small></span>
                       <span className={s.processDescription}>{WORKFLOW_STEP_DETAILS[step]}</span>
-                      {agents.length > 0 && <small className={s.processModel}>{nodeConfigs.length > 1 ? 'Configure 3 agents' : `${nodeConfigs[0].model || 'Default model'} · Edit settings`}</small>}
+                      {agents.length > 0 && <small className={s.processModel}><span>{nodeConfigs.length > 1 ? 'Configure 3 agents' : nodeConfigs[0].model || 'Default model'}</span><Settings size={12} aria-hidden="true" /></small>}
                     </span>
                     {review && <span className={s.processRounds}>2 rounds</span>}
                     {human && <LockKeyhole size={15} className={s.processLock} aria-hidden="true" />}

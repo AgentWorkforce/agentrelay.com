@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Check, Code2, Copy, Download, Info,
   ChevronDown, Terminal, Pi as PiIcon, Ellipsis } from 'lucide-react';
@@ -14,7 +13,7 @@ import GithubCopilot from '@lobehub/icons/es/GithubCopilot';
 import Windsurf from '@lobehub/icons/es/Windsurf';
 import Goose from '@lobehub/icons/es/Goose';
 import Grok from '@lobehub/icons/es/Grok';
-import { LogoIcon, LogoWordmark } from '../../../components/SiteNav';
+import { OnboardingHeader, OnboardingIntro, BuildStages } from './OnboardingFrame';
 import { canContinue, isCodingAgent, CODING_AGENTS, DEFAULT_FACTORY,
   FACTORY_DRAFT_KEY, PREVIOUS_FACTORY_DRAFT_KEY, LEGACY_FACTORY_DRAFT_KEY, factoryCodeSections, factorySource, readFactoryDraft,
   ONBOARDING_STAGES, onboardingPath, accessibleOnboardingStep, otherAgentIsSelected,
@@ -192,10 +191,10 @@ export function FactoryBuilder() {
     setNotice('Downloaded software-factory.flow.ts.');
   }
 
-  const navigation = <div className={`${s.navigation} ${draft.step === 2 ? s.workflowNavigation : ''}`}>
+  const navigation = <nav className={s.navigation} aria-label="Step navigation">
               <button type="button" className={s.previous} onClick={() => goToStep(draft.step - 1)}><ArrowLeft size={15} /> Back</button>
               <button type="button" className={s.primary} disabled={!hydrated} aria-disabled={!canContinue(draft)} onClick={next}>{draft.step === 2 ? 'Create my flow' : 'Continue'}<ArrowRight size={17} /></button>
-            </div>;
+            </nav>;
 
   const codePanel = <section className={`ph-no-capture ph-sensitive ${s.codePanel} ${emptyPreview ? s.codePanelEmpty : ''}`} aria-label="Your flow taking shape">
           <div className={s.editorHeader}><div><Code2 size={15} /><span>software-factory.flow.ts</span></div>{started && ready && <span className={s.live}>Ready</span>}</div>
@@ -209,18 +208,7 @@ export function FactoryBuilder() {
         </section>;
 
   return <div className={s.page}>
-    <div className={s.headerOuter}>
-      <header className={s.header}>
-        <div className={s.headerContent}>
-          <Link href="/flows" className={s.logo} aria-label="Agent Relay"><LogoIcon /><LogoWordmark /></Link>
-          <div className={s.headerProgress} role="progressbar" aria-label="Onboarding progress"
-            aria-valuemin={0} aria-valuemax={ONBOARDING_STAGES.length} aria-valuenow={started ? routeStep + 1 : 0}
-            aria-valuetext={started ? `Step ${routeStep + 1} of ${ONBOARDING_STAGES.length}: ${ready ? 'Connect your tools' : question.title}` : 'Ready to build your first flow'}>
-            {ONBOARDING_STAGES.map((stage, index) => <span key={stage} aria-hidden="true" className={started && index <= routeStep ? s.progressActive : undefined} />)}
-          </div>
-        </div>
-      </header>
-    </div>
+    <OnboardingHeader />
     <main className={s.main} onFocusCapture={event => {
       const field = event.target as HTMLInputElement;
       if (!/^(source-[a-z]+-[a-z]+|factory-task|other-coding-agent)$/.test(field.id)) return;
@@ -231,20 +219,25 @@ export function FactoryBuilder() {
       if (!/^(source-[a-z]+-[a-z]+|factory-task|other-coding-agent)$/.test(field.id)) return;
       track('field_completed', { field: field.id, filled: Boolean(field.value?.trim()), length_bucket: lengthBucket(field.value?.length ?? 0), editing_ms: Date.now() - (fieldStart.current[field.id] ?? Date.now()) });
     }}>
+      <OnboardingIntro>
+        {started && !loadingStage && <BuildStages currentStep={routeStep} onSelect={goToStep} />}
+      </OnboardingIntro>
+      <div className={s.setupSection}>
+      <div className={s.waveBreak} aria-hidden="true" />
       <div className={s.workspace}>
       {!started ? <section className={s.welcome} aria-labelledby="welcome-title">
-        <h1 id="welcome-title">Let’s build your first flow on Agent Relay.</h1>
+        <h2 id="welcome-title">Start with a software factory.</h2>
         <p>A software factory is the easiest flow to set up. It’ll take about 5 minutes. Once you get the hang of Flows, you can build another one for other use cases.</p>
         <button type="button" className={s.primary} disabled={!hydrated} onClick={showQuestions}>
           {draft.step > 0 ? 'Continue building my flow' : 'Let’s get started'}<ArrowRight size={17} />
         </button>
       </section> : loadingStage ? <section className={s.builder} aria-busy="true"><p>Loading your flow…</p></section> : <section className={s.builder} aria-label="Build your first flow">
           {!ready ? <div key={draft.step} className={s.question}>
-            <h1 tabIndex={-1} ref={questionHeading}>{question.title}</h1>
+            <h2 tabIndex={-1} ref={questionHeading}>{question.title}</h2>
             <p className={s.description}>{question.description}</p>
             {comingSoonOnly && draft.step > 1 && <p className={s.exampleNote}>You’re building a Claude Code example. Your coming-soon preferences are saved.</p>}
 
-            {draft.step === 0 && <SourcePicker draft={draft} onChange={updateDraft} onTrack={track} actions={navigation} />}
+            {draft.step === 0 && <SourcePicker draft={draft} onChange={updateDraft} onTrack={track} />}
 
             {draft.step === 1 && <>
               <fieldset className={s.agentGroup}><legend>Select all you use</legend>
@@ -285,11 +278,10 @@ export function FactoryBuilder() {
               {comingSoonOnly && <p className={s.selectionNote}>You can still build an example with Claude Code while support for your tools is on the way.</p>}
             </>}
 
-            {draft.step === 2 && <WorkflowPicker draft={draft} onChange={updateDraft} onTrack={track} actions={navigation} />}
+            {draft.step === 2 && <WorkflowPicker draft={draft} onChange={updateDraft} onTrack={track} />}
 
-            {draft.step === 1 && navigation}
           </div> : <div className={s.ready}>
-            <h1 tabIndex={-1} ref={questionHeading}>Let’s run your first flow.</h1>
+            <h2 tabIndex={-1} ref={questionHeading}>Let’s run your first flow.</h2>
             <p className={s.runDescription}>Your software factory is built. Choose where to put it to work.</p>
             <RunOptions draft={draft} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} markOutcome={markOutcome} />
             <details className={s.flowReview} onToggle={event => track('help_toggled', { section: 'review_flow', open: event.currentTarget.open })}>
@@ -317,9 +309,14 @@ export function FactoryBuilder() {
             <WorkflowPlan key={draft.workflow} draft={draft} onChange={updateDraft} onTrack={track} />
           </div>
           <div id="workflow-preview-code" hidden={showingPlan}>{codePanel}</div>
-        </section> : codePanel}
+        </section> : <div className={s.previewPane}>{codePanel}</div>}
       </div>
+      {started && !loadingStage && !ready && navigation}
       <p className={s.notice} role="status">{notice}</p>
+      </div>
     </main>
+    <footer className={s.footer}>
+      <small>© {new Date().getFullYear()} Agent Relay. All rights reserved.</small>
+    </footer>
   </div>;
 }
