@@ -97,9 +97,23 @@ export default flow("software-factory",
   const readMarkdownCommand = "cat -- '" + markdownPath.replace(/'/g, "'\\''") + "'";
   const hasBuilder = draft.step >= 1 && canContinue(draft, 1);
   const sections = [{ id: 'setup', code: 'import { flow } from "@relayflows/surface";' },
-    { id: 'sources', code: issueSourceCode(draft.sources, draft.sourceSettings) }];
+    { id: 'sources', code: issueSourceCode(draft.sources, draft.sourceSettings, target) }];
   if (hasBuilder) sections.push({ id: 'builder', code: `${draft.agents.some(isCodingAgent) ? '// Your coding agent, ready to work.' : '// Claude Code example while your selected tools are coming soon.'}
 const builder = "${agent}";` });
+  // Cloud filters tickets before a run exists: the deployed listener's watch
+  // rules pick which tickets wake the flow and the launcher re-checks every
+  // chosen field, so re-filtering here only gave a run a silent way to cancel
+  // itself. A local run has no dispatcher, so it filters and explains instead.
+  const guard = target === 'local'
+    ? `  // Nothing screens tickets before a local run, so check the input here.
+  const rejection = issueRejection(issue);
+  if (rejection) {
+    console.error("Canceled: " + rejection + ". Edit flow-input.json and run again.");
+    return f.done("canceled");
+  }`
+    : `  // Cloud starts this flow only for tickets that already match the sources
+  // and filters you chose, so just check the ticket arrived intact.
+  if (!issue?.title?.trim()) return f.done("canceled");`;
   sections.push({ id: 'input', code: `type Input = { issue${hasMarkdown ? '?' : ''}: Issue; approver: string };
 
 // Run in a connected repository, on a new branch.
@@ -111,8 +125,7 @@ export default flow<Input>("software-factory",
     body: await f.run(${JSON.stringify(readMarkdownCommand)}),
     labels: [], path: ${JSON.stringify(markdownPath)},
   };` : '\n  const issue = input.issue;'}
-  // Ignore items outside the sources and filters you chose.
-  if (!matchesIssue(issue)) return f.done("canceled");` });
+${guard}` });
   if (hasBuilder && draft.step >= 2 && draft.workflow) {
     sections.push(...workflowCode(draft.workflow, workflowAgents(draft.agents), draft.task, target, draft.agentSettings, draft.agents));
   }

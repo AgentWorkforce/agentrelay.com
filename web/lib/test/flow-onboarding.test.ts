@@ -146,17 +146,28 @@ describe('software factory onboarding', () => {
     expect(readFactoryDraft(JSON.stringify({ ...completed, sourceSettings: { slack: { mentioned: 'true' } } }))).toBeNull();
   });
 
-  it('never runs agents for tickets outside the chosen filters', async () => {
+  it('leaves ticket filtering to Cloud dispatch and guards only the ticket itself', async () => {
+    // A Cloud deployment is filtered before a run exists: the listener's watch
+    // rules choose which tickets wake the flow, and the launcher re-checks every
+    // configured field. Repeating that here only gave a run a way to cancel
+    // itself with a bare "canceled" and no reason, so the deployed flow now
+    // trusts dispatch. Filtering is still generated and tested for local runs
+    // (flow-sources.test.ts and flow-local.test.ts), where nothing else does it.
+    const source = factorySource(completed);
+    expect(source).not.toContain('issueRejection');
+    expect(source).not.toContain('acme/app');
     for (const issue of [
       { ...matchingIssue, source: 'linear' },
       { ...matchingIssue, repository: 'acme/other' },
       { ...matchingIssue, labels: ['ready'] },
+      { ...matchingIssue, labels: ['BUG', ' Ready '] },
     ]) {
-      const result = await runFactory([true], true, issue);
-      expect(result.calls).toEqual([]);
-      expect(result.finish).toBe('canceled');
+      expect((await runFactory([true, true], true, issue)).finish).toBe('needs_human');
     }
-    expect((await runFactory([true, true], true, { ...matchingIssue, labels: ['BUG', ' Ready '] })).finish).toBe('needs_human');
+    // A ticket that never really arrived still stops the run before any agent.
+    const empty = await runFactory([true], true, { ...matchingIssue, title: '  ' });
+    expect(empty.calls).toEqual([]);
+    expect(empty.finish).toBe('canceled');
   });
 
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
