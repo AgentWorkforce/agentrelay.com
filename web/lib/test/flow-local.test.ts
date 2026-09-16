@@ -83,6 +83,18 @@ describe('local flow starter kit', () => {
     for (const name of Object.keys(localKitFiles(draft))) expect(script).toContain(`"${name}"`);
   });
 
+  it('reads git porcelain status without trimming off the first path', () => {
+    const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
+    // `git status --porcelain` puts the status in columns 1-2, so an unstaged
+    // change leads with a space (" M package.json"). Trimming the command
+    // output strips that space from the first line only; slice(3) then eats a
+    // character of that path, it no longer matches KIT_FILES, and a routine
+    // `npm install` touching the tracked package.json falsely blocks the run.
+    expect(script).toContain('return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });');
+    expect(script).not.toMatch(/execFileSync\("git"[^\n]*\)\.trim\(\)/);
+    expect(script).toContain('git("status", "--porcelain").split("\\n").filter(Boolean)');
+  });
+
   it('leaves a Markdown-sourced kit no placeholder ticket to prompt for', () => {
     const markdown: FactoryDraft = { ...draft, sources: ['markdown'], sourceSettings: { markdown: { path: 'docs/ticket.md' } } };
     expect(localInput(markdown)).not.toHaveProperty('issue');

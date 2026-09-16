@@ -70,8 +70,15 @@ function fail(problem, ...advice) {
 
 // execFile, never a shell: a repository path containing spaces, parentheses or
 // quotes must not change how any of these commands parse.
+//
+// Deliberately untrimmed. "git status --porcelain" encodes the status in the
+// first two columns, and an unstaged change leads with a space (" M path").
+// Trimming the output would strip that space off the first line only, so
+// slice(3) would eat a character of that path, it would miss KIT_FILES, and a
+// routine "npm install" touching the tracked package.json would block step 4
+// while reporting a mangled filename.
 function git(...args) {
-  return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
 try {
