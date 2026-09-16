@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { ListFilter, ChevronDown } from 'lucide-react';
 import { SiGithub, SiLinear, SiShortcut, SiJira, SiMarkdown } from 'react-icons/si';
 import { ISSUE_SOURCES, sourceLabel, type IssueSourceId, type SourceSettings } from '../../../lib/flow-sources';
@@ -14,7 +14,7 @@ export function SourceIcon({ id }: { id: IssueSourceId }) {
   return <Icon className={`${s.sourceIcon} ${s[`source_${id}`]}`} aria-hidden="true" />;
 }
 
-export function SourcePicker({ draft, onChange, onTrack, actions }: { draft: FactoryDraft; onChange: (draft: FactoryDraft) => void; onTrack: FlowTrack; actions: ReactNode }) {
+export function SourcePicker({ draft, onChange, onTrack }: { draft: FactoryDraft; onChange: (draft: FactoryDraft) => void; onTrack: FlowTrack }) {
   const [active, setActive] = useState<IssueSourceId | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(true);
   const activeId = active && draft.sources.includes(active) ? active : draft.sources[0];
@@ -41,7 +41,6 @@ export function SourcePicker({ draft, onChange, onTrack, actions }: { draft: Fac
         </label>
       )}</div>
     </fieldset>
-    {actions}
     {source && <details className={s.sourceSettings} open={filtersOpen} onToggle={event => {
       setFiltersOpen(event.currentTarget.open);
     }}>
