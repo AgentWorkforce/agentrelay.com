@@ -10,7 +10,13 @@ export const ISSUE_SOURCES = [
   ] },
   { id: 'shortcut', label: 'Shortcut', fields: [
     { key: 'workspace', label: 'Workspace', placeholder: 'Your workspace' },
-    { key: 'project', label: 'Project', placeholder: 'Web app' },
+    // Shortcut scopes work by Group, branded "Team" in its UI. Projects are
+    // legacy: `/api/v3/projects` is empty in a modern workspace and a story's
+    // `project_id` is null there, so a project filter could never match one —
+    // and the launcher compared the name typed here against a numeric id, which
+    // silently dropped every story. Cloud now matches this against the team
+    // name (or its group id), so ask for the thing a story actually carries.
+    { key: 'team', label: 'Team (group)', placeholder: 'Platform' },
     { key: 'labels', label: 'Required labels', placeholder: 'ready-for-agent' },
   ] },
   { id: 'jira', label: 'Jira', fields: [
