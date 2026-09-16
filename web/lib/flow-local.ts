@@ -13,9 +13,16 @@ import { workflowAgents } from './flow-workflows';
  * step 4 of START-HERE.txt died on `contains invalid YAML or JSON` before the
  * run was ever reached. 2.0.12 links `flows` to the SDK's Node CLI, checks
  * authored `.mts` flows, accepts the `{ wallclock }` budget header, and exits 3
- * on `done("needs_human")`. Do not lower this pin.
+ * on `done("needs_human")`. 2.0.13 makes a failed step diagnosable: a failing
+ * step reported only `FAILED [protocol_error] ... step_failed` naming the run
+ * id, with no exit code, no output and no pointer to the journal, even though
+ * `.relayflowd/` held all of it. 2.0.14 extends that to `flows resume`, which
+ * 2.0.13 missed by 94 seconds — it was published just before the fix merged,
+ * so resume still printed `protocol_error` / `RUN <id> unknown`. That matters
+ * here because every preset ends in `done("needs_human")`, making resume the
+ * next thing a reader reaches for. Do not lower this pin.
  */
-export const RELAYFLOWS_VERSION = '2.0.12';
+export const RELAYFLOWS_VERSION = '2.0.14';
 export const LOCAL_PREFLIGHT = 'relay-preflight.mjs';
 
 export const LOCAL_INSTALL = `npm install --save-dev relayflows@${RELAYFLOWS_VERSION} @relayflows/surface@${RELAYFLOWS_VERSION}`;
