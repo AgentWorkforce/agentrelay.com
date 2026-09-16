@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
+import { execFileSync, spawn } from 'node:child_process';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
@@ -75,7 +80,7 @@ describe('local flow starter kit', () => {
     expect(script).toContain('git("rev-parse", "--is-inside-work-tree")');
     expect(script).toContain('git("remote", "get-url", "origin")');
     expect(script).toContain('execFileSync("gh", ["auth", "status"]');
-    expect(script).toContain('git("status", "--porcelain")');
+    expect(script).toContain('const dirty = dirtyPaths();');
     // execFile, never a shell: repository paths contain spaces and parentheses.
     expect(script).toContain('execFileSync');
     expect(script).not.toMatch(/\bexecSync\(/);
@@ -92,7 +97,10 @@ describe('local flow starter kit', () => {
     // `npm install` touching the tracked package.json falsely blocks the run.
     expect(script).toContain('return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });');
     expect(script).not.toMatch(/execFileSync\("git"[^\n]*\)\.trim\(\)/);
-    expect(script).toContain('git("status", "--porcelain").split("\\n").filter(Boolean)');
+    expect(script).toContain('git(...prefix, "status", "--porcelain").split("\\n").filter(Boolean)');
+    // The same helper checks a relocation target, so a repository is only ever
+    // called dirty for work that is not the kit's own files.
+    expect(script).toContain('dirtyPaths("-C", target)');
   });
 
   it('leaves a Markdown-sourced kit no placeholder ticket to prompt for', () => {
@@ -217,5 +225,173 @@ describe('local flow starter kit', () => {
       expect(source).not.toContain('$8/run');
       expect(source).not.toContain('pr merge');
     }
+  });
+});
+
+/**
+ * The kit extracted to ~/Downloads and run there is the common first mistake,
+ * so these run the generated script for real: a throwaway repository per case,
+ * answers typed into it, and the filesystem checked afterwards.
+ */
+describe('relocating a kit that was extracted outside a repository', () => {
+  const roots: string[] = [];
+  afterAll(() => { for (const root of roots) rmSync(root, { recursive: true, force: true }); });
+
+  const GIT_CONFIG = ['-c', 'user.email=kit@example.com', '-c', 'user.name=Kit', '-c', 'init.defaultBranch=main', '-c', 'commit.gpgsign=false'];
+  const git = (...args: string[]) => execFileSync('git', [...GIT_CONFIG, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+
+  function workspace() {
+    const root = mkdtempSync(join(tmpdir(), 'relay-kit-'));
+    roots.push(root);
+    // The directory a real onboarding died in was "software-factory-local (1)":
+    // spaces and parentheses, which is why nothing here goes through a shell.
+    const download = join(root, 'software-factory-local (1)');
+    mkdirSync(download);
+    for (const [name, content] of Object.entries(localKitFiles(draft))) writeFileSync(join(download, name), content);
+    writeFileSync(join(root, 'force-tty.mjs'), 'process.stdin.isTTY = true;\n');
+    return { root, download };
+  }
+
+  function repo(root: string, name: string, options: { origin?: boolean; dirty?: boolean } = {}) {
+    const dir = join(root, name);
+    mkdirSync(dir, { recursive: true });
+    git('init', '-q', dir);
+    writeFileSync(join(dir, 'src.txt'), 'hello\n');
+    git('-C', dir, 'add', '-A');
+    git('-C', dir, 'commit', '-qm', 'first');
+    if (options.origin !== false) git('-C', dir, 'remote', 'add', 'origin', 'https://example.com/acme/app.git');
+    if (options.dirty) writeFileSync(join(dir, 'src.txt'), 'edited\n');
+    return dir;
+  }
+
+  /**
+   * Runs the generated preflight the way a person does. Forcing isTTY on a pipe
+   * is the only way to reach the prompt without a pseudo-terminal; answers are
+   * typed one at a time as each prompt appears, because readline drops lines
+   * that arrive while no question is pending. Running out of answers closes the
+   * stream, which is what Ctrl+D does.
+   */
+  function preflight(cwd: string, root: string, answers: string[], tty = true) {
+    const args = tty ? ['--import', pathToFileURL(join(root, 'force-tty.mjs')).href, LOCAL_PREFLIGHT] : [LOCAL_PREFLIGHT];
+    const child = spawn(process.execPath, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    const queue = [...answers];
+    let out = '';
+    let err = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (text: string) => {
+      out += text;
+      if (!text.includes('(empty to stop): ')) return;
+      const answer = queue.shift();
+      if (answer === undefined) child.stdin.end();
+      else child.stdin.write(answer + '\n');
+    });
+    child.stderr.on('data', (text: string) => { err += text; });
+    return new Promise<{ code: number | null; out: string; err: string }>((resolve, reject) => {
+      // A hang is a failure of this feature, not a suite that never finishes.
+      const timer = setTimeout(() => { child.kill('SIGKILL'); reject(Error('the preflight never exited\n' + out + err)); }, 20_000);
+      child.on('error', reject);
+      child.on('close', code => { clearTimeout(timer); resolve({ code, out, err }); });
+    });
+  }
+
+  it('copies the kit into the repository the user names and prints the sequence for it', async () => {
+    const { root, download } = workspace();
+    const target = repo(root, 'checkout (1)');
+    const { code, out } = await preflight(download, root, [target]);
+    expect(readdirSync(target).filter(name => name !== '.git').sort()).toEqual([...Object.keys(localKitFiles(draft)), 'src.txt'].sort());
+    // Step 2 installed into the download directory, so npx would resolve
+    // nothing in the repository: the install has to be printed again, before
+    // the chain, and node_modules is never carried across.
+    expect(out).toContain("cd '" + target + "'");
+    expect(out.indexOf(LOCAL_INSTALL)).toBeGreaterThan(out.indexOf("cd '"));
+    expect(out.indexOf(LOCAL_INSTALL)).toBeLessThan(out.indexOf('npx flows check'));
+    for (const line of LOCAL_RUN.split('\n')) expect(out).toContain(line);
+    expect(existsSync(join(target, 'node_modules'))).toBe(false);
+    // Exit 1, not 0: the rest of step 4's && chain must not run in a directory
+    // that is still not a repository.
+    expect(code).toBe(1);
+  }, 30_000);
+
+  it('writes nothing into a target the flow could not have pushed from', async () => {
+    const { root, download } = workspace();
+    const missing = join(root, 'nope');
+    const plain = join(root, 'not a repo (yet)');
+    mkdirSync(plain);
+    const noOrigin = repo(root, 'no-origin', { origin: false });
+    const unclean = repo(root, 'unclean', { dirty: true });
+    const target = repo(root, 'good');
+    const { code, out } = await preflight(download, root, [missing, plain, noOrigin, unclean, target]);
+    expect(out).toContain('There is no ' + missing);
+    expect(out).toContain('Not a Git repository: ' + plain);
+    expect(out).toContain('No origin remote there');
+    expect(out).toContain('Uncommitted changes there (src.txt)');
+    for (const rejected of [plain, noOrigin, unclean]) expect(existsSync(join(rejected, LOCAL_PREFLIGHT))).toBe(false);
+    expect(existsSync(missing)).toBe(false);
+    // Rejection re-prompts; it does not give up on the fifth, valid answer.
+    expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(true);
+    expect(code).toBe(1);
+  }, 30_000);
+
+  it('keeps a file that is already there rather than overwriting it', async () => {
+    const { root, download } = workspace();
+    const target = repo(root, 'checkout');
+    writeFileSync(join(target, 'flow-input.json'), '{ "approver": "mine" }\n');
+    const { out } = await preflight(download, root, [target]);
+    // A flow-input.json already filled in is worth more than the placeholder
+    // this kit ships, and START-HERE.txt promises existing files are kept.
+    expect(readFileSync(join(target, 'flow-input.json'), 'utf8')).toBe('{ "approver": "mine" }\n');
+    expect(out).toContain('Left alone, already there: flow-input.json');
+    expect(out).toContain('START-HERE.txt');
+    expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(true);
+  }, 30_000);
+
+  it('never asks without a terminal, and never hangs waiting to', async () => {
+    const { root, download } = workspace();
+    const target = repo(root, 'checkout');
+    const { code, out, err } = await preflight(download, root, [], false);
+    // stdin is an open pipe nobody writes to: reaching the prompt would hang
+    // the run, so the guard has to fail with the message it always gave.
+    expect(out).not.toContain('Path to your repository');
+    expect(err).toContain('Extract the kit into your repository root and run it from there.');
+    expect(err).toContain('the flow would fail at git push after the agents had finished their work.');
+    expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(false);
+    expect(code).toBe(1);
+  }, 30_000);
+
+  it.each([['an empty answer', ['']], ['Ctrl+D', []]] as const)('leaves cleanly on %s', async (_label, answers) => {
+    const { root, download } = workspace();
+    const target = repo(root, 'checkout');
+    const { code, out, err } = await preflight(download, root, [...answers]);
+    expect(out).toContain('Path to your repository (empty to stop): ');
+    expect(err).toContain('Extract the kit into your repository root and run it from there.');
+    // readline leaves question() pending forever once the stream ends, so an
+    // unraced await ends the process on an unsettled top-level await, exit 13,
+    // with no message at all.
+    expect(err).not.toContain('unsettled top-level await');
+    expect(code).toBe(1);
+    expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(false);
+  }, 30_000);
+
+  it.each([['dragged in, shell-escaped', (path: string) => path.replace(/([ ()])/g, '\\$1')], ['pasted with quotes', (path: string) => `"${path}"`]])('accepts a path %s', async (_label, type) => {
+    const { root, download } = workspace();
+    const target = repo(root, 'checkout (2)');
+    const { code } = await preflight(download, root, [type(target)]);
+    expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(true);
+    expect(code).toBe(1);
+  }, 30_000);
+
+  it('offers the move for the throwaway directory only, from one file list', () => {
+    const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
+    // A repository with no origin is a different problem with a different fix.
+    expect(script.match(/await relocate\(\)/g)).toHaveLength(1);
+    expect(script).toContain('Add one first: git remote add origin <url>');
+    expect(script).toContain('if (!process.stdin.isTTY) fail("this directory is not a Git repository.", ...NOT_A_REPO);');
+    // One list. A second one would drift from the dirty-tree exemptions.
+    expect(script).toContain('const PORTABLE = [...KIT_FILES].filter(name => !name.endsWith("/") && !NOT_PORTABLE.has(name));');
+    expect(script).toContain('const NOT_PORTABLE = new Set(["package.json", "package-lock.json", "summary.md"]);');
+    // npm writes those three next to the kit and the repository owns files of
+    // the same name, so a kit file may never be called one of them.
+    for (const name of Object.keys(localKitFiles(draft))) expect(['package.json', 'package-lock.json', 'summary.md', 'node_modules/']).not.toContain(name);
   });
 });
