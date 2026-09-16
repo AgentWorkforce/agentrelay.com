@@ -4,7 +4,7 @@ import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import { defaultOgImage } from '../../../lib/og-meta';
-import { absoluteUrl } from '../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 import { ThemeShowcase } from './ThemeShowcase';
 
 const title = 'Web Theme';
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/brand/theme'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: `${title} · Agent Relay`,
     description,
     url: absoluteUrl('/brand/theme'),

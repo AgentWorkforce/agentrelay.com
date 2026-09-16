@@ -12,7 +12,7 @@ import { InvestorStrip } from '../../components/InvestorStrip';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { FLOWS_OG_ALT, FLOWS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import home from '../landing.module.css';
 import s from './flows.module.css';
 import { FlowExamples } from './FlowExamples';
@@ -26,6 +26,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/flows'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Relayflows: Script your agents',
     description:
       'Write the steps once. Relayflows runs your agents in order, checks their work, and pauses for human approval.',

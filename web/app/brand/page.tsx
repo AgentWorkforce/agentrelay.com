@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import { BrandShowcase } from './BrandShowcase';
 
 const title = 'Brand Kit';
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/brand'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: `${title} · Agent Relay`,
     description,
     url: absoluteUrl('/brand'),

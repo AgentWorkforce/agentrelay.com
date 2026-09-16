@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { SkillPage } from '../../components/SkillPage';
 import { defaultOgImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import { readAgentRelaySkillMarkdown } from '../../lib/skill-markdown';
 
 export const dynamic = 'force-static';
@@ -23,6 +23,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/skill'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Agent Relay Skill',
     description:
       'One hosted handoff for agents: start a Relay workspace, choose the orchestrator or participant role, and coordinate with the team.',
