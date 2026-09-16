@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
-import { LOCAL_INSTALL, LOCAL_RUN, localInput, localKitArchive, localKitFiles } from '../flow-local';
+import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
 import { FLOW_TEST_COMMAND } from '../flow-workflows';
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'bug, ready' } }, agents: ['claude', 'codex'], workflow: 'traditional', step: 3 };
@@ -18,12 +18,88 @@ describe('local flow starter kit', () => {
   it('creates a readable zip with a flow, input, and instructions', () => {
     const files = localKitFiles(draft);
     const unpacked = unzipSync(localKitArchive(draft));
-    expect(Object.keys(unpacked).sort()).toEqual(['START-HERE.txt', 'flow-input.json', 'software-factory.flow.mts']);
+    expect(Object.keys(unpacked).sort()).toEqual(['START-HERE.txt', 'flow-input.json', 'relay-preflight.mjs', 'software-factory.flow.mts']);
     for (const [name, content] of Object.entries(files)) expect(strFromU8(unpacked[name])).toBe(content);
     expect(files['START-HERE.txt']).toContain(LOCAL_INSTALL);
     expect(files['START-HERE.txt']).toContain(LOCAL_RUN);
     expect(LOCAL_RUN).toContain('--local-agent');
     expect(LOCAL_RUN).toContain('--input flow-input.json');
+  });
+
+  it('pins a Flows CLI new enough to run its own authored TypeScript flow', () => {
+    // 2.0.9 linked `flows` to the prebuilt runtime binary, which cannot resolve
+    // @relayflows/surface from a .flow.mts, and shipped a `flows check` with no
+    // TypeScript path at all — so step 4 always died on "contains invalid YAML
+    // or JSON" before the run started. Verified fixed in 2.0.12.
+    expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
+    expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
+    expect(RELAYFLOWS_VERSION).toBe('2.0.12');
+  });
+
+  it('runs preconditions and the spec check before the flow itself', () => {
+    const steps = LOCAL_RUN.split('&&').map(step => step.trim());
+    expect(steps[0]).toBe('git switch -c relay/first-flow');
+    expect(steps[1]).toBe(`node ${LOCAL_PREFLIGHT}`);
+    expect(steps[2]).toBe('npx flows check software-factory.flow.mts');
+    expect(steps.at(-1)).toBe('npx flows run --local-agent software-factory.flow.mts --input flow-input.json');
+    expect(localKitFiles(draft)['START-HERE.txt']).toContain(LOCAL_PREFLIGHT);
+  });
+
+  it('checks the placeholder with the exact sentinel the kit writes', () => {
+    const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
+    const { issue } = localInput(draft) as { issue: { title: string; body: string } };
+    // Drift between the two is the bug this guards: if the sentinel stops
+    // matching what localInput prefills, an unedited ticket reaches an agent.
+    expect(issue.body).toBe(PLACEHOLDER_BODY);
+    expect(issue.title).toBe(PLACEHOLDER_TITLE);
+    expect(script).toContain(JSON.stringify(PLACEHOLDER_BODY));
+    // body, not title: a `contains` filter overwrites title at build time.
+    const filtered = { ...draft, sourceSettings: { github: { repository: 'acme/app', contains: 'Please fix' } } };
+    const contains = localInput(filtered) as { issue: { title: string; body: string } };
+    expect(contains.issue.title).toBe('Please fix');
+    expect(contains.issue.body).toBe(PLACEHOLDER_BODY);
+    expect(script).toContain('const untouched = issue.body === PLACEHOLDER_BODY;');
+  });
+
+  it('prompts on a terminal and fails fast without one instead of hanging', () => {
+    const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
+    expect(script).toContain('createInterface');
+    expect(script).toContain('untouched && !process.stdin.isTTY');
+    // The non-interactive refusal has to name the file and both fields.
+    expect(script).toContain('Set issue.title and issue.body to the real ticket');
+    expect(script).toContain('writeFileSync(INPUT, JSON.stringify(input, null, 2)');
+  });
+
+  it('fails fast on a throwaway repo, a missing origin or no gh sign-in', () => {
+    const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
+    expect(script).toContain('git("rev-parse", "--is-inside-work-tree")');
+    expect(script).toContain('git("remote", "get-url", "origin")');
+    expect(script).toContain('execFileSync("gh", ["auth", "status"]');
+    expect(script).toContain('git("status", "--porcelain")');
+    // execFile, never a shell: repository paths contain spaces and parentheses.
+    expect(script).toContain('execFileSync');
+    expect(script).not.toMatch(/\bexecSync\(/);
+    // The kit's own files are not the user's uncommitted work.
+    for (const name of Object.keys(localKitFiles(draft))) expect(script).toContain(`"${name}"`);
+  });
+
+  it('reads git porcelain status without trimming off the first path', () => {
+    const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
+    // `git status --porcelain` puts the status in columns 1-2, so an unstaged
+    // change leads with a space (" M package.json"). Trimming the command
+    // output strips that space from the first line only; slice(3) then eats a
+    // character of that path, it no longer matches KIT_FILES, and a routine
+    // `npm install` touching the tracked package.json falsely blocks the run.
+    expect(script).toContain('return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });');
+    expect(script).not.toMatch(/execFileSync\("git"[^\n]*\)\.trim\(\)/);
+    expect(script).toContain('git("status", "--porcelain").split("\\n").filter(Boolean)');
+  });
+
+  it('leaves a Markdown-sourced kit no placeholder ticket to prompt for', () => {
+    const markdown: FactoryDraft = { ...draft, sources: ['markdown'], sourceSettings: { markdown: { path: 'docs/ticket.md' } } };
+    expect(localInput(markdown)).not.toHaveProperty('issue');
+    // The guard keys off input.issue, so the Markdown kit skips the prompt.
+    expect(localKitFiles(markdown)[LOCAL_PREFLIGHT]).toContain('if (issue) {');
   });
 
   it('preserves issue filters and provides an editable one-ticket input', () => {
