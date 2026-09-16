@@ -25,14 +25,41 @@ export const WORKFLOW_STEP_DETAILS: Record<WorkflowStep, string> = {
 export type WorkflowId = (typeof WORKFLOWS)[number]['id'];
 
 /**
+ * Reads `package.json` with Node, which every sandbox has because it has npm.
+ * A missing file, unparseable JSON, or an empty/absent `test` script all exit
+ * non-zero so the caller can skip instead of running a package manager.
+ */
+const HAS_TEST_SCRIPT = 'node -e \'const f=require("fs");let p;try{p=JSON.parse(f.readFileSync("package.json","utf8"))}catch{process.exit(1)}const t=(p.scripts||{}).test;process.exit(t&&String(t).trim()?0:1)\'';
+
+/**
  * Installs dependencies with the repository's own package manager (chosen by
  * lockfile) and runs its `test` script. Cloud sandboxes ship npm and corepack
  * but not pnpm or Yarn, so a bare `npm test` fails for pnpm/Yarn repositories
  * whose test script calls the package manager (AgentWorkforce/burn#540). Yarn
  * Berry (`.yarnrc.yml`) installs with `--immutable`; Yarn Classic with
  * `--frozen-lockfile`.
+ *
+ * The step runs under `sh`, and its exit code is the only signal the runner
+ * has: `f.run` takes a timeout but no retry policy, so anything non-zero is
+ * retried until the run dies with `retries_exhausted`. A repository with no
+ * `package.json` therefore killed real runs — every npm subcommand reports
+ * ENOENT as `errno -2`, which npm returns verbatim as its exit status, and
+ * `-2 & 0xFF` is 254. Retrying can never create the file, so "there is nothing
+ * to test" now skips with a message and exit 0; only a genuine install or test
+ * failure, or a lockfile whose package manager cannot be provided, exits
+ * non-zero. Every path prints a line, so the journal never records an empty
+ * `stdout_tail` again.
  */
-export const FLOW_TEST_COMMAND = "if [ -f pnpm-lock.yaml ]; then mkdir -p \"$HOME/.local/bin\" && { corepack enable --install-directory \"$HOME/.local/bin\" pnpm 2>/dev/null || true; } && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm install --frozen-lockfile && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm test; elif [ -f yarn.lock ]; then mkdir -p \"$HOME/.local/bin\" && { corepack enable --install-directory \"$HOME/.local/bin\" yarn 2>/dev/null || true; } && export PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 && { if [ -f .yarnrc.yml ]; then yarn install --immutable; else yarn install --frozen-lockfile; fi; } && PATH=\"$HOME/.local/bin:$PATH\" COREPACK_ENABLE_DOWNLOAD_PROMPT=0 yarn test; elif [ -f bun.lock ] || [ -f bun.lockb ]; then bun install --frozen-lockfile && bun run test; else { [ -f package-lock.json ] && npm ci || npm install; } && npm test; fi";
+export const FLOW_TEST_COMMAND = [
+  'set -e',
+  'if [ ! -f package.json ]; then echo "relayflow: no package.json in the repository root; skipping tests." && exit 0; fi',
+  `if ! ${HAS_TEST_SCRIPT} >/dev/null 2>&1; then echo "relayflow: package.json has no runnable test script; skipping tests." && exit 0; fi`,
+  'if [ -f pnpm-lock.yaml ]; then pm=pnpm; elif [ -f yarn.lock ]; then pm=yarn; elif [ -f bun.lock ] || [ -f bun.lockb ]; then pm=bun; else pm=npm; fi',
+  'if [ "$pm" = pnpm ] || [ "$pm" = yarn ]; then if ! command -v "$pm" >/dev/null 2>&1; then mkdir -p "$HOME/.local/bin" && { corepack enable --install-directory "$HOME/.local/bin" "$pm" >/dev/null 2>&1 || true; } && PATH="$HOME/.local/bin:$PATH" && export PATH; fi; COREPACK_ENABLE_DOWNLOAD_PROMPT=0 && export COREPACK_ENABLE_DOWNLOAD_PROMPT; fi',
+  'if ! command -v "$pm" >/dev/null 2>&1; then echo "relayflow: this repository\'s lockfile requires $pm, which is not installed and could not be provisioned." >&2 && exit 1; fi',
+  'echo "relayflow: installing dependencies and running tests with $pm"',
+  'if [ "$pm" = pnpm ]; then pnpm install --frozen-lockfile && pnpm test; elif [ "$pm" = yarn ]; then { if [ -f .yarnrc.yml ]; then yarn install --immutable; else yarn install --frozen-lockfile; fi; } && yarn test; elif [ "$pm" = bun ]; then bun install --frozen-lockfile && bun run test; else { if [ -f package-lock.json ]; then npm ci; else npm install; fi; } && npm test; fi',
+].join('; ');
 
 export function workflowAgents(selected: readonly string[]) {
   const builder = selected.filter(isCodingAgent)[0] ?? 'claude';
