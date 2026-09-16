@@ -1,7 +1,12 @@
 FLOWS ONBOARDING MEASUREMENT — VERSION 2
 
-Status: implemented instrumentation and report definitions; no live PostHog
-project settings, dashboard, or production deployment changed by this work.
+Status: implemented instrumentation and report definitions on both apps; no live
+PostHog project settings, dashboard, or production deployment changed by this
+work. The Cloud branch is emitted by the Cloud deploy wizard (cloud repository,
+packages/web/app/flows/deploy/_lib/flow-funnel.ts). journey_id reaches Cloud in
+the handoff payload and is preserved by parseFlowHandoff, which is what makes
+the cross-app report possible; a handoff carrying no usable journey still
+deploys and is counted with journey_id = null.
 
 PRIMARY QUESTIONS
 1. Which step loses the most journeys?
@@ -30,15 +35,26 @@ Core setup, in order:
   flows_onboarding_flow_created
   flows_onboarding_step_viewed                 stage = connections
 
-Cloud branch:
-  flows_onboarding_cloud_handoff_started
-  flows_onboarding_cloud_import_received
+Cloud branch (emitted by Cloud except where marked):
+  flows_onboarding_cloud_handoff_started       marketing side, beacon transport
+  flows_onboarding_cloud_import_received       from_fragment, has_journey
   flows_onboarding_google_redirect_started
-  flows_onboarding_google_login_completed
-  flows_onboarding_cloud_flow_saved
-  flows_onboarding_cloud_dashboard_viewed
-  flows_onboarding_connection_setup_clicked
-  flows_onboarding_connection_setup_viewed
+  flows_onboarding_google_login_completed      a stored (not fragment) handoff on
+                                               an authenticated view: the return trip
+  flows_onboarding_cloud_flow_saved            flow_id
+  flows_onboarding_cloud_dashboard_viewed      from = run_complete/run_panel/deployed
+  flows_onboarding_connection_setup_clicked    not implemented
+  flows_onboarding_connection_setup_viewed     not implemented
+
+Cloud wizard steps (surface = cloud; cloud_step = flow/workspace/integrations/
+model/deploy, one merged page per step):
+  flows_onboarding_cloud_step_viewed           is_revisit, visit_number
+  flows_onboarding_cloud_step_left             elapsed_ms on the step just left
+  flows_onboarding_cloud_save_started
+  flows_onboarding_cloud_save_failed           stage, error_code
+  flows_onboarding_cloud_test_ticket_started
+  flows_onboarding_cloud_test_ticket_failed    error_code
+  flows_onboarding_cloud_run_finished          run_status
 
 Local branch:
   flows_onboarding_destination_selected        destination = local
@@ -92,6 +108,14 @@ handoff_id: correlates a particular Cloud attempt.
 flow_id: correlates a successfully saved Cloud flow.
 PostHog's normal device/browser/referrer/session properties remain available.
 
+Cloud events additionally carry surface=cloud, cloud_step, cloud_step_index,
+visit_number, and elapsed_ms, plus the flow's shape (workflow, sources,
+source_count, agent_count, configured_filters). Cloud reports elapsed_ms but
+not active_ms: visibility tracking is not wired there, and a dwell time that
+silently counted a backgrounded tab would mislead more than an absent one.
+error_code on a Cloud failure is bounded: a server enum such as session_required
+or flow_repository_not_connected, otherwise http_<status>, never a message.
+
 DIAGNOSTIC EVENTS (all prefixed flows_onboarding_)
 step_completed, intro_completed, navigation_clicked (direction/target_stage)
 step_left (reason=route_change/pagehide/unmount, exit_signal)
@@ -111,6 +135,13 @@ cloud_handoff_started, handoff_failed
 cloud_import_received, cloud_import_failed, google_redirect_started
 google_login_completed, google_login_failed
 cloud_save_started, cloud_flow_saved, cloud_save_failed, cloud_dashboard_viewed
+cloud_step_viewed, cloud_step_left (Cloud wizard steps; visit_number, elapsed_ms)
+cloud_test_ticket_started, cloud_test_ticket_failed, cloud_run_finished
+cloud_import_failed carries reason = missing/storage_blocked, which separates a
+  handoff lost to blocked browser storage from one that never arrived.
+cloud_save_failed carries stage = model_credentials/deploy_request/unexpected,
+  because credential activation and the deploy call fail for different reasons
+  and one shared code would hide which half of the step users lose.
 connection_setup_clicked, connection_setup_viewed (setup=agents/integrations)
 cloud_code_copied
 
@@ -129,9 +160,11 @@ INTERPRETATION AND COVERAGE LIMITS
   Returned login failures are captured with bounded error categories.
 - cloud_flow_saved means persistence succeeded. connection_setup_viewed means
   the setup page opened, not that an integration or agent connected.
-- First-run start/success/failure requires runner-side events. The current Cloud
-  saved-flow dashboard has no executor; local CLI execution is outside this UI.
-  Do not label saves or downloads as activation/first-run success.
+- First-run start/success/failure requires runner-side events. cloud_run_finished
+  reports only the status the deploy wizard itself observed for a run it started
+  from the test ticket, not the runs the deployed listener launches later, and
+  local CLI execution is outside this UI. Do not label saves or downloads as
+  activation/first-run success.
 - Session replay depends on PostHog project enablement and sampling. Inputs are
   masked and code/configuration surfaces are blocked. Analytics do not collect
   raw repository names, tickets, source filters, generated code, or write-in names.
