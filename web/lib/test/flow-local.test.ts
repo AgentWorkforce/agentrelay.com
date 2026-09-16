@@ -136,6 +136,28 @@ describe('local flow starter kit', () => {
     expect(messages[0]).toContain('flow-input.json');
   });
 
+  it('keeps a co-selected source’s prefill instead of letting Markdown win in silence', () => {
+    // Reported with Linear + Markdown both selected: flow-input.json came out
+    // as { approver } alone, so the ticket source's prefill was discarded, its
+    // filters in issueRejection were unreachable, and START-HERE never said so.
+    const both: FactoryDraft = { ...draft, sources: ['markdown', 'github'], sourceSettings: { ...draft.sourceSettings, markdown: { path: 'docs/ticket.md' } } };
+    expect(localInput(both).issue).toMatchObject({ source: 'github', repository: 'acme/app', labels: ['bug', 'ready'] });
+    // Selection order is not a hidden setting: either order prefills the ticket.
+    expect(localInput({ ...both, sources: ['github', 'markdown'] })).toEqual(localInput(both));
+    // Nothing is lost either way: the flow still reads the Markdown file when
+    // flow-input.json carries no issue, and step 3 says which one wins.
+    expect(localKitFiles(both)['software-factory.flow.mts']).toContain('input.issue ?? {');
+    const start = localKitFiles(both)['START-HERE.txt'];
+    expect(start).toContain('it is the fallback here, not the default');
+    expect(start).toContain('delete "issue" from flow-input.json');
+    expect(start).toContain('docs/ticket.md');
+    // Markdown on its own is untouched: no placeholder ticket, no prompt.
+    const alone: FactoryDraft = { ...both, sources: ['markdown'] };
+    expect(localInput(alone)).toEqual({ approver: 'local' });
+    expect(localKitFiles(alone)['START-HERE.txt']).toContain('Write the ticket and acceptance criteria in docs/ticket.md');
+    expect(localKitFiles(alone)['START-HERE.txt']).not.toContain('delete "issue" from flow-input.json');
+  });
+
   it('does not overwrite the user’s Markdown task file', () => {
     const markdown: FactoryDraft = { ...draft, sources: ['markdown'], sourceSettings: { markdown: { path: 'docs/ticket.md' } } };
     expect(localInput(markdown)).toEqual({ approver: 'local' });
@@ -271,9 +293,9 @@ describe('relocating a kit that was extracted outside a repository', () => {
    * that arrive while no question is pending. Running out of answers closes the
    * stream, which is what Ctrl+D does.
    */
-  function preflight(cwd: string, root: string, answers: string[], tty = true) {
+  function preflight(cwd: string, root: string, answers: string[], tty = true, env?: NodeJS.ProcessEnv) {
     const args = tty ? ['--import', pathToFileURL(join(root, 'force-tty.mjs')).href, LOCAL_PREFLIGHT] : [LOCAL_PREFLIGHT];
-    const child = spawn(process.execPath, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn(process.execPath, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'], ...(env ? { env } : {}) });
     const queue = [...answers];
     let out = '';
     let err = '';
@@ -379,6 +401,60 @@ describe('relocating a kit that was extracted outside a repository', () => {
     const { code } = await preflight(download, root, [type(target)]);
     expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(true);
     expect(code).toBe(1);
+  }, 30_000);
+
+  /** The kit extracted into the repository, as step 1 of START-HERE says. */
+  function installed(root: string, name: string, options: { dependency?: boolean; ticket?: boolean } = {}) {
+    const target = repo(root, name);
+    for (const [file, content] of Object.entries(localKitFiles(draft))) writeFileSync(join(target, file), content);
+    if (options.dependency) {
+      const pkg = join(target, 'node_modules', 'relayflows');
+      mkdirSync(pkg, { recursive: true });
+      writeFileSync(join(pkg, 'package.json'), '{ "name": "relayflows", "version": "0.0.0", "main": "index.js" }\n');
+      writeFileSync(join(pkg, 'index.js'), 'module.exports = {};\n');
+    }
+    if (options.ticket) {
+      writeFileSync(join(target, 'flow-input.json'), JSON.stringify({ approver: 'local',
+        issue: { source: 'github', title: 'Fix login', body: 'Users cannot sign in.', labels: ['bug', 'ready'], repository: 'acme/app' } }, null, 2) + '\n');
+    }
+    return target;
+  }
+  /** A gh that is signed in, so the check under test is the one that decides. */
+  function signedIn(root: string) {
+    const bin = join(root, 'bin');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, 'gh'), '#!/bin/sh\nexit 0\n', { mode: 0o755 });
+    return { ...process.env, PATH: bin + ':' + process.env.PATH };
+  }
+
+  it('stops on a skipped install instead of leaving npx to fail without advice', async () => {
+    const { root } = workspace();
+    const target = installed(root, 'no-install');
+    const { code, out, err } = await preflight(target, root, [], true, signedIn(root));
+    // What this replaces: "Preconditions met. Starting the flow." followed by
+    // npm's "could not determine executable to run", which names neither the
+    // missing package nor the directory the install has to happen in.
+    expect(err).toContain('relayflows is not installed in this repository.');
+    expect(err).toContain(LOCAL_INSTALL);
+    expect(err).toContain('Run step 2 in this repository first:');
+    expect(out).not.toContain('Preconditions met');
+    // Before the prompt, not after: the operator typed out a whole ticket and
+    // then lost the run to a missing binary.
+    expect(out).not.toContain('still holds the placeholder ticket');
+    expect(code).toBe(1);
+  }, 30_000);
+
+  it('passes the same check once step 2 has run in that repository', async () => {
+    const { root } = workspace();
+    const target = installed(root, 'installed', { dependency: true, ticket: true });
+    const { code, out, err } = await preflight(target, root, [], true, signedIn(root));
+    // The paired positive: a check that cannot pass is as useless as none.
+    expect(err).not.toContain('relayflows is not installed');
+    expect(out).toContain('Preconditions met. Starting the flow.');
+    expect(code).toBe(0);
+    // Resolved from the repository, not from the kit: node_modules next to the
+    // script says nothing about where npx will look.
+    expect(localKitFiles(draft)[LOCAL_PREFLIGHT]).toContain('createRequire(join(process.cwd(), "package.json")).resolve("relayflows")');
   }, 30_000);
 
   it('offers the move for the throwaway directory only, from one file list', () => {
