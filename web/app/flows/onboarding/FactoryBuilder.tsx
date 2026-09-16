@@ -298,7 +298,7 @@ export function FactoryBuilder() {
                 <div className={s.reviewHeading}><span>{workflow?.label}</span><button type="button" onClick={() => goToStep(2)}>Edit workflow</button></div>
                 <section className={`ph-no-capture ph-sensitive ${s.connectionChecklist}`} aria-label="Your sources to connect">
                   <ul>{draft.sources.map(id => <li key={id}>
-                    <SourceIcon id={id} /><div><strong>{sourceLabel(id)}</strong><p>{sourceSummary(id, draft.sourceSettings[id] ?? {})}</p></div><span>{id === 'markdown' ? 'No connection needed' : 'Connect in Cloud'}</span>
+                    <SourceIcon id={id} /><div><strong>{sourceLabel(id)}</strong><p>{sourceSummary(id, draft.sourceSettings[id] ?? {})}</p></div><span>{id === 'markdown' ? 'Local runs only' : 'Connect in Cloud'}</span>
                   </li>)}</ul>
                   {comingSoonOnly && <p>This example uses Claude Code while support for your selected agents is on the way.</p>}
                   <button type="button" className={s.previous} onClick={() => goToStep(0)}>Edit sources and agents<ArrowRight size={13} /></button>

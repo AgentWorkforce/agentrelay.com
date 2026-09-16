@@ -67,6 +67,22 @@ export function readFactoryDraft(raw: string | null): FactoryDraft | null {
   } catch { return null; }
 }
 
+/**
+ * Cloud deploys a listener, and a Markdown file is read by a run rather than
+ * emitting events, so a Markdown-only flow has nothing to trigger it. Cloud
+ * already refuses this at deploy time; saying so here saves a Google sign-in,
+ * a GitHub App install and a model choice made for a deploy that cannot
+ * happen. Any other selected source is a real listener, so the flow deploys
+ * (Cloud drops markdown from the sources it listens to) and is not blocked.
+ */
+export const MARKDOWN_ONLY_CLOUD_NOTE = 'Markdown files are not a live source, so Cloud has nothing to listen to. Choose a ticket source, or run on your computer.';
+export function isMarkdownOnly(draft: FactoryDraft): boolean {
+  return draft.sources.length > 0 && draft.sources.every(source => source === 'markdown');
+}
+export function cloudBlockedReason(draft: FactoryDraft): string {
+  return isMarkdownOnly(draft) ? MARKDOWN_ONLY_CLOUD_NOTE : '';
+}
+
 export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, journeyId?: string): string {
   if (!canContinue(draft, 2)) throw new Error('Choose a workflow before continuing to Cloud.');
   // The fragment is read only by Cloud's browser deploy page, which keeps it in

@@ -24,9 +24,18 @@ export const LOCAL_RUN = `git switch -c relay/first-flow &&\nnode ${LOCAL_PREFLI
 export const PLACEHOLDER_TITLE = 'Replace with your ticket title';
 export const PLACEHOLDER_BODY = 'Replace with the ticket description and acceptance criteria.';
 
+/**
+ * Markdown is a fallback, not an override. Selecting it alongside a ticket
+ * source used to win outright: flow-input.json became `{ approver }` alone, so
+ * that source's prefill (its `contains` title, labels, team, repository) was
+ * dropped without a word and its filters in issueRejection could never run.
+ * The ticket source prefills instead, and nothing is lost — the generated flow
+ * still reads the Markdown file whenever flow-input.json carries no issue, and
+ * START-HERE step 3 says so. Markdown alone has no ticket to prefill.
+ */
 export function localInput(draft: FactoryDraft) {
-  if (draft.sources.includes('markdown')) return { approver: 'local' };
-  const source = draft.sources[0];
+  const source = draft.sources.find(id => id !== 'markdown');
+  if (!source) return { approver: 'local' };
   const settings = draft.sourceSettings[source] ?? {};
   const { labels, contains, ...fields } = settings;
   return { approver: 'local', issue: {
@@ -54,6 +63,7 @@ export const LOCAL_PREFLIGHT_SCRIPT = `#!/usr/bin/env node
 // Run by START-HERE.txt step 4, before "flows check" and "flows run".
 import { execFileSync } from "node:child_process";
 import { constants, copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -267,6 +277,22 @@ try {
     "Add one first: git remote add origin <url>");
 }
 
+// Step 4 runs "npx flows" twice straight after this, and npx resolves from the
+// directory it runs in — never from wherever this script lives. So the install
+// from step 2 has to have happened in this repository, and the check has to
+// resolve from here: a kit invoked by absolute path from somewhere else must
+// not pass on a node_modules sitting next to the script. Skipping step 2 used
+// to reach "Preconditions met", then die on npm's "could not determine
+// executable to run", which names neither the package nor the directory.
+try {
+  createRequire(join(process.cwd(), "package.json")).resolve("relayflows");
+} catch {
+  fail("relayflows is not installed in this repository.",
+    "npx flows would fail here with: could not determine executable to run",
+    "Run step 2 in this repository first:",
+    INSTALL);
+}
+
 try {
   execFileSync("gh", ["auth", "status"], { stdio: "ignore" });
 } catch {
@@ -345,9 +371,14 @@ export function localKitFiles(draft: FactoryDraft): Record<string, string> {
   const roles = WORKFLOWS.find(value => value.id === draft.workflow)?.steps.flatMap(rolesForStep) ?? [];
   const names = [...new Set(roles.length ? roles.map(role => resolveAgentSettings(draft.workflow!, role, draft.agents, draft.agentSettings).agent) : [agents.builder])].map(agentLabel).join(' and ');
   const markdownPath = draft.sourceSettings.markdown?.path?.trim() || 'tasks.md';
-  const inputStep = draft.sources.includes('markdown')
+  const ticketStep = `Edit flow-input.json with a real ticket title and description. It is prefilled with your selected source and filters. If you skip this, ${LOCAL_PREFLIGHT} asks for them in step 4 rather than starting an agent on the placeholder. This starts one ticket manually; it does not subscribe to external issue trackers.`;
+  const inputStep = draft.sources.every(id => id === 'markdown')
     ? `Write the ticket and acceptance criteria in ${markdownPath}, relative to your repository root. The flow reads that file; it is not included in this kit so an existing file cannot be overwritten.`
-    : `Edit flow-input.json with a real ticket title and description. It is prefilled with your selected source and filters. If you skip this, ${LOCAL_PREFLIGHT} asks for them in step 4 rather than starting an agent on the placeholder. This starts one ticket manually; it does not subscribe to external issue trackers.`;
+    : draft.sources.includes('markdown')
+      // Which input wins is stated here rather than decided in silence: the
+      // ticket source prefills, and the Markdown file is one deletion away.
+      ? `${ticketStep} You chose Markdown as well: it is the fallback here, not the default. To work from ${markdownPath} instead, delete "issue" from flow-input.json — the flow reads that file whenever no issue is there.`
+      : ticketStep;
   return {
     'software-factory.flow.mts': factorySource({ ...draft, step: 3 }, 'local'),
     'flow-input.json': JSON.stringify(localInput(draft), null, 2) + '\n',
@@ -371,7 +402,7 @@ ${LOCAL_INSTALL}
 4. Start from a clean working tree and create a new branch (choose another name if relay/first-flow already exists), then check and run:
 ${LOCAL_RUN}
 
-${LOCAL_PREFLIGHT} runs first and stops before any model usage if this is not a repository, has no origin remote, has no gh sign-in, or has uncommitted changes. If you did extract the kit somewhere else, it offers to copy it into your repository: give it the path, and it checks that repository first, copies without replacing any file already there, and prints the commands to run from it — including the install from step 2, which has to run there too. When flow-input.json still holds the placeholder ticket it asks for the title and description and saves them; with no terminal to ask on it stops and names the fields to edit.
+${LOCAL_PREFLIGHT} runs first and stops before any model usage if this is not a repository, has no origin remote, has not had step 2's install run in it, has no gh sign-in, or has uncommitted changes. If you did extract the kit somewhere else, it offers to copy it into your repository: give it the path, and it checks that repository first, copies without replacing any file already there, and prints the commands to run from it — including the install from step 2, which has to run there too. When flow-input.json still holds the placeholder ticket it asks for the title and description and saves them; with no terminal to ask on it stops and names the fields to edit.
 
 The flows command then starts the local runtime and attaches the local worker. Coding agents use their existing local sign-in; no Agent Relay Cloud account is needed. This flow edits code, runs tests, pushes the branch, and opens a pull request.
 

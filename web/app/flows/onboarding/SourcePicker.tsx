@@ -74,7 +74,7 @@ export function SourcePicker({ draft, onChange, onTrack, actions }: { draft: Fac
         <input type="checkbox" checked={settings.mentioned ?? false} onChange={event => update({ mentioned: event.target.checked })} />
         Only when the app is mentioned
       </label>}
-      {source.id === 'markdown' && <p className={s.sourceNote}>Uses tasks.md if left blank. Your file stays in your repository.</p>}
+      {source.id === 'markdown' && <p className={s.sourceNote}>Uses tasks.md if left blank. Your file stays in your repository. Local runs only: Cloud cannot listen to a file.{draft.sources.length > 1 && ' Your other source prefills the ticket; the Markdown file is the fallback.'}</p>}
       </div>
     </details>}
   </>;

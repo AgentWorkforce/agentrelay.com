@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ArrowRight, Cloud, Monitor, Download, Copy, Check } from 'lucide-react';
 import Google from '@lobehub/icons/es/Google';
-import { cloudConnectionsHref, type FactoryDraft } from '../../../lib/flow-onboarding';
+import { cloudBlockedReason, cloudConnectionsHref, isMarkdownOnly, type FactoryDraft } from '../../../lib/flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_RUN, localKitArchive } from '../../../lib/flow-local';
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
@@ -11,11 +11,16 @@ import s from './onboarding.module.css';
 export function RunOptions({ draft, onTrack, getJourneyId, markOutcome, onNotice }: {
   draft: FactoryDraft; onTrack: FlowTrack; getJourneyId: () => string | undefined; markOutcome: (outcome: 'cloud_handoff' | 'local_kit_downloaded') => void; onNotice: (message: string) => void;
 }) {
-  const [destination, setDestination] = useState<'cloud' | 'local'>('cloud');
+  const [chosen, setDestination] = useState<'cloud' | 'local'>('cloud');
   const [copied, setCopied] = useState('');
   const [signingIn, setSigningIn] = useState(false);
+  // A Markdown-only flow cannot be deployed: Cloud's deploy wizard refuses it
+  // after a Google sign-in, a GitHub App install and a model choice. Say it
+  // here, before any of that, and start these people on the local kit.
+  const cloudBlocked = cloudBlockedReason(draft);
+  const destination = cloudBlocked ? 'local' : chosen;
   function continueInCloud() {
-    if (signingIn) return;
+    if (signingIn || cloudBlocked) return;
     setSigningIn(true);
     try {
       const handoffId = crypto.randomUUID();
@@ -53,11 +58,13 @@ export function RunOptions({ draft, onTrack, getJourneyId, markOutcome, onNotice
     <fieldset className={s.runChoices}>
       <legend className={s.visuallyHidden}>Where to run your flow</legend>
       {([{ id: 'cloud', title: 'In Cloud', detail: 'Sign in and connect your tools.', Icon: Cloud },
-        { id: 'local', title: 'On your computer', detail: 'Use your local coding agents.', Icon: Monitor }] as const).map(({ id, title, detail, Icon }) =>
-        <label key={id} className={`${s.runChoice} ${destination === id ? s.runChoiceSelected : ''}`}>
-          <div><Icon size={20} aria-hidden="true" /><strong>{title}</strong><input type="radio" name="run-destination" value={id} checked={destination === id} onChange={() => { onTrack('destination_selected', { from: destination, destination: id }); setDestination(id); }} aria-label={title} /></div>
-          <p>{detail}</p>
-        </label>)}
+        { id: 'local', title: 'On your computer', detail: 'Use your local coding agents.', Icon: Monitor }] as const).map(({ id, title, detail, Icon }) => {
+        const blocked = id === 'cloud' && cloudBlocked !== '';
+        return <label key={id} className={`${s.runChoice} ${destination === id ? s.runChoiceSelected : ''} ${blocked ? s.runChoiceBlocked : ''}`}>
+          <div><Icon size={20} aria-hidden="true" /><strong>{title}</strong><input type="radio" name="run-destination" value={id} checked={destination === id} disabled={blocked} onChange={() => { onTrack('destination_selected', { from: destination, destination: id }); setDestination(id); }} aria-label={title} /></div>
+          <p>{blocked ? cloudBlocked : detail}</p>
+        </label>;
+      })}
     </fieldset>
     {destination === 'cloud' ? <div className={s.runDestination}>
       <button type="button" className={`${s.primary} ${s.runAction}`} onClick={continueInCloud} disabled={signingIn}><span className={s.googleMark}><Google.Color size={18} /></span> {signingIn ? 'Opening Cloud…' : 'Continue with Google'} <ArrowRight size={17} /></button>
@@ -66,7 +73,7 @@ export function RunOptions({ draft, onTrack, getJourneyId, markOutcome, onNotice
       <button type="button" className={`${s.primary} ${s.runAction}`} onClick={downloadKit}><Download size={17} /> Download local kit</button>
       <p className={s.localKitNote}>Your flow, ticket input, and instructions. No Cloud account needed.</p>
       <ol className={s.localSteps}>
-        <li><strong>Extract into your repository</strong><p>{draft.sources.includes('markdown') ? 'Write your task in your selected Markdown file.' : 'Add a real ticket to flow-input.json.'} Open a terminal in that repository.</p></li>
+        <li><strong>Extract into your repository</strong><p>{isMarkdownOnly(draft) ? 'Write your task in your selected Markdown file.' : 'Add a real ticket to flow-input.json.'} Open a terminal in that repository.</p></li>
         <li><strong>Install the Flows CLI</strong>{command(LOCAL_INSTALL, 'install command')}</li>
         <li><strong>Check and run on a new branch</strong>{command(LOCAL_RUN, 'run commands')}</li>
       </ol>

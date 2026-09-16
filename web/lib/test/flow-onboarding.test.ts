@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import { FLOW_TEST_COMMAND } from '../flow-workflows';
-import { cloudConnectionsHref, DEFAULT_FACTORY, factorySource, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
+import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
+import { localInput } from '../flow-local';
 
 const matchingIssue = { source: 'github', title: 'Fix login', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app' };
 
@@ -192,11 +193,38 @@ describe('software factory onboarding', () => {
     expect(payload.handoffId).toBe('00000000-0000-4000-8000-000000000001');
   });
 
+  it('stops a Markdown-only draft before Cloud, and lets a co-selected source through', () => {
+    const markdownOnly: FactoryDraft = { ...completed, sources: ['markdown'], sourceSettings: { markdown: { path: 'tasks.md' } } };
+    // Markdown is read by a run, so a Markdown-only flow has nothing to wake a
+    // Cloud listener. Cloud refuses it at the deploy step; without this the
+    // person gets there through Google sign-in, a GitHub App and a model
+    // choice first. Same words as Cloud's wizard, so the two surfaces agree.
+    expect(isMarkdownOnly(markdownOnly)).toBe(true);
+    expect(cloudBlockedReason(markdownOnly)).toBe(MARKDOWN_ONLY_CLOUD_NOTE);
+    expect(MARKDOWN_ONLY_CLOUD_NOTE).toContain('Markdown files are not a live source');
+    // The negative that matters: Markdown beside a real ticket source is a
+    // legitimate deploy. Cloud drops markdown and listens to the other source,
+    // so blocking this would refuse a configuration that works.
+    for (const sources of [['markdown', 'linear'], ['linear', 'markdown'], ['github'], []] as FactoryDraft['sources'][]) {
+      expect(cloudBlockedReason({ ...markdownOnly, sources })).toBe('');
+      expect(isMarkdownOnly({ ...markdownOnly, sources })).toBe(false);
+    }
+    const withLinear: FactoryDraft = { ...markdownOnly, sources: ['markdown', 'linear'], sourceSettings: { markdown: { path: 'tasks.md' }, linear: { team: 'Engineering' } } };
+    const payload = JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(withLinear, 'id')).hash.slice(1)));
+    expect(payload.sources).toEqual(['markdown', 'linear']);
+    expect(payload.sourceSettings.linear).toEqual({ team: 'Engineering' });
+  });
+
   it('reads a Markdown task without an external source connection and quotes the path', async () => {
     const path = "docs/team's $(touch nope).md";
     const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['markdown', 'github'],
       sourceSettings: { markdown: { path } }, agents: ['claude'], task: 'Implement this task', workflow: 'simple', step: 2 };
     expect(readFactoryDraft(JSON.stringify(draft))?.sources).toEqual(['markdown', 'github']);
+    // Markdown next to a ticket source is the fallback, not an override: the
+    // kit prefills GitHub's ticket, and the Markdown branch still runs when
+    // flow-input.json carries no issue. Both are executed below.
+    expect(localInput(draft).issue).toMatchObject({ source: 'github' });
+    expect(localInput({ ...draft, sources: ['markdown'] })).toEqual({ approver: 'local' });
     const compiled = ts.transpileModule(factorySource(draft).replace('import { flow } from "@relayflows/surface";', ''), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
     });

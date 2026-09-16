@@ -50,7 +50,7 @@ export function validSourcePreferences(value: unknown): value is SourcePreferenc
 }
 
 export function sourceSummary(id: IssueSourceId, settings: SourceSettings): string {
-  if (id === 'markdown') return `${settings.path?.trim() || 'tasks.md'} · No source integration needed`;
+  if (id === 'markdown') return `${settings.path?.trim() || 'tasks.md'} · Local runs only, nothing to connect`;
   const parts = ISSUE_SOURCES.find(source => source.id === id)!.fields.flatMap(field => {
     const value = settings[field.key]?.trim();
     return value ? [`${field.label}: ${value}`] : [];
