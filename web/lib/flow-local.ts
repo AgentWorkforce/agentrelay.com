@@ -43,16 +43,26 @@ export function localInput(draft: FactoryDraft) {
  * with nowhere to push, a missing `gh` sign-in, uncommitted work, and a
  * `flow-input.json` still holding the placeholder ticket. Ordered cheapest
  * first; none of it costs model usage.
+ *
+ * The first of those is where most people land — the kit is extracted to
+ * ~/Downloads and run there — so on a terminal that one guard does more than
+ * complain: it offers to copy the kit into the repository the user names, and
+ * prints the sequence to run from there. Everywhere else, including every
+ * non-interactive shell, it fails with the same message it always did.
  */
 export const LOCAL_PREFLIGHT_SCRIPT = `#!/usr/bin/env node
 // Run by START-HERE.txt step 4, before "flows check" and "flows run".
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { constants, copyFileSync, existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 
 const INPUT = "flow-input.json";
 const PLACEHOLDER_TITLE = ${JSON.stringify(PLACEHOLDER_TITLE)};
 const PLACEHOLDER_BODY = ${JSON.stringify(PLACEHOLDER_BODY)};
+const INSTALL = ${JSON.stringify(LOCAL_INSTALL)};
+const RUN = ${JSON.stringify(LOCAL_RUN)};
 
 // This kit's own files differ from HEAD by design, so they are not treated as
 // uncommitted work.
@@ -62,10 +72,38 @@ const KIT_FILES = new Set([
   "node_modules/", ".relayflowd/", "summary.md",
 ]);
 
+// KIT_FILES exempts names from the dirty-tree check; it is not a description of
+// the kit. These are what npm and a finished run leave next to it, and the
+// target repository owns files of the same name, so relocation never carries
+// them. Everything else in KIT_FILES is copied, so a new kit file is portable
+// the moment it is listed above.
+const NOT_PORTABLE = new Set(["package.json", "package-lock.json", "summary.md"]);
+const PORTABLE = [...KIT_FILES].filter(name => !name.endsWith("/") && !NOT_PORTABLE.has(name));
+
+// Where the kit is, which is not necessarily where node was invoked from.
+const KIT_DIR = import.meta.dirname;
+
+const NOT_A_REPO = [
+  "Extract the kit into your repository root and run it from there.",
+  "Running git init here instead would build a repository with no origin, and",
+  "the flow would fail at git push after the agents had finished their work.",
+];
+
 function fail(problem, ...advice) {
   console.error("Blocked before the flow started: " + problem);
   for (const line of advice) console.error("  " + line);
   process.exit(1);
+}
+
+// createInterface, plus the one thing readline/promises leaves out: end of
+// input. Once the stream closes, question() stays pending forever, so Ctrl+D at
+// any prompt below would end the run with "Detected unsettled top-level await"
+// and a bare exit 13. Racing the close event reads a closed stream as null, and
+// every caller treats null as the answer it is: the user left.
+function prompter() {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const closed = new Promise(resolve => rl.once("close", () => resolve(null)));
+  return { rl, ask: query => Promise.race([rl.question(query).catch(() => null), closed]) };
 }
 
 // execFile, never a shell: a repository path containing spaces, parentheses or
@@ -81,13 +119,144 @@ function git(...args) {
   return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
+// Shared by the guard below and by the check on a relocation target: the kit's
+// own files are never the user's uncommitted work, in either directory.
+function dirtyPaths(...prefix) {
+  return git(...prefix, "status", "--porcelain").split("\\n").filter(Boolean)
+    .map(line => line.slice(3))
+    .filter(path => !KIT_FILES.has(path));
+}
+
+function expandHome(text) {
+  return resolve(text === "~" || text.startsWith("~/") ? join(homedir(), text.slice(1)) : text);
+}
+
+// A path dragged into a terminal arrives shell-escaped (Downloads/kit\\ \\(1\\))
+// and a pasted one can arrive quoted. Both name a directory that exists, so the
+// escapes are stripped only when the text as typed does not name one; a real
+// backslash in a directory name still wins.
+function targetPath(answer) {
+  const unquoted = answer.replace(/^(["'])(.*)\\1$/s, "$2");
+  const paths = [...new Set([unquoted, unquoted.replace(/\\\\(.)/g, "$1")])].map(expandHome);
+  return paths.find(existsSync) ?? paths[0];
+}
+
+// Single quotes, always: the directory this exists for was literally named
+// "software-factory-local (1)".
+function quote(path) {
+  return "'" + path.replaceAll("'", "'\\\\''") + "'";
+}
+
+// Everything the flow will need of the destination, checked before a single
+// file is written: the same three conditions this script enforces here, so a
+// relocated kit cannot land somewhere its own preflight would reject.
+function repoProblem(target) {
+  const stat = statSync(target, { throwIfNoEntry: false });
+  if (!stat) return "There is no " + target;
+  if (!stat.isDirectory()) return "Not a directory: " + target;
+  try {
+    git("-C", target, "rev-parse", "--is-inside-work-tree");
+  } catch {
+    return "Not a Git repository: " + target;
+  }
+  try {
+    git("-C", target, "remote", "get-url", "origin");
+  } catch {
+    return "No origin remote there. The flow ends in git push and gh pr create, so add one first: git remote add origin <url>";
+  }
+  const unclean = dirtyPaths("-C", target);
+  if (unclean.length) {
+    return "Uncommitted changes there (" + unclean.slice(0, 3).join(", ") + (unclean.length > 3 ? ", ..." : "") + "). Commit or stash them first; the flow commits and pushes a branch.";
+  }
+  return "";
+}
+
+// Never overwrite: START-HERE promises the kit keeps existing files, and a
+// flow-input.json already filled in is worth more than the placeholder shipped
+// here. Anything already present is left alone and named in the report.
+function copyKit(target) {
+  const copied = [];
+  const kept = [];
+  for (const name of PORTABLE) {
+    const from = join(KIT_DIR, name);
+    if (!existsSync(from)) continue;
+    if (existsSync(join(target, name))) {
+      kept.push(name);
+      continue;
+    }
+    copyFileSync(from, join(target, name), constants.COPYFILE_EXCL);
+    copied.push(name);
+  }
+  return { copied, kept };
+}
+
+/**
+ * The kit is sitting outside a repository, which is where most people who
+ * extract it to ~/Downloads end up. On a terminal it can move itself; the last
+ * thing it does either way is stop, because the rest of step 4 must not run in
+ * this directory.
+ */
+async function relocate() {
+  const { rl, ask } = prompter();
+  try {
+    console.log("This directory is not a Git repository, so the flow would have nowhere to push.");
+    console.log("The kit can be copied into your repository now, without overwriting anything.");
+    console.log("");
+    for (;;) {
+      const answer = await ask("Path to your repository (empty to stop): ");
+      // An empty line, Ctrl+D or a closed pipe all mean the same thing here:
+      // leave, with the advice this guard has always given.
+      if (answer === null || !answer.trim()) {
+        console.log("");
+        fail("this directory is not a Git repository.", ...NOT_A_REPO);
+      }
+      const target = targetPath(answer.trim());
+      const problem = repoProblem(target);
+      if (problem) {
+        console.log("  " + problem);
+        console.log("");
+        continue;
+      }
+      let moved;
+      try {
+        moved = copyKit(target);
+      } catch (error) {
+        fail("the kit could not be copied to " + target + ".",
+          String(error && error.message ? error.message : error),
+          "Copy " + PORTABLE.join(", ") + " there by hand, then run this again from " + target + ".");
+      }
+      console.log("");
+      if (moved.copied.length) console.log("Copied into " + target + ": " + moved.copied.join(", "));
+      if (moved.kept.length) {
+        console.log("Left alone, already there: " + moved.kept.join(", "));
+        console.log("The kit's copies are still in " + KIT_DIR + " if you want to compare them.");
+      }
+      console.log("");
+      // The documented sequence installs before this script runs, so the
+      // dependencies are here, not there, and node_modules is deliberately not
+      // copied. npx resolves from the directory it runs in, so the install has
+      // to happen again in the repository or "npx flows" finds nothing.
+      console.log("Now run these from the repository. The install has to run there too:");
+      console.log("");
+      console.log("  cd " + quote(target));
+      console.log("  " + INSTALL);
+      for (const line of RUN.split("\\n")) console.log("  " + line);
+      console.log("");
+      console.log("Stopping here so nothing else runs in this directory.");
+      process.exit(1);
+    }
+  } finally {
+    rl.close();
+  }
+}
+
 try {
   git("rev-parse", "--is-inside-work-tree");
 } catch {
-  fail("this directory is not a Git repository.",
-    "Extract the kit into your repository root and run it from there.",
-    "Running git init here instead would build a repository with no origin, and",
-    "the flow would fail at git push after the agents had finished their work.");
+  // Nothing can be asked without a terminal, so a non-interactive shell gets
+  // the message and the exit code it got before, with no chance of hanging.
+  if (!process.stdin.isTTY) fail("this directory is not a Git repository.", ...NOT_A_REPO);
+  await relocate();
 }
 
 try {
@@ -105,9 +274,7 @@ try {
     "Install it from https://cli.github.com, then run: gh auth login");
 }
 
-const dirty = git("status", "--porcelain").split("\\n").filter(Boolean)
-  .map(line => line.slice(3))
-  .filter(path => !KIT_FILES.has(path));
+const dirty = dirtyPaths();
 if (dirty.length) {
   fail("the working tree has uncommitted changes.",
     "Commit or stash them first; the flow commits and pushes this branch.",
@@ -130,20 +297,28 @@ if (existsSync(INPUT)) {
         "than sending a coding agent after " + JSON.stringify(PLACEHOLDER_TITLE) + ".");
     }
     if (untouched) {
-      const rl = createInterface({ input: process.stdin, output: process.stdout });
+      const { rl, ask } = prompter();
       try {
         console.log(INPUT + " still holds the placeholder ticket. Fill it in now.");
         console.log("");
         let title = "";
         while (!title) {
-          title = (await rl.question("Ticket title: ")).trim();
+          const answer = await ask("Ticket title: ");
+          // Ctrl+D or a closed pipe at the prompt ends with the same advice as
+          // the no-terminal path, not an unhandled rejection.
+          if (answer === null) {
+            fail("the ticket was not entered.",
+              "Set issue.title and issue.body in " + INPUT + ", then run again.");
+          }
+          title = answer.trim();
           if (!title) console.log("  A title is required.");
         }
         console.log("Description and acceptance criteria. Finish with an empty line.");
         const lines = [];
         for (;;) {
-          const line = await rl.question("> ");
-          if (!line.trim()) break;
+          const line = await ask("> ");
+          // Ctrl+D ends the description, exactly as the empty line does.
+          if (line === null || !line.trim()) break;
           lines.push(line);
         }
         const body = lines.join("\\n").trim();
@@ -155,14 +330,6 @@ if (existsSync(INPUT)) {
         writeFileSync(INPUT, JSON.stringify(input, null, 2) + "\\n");
         console.log("");
         console.log("Saved to " + INPUT + ".");
-      } catch (error) {
-        // Ctrl+D or a closed pipe at the prompt ends with the same advice as
-        // the no-terminal path, not an unhandled AbortError stack trace.
-        if (error && error.code === "ABORT_ERR") {
-          fail("the ticket was not entered.",
-            "Set issue.title and issue.body in " + INPUT + ", then run again.");
-        }
-        throw error;
       } finally {
         rl.close();
       }
@@ -204,7 +371,7 @@ ${LOCAL_INSTALL}
 4. Start from a clean working tree and create a new branch (choose another name if relay/first-flow already exists), then check and run:
 ${LOCAL_RUN}
 
-${LOCAL_PREFLIGHT} runs first and stops before any model usage if this is not a repository, has no origin remote, has no gh sign-in, or has uncommitted changes. When flow-input.json still holds the placeholder ticket it asks for the title and description and saves them; with no terminal to ask on it stops and names the fields to edit.
+${LOCAL_PREFLIGHT} runs first and stops before any model usage if this is not a repository, has no origin remote, has no gh sign-in, or has uncommitted changes. If you did extract the kit somewhere else, it offers to copy it into your repository: give it the path, and it checks that repository first, copies without replacing any file already there, and prints the commands to run from it — including the install from step 2, which has to run there too. When flow-input.json still holds the placeholder ticket it asks for the title and description and saves them; with no terminal to ask on it stops and names the fields to edit.
 
 The flows command then starts the local runtime and attaches the local worker. Coding agents use their existing local sign-in; no Agent Relay Cloud account is needed. This flow edits code, runs tests, pushes the branch, and opens a pull request.
 
