@@ -11,10 +11,10 @@ export async function GET() {
   return new ImageResponse(
     <DefaultVariant
       bodyFamily={bodyFamily}
-      eyebrow="Chief by Agent Relay"
+      eyebrow="Skip by Agent Relay"
       headingFamily={headingFamily}
-      subtitle="Run coding-agent teams across your backlog and get pull requests ready for review."
-      title="The Agent Software Manager"
+      subtitle="Chat with one coding agent that works your backlog and reports back in your channel."
+      title="The single-agent chat for engineering work"
     />,
     {
       ...OG_SIZE,
