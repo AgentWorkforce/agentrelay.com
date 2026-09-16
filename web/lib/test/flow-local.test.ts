@@ -39,9 +39,12 @@ describe('local flow starter kit', () => {
     // made a failed step diagnosable: before it, a failure reported only
     // `FAILED [protocol_error] ... step_failed` naming the run id, with no exit
     // code, no output and no pointer to the journal that held all of it.
+    // 2.0.14 carries the same fix for `flows resume`, which 2.0.13 missed by 94
+    // seconds — resume is the next command a reader reaches for, because every
+    // preset ends in done("needs_human").
     expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
     expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
-    expect(RELAYFLOWS_VERSION).toBe('2.0.13');
+    expect(RELAYFLOWS_VERSION).toBe('2.0.14');
   });
 
   it('runs preconditions and the spec check before the flow itself', () => {
