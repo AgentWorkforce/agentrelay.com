@@ -27,13 +27,17 @@ describe('generated issue source filters', () => {
   it('combines source-specific filters and allows any selected source', () => {
     const matches = matcher(['linear', 'shortcut', 'jira'], {
       linear: { team: 'Engineering', project: 'Web', labels: 'ready' },
-      shortcut: { workspace: 'acme', project: 'App', labels: 'bug, ready' },
+      shortcut: { workspace: 'acme', team: 'Platform', labels: 'bug, ready' },
       jira: { project: 'ENG', labels: 'ready' },
     });
     expect(matches({ ...issue, team: 'Engineering', project: 'Web' })).toBe(true);
     expect(matches({ ...issue, team: 'Design', project: 'Web' })).toBe(false);
-    expect(matches({ ...issue, source: 'shortcut', workspace: 'acme', project: 'App', labels: ['ready', 'bug'] })).toBe(true);
-    expect(matches({ ...issue, source: 'shortcut', workspace: 'other', project: 'App', labels: ['ready', 'bug'] })).toBe(false);
+    expect(matches({ ...issue, source: 'shortcut', workspace: 'acme', team: 'Platform', labels: ['ready', 'bug'] })).toBe(true);
+    expect(matches({ ...issue, source: 'shortcut', workspace: 'other', team: 'Platform', labels: ['ready', 'bug'] })).toBe(false);
+    // Paired negative on the field itself: same workspace, different team. A
+    // Shortcut story names its team by `group_id`, never by a project name, so
+    // this is the scoping that has to hold — and has to still reject.
+    expect(matches({ ...issue, source: 'shortcut', workspace: 'acme', team: 'Growth', labels: ['ready', 'bug'] })).toBe(false);
     expect(matches({ ...issue, source: 'jira', project: 'ENG' })).toBe(true);
     expect(matches({ ...issue, source: 'github' })).toBe(false);
   });
