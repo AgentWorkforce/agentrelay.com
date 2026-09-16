@@ -32,6 +32,26 @@ describe('local flow starter kit', () => {
     expect(localInput({ ...slack, sources: [...slack.sources] }).issue).toMatchObject({ source: 'slack', title: 'Please fix', channel: '#build', mentioned: true });
   });
 
+  it('says which filter turned a local ticket away instead of cancelling silently', async () => {
+    const input = localInput(draft) as { approver: string; issue: Record<string, unknown> };
+    const messages: string[] = [];
+    const original = console.error;
+    console.error = (message: string) => { messages.push(message); };
+    const calls: string[] = [];
+    let finish = '';
+    try {
+      await compile(localKitFiles(draft)['software-factory.flow.mts'])({
+        agent: async (name: string) => { calls.push(name); },
+        run: async () => '',
+        done: (reason: string) => { finish = reason; },
+      }, { ...input, issue: { ...input.issue, labels: ['ready'] } });
+    } finally { console.error = original; }
+    expect(finish).toBe('canceled');
+    expect(calls).toEqual([]);
+    expect(messages[0]).toContain('missing required label: bug');
+    expect(messages[0]).toContain('flow-input.json');
+  });
+
   it('does not overwrite the user’s Markdown task file', () => {
     const markdown: FactoryDraft = { ...draft, sources: ['markdown'], sourceSettings: { markdown: { path: 'docs/ticket.md' } } };
     expect(localInput(markdown)).toEqual({ approver: 'local' });
