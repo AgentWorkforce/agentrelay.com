@@ -121,29 +121,37 @@ const builder = "${agent}";` });
   // rules pick which tickets wake the flow and the launcher re-checks every
   // chosen field, so re-filtering here only gave a run a silent way to cancel
   // itself. A local run has no dispatcher, so it filters and explains instead.
-  // Both guards park rather than report done("canceled"). `canceled` is a real
-  // FlowCompletionReason, so it typechecks and `flows check` passes, but the
-  // pinned runtime's authored executor lowers only success and needs_human and
-  // throws unsupported_completion on the rest — the same wall that turned a
-  // failed review into a protocol_error (see FLOW_REVIEW_BLOCKED_COMMAND).
-  // AgentWorkforce/flows#401 adds `canceled` alongside `step_failed`; when this
-  // kit pins a release containing it, both of these become f.done("canceled").
-  // The reason is printed either way, so a parked run still says why it stopped
-  // and no ticket is quietly treated as work that succeeded.
+  // Both guards park rather than report done("canceled"), and that is now
+  // permanent. `canceled` is a real FlowCompletionReason, so it typechecks and
+  // `flows check` passes it, but the runtime refuses it by design: cancellation
+  // is a kernel fact that arrives through `run.cancel`, so a flow body
+  // declaring it would assert something that never happened
+  // (AgentWorkforce/flows#436, which lowered `step_failed` and kept `canceled`
+  // and `budget_exceeded` refused). This is not a lowering gap waiting on a
+  // release — flows#401, which promised `canceled`, is closed and superseded.
+  // What these guards actually mean is a deliberate declination: nothing was
+  // wrong, there was simply nothing to do. That reason is proposed as
+  // `declined` in AgentWorkforce/flows#438 and implemented in PR #439, which is
+  // open and in no published release; when a pin here contains it, these become
+  // f.done("declined"). Until then they park, and the reason is printed either
+  // way, so a parked run still says why it stopped and no ticket is quietly
+  // treated as work that succeeded.
   const guard = target === 'local'
     ? `  // Nothing screens tickets before a local run, so check the input here.
   const rejection = issueRejection(issue);
   if (rejection) {
-    // Parked, not canceled: this runtime lowers only success and needs_human,
-    // so done("canceled") would fail the run (AgentWorkforce/flows#401 adds it).
+    // Parked, not canceled: the runtime refuses done("canceled") by design, as
+    // a kernel fact a flow body cannot declare (AgentWorkforce/flows#436). The
+    // reason this wants is a declination — AgentWorkforce/flows#438, unshipped.
     console.error("Stopped: " + rejection + ". Edit flow-input.json and run again. Nothing was built.");
     return f.done("needs_human");
   }`
     : `  // Cloud starts this flow only for tickets that already match the sources
   // and filters you chose, so just check the ticket arrived intact.
   if (!issue?.title?.trim()) {
-    // Parked, not canceled: this runtime lowers only success and needs_human,
-    // so done("canceled") would fail the run (AgentWorkforce/flows#401 adds it).
+    // Parked, not canceled: the runtime refuses done("canceled") by design, as
+    // a kernel fact a flow body cannot declare (AgentWorkforce/flows#436). The
+    // reason this wants is a declination — AgentWorkforce/flows#438, unshipped.
     console.error("Stopped: no ticket arrived with this run, so there was nothing to work on.");
     return f.done("needs_human");
   }`;

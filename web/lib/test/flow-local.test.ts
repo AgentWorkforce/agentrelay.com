@@ -49,25 +49,40 @@ describe('local flow starter kit', () => {
     // 2.0.14 carries the same fix for `flows resume`, which 2.0.13 missed by 94
     // seconds — resume is the next command a reader reaches for, because every
     // preset ends in done("needs_human").
-    // 2.0.14 is also the last pin whose authored executor lowers only
-    // `success` and `needs_human`. `done("step_failed")` and `done("canceled")`
-    // are both real FlowCompletionReasons, so they typecheck and `flows check`
-    // passes them, and both then fail the run with `unsupported_completion`
-    // after the agents have finished — which is how a full software-factory run
-    // ended as `protocol_error`. AgentWorkforce/flows#401 adds both reasons.
-    // The assertion below is the tripwire for that bump: when this pin moves to
-    // a release containing #401, restore `f.done("step_failed")` in
-    // flow-workflows.ts and `f.done("canceled")` in flow-onboarding.ts.
+    // 2.0.14 was the last pin whose authored executor lowered only `success`
+    // and `needs_human`. `done("step_failed")` typechecks and `flows check`
+    // passes it, and it then failed the run with `unsupported_completion` after
+    // the agents had finished — which is how a full software-factory run ended
+    // as `protocol_error`. 2.0.15 lowers it (AgentWorkforce/flows#436), so a
+    // failed adversarial review reports it again and the CLI gives that run
+    // exit 1, distinct from the exit 3 a clean run parks with.
+    //
+    // This assertion is the tripwire for the NEXT bump, so it carries what to
+    // revisit then — and what not to. `canceled` is not waiting on a release:
+    // #436 refuses `canceled` and `budget_exceeded` deliberately and
+    // permanently, because they are kernel facts (cancellation comes from
+    // `run.cancel`, budget from the enforced budget) that a flow body cannot
+    // declare. flows#401, which promised `canceled`, is closed and superseded
+    // by #436. The guards in flow-onboarding.ts want a deliberate declination
+    // instead — `declined`, proposed in AgentWorkforce/flows#438 and
+    // implemented in PR #439, which is open and unmerged. When a pinned release
+    // contains it, turn those two f.done("needs_human") calls into
+    // f.done("declined"), and not before.
     expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
     expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
-    expect(RELAYFLOWS_VERSION).toBe('2.0.14');
+    expect(RELAYFLOWS_VERSION).toBe('2.0.15');
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
-      const code = withoutComments(factorySource({ ...draft, workflow }, 'local'));
-      expect(code).not.toContain('f.done("step_failed")');
+      const source = factorySource({ ...draft, workflow }, 'local');
+      const code = withoutComments(source);
+      // Refused by design, so never generated — in any preset, at any pin.
       expect(code).not.toContain('f.done("canceled")');
-      // The reasons are still named where a reader meets them, with the runtime
-      // change that brings them back.
-      expect(factorySource({ ...draft, workflow }, 'local')).toContain('AgentWorkforce/flows#401');
+      expect(code).not.toContain('f.done("budget_exceeded")');
+      // The reason the runtime does lower is used where the flow judges its own
+      // work. `simple` runs no review, so it has no such verdict to report.
+      expect(code.includes('f.done("step_failed")')).toBe(workflow !== 'simple');
+      // The unshipped reason is named where a reader meets the park, so the
+      // guard is not left looking like an unexplained choice.
+      expect(source).toContain('AgentWorkforce/flows#438');
     }
   });
 
@@ -160,11 +175,13 @@ describe('local flow starter kit', () => {
         done: (reason: string) => { finish = reason; },
       }, { ...input, issue: { ...input.issue, labels: ['ready'] } });
     } finally { console.error = original; }
-    // `canceled` is the honest reason and the surface accepts it, but the
-    // pinned executor lowers only success and needs_human, so a turned-away
-    // ticket ended the run as a protocol_error rather than a clean stop. The
-    // run parks instead, and the printed reason — not the completion reason —
-    // is what tells the operator nothing was built.
+    // `canceled` looks like the honest reason and the surface accepts it, but
+    // the runtime refuses it by design: cancellation is a kernel fact, not an
+    // authored verdict (AgentWorkforce/flows#436). A ticket turned away by its
+    // own filters is a declination — `declined`, proposed in
+    // AgentWorkforce/flows#438 and unshipped — so until that reason exists the
+    // run parks, and the printed reason, not the completion reason, is what
+    // tells the operator nothing was built.
     expect(finish).toBe('needs_human');
     expect(calls).toEqual([]);
     expect(messages[0]).toContain('missing required label: bug');

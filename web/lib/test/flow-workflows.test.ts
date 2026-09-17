@@ -99,12 +99,12 @@ describe('FLOW_TEST_COMMAND', () => {
 });
 
 /**
- * The step that runs when an adversarial review does not pass. It exists
- * because `f.done("step_failed")` — the honest ending — is refused by the
- * pinned runtime's authored executor, which lowers only `success` and
- * `needs_human`; a run that did all its work then died as `protocol_error`.
- * The run now parks like any other preset, so the pull request has to carry the
- * verdict, and this step is what puts it there.
+ * The step that runs when an adversarial review does not pass. The run itself
+ * reports `f.done("step_failed")` again: the 2.0.15 pin lowers that reason
+ * (AgentWorkforce/flows#436), where 2.0.14 failed the whole run with
+ * `unsupported_completion` after every agent had finished. An exit code still
+ * cannot carry what the reviewer found, so this step puts the verdict where an
+ * operator acts on it — the pull request, drafted, with the findings posted.
  *
  * Like FLOW_TEST_COMMAND, its exit code is the only signal the runner has and
  * `f.run` has no retry policy, so every branch must exit 0: a missing review.md

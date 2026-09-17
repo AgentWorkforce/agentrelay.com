@@ -174,10 +174,12 @@ describe('software factory onboarding', () => {
     // A ticket that never really arrived still stops the run before any agent.
     const empty = await runFactory([true], true, { ...matchingIssue, title: '  ' });
     expect(empty.calls).toEqual([]);
-    // Parked, not canceled: 2.0.14's authored executor cannot lower
-    // done("canceled") either, and fails the whole run with
-    // unsupported_completion instead (AgentWorkforce/flows#401 restores it).
-    // The run still says why it stopped, so nothing reads as work that landed.
+    // Parked, not canceled, and permanently so: the runtime refuses
+    // done("canceled") by design, because cancellation is a kernel fact a flow
+    // body cannot declare (AgentWorkforce/flows#436 lowered `step_failed` and
+    // kept `canceled` refused). The reason this guard wants is a declination —
+    // `declined`, proposed in AgentWorkforce/flows#438 and unshipped. The run
+    // still says why it stopped, so nothing reads as work that landed.
     expect(empty.finish).toBe('needs_human');
     expect(withoutComments(source)).not.toContain('f.done("canceled")');
   });
@@ -280,19 +282,19 @@ describe('software factory onboarding', () => {
     const { calls, finish } = await runFactory([false, false, false]);
     expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
     expect(calls).not.toContain('human');
-    // done("step_failed") is the honest reason and the surface accepts it, but
-    // the pinned executor lowers only success and needs_human: a real run did
-    // all 15 steps, opened AgentWorkforce/cloud-e2e-sandbox#25, and then died
-    // as FAILED [protocol_error] unsupported_completion — the one outcome that
-    // tells an operator nothing. Until AgentWorkforce/flows#401 ships, the run
-    // parks and the pull request carries the verdict instead.
-    expect(finish).toBe('needs_human');
+    // done("step_failed") is the honest reason, and as of the 2.0.15 pin the
+    // runtime lowers it (AgentWorkforce/flows#436). Before that it did not: a
+    // real run did all 15 steps, opened AgentWorkforce/cloud-e2e-sandbox#25,
+    // and then died as FAILED [protocol_error] unsupported_completion — the one
+    // outcome that tells an operator nothing. The reason is back, and the pull
+    // request still carries the findings, which no exit code can.
+    expect(finish).toBe('step_failed');
     expect(calls).toContain(FLOW_REVIEW_BLOCKED_COMMAND);
     expect(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND)).toBeGreaterThan(calls.lastIndexOf('adversary-2:codex'));
-    expect(withoutComments(factorySource(completed))).not.toContain('f.done("step_failed")');
-    // Named in the generated flow itself, so the next reader knows what brings
-    // the honest reason back rather than finding an unexplained park.
-    expect(factorySource(completed)).toContain('AgentWorkforce/flows#401');
+    expect(withoutComments(factorySource(completed))).toContain('f.done("step_failed")');
+    // Named in the generated flow itself, so a reader meets the release that
+    // made the honest reason lowerable rather than guessing.
+    expect(factorySource(completed)).toContain('AgentWorkforce/flows#436');
   });
 
   it('hands every preset to a person without calling an unsupported interactive gate or merging', async () => {
