@@ -183,7 +183,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Unresolved feedback stops the flow short of approval.
   if (!clean) {
     await f.run(reviewBlockedCommand);
-    console.error("The adversarial review did not pass. The pull request is now a draft with the findings posted, and review-blocked.md holds them too. This run is parked, not approved.");
+    // Says only what is certain: the step above reports per branch whether it
+    // could draft the pull request or comment on it.
+    console.error("The adversarial review did not pass. The findings are in review-blocked.md, and on the pull request if it could be reached. This run is parked, not approved.");
     return f.done("needs_human");
   }` });
   sections.push({ id: 'gate', code: `  // Require approving reviews and passing CI checks in GitHub branch rules.
