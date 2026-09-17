@@ -62,6 +62,8 @@ npx flows run hello.flow.ts --input '{}'
 npx flows check hello.flow.yaml   # preflight only — nothing runs
 npx flows run hello.flow.yaml
 ```
+
+`flows check` works on the TypeScript flow too — `npx flows check hello.flow.ts` — and `flows run` repeats the same preflight before its first step.
 </CodeGroup>
 
 This is a real, captured run:
@@ -77,7 +79,7 @@ RUN 01M26HYJNS6A4K5Q64FH6D0SG9 completed (2 steps) completionReason: success
 ```
 </CodeGroup>
 
-Every step's outcome is in the journal now, keyed by that run ID. `flows check` only takes a `flow.yaml` or `spec.json` — a TypeScript flow gets the same preflight for free, as the first thing `flows run` does.
+Every step's outcome is in the journal now, keyed by that run ID.
 
 ## 4. If it gets interrupted
 

@@ -11,7 +11,7 @@ A flow isn't locked to one CLI or one model. Name as many agents as the task nee
 version: '0.1.0'
 name: ship-feature
 agents:
-  planner: { cli: claude, model: claude-opus-4-6 }
+  planner: { cli: claude, model: claude-opus-5 }
   implementer: { cli: codex, model: gpt-5.6-codex }
   reviewer: { cli: claude, model: claude-sonnet-4-6 }
 
@@ -61,14 +61,14 @@ export default flow('ship-feature', async (f) => {
   });
 
   const ok = await f.human(`Ship this?\n${plan.summary}`, { to: 'khaliq' });
-  if (!ok) return f.done('canceled');
+  if (!ok) return f.done('declined');   // a decision not to act, not a kernel cancellation
 
   const pr = await f.dispatch('garden/implement', plan);
   f.done('success');
 });
 ```
 
-`f.human` parks the run on a durable wait — nothing sits there blocking a thread, and the wait survives a restart exactly like a crash mid-step does. `f.dispatch` hands the plan to a named child flow and returns its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
+`f.human` parks the run on a durable wait — nothing sits there blocking a thread, and the wait survives a restart exactly like a crash mid-step does. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. `f.dispatch` hands the plan to a named child flow and returns its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
 
 ## Next
 

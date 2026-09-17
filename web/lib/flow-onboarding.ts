@@ -97,9 +97,11 @@ export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, jou
 }
 
 export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
-  // A wall-clock budget for every target: a dollar budget makes the Relayflow
-  // runtime refuse any agent step without a frozen-priced model (Codex has no
-  // default model), which stops the run before the first Codex step.
+  // A wall-clock budget for every target. Since relayflows 2.0.13 a dollar
+  // budget no longer refuses a model-less Codex step (AgentWorkforce/flows#421);
+  // such a step runs unmetered, so a dollar cap cannot bound it. Wall-clock is
+  // enforced on every step regardless of pricing, which is why it stays the
+  // default here; `{ dollars, wallclock }` together is also valid.
   const budget = '{ wallclock: "1h" }';
   if (!draft.sources.length) return [{ id: 'empty', code: `import { flow } from "@relayflows/surface";
 

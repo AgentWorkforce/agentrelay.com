@@ -1,18 +1,72 @@
 ---
 title: 'Cloud'
-description: 'Run a flow on hosted infrastructure instead of your own machine — the same verification, the same journal.'
+description: 'Run a flow on hosted infrastructure, sync your working tree up and the changes back, or deploy it as a listener — the same verification, the same journal.'
 ---
 
-A flow doesn't need your laptop up to run. `flows run --cloud` submits the exact same spec to hosted infrastructure. The Rust runtime still executes and verifies every step; only where it runs is different.
+A flow doesn't need your laptop up to run. `flows run --cloud` submits the same flow to hosted infrastructure; the Rust runtime still executes and verifies every step, only where it runs is different. `flows deploy` goes one step further and leaves the flow listening for tickets.
 
 ## Run it
 
 ```bash
 flows run --cloud examples/ship-feature.flow.yaml
 flows run --cloud --wait --json examples/ship-feature.flow.yaml
+flows run --cloud --wait ship-feature.flow.ts --input '{"ticket":"ENG-42"}'
 ```
 
 Without `--wait`, exit `0` means the run was **accepted**. You get a run ID back and the run continues on its own; it hasn't completed yet. With `--wait`, exit `0` means Cloud reported the run `completed` with a validated `success` reason. A failed or cancelled run, or an observation failure, exits `1`.
+
+An authored `.flow.ts` takes `--input` exactly as a local run does (an existing JSON file, otherwise inline JSON) and travels as one self-contained source: `use:` dependencies and sibling imports are refused before any HTTP call, since the hosted runner loads the flow from the request, not from a checkout.
+
+## Bring your working tree
+
+```bash
+cd my-repo
+flows run --cloud --sync-code --wait review.flow.ts --input '{"pr": 7}'
+flows sync <run-id>            # apply the run's changes to this checkout
+```
+
+`--sync-code` uploads the invoking directory before submission, so every `f.run` and `f.agent` in the hosted run executes inside your tree. In a Git checkout the upload is exactly `git ls-files --cached --others --exclude-standard`: `.gitignore` governs, untracked files ride along, `.git` and `node_modules` never do, executable bits survive. A checkout whose `git` fails for any other reason is refused rather than uploaded without its ignore rules. The limit is 256 MiB uncompressed.
+
+`flows sync <run-id>` fetches the diff the run left behind and applies it with `git apply` after a `--check` pass — a conflict leaves your tree untouched (`patch_conflict`, exit `2`). It lands **uncommitted**, with every touched path listed, so you review it with `git diff` before keeping any of it.
+
+## Deploy it as a listener
+
+```bash
+flows deploy software-factory.flow.ts \
+  --repo acme/api \
+  --on linear:team=ENG \
+  --approver you
+flows deployments
+flows undeploy <deployment-id>
+```
+
+`flows deploy <flow.ts>` is the command-line form of the [Flows onboarding](/flows) deploy step. Cloud stores the source and creates a listener whose watch rules match the chosen ticket sources; there is no webhook to register — your workspace's GitHub App installation or Slack, Linear, Jira, or Shortcut connection is the ingress. Each matching ticket launches one run of the stored source, cloned from `--repo`'s default branch onto a fresh `relayflow/<name>-<id>` branch, with `{ approver, issue, event }` as the flow's input. The flow must therefore be the default body, `flow<Input>(name, header, async (f, input) => …)`, reading `input.issue`.
+
+`--on <provider>[:key=value,…]` takes `github` (`repository`, `labels`, `contains`), `slack` (`channel`, `contains`), `linear` (`team`, `contains`), `jira` (`project`, `contains`) or `shortcut` (`workspace`, `contains`), each at most once; a GitHub source without `repository` is scoped to `--repo`. `--agents` names the coding-agent harnesses the flow uses (default `claude`); activation checks their credentials are connected and refuses with `flow_model_not_connected` otherwise. `--draft` saves without activating. Refusals are named — `flow_repository_not_connected`, `flow_name_taken`, … — rather than reported as a bare status.
+
+<Note>
+  Today a GitHub listener wakes on `issues.opened` and `issues.labeled`.
+  Pull-request events (`--on github:events=pull_request`) and hosted
+  schedules for v2 flows are in progress and not in 2.0.16; the local
+  `flows tick` schedule still works in the meantime.
+</Note>
+
+## Credentials
+
+Every hosted verb resolves its credential the same way: the SDK's `token` option, then `FLOWS_CLOUD_TOKEN`, then the `agent-relay cloud login` store (`~/.agentworkforce/relay/cloud-auth.json`). Once you've run `agent-relay cloud login`, no environment variable is needed; the login's API URL is also the default base, so a login against one deployment never sends its token to another, and an expired login is refused with the re-login remedy instead of sent.
+
+For CI, or a host with no browser, provision a token from the [Cloud dashboard](https://cloud.agentrelay.com/dashboard/settings):
+
+1. Open **Settings → Workspace API tokens**.
+2. Under **Purpose**, pick **Flows Cloud token**.
+3. Name it, set an expiry, and create it.
+4. Copy the one-time `cld_at_...` value — it's shown once — and export it:
+
+```bash
+export FLOWS_CLOUD_TOKEN="cld_at_paste-your-copied-token-here"
+```
+
+That token is scoped to `workflow:invoke:read`, `workflow:invoke:write`, `workflow:runs:read`, and `workflow:logs:read`, which covers `run --cloud`, `--sync-code`, and `sync`. Deploying, listing, and removing listeners need the interactive `cli:auth` credential the login produces; with a deployment token the CLI says so (`session_required`) rather than failing opaquely. `FLOWS_CLOUD_URL` points at a different Cloud deployment if you're not using the default.
 
 ## From the SDK
 
@@ -26,32 +80,17 @@ const accepted = await runInCloud(
 console.log(accepted.runId); // accepted, not completed
 
 const finished = await waitForCloudFlowRun(accepted.runId);
-console.log(finished.status, finished.completionReason);
+console.log(finished.status, 'completionReason' in finished ? finished.completionReason : undefined);
 ```
 
-`FLOWS_CLOUD_TOKEN` needs a Cloud API token; the `flows` CLI never logs in for you. Provision one from the [Cloud dashboard](https://cloud.agentrelay.com/dashboard/settings), the same place you'd create a deployment token or a Relayfile agent key:
-
-1. Open **Settings → Workspace API tokens**.
-2. Under **Purpose**, pick **Flows Cloud token**.
-3. Name it, set an expiry, and create it.
-4. Copy the one-time `cld_at_...` value — it's shown once — and export it, replacing the placeholder below with what you copied:
-
-```bash
-export FLOWS_CLOUD_TOKEN="cld_at_paste-your-copied-token-here"
-```
-
-This mints a token scoped to exactly `workflow:invoke:read`, `workflow:invoke:write`, `workflow:runs:read`, and `workflow:logs:read` — nothing else — which covers both submitting and polling a run on this page. It's a workspace-level credential: anyone with dashboard access to the workspace can create or revoke one, no CLI or special access needed.
-
-Prefer a CLI instead (headless/SSH host, no browser to click through)? `agent-relay cloud login` (`--device` for headless) plus `agent-relay cloud session --json --reveal-token` gets you a token too, though that one carries a broader `cli:auth` scope rather than the four scopes above — Cloud's workflow-run endpoints accept either.
-
-`FLOWS_CLOUD_URL` points at a different Cloud deployment if you're not using the default.
+`runInCloud` also takes `input` for an authored flow and `syncCode: { root }` to upload a tree; `deployToCloud`, `listCloudDeployments`, `undeployFromCloud`, `downloadCloudPatch`, and `applyCloudPatch` back the corresponding verbs.
 
 ## What's different about a cloud run
 
-- **Only declarative flows.** `--cloud` accepts `flow.yaml` / `spec.json`, not an authored `.flow.ts` file — the SDK refuses those before making an HTTP call rather than uploading code that can't run there.
-- **Accepted isn't completed.** An interruption after submission but before the acceptance receipt reports `admission_unknown` — the server may already have started a non-idempotent run. Don't resubmit blindly; check the run ID you already have first.
-- **One-hour execution ceiling.** Cloud's current executor has a one-hour deadline per run, independent of any local timeout you'd otherwise configure.
-- **You get the completion reason, not the step-by-step journal.** It's validated against the same closed vocabulary as a local run, but this API doesn't expose per-step detail yet.
+- **Accepted isn't completed.** An interruption during the submission request itself reports `admission_unknown` — the server may already have started a non-idempotent run; check the run ID before resubmitting. An interruption earlier, while preparing or uploading a synced tree, reports `submission_aborted`: nothing was admitted and rerunning is safe.
+- **One-hour execution ceiling.** Cloud's executor has a one-hour deadline per run, independent of any local timeout you'd otherwise configure.
+- **You get the completion reason, not the step-by-step journal.** It's validated against the same closed vocabulary as a local run, but this API doesn't expose per-step output.
+- **Pinned runtime.** Cloud runs a pinned build of the flows runtime, promoted separately from the npm release, so a brand-new CLI feature can be published before the hosted runtime that honours it inside the sandbox.
 
 ## Next
 
