@@ -21,7 +21,7 @@ The rest of this page is what the skill encodes — worth reading so you can tel
 
 ## Two ways to author the same thing
 
-**YAML** describes a fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
+**TypeScript** calls the primitives imperatively, as ordinary code. **YAML** describes the same fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. Both compile down to the same journal; every sample on these pages is shown in TypeScript, with the YAML form behind the language switch.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -117,27 +117,52 @@ A step that fails its check is recorded as `verification_failed`, with exactly w
 
 ## Permissions and recovery
 
-An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit:
+An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit. These are YAML step fields; the TypeScript body reaches the same step through `f.dispatch`, or leaves recovery to the kernel's default (`reset`):
 
-```yaml
-- id: edit
-  type: agent
-  dependsOn: [greet]
-  instruction: 'Produce the hello artifact through the deterministic test stub.'
-  recoveryMode: reset
-  maxIterations: 2
-  surfaces:
-    workspace:
-      - surface: repo
-    streams:
-      - stream: agent-notes
-  permissions:
-    fileGlobs: ['artifacts/**']
-    accessPreset: readwrite
-  verification:
-    type: output_contains
-    value: agent-ok
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+export default flow('hello-agent', async (f) => {
+  await f.run('printf hello');
+
+  // No recoveryMode/permissions here: a crashed attempt resets to the
+  // pinned revision (the default), and the workspace is the daemon's cwd.
+  await f.agent('edit', {
+    task: 'Produce the hello artifact and print agent-ok when it exists.',
+    cli: 'claude',
+  }).gate({ type: 'regex_match', pattern: 'agent-ok' });
+
+  f.done('success');
+});
 ```
+```yaml YAML
+version: '0.1.0'
+name: hello-agent
+steps:
+  - id: greet
+    type: deterministic
+    command: 'printf hello'
+
+  - id: edit
+    type: agent
+    dependsOn: [greet]
+    instruction: 'Produce the hello artifact through the deterministic test stub.'
+    recoveryMode: reset
+    maxIterations: 2
+    surfaces:
+      workspace:
+        - surface: repo
+      streams:
+        - stream: agent-notes
+    permissions:
+      fileGlobs: ['artifacts/**']
+      accessPreset: readwrite
+    verification:
+      type: output_contains
+      value: agent-ok
+```
+</CodeGroup>
 
 - **`reset`** (the default) — the next attempt starts fresh from the pinned workspace revision, with no half-finished edit left behind.
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.

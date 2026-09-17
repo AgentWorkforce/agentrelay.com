@@ -60,7 +60,23 @@ Both steps above name their own `cli` and `model` directly — `f.agent`'s optio
 
 An agent rarely fails by crashing. It fails by returning something plausible and wrong, which a plain retry-on-error never catches. So a step's completion is decided by a check the kernel runs against the real output, not by the agent's own account of what happened.
 
-```yaml
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+export default flow('hello-agent', async (f) => {
+  await f.run('printf hello')
+    .gate({ type: 'regex_match', pattern: '^hello' });
+
+  await f.agent('edit', {
+    task: 'Produce the hello artifact and print agent-ok when it exists.',
+    cli: 'claude',
+  }).gate({ type: 'regex_match', pattern: 'agent-ok' });
+
+  f.done('success');
+});
+```
+```yaml YAML
 version: '0.1.0'
 name: hello-agent
 steps:
@@ -84,10 +100,11 @@ steps:
       type: output_contains
       value: agent-ok
 ```
+</CodeGroup>
 
-The exit code is always checked. On top of that, `output_contains` adds an opt-in string match, and an `llm` step can require its output to match a `json_schema` instead. A step that fails verification is recorded as `verification_failed` in the journal — it doesn't get to report success on its own say.
+The exit code is always checked. On top of that, `output_contains` (YAML) or a postfix `.gate({ … })` (TypeScript) adds an opt-in check against the real output, and an `llm` step can require its output to match a `json_schema` instead. A step that fails verification is recorded as `verification_failed` in the journal — it doesn't get to report success on its own say.
 
-`recoveryMode: reset` governs what happens if this step dies mid-edit: the next attempt starts over from the pinned workspace revision instead of picking up whatever half-finished state got left behind. `permissions` limits what that attempt is allowed to touch while it runs.
+`recoveryMode: reset` governs what happens if this step dies mid-edit: the next attempt starts over from the pinned workspace revision instead of picking up whatever half-finished state got left behind. `permissions` limits what that attempt is allowed to touch while it runs. Both are declared per step in YAML today; see [Build a flow](/docs/relayflows/build#permissions-and-recovery).
 
 ## Resumable by construction
 
