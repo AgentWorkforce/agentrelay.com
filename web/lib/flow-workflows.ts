@@ -61,6 +61,39 @@ export const FLOW_TEST_COMMAND = [
   'if [ "$pm" = pnpm ]; then pnpm install --frozen-lockfile && pnpm test; elif [ "$pm" = yarn ]; then { if [ -f .yarnrc.yml ]; then yarn install --immutable; else yarn install --frozen-lockfile; fi; } && yarn test; elif [ "$pm" = bun ]; then bun install --frozen-lockfile && bun run test; else { if [ -f package-lock.json ]; then npm ci; else npm install; fi; } && npm test; fi',
 ].join('; ');
 
+const REVIEW_BLOCKED_HEADING = '**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
+
+/**
+ * Puts the failed review where an operator acts on it: on the pull request.
+ *
+ * `done("step_failed")` is the honest end for a review that found problems, and
+ * as of the 2.0.15 pin the runtime lowers it (AgentWorkforce/flows#436), so the
+ * flow reports it. Up to 2.0.14 it did not: the authored executor lowered only
+ * `success` and `needs_human` and threw `the initial authored executor cannot
+ * lower done("step_failed")`, and a real run paid for it — 15 agent steps, a
+ * pushed branch and AgentWorkforce/cloud-e2e-sandbox#25, then
+ * `FAILED [protocol_error]` as the only verdict.
+ *
+ * The exit code says a review failed; it cannot say what the reviewer found.
+ * That is what this step is for, and why it outlived the stopgap: the pull
+ * request is converted to a draft so it cannot be merged by accident, and the
+ * unresolved review is posted to it. A reader of the pull request learns the
+ * verdict without opening the run journal.
+ *
+ * Every branch exits 0 deliberately. `f.run` has no retry policy, so a non-zero
+ * exit is retried until the run dies with `retries_exhausted`: a missing
+ * review.md, an older `gh` without `pr ready --undo`, or a repository that
+ * refuses drafts must not cost the run the report it is trying to leave behind.
+ * Each branch prints which way it went, so the journal records the outcome.
+ */
+export const FLOW_REVIEW_BLOCKED_COMMAND = [
+  'set -e',
+  `{ printf '%s\\n\\n' "${REVIEW_BLOCKED_HEADING}"; if [ -s review.md ]; then cat review.md; else printf '%s\\n' "_The reviewer left no review.md; see the review step in the run journal._"; fi; } > review-blocked.md || true`,
+  'echo "relayflow: the adversarial review did not pass; wrote review-blocked.md."',
+  'if gh pr ready --undo >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft; review-blocked.md still holds the findings." >&2; fi',
+  'if gh pr comment --body-file review-blocked.md >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi',
+].join('; ');
+
 export function workflowAgents(selected: readonly string[]) {
   const builder = selected.filter(isCodingAgent)[0] ?? 'claude';
   const reviewer = selected.filter(isCodingAgent).find(id => id !== builder) ?? builder;
@@ -120,6 +153,13 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   await f.run("git push --set-upstream origin HEAD");
   await f.run('gh pr create --title "Software factory change" --body-file summary.md');` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'Always run two independent adversarial reviews, even if the first passes.' : 'Review the final implementation against the ticket and comparison findings.'}
+  // A review that found problems is this flow's verdict on its own work, so it
+  // reports done("step_failed"). The pinned 2.0.15 runtime lowers that reason
+  // (AgentWorkforce/flows#436) and the CLI gives it exit 1, distinct from the
+  // exit 3 a clean run parks with. An exit code cannot carry what the reviewer
+  // found, so the step below still drafts the pull request and posts the
+  // findings to it.
+  const reviewBlockedCommand = ${JSON.stringify(FLOW_REVIEW_BLOCKED_COMMAND)};
   let clean = false;
   for (let round = 0; round < ${workflow === 'traditional' ? 2 : 1}; round++) {
     await f.run("rm -f review.clean");
@@ -135,8 +175,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       await f.run("git push");
     }` : ''}
   }
-  // Unresolved feedback stops the flow.
-  if (!clean) return f.done("step_failed");` });
+  // Unresolved feedback stops the flow short of approval.
+  if (!clean) {
+    await f.run(reviewBlockedCommand);
+    // Says only what is certain: the step above reports per branch whether it
+    // could draft the pull request or comment on it.
+    console.error("The adversarial review did not pass. The findings are in review-blocked.md, and on the pull request if it could be reached. This branch is not approved.");
+    return f.done("step_failed");
+  }` });
   sections.push({ id: 'gate', code: `  // Require approving reviews and passing CI checks in GitHub branch rules.
   // Stop for human review. This flow never merges the pull request.
   // Review and merge in GitHub; approval happens outside the runner.

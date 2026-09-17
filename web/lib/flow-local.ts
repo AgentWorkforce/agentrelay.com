@@ -21,8 +21,36 @@ import { workflowAgents } from './flow-workflows';
  * so resume still printed `protocol_error` / `RUN <id> unknown`. That matters
  * here because every preset ends in `done("needs_human")`, making resume the
  * next thing a reader reaches for. Do not lower this pin.
+ *
+ * 2.0.15 is the first release whose authored executor lowers
+ * `done("step_failed")` (AgentWorkforce/flows#436). Up to and including 2.0.14
+ * it lowered only `success` and `needs_human` and threw
+ * `unsupported_completion` on everything else — after the agents had done their
+ * work — which is how a complete software-factory run ended as
+ * `protocol_error`. A failed adversarial review therefore reports
+ * `f.done("step_failed")` again, and the CLI turns that into a distinct exit
+ * code: success 0, needs_human 3, step_failed 1.
+ *
+ * `done("canceled")` is not coming back, and neither is `budget_exceeded`.
+ * #436 refuses both on purpose and permanently: they are kernel facts —
+ * cancellation arrives through `run.cancel`, budget exhaustion through the
+ * enforced budget — so a flow body declaring one would assert something that
+ * never happened, and `canceled` has no terminal shape to lower into either
+ * (there is no `cancelled` RunStatus in the local protocol). The published
+ * 2.0.15 executor states exactly that in its refusal message, and its
+ * `LOWERED_COMPLETIONS` is `['success', 'needs_human', 'step_failed']`.
+ * AgentWorkforce/flows#401, which promised `canceled` alongside `step_failed`,
+ * is CLOSED and superseded by #436; do not plan around it.
+ *
+ * So the guards that turn a ticket away still park with `f.done("needs_human")`
+ * (see flow-onboarding.ts). The reason they actually want is a deliberate
+ * declination, proposed as `declined` in AgentWorkforce/flows#438 and
+ * implemented in PR #439 — open, unmerged, and not in any published release.
+ * Do not generate `declined` until a pin here contains it. The test that
+ * asserts this exact version is the tripwire for that: it fails on the next
+ * bump and names what to revisit.
  */
-export const RELAYFLOWS_VERSION = '2.0.14';
+export const RELAYFLOWS_VERSION = '2.0.15';
 export const LOCAL_PREFLIGHT = 'relay-preflight.mjs';
 
 export const LOCAL_INSTALL = `npm install --save-dev relayflows@${RELAYFLOWS_VERSION} @relayflows/surface@${RELAYFLOWS_VERSION}`;
@@ -416,6 +444,7 @@ The flows command then starts the local runtime and attaches the local worker. C
 Local runtime behavior
 This local version uses a one-hour wall-clock budget. Model usage is billed by your coding-agent provider; this is not a dollar cap.
 Every preset reports needs_human (exit code 3) after its checks and any agent reviews pass. This is the intended manual approval stop, not a failed run. Review and merge the PR in GitHub; the flow never merges automatically and does not resume automatically after approval.
+A run whose adversarial review does not pass ends as step_failed (exit code 1) instead. Its findings are written to review-blocked.md and posted to the pull request, and the pull request is left as a draft so it cannot be merged by accident.
 ${draft.workflow === 'prototype' ? 'Prototype worktrees remain available under the generated temporary directory for inspection.' : ''}
 
 GitHub merge protection

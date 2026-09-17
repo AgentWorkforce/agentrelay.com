@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { FLOW_TEST_COMMAND } from '../flow-workflows';
+import { FLOW_REVIEW_BLOCKED_COMMAND, FLOW_TEST_COMMAND } from '../flow-workflows';
 
 /**
  * The generated test step runs under `sh`, and its exit code is the only thing
@@ -95,5 +95,91 @@ describe('FLOW_TEST_COMMAND', () => {
     // chain masked npm ci failures behind a second install.
     expect(FLOW_TEST_COMMAND).toContain('if [ -f package-lock.json ]; then npm ci; else npm install; fi');
     expect(FLOW_TEST_COMMAND).not.toContain('npm ci || npm install');
+  });
+});
+
+/**
+ * The step that runs when an adversarial review does not pass. The run itself
+ * reports `f.done("step_failed")` again: the 2.0.15 pin lowers that reason
+ * (AgentWorkforce/flows#436), where 2.0.14 failed the whole run with
+ * `unsupported_completion` after every agent had finished. An exit code still
+ * cannot carry what the reviewer found, so this step puts the verdict where an
+ * operator acts on it — the pull request, drafted, with the findings posted.
+ *
+ * Like FLOW_TEST_COMMAND, its exit code is the only signal the runner has and
+ * `f.run` has no retry policy, so every branch must exit 0: a missing review.md
+ * or a `gh` that cannot draft this pull request must not turn a reported review
+ * failure into `retries_exhausted`. These cases run the real command with a
+ * real `gh` on PATH.
+ */
+function runReviewBlocked(files: Record<string, string>, gh: 'works' | 'fails' | 'missing') {
+  const root = fixture(files);
+  const bin = path.join(root, 'bin');
+  mkdirSync(bin, { recursive: true });
+  // Records what it was asked to do, so the assertions check the real argv.
+  if (gh !== 'missing') {
+    writeFileSync(path.join(bin, 'gh'), gh === 'works'
+      ? '#!/bin/sh\necho "$@" >> gh-calls.txt\nexit 0\n'
+      : '#!/bin/sh\necho "$@" >> gh-calls.txt\nexit 1\n', { mode: 0o755 });
+  }
+  const result = spawnSync('/bin/sh', ['-c', FLOW_REVIEW_BLOCKED_COMMAND], {
+    cwd: root,
+    encoding: 'utf8',
+    // "missing" means genuinely absent: only Node and the base system on PATH.
+    env: { ...process.env, PATH: gh === 'missing' ? `${path.dirname(process.execPath)}:/usr/bin:/bin` : `${bin}:${process.env.PATH}` },
+  });
+  const read = (name: string) => existsSync(path.join(root, name)) ? readFileSync(path.join(root, name), 'utf8') : '';
+  return { code: result.status, stdout: result.stdout, stderr: result.stderr, blocked: read('review-blocked.md'), ghCalls: read('gh-calls.txt') };
+}
+
+const review = { 'review.md': '## Findings\n\nThe retry loop still drops the last error.\n' };
+
+describe('FLOW_REVIEW_BLOCKED_COMMAND', () => {
+  it('drafts the pull request and posts the unresolved review', () => {
+    const { code, stdout, blocked, ghCalls } = runReviewBlocked(review, 'works');
+    expect(code).toBe(0);
+    // A draft cannot be merged by accident, which is the point: the run parks
+    // with the same reason a clean run does, so this is what an operator sees.
+    expect(ghCalls).toContain('pr ready --undo');
+    expect(ghCalls).toContain('pr comment --body-file review-blocked.md');
+    expect(blocked).toContain('the adversarial review did not pass');
+    expect(blocked).toContain('not approved');
+    expect(blocked).toContain('The retry loop still drops the last error.');
+    expect(stdout).toContain('converted the pull request to a draft.');
+    expect(stdout).toContain('posted the unresolved review to the pull request.');
+  });
+
+  it('still exits 0 and keeps the findings when gh cannot draft or comment', () => {
+    // Older gh without `pr ready --undo`, a plan without draft pull requests, a
+    // revoked token: the report must survive all of them. A non-zero exit here
+    // would be retried until the run died with retries_exhausted.
+    const { code, stderr, blocked } = runReviewBlocked(review, 'fails');
+    expect(code).toBe(0);
+    expect(blocked).toContain('The retry loop still drops the last error.');
+    expect(stderr).toContain('could not convert the pull request to a draft');
+    expect(stderr).toContain('could not comment on the pull request');
+  });
+
+  it('exits 0 with no gh on PATH at all', () => {
+    const { code, blocked } = runReviewBlocked(review, 'missing');
+    expect(code).toBe(0);
+    expect(blocked).toContain('The retry loop still drops the last error.');
+  });
+
+  it('says so rather than reporting an empty review when the reviewer wrote none', () => {
+    for (const files of [{}, { 'review.md': '' }] as Record<string, string>[]) {
+      const { code, blocked } = runReviewBlocked(files, 'works');
+      expect(code).toBe(0);
+      expect(blocked).toContain('the adversarial review did not pass');
+      expect(blocked).toContain('left no review.md');
+    }
+  });
+
+  it('always reports what it did, and never merges', () => {
+    for (const gh of ['works', 'fails', 'missing'] as const) {
+      expect(runReviewBlocked(review, gh).stdout).toContain('wrote review-blocked.md.');
+    }
+    expect(FLOW_REVIEW_BLOCKED_COMMAND).not.toContain('pr merge');
+    expect(FLOW_REVIEW_BLOCKED_COMMAND).not.toContain('pr ready;');
   });
 });
