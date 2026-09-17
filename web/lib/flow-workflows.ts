@@ -61,6 +61,44 @@ export const FLOW_TEST_COMMAND = [
   'if [ "$pm" = pnpm ]; then pnpm install --frozen-lockfile && pnpm test; elif [ "$pm" = yarn ]; then { if [ -f .yarnrc.yml ]; then yarn install --immutable; else yarn install --frozen-lockfile; fi; } && yarn test; elif [ "$pm" = bun ]; then bun install --frozen-lockfile && bun run test; else { if [ -f package-lock.json ]; then npm ci; else npm install; fi; } && npm test; fi',
 ].join('; ');
 
+const REVIEW_BLOCKED_HEADING = '**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
+
+/**
+ * Says on the pull request what the run cannot yet say in its exit code.
+ *
+ * `done("step_failed")` is the honest end for a review that found problems, and
+ * `@relayflows/surface` accepts it — `step_failed` is a real
+ * `FlowCompletionReason`, so `flows check` passes and the type system is happy.
+ * The pinned runtime is not: its authored executor lowers only `success` and
+ * `needs_human` and throws on everything else (`the initial authored executor
+ * cannot lower done("step_failed")`, packages/sdk/src/authored-flow-executor.ts
+ * in AgentWorkforce/flows). A real run proved what that costs — 15 agent steps,
+ * a pushed branch and AgentWorkforce/cloud-e2e-sandbox#25, then
+ * `FAILED [protocol_error]` as the only verdict. The happy path lowers, so this
+ * stayed hidden until a review legitimately failed.
+ *
+ * AgentWorkforce/flows#401 teaches the executor `step_failed` and `canceled`.
+ * Until the pin in flow-local.ts moves to a release containing it, a failed
+ * review parks like every other preset — and the difference lives where the
+ * operator acts rather than in a reason string: the pull request is converted
+ * to a draft, so it cannot be merged by accident, and the unresolved review is
+ * posted to it. That marking is worth keeping after #401 ships; only the
+ * `f.done` reason changes then.
+ *
+ * Every branch exits 0 deliberately. `f.run` has no retry policy, so a non-zero
+ * exit is retried until the run dies with `retries_exhausted`: a missing
+ * review.md, an older `gh` without `pr ready --undo`, or a repository that
+ * refuses drafts must not cost the run the report it is trying to leave behind.
+ * Each branch prints which way it went, so the journal records the outcome.
+ */
+export const FLOW_REVIEW_BLOCKED_COMMAND = [
+  'set -e',
+  `{ printf '%s\\n\\n' "${REVIEW_BLOCKED_HEADING}"; if [ -s review.md ]; then cat review.md; else printf '%s\\n' "_The reviewer left no review.md; see the review step in the run journal._"; fi; } > review-blocked.md || true`,
+  'echo "relayflow: the adversarial review did not pass; wrote review-blocked.md."',
+  'if gh pr ready --undo >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft; review-blocked.md still holds the findings." >&2; fi',
+  'if gh pr comment --body-file review-blocked.md >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi',
+].join('; ');
+
 export function workflowAgents(selected: readonly string[]) {
   const builder = selected.filter(isCodingAgent)[0] ?? 'claude';
   const reviewer = selected.filter(isCodingAgent).find(id => id !== builder) ?? builder;
@@ -120,6 +158,13 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   await f.run("git push --set-upstream origin HEAD");
   await f.run('gh pr create --title "Software factory change" --body-file summary.md');` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'Always run two independent adversarial reviews, even if the first passes.' : 'Review the final implementation against the ticket and comparison findings.'}
+  // A failed review parks instead of reporting done("step_failed"): the pinned
+  // runtime lowers only success and needs_human, so that reason would end this
+  // run as protocol_error after all the work above is finished. The pull
+  // request carries the verdict instead. AgentWorkforce/flows#401 adds the
+  // missing lowering; when this kit pins a release with it, the reason below
+  // becomes f.done("step_failed") and the marking stays as it is.
+  const reviewBlockedCommand = ${JSON.stringify(FLOW_REVIEW_BLOCKED_COMMAND)};
   let clean = false;
   for (let round = 0; round < ${workflow === 'traditional' ? 2 : 1}; round++) {
     await f.run("rm -f review.clean");
@@ -135,8 +180,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       await f.run("git push");
     }` : ''}
   }
-  // Unresolved feedback stops the flow.
-  if (!clean) return f.done("step_failed");` });
+  // Unresolved feedback stops the flow short of approval.
+  if (!clean) {
+    await f.run(reviewBlockedCommand);
+    console.error("The adversarial review did not pass. The pull request is now a draft with the findings posted, and review-blocked.md holds them too. This run is parked, not approved.");
+    return f.done("needs_human");
+  }` });
   sections.push({ id: 'gate', code: `  // Require approving reviews and passing CI checks in GitHub branch rules.
   // Stop for human review. This flow never merges the pull request.
   // Review and merge in GitHub; approval happens outside the runner.

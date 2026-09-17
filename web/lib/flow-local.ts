@@ -21,6 +21,21 @@ import { workflowAgents } from './flow-workflows';
  * so resume still printed `protocol_error` / `RUN <id> unknown`. That matters
  * here because every preset ends in `done("needs_human")`, making resume the
  * next thing a reader reaches for. Do not lower this pin.
+ *
+ * What 2.0.14 still cannot do is lower any completion reason except `success`
+ * and `needs_human`. `done("step_failed")` and `done("canceled")` are both real
+ * `FlowCompletionReason`s, so they typecheck and `flows check` passes them, and
+ * both then die at the executor's lowering check with
+ * `unsupported_completion` — after the agents have done their work. So the
+ * generated flow emits neither: a failed adversary review marks the pull
+ * request as a draft, posts its findings, and parks (see
+ * FLOW_REVIEW_BLOCKED_COMMAND in flow-workflows.ts), and a ticket the filters
+ * turn away prints its reason and parks (see the guard in flow-onboarding.ts).
+ * AgentWorkforce/flows#401 adds both reasons to the executor. When this pin
+ * moves to a release containing it, those two `f.done("needs_human")` calls
+ * become `f.done("step_failed")` and `f.done("canceled")` again; the pull
+ * request marking is worth keeping either way. The test that asserts this exact
+ * version is the tripwire for that — it fails on the next bump and says so.
  */
 export const RELAYFLOWS_VERSION = '2.0.14';
 export const LOCAL_PREFLIGHT = 'relay-preflight.mjs';
