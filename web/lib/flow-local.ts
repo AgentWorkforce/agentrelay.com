@@ -440,6 +440,7 @@ ${LOCAL_RUN}
 ${LOCAL_PREFLIGHT} runs first and stops before any model usage if this is not a repository, has no origin remote, has not had step 2's install run in it, has no gh sign-in, or has uncommitted changes. If you did extract the kit somewhere else, it offers to copy it into your repository: give it the path, and it checks that repository first, copies without replacing any file already there, and prints the commands to run from it — including the install from step 2, which has to run there too. When flow-input.json still holds the placeholder ticket it asks for the title and description and saves them; with no terminal to ask on it stops and names the fields to edit.
 
 The flows command then starts the local runtime and attaches the local worker. Coding agents use their existing local sign-in; no Agent Relay Cloud account is needed. This flow edits code, runs tests, pushes the branch, and opens a pull request.
+If the agents commit nothing — a ticket with nothing to do in this repository — the run stops before pushing: no branch, no pull request, and a line saying why.
 
 Local runtime behavior
 This local version uses a one-hour wall-clock budget. Model usage is billed by your coding-agent provider; this is not a dollar cap.

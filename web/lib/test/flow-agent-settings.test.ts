@@ -12,7 +12,10 @@ async function execute(value: FactoryDraft) {
   new Function('exports', 'flow', compiled.outputText)(exports, (_name: string, _options: unknown, body: unknown) => body);
   const calls: Record<string, { cli: string; model?: string; task: string; cwd?: string }> = {};
   await exports.default!({ agent: async (name: string, options: typeof calls[string]) => { calls[name] = options; },
-    run: async (command: string) => command.startsWith('mktemp') ? '/tmp/prototypes' : command.includes('review.clean &&') ? 'yes' : 'base', done: () => {} },
+    // "base=..." is the publish check; without a verdict it understands, the
+    // flow correctly stops before the reviews rather than opening a pull
+    // request for work that was never committed.
+    run: async (command: string) => command.startsWith('base=') ? 'publish' : command.startsWith('mktemp') ? '/tmp/prototypes' : command.includes('review.clean &&') ? 'yes' : 'base', done: () => {} },
   { issue: { source: 'github', title: 'Ticket title', body: 'Ticket body', labels: [] } });
   return calls;
 }

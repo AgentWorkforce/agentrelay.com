@@ -61,7 +61,46 @@ export const FLOW_TEST_COMMAND = [
   'if [ "$pm" = pnpm ]; then pnpm install --frozen-lockfile && pnpm test; elif [ "$pm" = yarn ]; then { if [ -f .yarnrc.yml ]; then yarn install --immutable; else yarn install --frozen-lockfile; fi; } && yarn test; elif [ "$pm" = bun ]; then bun install --frozen-lockfile && bun run test; else { if [ -f package-lock.json ]; then npm ci; else npm install; fi; } && npm test; fi',
 ].join('; ');
 
-const REVIEW_BLOCKED_HEADING = '**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
+/**
+ * Decides whether there is anything to publish, before the branch is pushed and
+ * before `gh pr create` runs.
+ *
+ * The generated flow published unconditionally. An agent that correctly does no
+ * work — nothing in the target repository to act on — writes no summary.md, so
+ * `gh pr create --body-file summary.md` died with `open summary.md: no such
+ * file or directory`, and an operator saw a bare `protocol_error` at the end of
+ * a run whose agent step had SUCCEEDED and had said, accurately, that it made
+ * no changes. The push step had already pushed the unchanged base commit. The
+ * hand-written example on /flows has always gated its pull request on
+ * `artifacts.includes("summary.md")`; the generated flow dropped that guard.
+ *
+ * The caller prefixes `base=<commit>`, the commit this branch started from.
+ * Exactly one token goes to stdout, because the flow compares that token;
+ * everything human-readable goes to stderr:
+ *
+ *   publish     new commits and a non-empty summary.md
+ *   no-summary  commits worth pushing, but no pull-request body to open with
+ *   no-commits  nothing committed, so there is nothing to push either
+ *
+ * Uncommitted changes are deliberately `no-commits`: a push would carry none of
+ * them. When the base commit cannot be resolved the check does not guess — it
+ * publishes only on the strength of a summary.md that is actually there, and
+ * otherwise declines to push.
+ *
+ * Like FLOW_TEST_COMMAND, every path exits 0. `f.run` has no retry policy, so a
+ * non-zero exit is retried until the run dies with `retries_exhausted`; a check
+ * that cannot tell must never be the thing that kills the run.
+ */
+export const FLOW_PUBLISH_CHECK_COMMAND = [
+  'if [ -s summary.md ]; then summary=yes; else summary=no; fi',
+  'changed=unknown',
+  'if [ -n "$base" ] && git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1; then if git diff --quiet "$base" HEAD 2>/dev/null; then changed=no; else changed=yes; fi; fi',
+  'if [ "$changed" != no ] && [ "$summary" = yes ]; then echo "relayflow: new commits and a summary.md are present; opening the pull request." >&2 && echo publish && exit 0; fi',
+  'if [ "$changed" = yes ]; then echo "relayflow: there are commits but summary.md is missing or empty, so there is no pull-request body." >&2 && echo no-summary && exit 0; fi',
+  'echo "relayflow: no commits were made on this branch, so there is nothing to push or publish." >&2 && echo no-commits && exit 0',
+].join('; ');
+
+const REVIEW_BLOCKED_HEADING ='**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
 
 /**
  * Puts the failed review where an operator acts on it: on the pull request.
@@ -142,6 +181,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   await f.run("test -s comparison.md");
   // Keep the prototype worktrees available for inspection.` });
   sections.push({ id: 'implement', code: `  // Build and test the change, then open a pull request.
+  // Where this branch started, so the publish step below can tell whether the
+  // agents actually committed anything.
+  const baseCommit = (await f.run("git rev-parse HEAD")).trim();
   await f.agent("implementer", {
     ${options('implementer', 'builder')}
   });` });
@@ -150,7 +192,22 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const testCommand = ${JSON.stringify(FLOW_TEST_COMMAND)};
   await f.run(testCommand, { timeout: "15m" });` });
   sections.push({ id: 'pull-request', code: `  // Publish the branch and open the pull request without an agent.
+  // Doing no work is a legitimate outcome: a repository with nothing to act on
+  // leaves no commits and no summary.md. Pushing a branch at the base commit
+  // and failing inside "gh pr create" is not the report such a run should
+  // leave, so the check below decides, and anything it cannot vouch for is
+  // treated as nothing to publish.
+  const publishCheck = ${JSON.stringify(FLOW_PUBLISH_CHECK_COMMAND)};
+  const publish = (await f.run("base=" + baseCommit + "; " + publishCheck)).trim();
+  if (publish !== "publish" && publish !== "no-summary") {
+    console.error("Stopped: the agents made no commits on this branch, so there is nothing to publish. No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
   await f.run("git push --set-upstream origin HEAD");
+  if (publish !== "publish") {
+    console.error("Stopped: the branch was pushed, but no summary.md was written, so there is no pull-request body. Open the pull request by hand, or run again.");
+    return f.done("needs_human");
+  }
   await f.run('gh pr create --title "Software factory change" --body-file summary.md');` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'Always run two independent adversarial reviews, even if the first passes.' : 'Review the final implementation against the ticket and comparison findings.'}
   // A review that found problems is this flow's verdict on its own work, so it

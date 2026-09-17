@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { FLOW_REVIEW_BLOCKED_COMMAND, FLOW_TEST_COMMAND } from '../flow-workflows';
+import { FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_TEST_COMMAND } from '../flow-workflows';
 
 /**
  * The generated test step runs under `sh`, and its exit code is the only thing
@@ -181,5 +181,88 @@ describe('FLOW_REVIEW_BLOCKED_COMMAND', () => {
     }
     expect(FLOW_REVIEW_BLOCKED_COMMAND).not.toContain('pr merge');
     expect(FLOW_REVIEW_BLOCKED_COMMAND).not.toContain('pr ready;');
+  });
+});
+
+/**
+ * The check that decides whether there is anything to publish. Its single
+ * stdout token is what the flow branches on, and getting it wrong either opens
+ * a doomed pull request or throws away real work, so these cases build real git
+ * history in a real repository and run the real command under `sh`.
+ */
+const GIT_CONFIG = ['-c', 'user.email=flow@example.com', '-c', 'user.name=Flow', '-c', 'init.defaultBranch=main', '-c', 'commit.gpgsign=false'];
+const git = (cwd: string, ...args: string[]) => execFileSync('git', [...GIT_CONFIG, ...args], { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+
+function publishCheck(options: { repo?: boolean; commit?: boolean; summary?: string; base?: 'missing' | 'empty' } = {}) {
+  const root = fixture({ 'f.txt': 'base\n' });
+  let head = '';
+  if (options.repo !== false) {
+    git(root, 'init', '-q', '.');
+    git(root, 'add', '-A');
+    git(root, 'commit', '-qm', 'base');
+    head = git(root, 'rev-parse', 'HEAD').trim();
+  }
+  if (options.summary !== undefined) writeFileSync(path.join(root, 'summary.md'), options.summary);
+  if (options.commit) {
+    writeFileSync(path.join(root, 'f.txt'), 'work\n');
+    git(root, 'add', '-A');
+    git(root, 'commit', '-qm', 'work');
+  }
+  const base = options.base === 'missing' ? 'deadbeef'.repeat(5) : options.base === 'empty' ? '' : head;
+  const result = spawnSync('/bin/sh', ['-c', `base=${base}; ${FLOW_PUBLISH_CHECK_COMMAND}`], { cwd: root, encoding: 'utf8' });
+  return { code: result.status, verdict: result.stdout.trim(), stderr: result.stderr };
+}
+
+describe('FLOW_PUBLISH_CHECK_COMMAND', () => {
+  it('reports no-commits when the agents committed nothing', () => {
+    // The production failure: the agent step succeeded having correctly made no
+    // changes, the branch was pushed at the base commit anyway, and
+    // `gh pr create --body-file summary.md` died on the missing file.
+    const { code, verdict, stderr } = publishCheck();
+    expect(code).toBe(0);
+    expect(verdict).toBe('no-commits');
+    expect(stderr).toContain('nothing to push or publish');
+  });
+
+  it('still reports no-commits when a summary exists but nothing was committed', () => {
+    // A summary describing work that was never committed, or an uncommitted
+    // tree: a push would carry none of it, so there is still nothing to open a
+    // pull request against.
+    expect(publishCheck({ summary: 'I did not make any changes.\n' }).verdict).toBe('no-commits');
+  });
+
+  it('publishes when there are commits and a non-empty summary', () => {
+    const { code, verdict, stderr } = publishCheck({ commit: true, summary: '## What changed\n' });
+    expect(code).toBe(0);
+    expect(verdict).toBe('publish');
+    expect(stderr).toContain('opening the pull request');
+  });
+
+  it('reports no-summary when there are commits but no pull-request body', () => {
+    // Real work, so the branch is still worth pushing — but `gh pr create
+    // --body-file summary.md` would fail, so the flow stops short of it.
+    expect(publishCheck({ commit: true }).verdict).toBe('no-summary');
+    expect(publishCheck({ commit: true, summary: '' }).verdict).toBe('no-summary');
+  });
+
+  it('does not guess when the base commit cannot be resolved', () => {
+    // Publishing then rests on evidence that is actually present: a summary.md
+    // that is really there. Without one it declines rather than push blind.
+    expect(publishCheck({ commit: true, summary: 'body\n', base: 'missing' }).verdict).toBe('publish');
+    expect(publishCheck({ commit: true, base: 'missing' }).verdict).toBe('no-commits');
+    expect(publishCheck({ commit: true, base: 'empty' }).verdict).toBe('no-commits');
+  });
+
+  it('exits 0 with exactly one known token on every path', () => {
+    // `f.run` has no retry policy, so a non-zero exit here would be retried
+    // until the run died with retries_exhausted — the FLOW_TEST_COMMAND lesson.
+    // And the flow compares the whole of stdout, so a second line would read as
+    // an unrecognised verdict.
+    for (const options of [{}, { commit: true }, { commit: true, summary: 'b\n' }, { repo: false }, { base: 'missing' as const }]) {
+      const { code, verdict } = publishCheck(options);
+      expect(code).toBe(0);
+      expect(verdict.split('\n')).toHaveLength(1);
+      expect(['publish', 'no-summary', 'no-commits']).toContain(verdict);
+    }
   });
 });

@@ -14,21 +14,31 @@ const completed: FactoryDraft = { version: 4, sources: ['github'], sourceSetting
  */
 const withoutComments = (source: string) => source.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
 
-async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed) {
+/**
+ * `publish` is what the deterministic publish check reports. That check is the
+ * only command the flow builds as `base=<commit>; ...`, so the mock keys off
+ * that prefix without having to reproduce the command itself.
+ */
+async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish') {
   const calls: string[] = [];
+  const errors: string[] = [];
   let finish = '';
   let index = 0;
   const source = factorySource(draft).replace('import { flow } from "@relayflows/surface";', '');
   const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } });
   const exports: { default?: (ctx: unknown, input: unknown) => Promise<void> } = {};
   new Function('exports', 'flow', compiled.outputText)(exports, (_name: string, _options: unknown, body: unknown) => body);
-  await exports.default!({
-    agent: async (name: string, options: { cli: string; cwd?: string }) => { calls.push(`${name}:${options.cli}`); if (name.startsWith('prototype-')) { await Promise.resolve(); calls.push('finished:' + name + ':' + options.cwd); } },
-    run: async (command: string) => { calls.push(command); return command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : ''; },
-    human: async () => { throw new Error('Interactive human approval is unsupported'); },
-    done: (reason: string) => { finish = reason; },
-  }, { issue, approver: 'owner' });
-  return { calls, finish };
+  const originalError = console.error;
+  console.error = (message: string) => { errors.push(String(message)); };
+  try {
+    await exports.default!({
+      agent: async (name: string, options: { cli: string; cwd?: string }) => { calls.push(`${name}:${options.cli}`); if (name.startsWith('prototype-')) { await Promise.resolve(); calls.push('finished:' + name + ':' + options.cwd); } },
+      run: async (command: string) => { calls.push(command); return command.startsWith('base=') ? publish : command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : ''; },
+      human: async () => { throw new Error('Interactive human approval is unsupported'); },
+      done: (reason: string) => { finish = reason; },
+    }, { issue, approver: 'owner' });
+  } finally { console.error = originalError; }
+  return { calls, finish, errors };
 }
 
 describe('software factory onboarding', () => {
@@ -266,6 +276,43 @@ describe('software factory onboarding', () => {
     expect(calls).toContain('fixer:claude');
     expect(calls.filter(call => call === FLOW_TEST_COMMAND)).toHaveLength(2);
     expect(calls).not.toContain('human');
+    expect(finish).toBe('needs_human');
+  });
+
+  it('opens no pull request, and pushes nothing, when the agents made no commits', async () => {
+    // Diagnosed from a real run. The agent step SUCCEEDED and reported "I did
+    // not make any changes... there is no docs/ directory"; the push step then
+    // pushed the unchanged base commit, and `gh pr create --body-file
+    // summary.md` died with `open summary.md: no such file or directory`. The
+    // operator saw only an opaque protocol_error. An agent that correctly does
+    // nothing is a legitimate outcome: it is not a pull request, and a branch
+    // pushed at the base commit is not worth leaving behind either.
+    const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'no-commits');
+    expect(calls.some(call => call.startsWith('gh pr create'))).toBe(false);
+    expect(calls.some(call => call.startsWith('git push'))).toBe(false);
+    expect(finish).toBe('needs_human');
+    // The reason reaches the operator, so "nothing was built" is never silent.
+    expect(errors.join('\n')).toContain('no commits');
+  });
+
+  it('pushes the work but opens no pull request when no summary.md was written', async () => {
+    // Commits exist, so the work is real and worth pushing; the pull request
+    // body is what is missing, and `gh pr create --body-file summary.md` would
+    // fail on exactly that.
+    const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'no-summary');
+    expect(calls).toContain('git push --set-upstream origin HEAD');
+    expect(calls.some(call => call.startsWith('gh pr create'))).toBe(false);
+    expect(finish).toBe('needs_human');
+    expect(errors.join('\n')).toContain('summary.md');
+  });
+
+  it('treats a publish verdict it does not recognise as nothing to publish', async () => {
+    // The check always exits 0 and prints one known token. If it ever prints
+    // anything else, the flow must not push a branch or open a pull request on
+    // the strength of output it did not understand.
+    const { calls, finish } = await runFactory([true, true], true, matchingIssue, completed, 'unexpected output');
+    expect(calls.some(call => call.startsWith('git push'))).toBe(false);
+    expect(calls.some(call => call.startsWith('gh pr create'))).toBe(false);
     expect(finish).toBe('needs_human');
   });
 
