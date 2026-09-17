@@ -27,7 +27,7 @@ TypeScript flows import `@relayflows/surface` at runtime, so it's a project depe
 import { flow } from '@relayflows/surface';
 
 export default flow('hello', async (f) => {
-  const greeting = await f.run('printf "Hello from Relayflows"');
+  const greeting = await f.run('printf "Hello from Flows"');
   console.log(greeting.trim());
   f.done('success');
 });
@@ -39,7 +39,7 @@ name: hello
 steps:
   - id: greeting
     type: deterministic
-    command: "printf 'Hello from Relayflows'"
+    command: "printf 'Hello from Flows'"
     verification:
       type: output_contains
       value: Hello
@@ -68,7 +68,7 @@ This is a real, captured run:
 
 <CodeGroup>
 ```text TypeScript
-Hello from Relayflows
+Hello from Flows
 RUN 01M26JC2VPAGFVTCVWFT3GSCXQ completed (2 steps) completionReason: success
 ```
 ```text YAML

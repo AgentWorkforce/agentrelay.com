@@ -8,10 +8,10 @@ import { LOCAL_INSTALL, LOCAL_RUN, localKitArchive } from '../../../lib/flow-loc
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
-export function RunOptions({ draft, onTrack, getJourneyId, markOutcome, onNotice }: {
+export function RunOptions({ draft, chosen, setDestination, onTrack, getJourneyId, markOutcome, onNotice }: {
+  chosen: 'cloud' | 'local'; setDestination: (destination: 'cloud' | 'local') => void;
   draft: FactoryDraft; onTrack: FlowTrack; getJourneyId: () => string | undefined; markOutcome: (outcome: 'cloud_handoff' | 'local_kit_downloaded') => void; onNotice: (message: string) => void;
 }) {
-  const [chosen, setDestination] = useState<'cloud' | 'local'>('cloud');
   const [copied, setCopied] = useState('');
   const [signingIn, setSigningIn] = useState(false);
   // A Markdown-only flow cannot be deployed: Cloud's deploy wizard refuses it
