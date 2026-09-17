@@ -134,12 +134,16 @@ const builder = "${agent}";` });
     ? `  // Nothing screens tickets before a local run, so check the input here.
   const rejection = issueRejection(issue);
   if (rejection) {
+    // Parked, not canceled: this runtime lowers only success and needs_human,
+    // so done("canceled") would fail the run (AgentWorkforce/flows#401 adds it).
     console.error("Stopped: " + rejection + ". Edit flow-input.json and run again. Nothing was built.");
     return f.done("needs_human");
   }`
     : `  // Cloud starts this flow only for tickets that already match the sources
   // and filters you chose, so just check the ticket arrived intact.
   if (!issue?.title?.trim()) {
+    // Parked, not canceled: this runtime lowers only success and needs_human,
+    // so done("canceled") would fail the run (AgentWorkforce/flows#401 adds it).
     console.error("Stopped: no ticket arrived with this run, so there was nothing to work on.");
     return f.done("needs_human");
   }`;

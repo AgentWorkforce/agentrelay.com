@@ -12,6 +12,13 @@ import { FLOW_TEST_COMMAND } from '../flow-workflows';
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'bug, ready' } }, agents: ['claude', 'codex'], workflow: 'traditional', step: 3 };
 
+/**
+ * The generated flow's comments name the completion reasons it deliberately
+ * does not emit, and why, so a reader is not left guessing. Only the code is
+ * checked for them.
+ */
+const withoutComments = (source: string) => source.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
+
 function compile(source: string) {
   const exports: { default?: (f: unknown, input: unknown) => Promise<void> } = {};
   const compiled = ts.transpileModule(source.replace('import { flow } from "@relayflows/surface";', ''), { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } });
@@ -42,9 +49,26 @@ describe('local flow starter kit', () => {
     // 2.0.14 carries the same fix for `flows resume`, which 2.0.13 missed by 94
     // seconds — resume is the next command a reader reaches for, because every
     // preset ends in done("needs_human").
+    // 2.0.14 is also the last pin whose authored executor lowers only
+    // `success` and `needs_human`. `done("step_failed")` and `done("canceled")`
+    // are both real FlowCompletionReasons, so they typecheck and `flows check`
+    // passes them, and both then fail the run with `unsupported_completion`
+    // after the agents have finished — which is how a full software-factory run
+    // ended as `protocol_error`. AgentWorkforce/flows#401 adds both reasons.
+    // The assertion below is the tripwire for that bump: when this pin moves to
+    // a release containing #401, restore `f.done("step_failed")` in
+    // flow-workflows.ts and `f.done("canceled")` in flow-onboarding.ts.
     expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
     expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
     expect(RELAYFLOWS_VERSION).toBe('2.0.14');
+    for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
+      const code = withoutComments(factorySource({ ...draft, workflow }, 'local'));
+      expect(code).not.toContain('f.done("step_failed")');
+      expect(code).not.toContain('f.done("canceled")');
+      // The reasons are still named where a reader meets them, with the runtime
+      // change that brings them back.
+      expect(factorySource({ ...draft, workflow }, 'local')).toContain('AgentWorkforce/flows#401');
+    }
   });
 
   it('runs preconditions and the spec check before the flow itself', () => {
@@ -122,7 +146,7 @@ describe('local flow starter kit', () => {
     expect(localInput({ ...slack, sources: [...slack.sources] }).issue).toMatchObject({ source: 'slack', title: 'Please fix', channel: '#build', mentioned: true });
   });
 
-  it('says which filter turned a local ticket away instead of cancelling silently', async () => {
+  it('says which filter turned a local ticket away instead of stopping silently', async () => {
     const input = localInput(draft) as { approver: string; issue: Record<string, unknown> };
     const messages: string[] = [];
     const original = console.error;
@@ -136,10 +160,16 @@ describe('local flow starter kit', () => {
         done: (reason: string) => { finish = reason; },
       }, { ...input, issue: { ...input.issue, labels: ['ready'] } });
     } finally { console.error = original; }
-    expect(finish).toBe('canceled');
+    // `canceled` is the honest reason and the surface accepts it, but the
+    // pinned executor lowers only success and needs_human, so a turned-away
+    // ticket ended the run as a protocol_error rather than a clean stop. The
+    // run parks instead, and the printed reason — not the completion reason —
+    // is what tells the operator nothing was built.
+    expect(finish).toBe('needs_human');
     expect(calls).toEqual([]);
     expect(messages[0]).toContain('missing required label: bug');
     expect(messages[0]).toContain('flow-input.json');
+    expect(messages[0]).toContain('Nothing was built');
   });
 
   it('keeps a co-selected source’s prefill instead of letting Markdown win in silence', () => {

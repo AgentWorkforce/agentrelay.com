@@ -1,12 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { FLOW_TEST_COMMAND } from '../flow-workflows';
+import { FLOW_REVIEW_BLOCKED_COMMAND, FLOW_TEST_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
 
 const matchingIssue = { source: 'github', title: 'Fix login', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app' };
 
 const completed: FactoryDraft = { version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready, bug' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'traditional', step: 3 };
+
+/**
+ * The generated flow's comments name the completion reasons it deliberately
+ * does not emit, and why. Only the code is checked for them.
+ */
+const withoutComments = (source: string) => source.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
 
 async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed) {
   const calls: string[] = [];
@@ -168,7 +174,12 @@ describe('software factory onboarding', () => {
     // A ticket that never really arrived still stops the run before any agent.
     const empty = await runFactory([true], true, { ...matchingIssue, title: '  ' });
     expect(empty.calls).toEqual([]);
-    expect(empty.finish).toBe('canceled');
+    // Parked, not canceled: 2.0.14's authored executor cannot lower
+    // done("canceled") either, and fails the whole run with
+    // unsupported_completion instead (AgentWorkforce/flows#401 restores it).
+    // The run still says why it stopped, so nothing reads as work that landed.
+    expect(empty.finish).toBe('needs_human');
+    expect(withoutComments(source)).not.toContain('f.done("canceled")');
   });
 
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
@@ -265,17 +276,33 @@ describe('software factory onboarding', () => {
     expect(calls.indexOf('adversary-1:codex')).toBeGreaterThan(create);
   });
 
-  it('never reaches approval if all reviews fail', async () => {
+  it('marks the pull request and parks, never approves, if all reviews fail', async () => {
     const { calls, finish } = await runFactory([false, false, false]);
     expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
     expect(calls).not.toContain('human');
-    expect(finish).toBe('step_failed');
+    // done("step_failed") is the honest reason and the surface accepts it, but
+    // the pinned executor lowers only success and needs_human: a real run did
+    // all 15 steps, opened AgentWorkforce/cloud-e2e-sandbox#25, and then died
+    // as FAILED [protocol_error] unsupported_completion — the one outcome that
+    // tells an operator nothing. Until AgentWorkforce/flows#401 ships, the run
+    // parks and the pull request carries the verdict instead.
+    expect(finish).toBe('needs_human');
+    expect(calls).toContain(FLOW_REVIEW_BLOCKED_COMMAND);
+    expect(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND)).toBeGreaterThan(calls.lastIndexOf('adversary-2:codex'));
+    expect(withoutComments(factorySource(completed))).not.toContain('f.done("step_failed")');
+    // Named in the generated flow itself, so the next reader knows what brings
+    // the honest reason back rather than finding an unexplained park.
+    expect(factorySource(completed)).toContain('AgentWorkforce/flows#401');
   });
 
   it('hands every preset to a person without calling an unsupported interactive gate or merging', async () => {
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const { calls, finish } = await runFactory([true, true], true, matchingIssue, { ...completed, workflow });
       expect(finish).toBe('needs_human');
+      // The paired negative for the failed-review case above: a clean run parks
+      // with the same reason, so the difference has to be visible somewhere. It
+      // is — a clean run never marks the pull request as unapproved.
+      expect(calls).not.toContain(FLOW_REVIEW_BLOCKED_COMMAND);
       expect(calls.some(call => call.includes('pr merge'))).toBe(false);
       expect(factorySource({ ...completed, workflow })).not.toContain('f.human(');
       expect(calls).toContain(FLOW_TEST_COMMAND);
