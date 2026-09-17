@@ -13,7 +13,7 @@ import GithubCopilot from '@lobehub/icons/es/GithubCopilot';
 import Windsurf from '@lobehub/icons/es/Windsurf';
 import Goose from '@lobehub/icons/es/Goose';
 import Grok from '@lobehub/icons/es/Grok';
-import { OnboardingHeader, OnboardingIntro, BuildStages } from './OnboardingFrame';
+import { OnboardingHeader, OnboardingIntro } from './OnboardingFrame';
 import { canContinue, isCodingAgent, CODING_AGENTS, DEFAULT_FACTORY,
   FACTORY_DRAFT_KEY, PREVIOUS_FACTORY_DRAFT_KEY, LEGACY_FACTORY_DRAFT_KEY, factoryCodeSections, factorySource, readFactoryDraft,
   ONBOARDING_STAGES, onboardingPath, accessibleOnboardingStep, otherAgentIsSelected,
@@ -50,6 +50,7 @@ function SyntaxLine({ text }: { text: string }) {
 export function FactoryBuilder() {
   const [answers, setDraft] = useState<FactoryDraft>(DEFAULT_FACTORY);
   const [hydrated, setHydrated] = useState(false);
+  const [destination, setDestination] = useState<'cloud' | 'local'>('cloud');
   const pathname = usePathname();
   const router = useRouter();
   const routeStep = ONBOARDING_STAGES.findIndex((_, index) => pathname === onboardingPath(index));
@@ -193,7 +194,7 @@ export function FactoryBuilder() {
 
   const navigation = <nav className={s.navigation} aria-label="Step navigation">
               <button type="button" className={s.previous} onClick={() => goToStep(draft.step - 1)}><ArrowLeft size={15} /> Back</button>
-              <button type="button" className={s.primary} disabled={!hydrated} aria-disabled={!canContinue(draft)} onClick={next}>{draft.step === 2 ? 'Create my flow' : 'Continue'}<ArrowRight size={17} /></button>
+              {!ready && <button type="button" className={s.primary} disabled={!hydrated} aria-disabled={!canContinue(draft)} onClick={next}>{draft.step === 2 ? 'Create my flow' : 'Continue'}<ArrowRight size={17} /></button>}
             </nav>;
 
   const codePanel = <section className={`ph-no-capture ph-sensitive ${s.codePanel} ${emptyPreview ? s.codePanelEmpty : ''}`} aria-label="Your flow taking shape">
@@ -219,9 +220,7 @@ export function FactoryBuilder() {
       if (!/^(source-[a-z]+-[a-z]+|factory-task|other-coding-agent)$/.test(field.id)) return;
       track('field_completed', { field: field.id, filled: Boolean(field.value?.trim()), length_bucket: lengthBucket(field.value?.length ?? 0), editing_ms: Date.now() - (fieldStart.current[field.id] ?? Date.now()) });
     }}>
-      <OnboardingIntro>
-        {started && !loadingStage && <BuildStages currentStep={routeStep} onSelect={goToStep} />}
-      </OnboardingIntro>
+      <OnboardingIntro />
       <div className={s.setupSection}>
       <div className={s.waveBreak} aria-hidden="true" />
       <div className={s.workspace}>
@@ -283,7 +282,7 @@ export function FactoryBuilder() {
           </div> : <div className={s.ready}>
             <h2 tabIndex={-1} ref={questionHeading}>Let’s run your first flow.</h2>
             <p className={s.runDescription}>Your software factory is built. Choose where to put it to work.</p>
-            <RunOptions draft={draft} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} markOutcome={markOutcome} />
+            <RunOptions draft={draft} chosen={destination} setDestination={setDestination} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} markOutcome={markOutcome} />
             <details className={s.flowReview} onToggle={event => track('help_toggled', { section: 'review_flow', open: event.currentTarget.open })}>
               <summary>Review your flow<ChevronDown size={16} /></summary>
               <div className={s.reviewContent}>
@@ -311,7 +310,7 @@ export function FactoryBuilder() {
           <div id="workflow-preview-code" hidden={showingPlan}>{codePanel}</div>
         </section> : <div className={s.previewPane}>{codePanel}</div>}
       </div>
-      {started && !loadingStage && !ready && navigation}
+      {started && !loadingStage && navigation}
       <p className={s.notice} role="status">{notice}</p>
       </div>
     </main>

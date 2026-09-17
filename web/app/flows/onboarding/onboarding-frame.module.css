@@ -4,18 +4,10 @@
 .intro { margin-bottom: 0; }
 .intro h1 { margin: 0; font: 500 32px/1.25 var(--font-heading), sans-serif; letter-spacing: -.8px; }
 .intro p { margin: 6px 0 0; color: #a8b8c8; font-size: 14px; line-height: 1.6; }
-.stages { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); width: min(100%, 440px); margin: 12px 0 0; border-bottom: 1px solid #74b8e229; }
-.stages button { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; margin-bottom: -1px; padding: 8px 4px; border-bottom: 2px solid transparent; color: #b4c2cf; font-size: 13px; cursor: pointer; }
-.stages button:disabled { color: #8fa6b9; cursor: default; }
-.stages button:hover:not(:disabled) { color: #edf4fb; }
-.stages button[aria-current] { color: #edf4fb; border-bottom-color: #74b8e2; font-weight: 600; }
-.stages button > svg { flex-shrink: 0; color: #a8d4f4; }
-.stages button:focus-visible { outline: 2px solid #74b8e2; outline-offset: 3px; border-radius: 3px; }
 @media (max-width: 760px) {
   .header { top: 8px; width: calc(100% - 20px); border-radius: 16px 16px 16px 3px; }
   .headerInner { min-height: 56px; gap: 10px; padding: 8px 12px; }
   .intro h1 { font-size: 28px; }
-  .stages button { font-size: 12px; }
 }
 
 .help { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; margin-left: auto; padding: 8px 14px; background: rgba(255, 255, 255, .06); color: #edf4fb; border: 1px solid rgba(255, 255, 255, .14); border-radius: 12px 12px 12px 3px; font-size: 13px; font-weight: 500; line-height: 1.4; white-space: nowrap; text-decoration: none; transition: background .2s, border-color .2s; }

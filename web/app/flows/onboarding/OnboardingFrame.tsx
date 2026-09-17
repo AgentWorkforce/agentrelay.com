@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Check } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { LogoIcon, LogoWordmark } from '../../../components/SiteNav';
 import nav from '../../../components/site-nav.module.css';
 import s from './onboarding-frame.module.css';
@@ -31,16 +31,4 @@ export function OnboardingIntro({ children }: { children?: ReactNode }) {
     <p>Choose your tools and how they work together. Your flow takes shape as you go.</p>
     {children}
   </div>;
-}
-
-const STAGES = ['Sources', 'Agents', 'Workflow', 'Run'];
-
-export function BuildStages({ currentStep, onSelect }: { currentStep: number; onSelect: (step: number) => void }) {
-  return <nav className={s.stages} aria-label="Build steps">
-    {STAGES.map((label, index) => <button key={label} type="button"
-      aria-current={index === currentStep ? 'step' : undefined}
-      disabled={index > currentStep} onClick={() => onSelect(index)}>
-      {index < currentStep && <Check size={13} aria-label="Completed" />}{label}
-    </button>)}
-  </nav>;
 }
