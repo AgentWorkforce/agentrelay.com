@@ -213,7 +213,7 @@ export const factorySection: ProductDocSection = {
 
 export const relayflowsSection: ProductDocSection = {
   id: 'relayflows',
-  label: 'Relayflows',
+  label: 'Flows',
   tagline: 'Deterministic scripts over agentic primitives — every step verified, every crash resumable.',
   repo: 'AgentWorkforce/flows',
   nav: [

@@ -6,7 +6,7 @@ author: 'Khaliq Gant'
 category: 'Opinion'
 tags:
   - Promptgramming
-  - Relayflows
+  - Flows
   - Agent Relay
   - Workflows
   - Multi-agent orchestration
@@ -153,7 +153,7 @@ export default flow<TicketInput>(
 );
 ```
 
-Sow are we using relayflows today? We have a relayflow that iterates over every single feature in our [cli relay surface](https://github.com/AgentWorkforce/relay/blob/main/workflows/verify-features.ts). It uses agent intelligence and deterministic checks to run a full end to end QA of every command and mapped feature. We built a [proactive Hacker news agent](https://github.com/AgentWorkforce/agents/blob/main/hn-monitor/workflows/scheduled-digest.ts) that fetches the latest from the site, filters by topics we're interested in and surfaces what we're interested in and posts a summary of those noteworthy posts to slack.
+Sow are we using Flows today? We have a relayflow that iterates over every single feature in our [cli relay surface](https://github.com/AgentWorkforce/relay/blob/main/workflows/verify-features.ts). It uses agent intelligence and deterministic checks to run a full end to end QA of every command and mapped feature. We built a [proactive Hacker news agent](https://github.com/AgentWorkforce/agents/blob/main/hn-monitor/workflows/scheduled-digest.ts) that fetches the latest from the site, filters by topics we're interested in and surfaces what we're interested in and posts a summary of those noteworthy posts to slack.
 Deterministic and consistent output with an agent doing its thing to do the hard part.
 
 If a task is well defined and can be decomposed into a series of well defined steps then you should be reaching for a relayflow. Hard constraints win over soft ones every time. Let's get back to programming, but with agents aka promptgramming. Get started: https://agentrelay.com/docs/relayflows/introduction

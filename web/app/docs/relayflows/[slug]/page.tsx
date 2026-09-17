@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const ogPath = `/docs/${SECTION_ID}/${slug}/og.png`;
 
   return {
-    title: `${doc.frontmatter.title} — Relayflows`,
+    title: `${doc.frontmatter.title} — Flows`,
     description: doc.frontmatter.description,
     alternates: {
       canonical: absoluteUrl(`/docs/${SECTION_ID}/${slug}`),
@@ -39,15 +39,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     openGraph: {
       siteName: SITE_NAME,
-      title: `${doc.frontmatter.title} — Relayflows`,
+      title: `${doc.frontmatter.title} — Flows`,
       description: doc.frontmatter.description,
       url: absoluteUrl(`/docs/${SECTION_ID}/${slug}`),
       type: 'article',
-      images: [ogImage(ogPath, `${doc.frontmatter.title} — Relayflows docs`)],
+      images: [ogImage(ogPath, `${doc.frontmatter.title} — Flows docs`)],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${doc.frontmatter.title} — Relayflows`,
+      title: `${doc.frontmatter.title} — Flows`,
       description: doc.frontmatter.description,
       images: [absoluteUrl(ogPath)],
     },

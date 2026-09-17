@@ -19,25 +19,25 @@ import { FlowExamples } from './FlowExamples';
 import { IntegrationMarquee } from './IntegrationMarquee';
 
 export const metadata: Metadata = {
-  title: 'Relayflows: Script your agents',
+  title: 'Flows: Script your agents',
   description:
-    'Write the steps once. Relayflows runs your agents in order, checks their work, and pauses for human approval.',
+    'Write the steps once. Flows runs your agents in order, checks their work, and pauses for human approval.',
   alternates: {
     canonical: absoluteUrl('/flows'),
   },
   openGraph: {
     siteName: SITE_NAME,
-    title: 'Relayflows: Script your agents',
+    title: 'Flows: Script your agents',
     description:
-      'Write the steps once. Relayflows runs your agents in order, checks their work, and pauses for human approval.',
+      'Write the steps once. Flows runs your agents in order, checks their work, and pauses for human approval.',
     url: absoluteUrl('/flows'),
     type: 'website',
     images: [ogImage(FLOWS_OG_IMAGE_PATH, FLOWS_OG_ALT)],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Relayflows: Script your agents',
-    description: 'Write the steps once. Relayflows runs your agents and checks their work before moving on.',
+    title: 'Flows: Script your agents',
+    description: 'Write the steps once. Flows runs your agents and checks their work before moving on.',
     images: [absoluteUrl(FLOWS_OG_IMAGE_PATH)],
   },
 };
