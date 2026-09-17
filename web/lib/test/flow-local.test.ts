@@ -223,7 +223,7 @@ describe('local flow starter kit', () => {
     let finish = '';
     await compile(localKitFiles(draft)['software-factory.flow.mts'])({
       agent: async (name: string) => { calls.push(name); },
-      run: async (command: string) => command.startsWith('test -f') ? 'yes' : '',
+      run: async (command: string) => command.startsWith('base=') ? 'publish' : command.startsWith('test -f') ? 'yes' : '',
       done: (reason: string) => { finish = reason; },
     }, localInput(draft));
     expect(calls).toEqual(['planner', 'plan-reviewer', 'implementer', 'adversary-1', 'adversary-2']);
@@ -233,6 +233,29 @@ describe('local flow starter kit', () => {
   });
 
 
+  it('publishes nothing from a local run whose agents made no commits', async () => {
+    // The same failure as the Cloud case, in the kit a person runs by hand:
+    // without a guard, `gh pr create --body-file summary.md` dies with
+    // `open summary.md: no such file or directory` after a branch has already
+    // been pushed at the base commit.
+    const commands: string[] = [];
+    const messages: string[] = [];
+    const original = console.error;
+    console.error = (message: string) => { messages.push(String(message)); };
+    let finish = '';
+    try {
+      await compile(localKitFiles(draft)['software-factory.flow.mts'])({
+        agent: async () => {},
+        run: async (command: string) => { commands.push(command); return command.startsWith('base=') ? 'no-commits' : command.startsWith('test -f') ? 'yes' : ''; },
+        done: (reason: string) => { finish = reason; },
+      }, localInput(draft));
+    } finally { console.error = original; }
+    expect(commands.some(command => command.startsWith('gh pr create'))).toBe(false);
+    expect(commands.some(command => command.startsWith('git push'))).toBe(false);
+    expect(finish).toBe('needs_human');
+    expect(messages.join('\n')).toContain('no commits');
+  });
+
   it('stops every preset for human review after tests and PR creation', async () => {
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const commands: string[] = [];
@@ -240,7 +263,7 @@ describe('local flow starter kit', () => {
       const selected = { ...draft, workflow };
       await compile(factorySource(selected, 'local'))({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); return command.startsWith('test -f') ? 'yes' : ''; },
+        run: async (command: string) => { commands.push(command); return command.startsWith('base=') ? 'publish' : command.startsWith('test -f') ? 'yes' : ''; },
         done: (reason: string) => { finish = reason; },
       }, localInput(selected));
       expect(finish).toBe('needs_human');
@@ -278,7 +301,7 @@ describe('local flow starter kit', () => {
       run: async (command: string) => {
         calls.push(command);
         if (command === FLOW_TEST_COMMAND && ++checks === 2 && fail) throw Error('revision failed');
-        return command.startsWith('test -f') ? 'no' : '';
+        return command.startsWith('base=') ? 'publish' : command.startsWith('test -f') ? 'no' : '';
       },
       done: () => {},
     }, localInput(draft));
