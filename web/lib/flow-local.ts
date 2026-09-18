@@ -319,8 +319,10 @@ try {
 // not pass on a node_modules sitting next to the script. Skipping step 2 used
 // to reach "Preconditions met", then die on npm's "could not determine
 // executable to run", which names neither the package nor the directory.
+// relayflows ships only a CLI (no "main", no "exports"), so the bare name never
+// resolves even when it is installed; its package.json always does.
 try {
-  createRequire(join(process.cwd(), "package.json")).resolve("relayflows");
+  createRequire(join(process.cwd(), "package.json")).resolve("relayflows/package.json");
 } catch {
   fail("relayflows is not installed in this repository.",
     "npx flows would fail here with: could not determine executable to run",

@@ -486,8 +486,12 @@ describe('relocating a kit that was extracted outside a repository', () => {
     if (options.dependency) {
       const pkg = join(target, 'node_modules', 'relayflows');
       mkdirSync(pkg, { recursive: true });
-      writeFileSync(join(pkg, 'package.json'), '{ "name": "relayflows", "version": "0.0.0", "main": "index.js" }\n');
-      writeFileSync(join(pkg, 'index.js'), 'module.exports = {};\n');
+      // The shape relayflows@2.0.15 really publishes: a bin and nothing to
+      // import. A fake with a "main" let a bare resolve("relayflows") pass here
+      // while it failed against every real install.
+      mkdirSync(join(pkg, 'bin'), { recursive: true });
+      writeFileSync(join(pkg, 'package.json'), '{ "name": "relayflows", "version": "0.0.0", "type": "module", "bin": { "flows": "./bin/flows.js" } }\n');
+      writeFileSync(join(pkg, 'bin', 'flows.js'), '#!/usr/bin/env node\n');
     }
     if (options.ticket) {
       writeFileSync(join(target, 'flow-input.json'), JSON.stringify({ approver: 'local',
@@ -530,7 +534,7 @@ describe('relocating a kit that was extracted outside a repository', () => {
     expect(code).toBe(0);
     // Resolved from the repository, not from the kit: node_modules next to the
     // script says nothing about where npx will look.
-    expect(localKitFiles(draft)[LOCAL_PREFLIGHT]).toContain('createRequire(join(process.cwd(), "package.json")).resolve("relayflows")');
+    expect(localKitFiles(draft)[LOCAL_PREFLIGHT]).toContain('createRequire(join(process.cwd(), "package.json")).resolve("relayflows/package.json")');
   }, 30_000);
 
   it('offers the move for the throwaway directory only, from one file list', () => {
