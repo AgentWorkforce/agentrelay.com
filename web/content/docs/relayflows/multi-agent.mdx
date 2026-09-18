@@ -7,11 +7,39 @@ A flow isn't locked to one CLI or one model. Name as many agents as the task nee
 
 ## Named agents
 
-```yaml
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+// Each call names its own cli and model; a plain object keeps them in one place.
+const planner = { cli: 'claude', model: 'claude-opus-5' };
+const implementer = { cli: 'codex', model: 'gpt-5.6-codex' };
+const reviewer = { cli: 'claude', model: 'claude-sonnet-4-6' };
+
+export default flow('ship-feature', async (f) => {
+  const plan = await f.agent('plan', {
+    ...planner,
+    task: 'Plan the implementation for: add OAuth2 support',
+  });
+
+  await f.agent('implement', {
+    ...implementer,
+    task: `Implement this plan:\n${plan.summary}`,
+  });
+
+  await f.agent('review', {
+    ...reviewer,
+    task: 'Review the diff for correctness and security. End with APPROVED or BLOCKED.',
+  }).gate({ type: 'regex_match', pattern: 'APPROVED' });
+
+  f.done('success');
+});
+```
+```yaml YAML
 version: '0.1.0'
 name: ship-feature
 agents:
-  planner: { cli: claude, model: claude-opus-4-6 }
+  planner: { cli: claude, model: claude-opus-5 }
   implementer: { cli: codex, model: gpt-5.6-codex }
   reviewer: { cli: claude, model: claude-sonnet-4-6 }
 
@@ -36,21 +64,20 @@ steps:
       type: output_contains
       value: 'APPROVED'
 ```
+</CodeGroup>
 
-Each step's `agent:` selector resolves to that named `{ cli, model }` pair at compile time, from an explicit declaration. `flows check` also flags a named agent nobody ever selects, and one that a step overrides without using, so a stale declaration doesn't quietly rot in the spec.
+In TypeScript every `f.agent` call names its own `cli` and `model` (flows#310); the `name` argument labels the step in the journal. In YAML the `agents:` map declares each `{ cli, model }` pair once and a step's `agent:` selector resolves to it at compile time, and `flows check` flags a named agent nobody selects, or one a step overrides without using, so a stale declaration doesn't quietly rot in the spec.
 
 <Note>
-  The named-agent **map** (`agents:` plus a step's `agent:` selector,
-  reused across steps by name) is YAML/JSON authoring only today. In
-  TypeScript, `f.agent(name, options)` takes `{ task, workspace?, cli?,
-  model? }` ([flows#310](https://github.com/AgentWorkforce/flows/issues/310))
-  — so a call can set its own `cli`/`model` directly, but the `name`
-  argument still just labels the call in the journal; there's no map to
-  select a declared pair from, or to reuse across multiple calls, the
-  way YAML's `agent:` selector does ([flows#300](https://github.com/AgentWorkforce/flows/issues/300)).
+  The reusable named-agent **map** is YAML/JSON authoring only today.
+  TypeScript has no `agents:` header to select a declared pair from
+  (flows#300); an
+  ordinary object spread, as above, is the idiom until it does.
 </Note>
 
 ## Asking a human, then handing off
+
+`Ctx` declares both verbs, and this typechecks and passes `flows check` — but neither runs yet in 2.0.16. Treat the shape below as the intended design, not something to ship on today:
 
 ```ts
 import { flow } from '@relayflows/surface';
@@ -61,14 +88,25 @@ export default flow('ship-feature', async (f) => {
   });
 
   const ok = await f.human(`Ship this?\n${plan.summary}`, { to: 'khaliq' });
-  if (!ok) return f.done('canceled');
+  if (!ok) return f.done('declined');   // a decision not to act, not a kernel cancellation
 
   const pr = await f.dispatch('garden/implement', plan);
   f.done('success');
 });
 ```
 
-`f.human` parks the run on a durable wait — nothing sits there blocking a thread, and the wait survives a restart exactly like a crash mid-step does. `f.dispatch` hands the plan to a named child flow and returns its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
+Once wired, `f.human` is meant to park the run on a durable wait — nothing sits there blocking a thread, and the wait would survive a restart exactly like a crash mid-step does. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. `f.dispatch` is meant to hand the plan to a named child flow and return its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
+
+<Note>
+  Verified directly: `flows run` on a flow that reaches `f.human` fails with
+  `unsupported_verb: the initial authored executor does not lower f.human`,
+  and the same for `f.dispatch`. Both are being implemented on flows'
+  `feat/f-human` branch and ship in the release after 2.0.17. Until then, do
+  durable approval in YAML instead (`recoveryMode: manual` parks a step as
+  `needs_human` with a diff for a person to resolve), or use the shipped
+  human gate directly: `f.done('needs_human')` parks the run (exit `3`) for
+  a person to act on, then `flows resume <run-id>` continues it.
+</Note>
 
 ## Next
 

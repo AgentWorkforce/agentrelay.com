@@ -1,0 +1,70 @@
+---
+title: 'Cookbook'
+description: 'Copy-paste flows for the automations people actually build first — verified end to end, not just typechecked.'
+---
+
+**We cook. Everybody eats.** [`AgentWorkforce/flows-cookbook`](https://github.com/AgentWorkforce/flows-cookbook) is a growing collection of single-file recipes — copy one, point it at your repo, run it locally or deploy it on our infrastructure at [agentrelay.com/flows](https://agentrelay.com/flows). Every recipe was run for real before it was published: see its README for the run link and exactly what was exercised.
+
+```bash
+npm install -g relayflows
+npm install --save-dev @relayflows/surface
+```
+
+## Getting started
+
+<CardGroup cols={2}>
+  <Card title="cloud-gates" href="https://github.com/AgentWorkforce/flows-cookbook/tree/main/cloud-gates">
+    One step, one gate — confirms your setup works before you build on it.
+  </Card>
+  <Card title="prospect-demo" href="https://github.com/AgentWorkforce/flows-cookbook/tree/main/prospect-demo">
+    Generate a message with an LLM, post it to Slack.
+  </Card>
+</CardGroup>
+
+cloud-gates: [![Deploy Flow](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows-cookbook%2Fblob%2Fmain%2Fcloud-gates%2Fcloud-gates.flow.yaml)
+prospect-demo: [![Deploy Flow](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows-cookbook%2Fblob%2Fmain%2Fprospect-demo%2Fdemo.flow.ts)
+
+## Automations
+
+<CardGroup cols={2}>
+  <Card title="stale-issues" href="https://github.com/AgentWorkforce/flows-cookbook/tree/main/stale-issues">
+    Triage every open issue on a schedule — stale vs. needs-attention, not just "quiet for N days" — and post a Slack digest.
+  </Card>
+  <Card title="stale-prs" href="https://github.com/AgentWorkforce/flows-cookbook/tree/main/stale-prs">
+    Same shape, for pull requests: ready-to-merge, needs-review, needs-author, or abandoned.
+  </Card>
+</CardGroup>
+
+stale-issues: [![Deploy Flow](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows-cookbook%2Fblob%2Fmain%2Fstale-issues%2Fstale-issues.flow.ts)
+stale-prs: [![Deploy Flow](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows-cookbook%2Fblob%2Fmain%2Fstale-prs%2Fstale-prs.flow.ts)
+
+## Review
+
+<CardGroup cols={1}>
+  <Card title="pr-reviewer" href="https://github.com/AgentWorkforce/flows-cookbook/tree/main/pr-reviewer">
+    Reads a PR, fixes what's mechanical, and only says "ready for a human" when the agent, the tests, and GitHub all agree.
+  </Card>
+</CardGroup>
+
+[![Deploy Flow](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows-cookbook%2Fblob%2Fmain%2Fpr-reviewer%2Fpr-reviewer.flow.ts)
+
+## Software Factory
+
+An issue becomes a pull request: implementation agent → deterministic tests, run outside the agent → adversarial review agent that must write an explicit verdict → PR for a human.
+
+```bash
+flows deploy software-factory/software-factory.flow.ts \
+  --repo acme/api --on linear:team=ENG --approver you
+```
+
+[![Deploy Flow](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows-cookbook%2Fblob%2Fmain%2Fsoftware-factory%2Fsoftware-factory.flow.ts&on=linear%3Ateam%3DENG)
+
+`--on` also takes `github:labels=agent`, `jira:project=OPS`, `shortcut:workspace=…` or `slack:channel=#eng`. `flows deployments` lists what's listening; `flows undeploy <id>` stops it.
+
+## Coming soon
+
+Four more recipes are real but currently blocked on upstream work in [flows](https://github.com/AgentWorkforce/flows) — the cookbook's README tracks each one against its blocking issue instead of quietly leaving it out: a two-sandbox dependency upgrade bot, a three-lens PR review pipeline, a research-then-fact-checked social post pipeline, and a multi-model research fan-out.
+
+<BannerLink href="https://github.com/AgentWorkforce/flows-cookbook" icon="compass">
+  Browse every recipe, its verification evidence, and what's still blocked.
+</BannerLink>

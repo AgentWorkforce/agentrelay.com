@@ -21,7 +21,7 @@ The rest of this page is what the skill encodes — worth reading so you can tel
 
 ## Two ways to author the same thing
 
-**YAML** describes a fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. **TypeScript** calls the same primitives imperatively, as ordinary code. Both compile down to the same journal.
+**TypeScript** calls the primitives imperatively, as ordinary code. **YAML** describes the same fixed set of steps and their dependencies as data, so `flows check` or a CI gate can read and validate it without running anything. Both compile down to the same journal; every sample on these pages is shown in TypeScript, with the YAML form behind the language switch.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -68,69 +68,126 @@ steps:
 
 Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
 
-Both `edit` steps above name their own `cli` and `model` directly, the same way in either language ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required in TypeScript: omit them and the step falls back to the flow's `cli`, then the nearest `flows.json`'s project-wide default, the same resolution [Introduction](/docs/relayflows/introduction#a-whole-flow) covers.
+Both `edit` steps above name their own `cli` and `model` directly, the same way in either language (flows#310). Neither is required in TypeScript: omit them and the step falls back to the flow's `cli`, then the nearest `flows.json`'s project-wide default, the same resolution [Introduction](/docs/relayflows/introduction#a-whole-flow) covers.
 
 <Note>
-  `recoveryMode`, `permissions`, `surfaces`, and `budget`, the richer
-  fields covered further down, are YAML/JSON fields only today.
-  TypeScript's `Ctx.agent` doesn't have them. If a step needs them,
-  author it in YAML and either run it directly or have a TypeScript
-  flow reach it with `f.dispatch`.
+  `recoveryMode`, `permissions`, and `surfaces`, the richer step fields
+  covered further down, are YAML/JSON fields only today. TypeScript's
+  `f.agent` takes `{ task, workspace?, cli?, model? }`, but under
+  `--local-agent` any `workspace` value is refused — not just an annotated
+  one. Verified: `workspace: 'repo: readonly'` and a bare `workspace: 'repo'`
+  both fail identically with `unsupported_workspace_permission: The local
+  agent worker accepts stream-only steps. Remove workspace or attach a
+  worker that holds its revision pins.` The local worker holds no revision
+  pins at all — omit `workspace` entirely for a step you run with
+  `--local-agent`; it's a real field only against a worker that supports it
+  (Cloud's). `budget` is available in both: the TypeScript form is the
+  flow header, `flow('name', { budget: '$5/run' }, async (f) => …)`.
 </Note>
 
 ## The context a flow body gets
 
 ```ts
 interface Ctx {
-  run(command: string): Step<string>;
+  run(command: string, options?: { timeout?: string | number }): Step<string>;   // lease: default 30s, max 15m
   llm(strings: TemplateStringsArray, ...values: unknown[]): Step<string>;
+  llm(prompt: string, options: { output: JsonSchema; cli?: string; model?: string }): Step<unknown>;
   agent(name: string, options: { task: string; workspace?: string; cli?: string; model?: string }): Step<{ summary: string; artifacts: string[] }>;
   human(question: string, options: { to: string }): Promise<boolean>;
   dispatch<T>(flow: string, input: unknown): Promise<T>;
-  done(reason: 'success' | 'step_failed' | 'canceled' | 'budget_exceeded'): void;
+  done(reason: 'success' | 'step_failed' | 'needs_human' | 'declined'): void;
+  slack: SlackHelper; github: GithubHelper; /* …every generated helper */
+  memory: MemoryHelper;
+  mcp: Record<string, Record<string, (args: unknown) => Step<unknown>>>;
 }
 ```
 
-This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control. `human` parks the run on a durable await instead of a blocking call — it's a wait the journal can survive a restart across. `dispatch` hands work to a named child flow and returns its typed result.
+This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control.
+
+<Note>
+  `human` and `dispatch` are declared and typecheck, but neither runs in
+  2.0.16 — verified: a flow that reaches `f.human` fails with
+  `unsupported_verb: the initial authored executor does not lower f.human`,
+  and the same for `f.dispatch`. Both are being implemented on flows'
+  `feat/f-human` branch and land in the release after 2.0.17. Once wired,
+  `human` is meant to park the run on a durable await instead of a blocking
+  call — a wait the journal can survive a restart across — and `dispatch` is
+  meant to hand work to a named child flow and return its typed result.
+  Until then, the shipped human gate is `f.done('needs_human')`: the run
+  parks (exit `3`), a person acts, and `flows resume <run-id>` continues it.
+</Note>
+
+`done` takes one of four authored verdicts. `success` completes the run; `step_failed` says the flow's own checks did not pass (the adversarial review found problems, the tests went red) and exits `1`; `needs_human` parks the run (exit `3`); `declined` records a deliberate decision not to act on the input — a ticket that turned out not to be work — and exits `0` with a `DECLINED` diagnostic. `canceled` and `budget_exceeded` are in the `FlowCompletionReason` type but refused at runtime with `unsupported_completion`: they are kernel facts, recorded when the kernel cancels a run or exhausts its budget, not verdicts a body can declare.
+
+`f.run` returns the command's output; a step's `.summary` on `f.agent` is the CLI's final text. `artifacts` is always empty in 2.0.16 — populating it from what the agent actually wrote lands in the next release (flows#449).
 
 ## Verification
 
 Every step's exit code is checked automatically. On top of that:
 
+- **`exit_code`** — a deterministic step's process exit code (always checked; declaring it is only meaningful on `deterministic` steps).
 - **`output_contains`** — an opt-in string match against the step's output. Fast to write, good for a smoke check.
-- **`json_schema`** on an `llm` step — the model's reply must parse and validate against the schema before anything downstream sees it.
+- **`json_schema`** on an `llm` step — the model's reply must parse and validate against the schema before anything downstream sees it. A schema of `{}` or `true` accepts anything and is flagged `vacuous_gate`.
+- **Named gates** — `references_input`, `regex_match`, `word_count_bounds`, and `subprocess_gate` (run a shell command against the output; exit `0` passes). Each lowers to a deterministic gate step in the same journal, so a resume replays the recorded verdict instead of re-judging.
+
+In TypeScript the same named gates attach postfix: `f.agent('review', {…}).gate({ type: 'subprocess_gate', command: 'test -s review.md' })`. A callback gate, `.gate((r) => r.artifacts.includes('review.md'))`, is refused in 2.0.16 (`unsupported_gate`: a closure can't be journaled); the next release runs it after the step and journals the verdict (flows#449).
 
 A step that fails its check is recorded as `verification_failed`, with exactly which check failed. The agent insisting it went fine doesn't override that.
 
 ## Permissions and recovery
 
-An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit:
+An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit. These are YAML step fields with no TypeScript equivalent today; a TypeScript body leaves recovery to the kernel's default (`reset`), and will reach a YAML step through `f.dispatch` once that verb ships (see the Note above — it doesn't execute yet in 2.0.16). Author the step in YAML now if you need `permissions`/`recoveryMode` before then:
 
-```yaml
-- id: edit
-  type: agent
-  dependsOn: [greet]
-  instruction: 'Produce the hello artifact through the deterministic test stub.'
-  recoveryMode: reset
-  maxIterations: 2
-  surfaces:
-    workspace:
-      - surface: repo
-    streams:
-      - stream: agent-notes
-  permissions:
-    fileGlobs: ['artifacts/**']
-    accessPreset: readwrite
-  verification:
-    type: output_contains
-    value: agent-ok
+<CodeGroup>
+```typescript TypeScript
+import { flow } from '@relayflows/surface';
+
+export default flow('hello-agent', async (f) => {
+  await f.run('printf hello');
+
+  // No recoveryMode/permissions here: a crashed attempt resets to the
+  // pinned revision (the default), and the workspace is the daemon's cwd.
+  await f.agent('edit', {
+    task: 'Produce the hello artifact and print agent-ok when it exists.',
+    cli: 'claude',
+  }).gate({ type: 'regex_match', pattern: 'agent-ok' });
+
+  f.done('success');
+});
 ```
+```yaml YAML
+version: '0.1.0'
+name: hello-agent
+steps:
+  - id: greet
+    type: deterministic
+    command: 'printf hello'
+
+  - id: edit
+    type: agent
+    dependsOn: [greet]
+    instruction: 'Produce the hello artifact through the deterministic test stub.'
+    recoveryMode: reset
+    maxIterations: 2
+    surfaces:
+      workspace:
+        - surface: repo
+      streams:
+        - stream: agent-notes
+    permissions:
+      fileGlobs: ['artifacts/**']
+      accessPreset: readwrite
+    verification:
+      type: output_contains
+      value: agent-ok
+```
+</CodeGroup>
 
 - **`reset`** (the default) — the next attempt starts fresh from the pinned workspace revision, with no half-finished edit left behind.
 - **`inspect`** — the next attempt starts inside the dirty workspace, with the failed attempt's trajectory tail injected as context, and decides whether to continue or redo.
 - **`manual`** — parks the run as `needs_human` with a diff of the pinned revision against whatever's actually there.
 
-`maxIterations` caps how many attempts a step gets before one of those three outcomes has to happen. A run-level `budget` (`maxTokensIn`, `maxTokensOut`, `maxDollars`) caps the whole flow the same way, declared once and enforced by the kernel instead of tracked by hand.
+`maxIterations` caps how many attempts a step gets before one of those three outcomes has to happen. A run-level `budget` caps the whole flow the same way, declared once and enforced by the kernel instead of tracked by hand. Write it as `"$5/run"` or `"$20/day"` (dollars, priced from a frozen per-model table), or as `{ tokens?, dollars?, wallclock? }` — `{ dollars: 5, wallclock: "45m" }` bounds both. Tokens and wallclock apply to every step; dollars apply to steps whose model has a frozen price. A Codex step, which picks its own model, is reported as `budget_unmetered` under a dollar budget and runs; it counts toward tokens and wallclock but cannot cross the dollar limit. Crossing a limit lets the running step finish and refuses the next one with `budget_exceeded`.
 
 ## Next
 

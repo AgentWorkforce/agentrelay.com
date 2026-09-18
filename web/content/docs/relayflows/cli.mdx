@@ -1,50 +1,81 @@
 ---
 title: 'CLI'
-description: 'Check a spec, run it, resume it, watch it — the flows command surface.'
+description: 'Check a flow, run it locally or in Cloud, resume it, deploy it as a listener — the flows command surface.'
 ---
 
+The full surface of `relayflows` 2.0.16, as `flows --help` prints it:
+
 ```text
-flows check [--json] <flow.yaml|spec.json>
-flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] <flow.yaml|spec.json>
-flows run --cloud [--json] [--wait] <flow.yaml|spec.json>
+flows check [--watch] [--json] <flow.ts|flow.yaml|spec.json>
+flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] [--reuse-from <run-id>] <flow.yaml|spec.json>
 flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] <flow.ts> --input <inline-json-or-file>
-flows resume [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] <run-id>
+flows resume [--allow-human-influenced] [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] <run-id>
+flows replay [--allow-human-influenced] [--json] [--data-dir <dir>] <run-id> [--at <step-id>]
+
+flows run --cloud [--json] [--wait] [--sync-code] <flow.yaml|spec.json>
+flows run --cloud [--json] [--wait] [--sync-code] <flow.ts> --input <inline-json-or-file>
+flows sync [--json] [--dir <path>] <run-id>
+flows deploy <flow.ts> --repo <owner/name> --on <provider>[:key=value,...] [--on ...] --approver <handle> [--agents claude[,codex]] [--name <name>] [--draft] [--json]
+flows deployments [--json]
+flows undeploy [--json] <deployment-id>
+
+flows build [--out <dir>] <flow.yaml|flow.ts>
+flows build --verify <bundle-dir>
+flows deploy <flow>@sha256:<digest> --to <file-bucket-uri>
+flows run <flow>@sha256:<digest> [--bucket <file-bucket-uri>] [--data-dir <dir>] [--json]
+flows add <helper-name|@flows/helper-name>
+
+flows serve-webhook --data-dir <dir> --port <p> [--allow <name>[,<name>]]
 flows tick start --schedule-id <id> --interval-ms <ms> [--epoch-ms <ms>] [--max-catch-up <n>] [--poll-interval-ms <ms>] [--data-dir <dir>] <spec.json>
 flows hn-monitor start [--data-dir <dir>] [--poll-interval-ms <n>] <spec.json>
 flows observer [--data-dir <dir>]
 ```
 
+Every verb refuses an unknown or duplicated flag with `REFUSED [invalid_invocation]` and the usage above, before anything runs.
+
 ## Check
 
 ```bash
 flows check my-flow.flow.yaml
+flows check my-flow.flow.ts
+flows check --watch my-flow.flow.ts     # re-check on every save
 ```
 
-Validates the spec: schema, step graph, verification blocks, and whether every declared CLI actually exists and is authenticated. Nothing runs and nothing is spawned. This is the same preflight a run does before its first step, exposed on its own so a broken spec fails in CI instead of at minute 27 of a real run.
+Validates the flow: schema, step graph, verification blocks, helper and trigger declarations, and whether every declared CLI actually exists and is authenticated (a real `claude -p --model …` / `codex exec …` probe, not a version check — that probe is a real subprocess, the one thing `check` does spawn). No flow runs, no daemon starts, no worker attaches — `check` never opens the daemon socket, and refuses `--data-dir` for that reason. It prints one `GATE` line per verification and one `RESOLVED` line per `llm`/`agent` step naming the CLI and model and where they came from (step, named agent, flow, or `flows.json`).
 
-`check` takes a declarative `flow.yaml` or `spec.json` — it validates data, so an authored `.flow.ts` file isn't a valid argument here. A TypeScript flow gets the same preflight automatically, run inline at the top of `flows run`.
+An authored `.flow.ts` is checked too: its declared surface — agents, helpers, `tools`, triggers, the `use:` graph — is preflighted; its control flow is not, so a check pass says the declarations are sound, not that the body is. The same preflight runs again at the top of `flows run`.
+
+If a `flows.json` is in scope and declares `models`, every model a step names must be on that list (`model_unknown` otherwise); without a `models` list the model is only probed for access.
 
 ## Run
 
 ```bash
 flows run my-flow.flow.ts --local-agent --input '{}'   # TypeScript flow, local CLI
 flows run workflow.yaml                                  # YAML/spec.json flow
-flows run --cloud --wait workflow.yaml                   # dispatch to the hosted engine, block for the result
+flows run --cloud --wait workflow.yaml                   # hosted engine, block for the result
 ```
 
-`--local-agent` runs each declared CLI (`claude`, `codex`, …) using whatever login it already has on your machine — no separate credentials to configure. It's what makes an authored TypeScript flow's `agent` steps runnable at all.
+An authored `.flow.ts` requires `--input`: an existing JSON file, otherwise inline JSON (up to 1 MiB), handed to the body as its second argument. `flows run --cloud <flow.ts> --input ...` used to fail immediately with `{"code":"http_error","message":"Cloud request failed with HTTP 400."}` against any authored flow, on any released `2.0.16` or earlier CLI — a badly-reported Surface version mismatch between Cloud and the CLI (flows#461). Fixed in `2.0.17`: verified for real, it now submits successfully and returns a run ID. Update if you're still on `2.0.16` or earlier and see that error.
 
-By default `run` spawns a daemon for the run if one isn't already up. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole environment) asserts a daemon is already present instead — the lever CI uses to fail loudly on a missing daemon rather than silently start one.
+`--local-agent` attaches the SDK's agent and LLM workers to the daemon, running each declared CLI (`claude`, `codex`, or a custom wrapper) with whatever login it already has on your machine. Without it, the first `llm` or `agent` step parks the run (exit `3`) until a worker is attached. Only stream-only agent steps run this way; a step that declares a `workspace` surface needs a worker holding its revision pins.
 
-`--data-dir <dir>` points at the journal's storage directory; it defaults to `.relayflowd` in the current project.
+By default `run` spawns a daemon for the data directory if one isn't already up. `--no-spawn` (or `FLOWS_NO_SPAWN=1` for a whole environment) asserts a daemon is already present instead — the lever CI uses to fail loudly on a missing daemon rather than silently start one. `--data-dir <dir>` points at the journal's storage directory; it defaults to `.relayflowd` in the current directory. `--reuse-from <run-id>` (YAML only) reuses completed steps of an earlier run instead of re-executing them; the report says how many were reused.
 
-## Resume
+Deterministic steps run in the **daemon's** working directory and environment — the directory you first ran `flows run` from — not in the flow file's directory. A `./script` in a step command is resolved and probed there.
+
+## Cloud
+
+`flows run --cloud` submits the flow to hosted infrastructure; the receipt prints `ACCEPTED <run-id>` and, with `--wait`, the validated completion. `--sync-code` uploads the invoking directory first so the hosted run executes inside your working tree, and `flows sync <run-id>` brings the run's file changes back as a patch applied to your checkout, uncommitted. This one-shot form works for both YAML/`spec.json` and authored TypeScript flows on `2.0.17`+ — see **Run**, above, for the version-mismatch bug that broke authored TypeScript on earlier releases. `flows deploy <flow.ts> --repo … --on …` turns a flow into a Cloud listener that launches one run per matching ticket; `flows deployments` lists them and `flows undeploy` removes one. See [Cloud](/docs/relayflows/cloud) for the details and credentials.
+
+## Resume and replay
 
 ```bash
 flows resume <run-id>
+flows resume --local-agent <run-id>     # an authored run started with --local-agent needs it again
+flows replay <run-id> --at <step-id>    # read-only reconstruction up to a step
 ```
 
-Picks a run back up from its journal. Completed steps aren't re-executed; only the work that never finished, or never got a recorded outcome, runs again.
+`resume` picks a run back up from its journal. Completed steps aren't re-executed; only the work that never finished, or never got a recorded outcome, runs again. A `run_not_found` target exits `2`; any other failure exits `1`, because the journal may already have changed. `replay` walks the journal without executing anything. Both take `--allow-human-influenced` to proceed past a run whose journal records a human intervention.
 
 ## Observer links
 
@@ -52,17 +83,42 @@ Picks a run back up from its journal. Completed steps aren't re-executed; only t
 flows observer
 ```
 
-Mints a read-only link for watching a run's activity in real time. Minting is best-effort — a failed mint never fails the run — so `--no-observer-link` is there for anyone who wants to skip it outright (CI, for instance).
+Mints a read-only link for watching a run's activity in real time, using the workspace key from `RELAYCAST_WORKSPACE_KEY` or your `agent-relay cloud login`. `run` and `resume` mint one automatically and print it after the `RUN` line; minting is best-effort and never fails the run. `--no-observer-link` or `FLOWS_NO_OBSERVER=1` skips it (CI, for instance).
 
-## Triggers
+## Triggers and event sources
 
 ```bash
+flows serve-webhook --data-dir .relayflowd --port 8787 --allow slack,github
 flows tick start --schedule-id daily --interval-ms 86400000 spec.json
 flows hn-monitor start spec.json
 ```
 
-`tick` is a durable schedule. Each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named trigger built the same way. Both report whether they're still alive, instead of quietly going dark for weeks without anyone noticing.
+`serve-webhook` receives provider events (`POST /providers/slack`, `POST /providers/github`, or a generic `POST /<name>`) and writes them to the daemon's inbox for a bound trigger spec. `tick` is a durable local schedule: each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named source built the same way. All of them are processes that must stay running; hosted schedules for v2 flows are not available yet.
+
+## Bundles
+
+```bash
+flows build my-flow.flow.ts --out dist
+flows deploy my-flow@sha256:<digest> --to file:///srv/flows
+flows run my-flow@sha256:<digest> --bucket file:///srv/flows
+```
+
+`build` seals a flow into a content-addressed bundle (canonical spec, compiled TypeScript with pinned dependencies, preflight declaration); the digest form of `deploy` copies it into a file bucket, and `run <flow>@sha256:…` executes it from there with no checkout. Only `file://` buckets are supported today.
+
+**Verified for real, and this doesn't work the way the example above implies.** `flows build` on an ordinary authored `.flow.ts` — including a minimal, header-less one, and every flow shown elsewhere on this site — is refused:
+
+```
+REFUSED [bundle_invalid] TypeScript build requires Bun: ...
+error: authored flow() requires an exported spec declaration for build-time preflight;
+the body is not executed during build
+```
+
+`build` wants a separate exported `spec` declaration for build-time preflight, distinct from the `flow(name, header?, body)` default export every other example on this site uses; a flow with a non-empty header is refused outright (`unsupported authored flow header`). What exact shape `build` expects instead isn't documented anywhere in this site's docs or in `docs/SURFACE.md`. Until that's resolved, `flows build`/the digest-bundle path is unverified for a normal authored flow — treat this section as aspirational for TypeScript flows, not a working command to copy.
 
 ## `--json`
 
-`check`, `run`, and `resume` accept `--json` for structured output instead of the human-readable progress line — the shape a CI step or another program should read, not the terminal renderer. `tick start`, `hn-monitor start`, and `observer` don't take it.
+`check`, `run`, `resume`, `replay`, `build`, `sync`, `deploy` (listener form), `deployments`, and `undeploy` accept `--json` for a single machine-readable object on stdout instead of the human-readable lines — the shape a CI step or another program should read. `tick start`, `hn-monitor start`, `serve-webhook`, and `observer` don't take it.
+
+## Exit codes
+
+`0` completed with `success` (a deliberate `done("declined")` also exits `0`, with a `DECLINED` diagnostic) · `1` failed with a declared reason, or the outcome is unknown · `2` refused before any journal write · `3` parked. [Reliability](/docs/relayflows/reliability) has the contract.

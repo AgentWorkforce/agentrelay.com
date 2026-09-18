@@ -8,9 +8,9 @@ This page covers what makes a run's completion trustworthy: not an agent's own r
 ## A run's exit code is a contract
 
 ```text
-0   completionReason: success
+0   completionReason: success (a deliberate done("declined") also exits 0, with a DECLINED diagnostic)
 1   a declared completionReason failure, or an unknown outcome from a transport/runtime/protocol error
-2   refused before any journal write: invalid input, failed preflight, unreachable daemon
+2   refused before any journal write: invalid input, failed preflight, unreachable daemon, a run_not_found resume target
 3   parked — waiting on an llm/agent worker or a needs_human recovery wait
 ```
 
@@ -27,7 +27,7 @@ Step:  success · verification_failed · retries_exhausted · lease_expired ·
 Run:   success · step_failed · canceled · budget_exceeded
 ```
 
-Handle every value in that list and there's no case left over to surprise you later. A step that fails verification is recorded as `verification_failed`, with exactly which check failed. The agent reporting that it went fine doesn't change the outcome.
+An authored TypeScript body declares its verdict with `f.done`: `success`, `step_failed`, `needs_human` (parks), or `declined` (a deliberate decision not to act; the kernel records `success` and the CLI adds a `DECLINED` diagnostic). `canceled` and `budget_exceeded` are the kernel's to record, never a body's. Handle every value in those lists and there's no case left over to surprise you later. A step that fails verification is recorded as `verification_failed`, with exactly which check failed. The agent reporting that it went fine doesn't change the outcome.
 
 ## Crashing mid-step
 

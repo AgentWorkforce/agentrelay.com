@@ -5,6 +5,8 @@ description: 'From zero to a verified, resumable run: write a flow, run it, and 
 
 This walks you from a fresh install to a real run in a few commands, using nothing but the published `relayflows` CLI. No scaffolder, no project template.
 
+Just want to see it work first, with nothing to install? Skip straight to [agentrelay.com/cloud](https://agentrelay.com/cloud) and run a flow in the browser — come back here when you're ready to author your own.
+
 ## 1. Install
 
 <CodeGroup>
@@ -50,7 +52,7 @@ steps:
 ```
 </CodeGroup>
 
-YAML is canonical — the compiler can check it without running anything. TypeScript is the power tool: the same primitives, called imperatively, with ordinary `if`/`for` control flow around each `await`.
+TypeScript is the default way to write a flow: the same primitives, called imperatively, with ordinary `if`/`for` control flow around each `await`. The YAML form (pick it from the language switch) is the canonical data the compiler checks without running anything — the shape a CI gate or a generator emits.
 
 ## 3. Run it
 
@@ -59,10 +61,12 @@ YAML is canonical — the compiler can check it without running anything. TypeSc
 npx flows run hello.flow.ts --input '{}'
 ```
 ```bash YAML
-npx flows check hello.flow.yaml   # preflight only — nothing runs
+npx flows check hello.flow.yaml   # preflight only — no flow, daemon, or worker starts
 npx flows run hello.flow.yaml
 ```
 </CodeGroup>
+
+`flows check` works on the TypeScript flow too — `npx flows check hello.flow.ts` — and `flows run` repeats the same preflight before its first step.
 
 This is a real, captured run:
 
@@ -77,7 +81,7 @@ RUN 01M26HYJNS6A4K5Q64FH6D0SG9 completed (2 steps) completionReason: success
 ```
 </CodeGroup>
 
-Every step's outcome is in the journal now, keyed by that run ID. `flows check` only takes a `flow.yaml` or `spec.json` — a TypeScript flow gets the same preflight for free, as the first thing `flows run` does.
+Every step's outcome is in the journal now, keyed by that run ID — the `01M26JC2VPAGFVTCVWFT3GSCXQ` in the `RUN ... completed` line above. That's the ID everything below refers back to.
 
 ## 4. If it gets interrupted
 
@@ -86,6 +90,8 @@ Every step's outcome is in the journal now, keyed by that run ID. `flows check` 
 ```bash
 flows resume 01M26JC2VPAGFVTCVWFT3GSCXQ
 ```
+
+That's the same run ID `flows run` printed in step 3 — copy it from your own terminal's `RUN ...` line (or, on a failure, from the `Inspect: flows replay <id> ...` line the CLI prints). If you didn't capture it, there's no `flows list`-style lookup today: the journal for each run lives at `<data-dir>/runs/<run-id>.sqlite3` (default data dir is `.relayflowd` in the directory you ran `flows` from), so `ls .relayflowd/runs/` recovers it by filename.
 
 `resume` starts a fresh daemon if none is up, reads the journal from disk, and continues from the first step that never recorded a `completionReason` — the step already marked done doesn't run again.
 

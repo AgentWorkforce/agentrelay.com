@@ -6,7 +6,7 @@ description: 'End-to-end: connect GitHub with one command, add the rest of your 
 A PR review bot is the shape Relayfile fits best: several agents, several providers, one shared state. This guide runs the whole flow end to end — from an empty machine to a bot whose orchestrator and specialists all read the same PR, coordinate through files, and post the finished review back to GitHub without any of them holding a provider token.
 
 <Note>
-  Every command, path, and payload below was run against a live workspace on `relayfile` **0.10.53**. The review in step 7 was posted by writing the file this guide tells you to write — [`agentrelay.com#59` review 5112118049](https://github.com/AgentWorkforce/agentrelay.com/pull/59#pullrequestreview-5112118049). Where a path or flag is version-dependent, it says so.
+  Every command, path, and payload below was run against a live workspace on `relayfile` **0.10.53**. The review in step 7 was posted by writing the file this guide tells you to write — `agentrelay.com#59` review 5112118049. Where a path or flag is version-dependent, it says so.
 </Note>
 
 ## What you're building
@@ -62,7 +62,7 @@ relayfile setup \
 
 `--no-open` prints the login and connect URLs instead of launching a browser — always pass it when an agent (or CI) is driving the command, since a headless browser launch burns the OAuth state.
 
-The local mirror it leaves behind is for *you*: somewhere to `ls`, `cat` and `grep` the tree and see exactly what your agents will see. It is not how a deployed bot reads the workspace — cloud sandboxes mount per run in [step 5](#5-give-every-sandbox-the-same-workspace), and short-lived functions skip the mount entirely. `--local-dir` is required here only because `--skip-mount` still prompts for a directory ([relayfile#461](https://github.com/AgentWorkforce/relayfile/pull/461)).
+The local mirror it leaves behind is for *you*: somewhere to `ls`, `cat` and `grep` the tree and see exactly what your agents will see. It is not how a deployed bot reads the workspace — cloud sandboxes mount per run in [step 5](#5-give-every-sandbox-the-same-workspace), and short-lived functions skip the mount entirely. `--local-dir` is required here only because `--skip-mount` still prompts for a directory (relayfile#461).
 
 <Note>
   Both URLs are short-lived. A Cloud device code expires in minutes and the Nango connect URL has its own TTL, so complete them while the command is still waiting. If it exits first, re-run the same line — a re-run reuses the workspace and only opens a new connect flow when the provider isn't connected yet.
