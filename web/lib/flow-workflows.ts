@@ -417,7 +417,8 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       ${options('check-discovery', 'builder')}
     });
   }
-  await f.run(${JSON.stringify(FLOW_CHECK_RESOLVE_COMMAND)});
+  const resolveChecks = ${JSON.stringify(FLOW_CHECK_RESOLVE_COMMAND)};
+  const checkPlan = (await f.run(resolveChecks)).trim();
 
   // Build and test the change, then open a pull request.
   // Where this branch started, so the publish step below can tell whether the
@@ -425,7 +426,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const baseCommit = (await f.run("git rev-parse HEAD")).trim();
   await f.agent("implementer", {
     ${options('implementer', 'builder')}
-  });` });
+  });
+  // A repository with no way to test itself may have gained one in this
+  // change (a first package.json with a test script). Resolving only before
+  // the change reported "no checks ran" on a pull request that added tests
+  // (cloud-e2e-sandbox#31), so a "none" is looked at again.
+  if (checkPlan === "none") await f.run(resolveChecks);` });
   sections.push({ id: 'checks', code: `  // Run the checks. A failure is not the end of the run: the tests are
   // how this flow learns what is wrong, so the repair agent reads the output
   // and fixes what it can, and whatever still fails is compared against the

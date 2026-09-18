@@ -73,6 +73,17 @@ describe('software factory onboarding', () => {
     expect(readFactoryDraft(JSON.stringify({ ...unanswered, workflow: 'prototype' }))?.workflow).toBe('prototype');
   });
 
+  it('resolves checks again after the implementer when none were found before it', () => {
+    for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
+      const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
+      const implementer = source.indexOf('f.agent("implementer"');
+      const again = source.indexOf('if (checkPlan === "none") await f.run(resolveChecks);');
+      expect(implementer, workflow).toBeGreaterThan(-1);
+      expect(again, workflow).toBeGreaterThan(implementer);
+      expect(source.indexOf('await f.run(runChecks'), workflow).toBeGreaterThan(again);
+    }
+  });
+
   it('rejects corrupt and unsupported persisted drafts', () => {
     for (const raw of [null, '{', '{}', '{"version":1,"agent":"shell","rounds":3}', '{"version":1,"agent":"claude","rounds":999}']) {
       expect(readFactoryDraft(raw)).toBeNull();

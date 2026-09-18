@@ -48,6 +48,15 @@ function resolveIn(files: Record<string, string>) {
 }
 
 describe('FLOW_CHECK_RESOLVE_COMMAND', () => {
+  it('finds tests a change added to a repository that had none (cloud-e2e-sandbox#31)', () => {
+    const root = fixture({ 'README.md': '# sandbox\n' });
+    expect(sh(FLOW_CHECK_RESOLVE_COMMAND, root).token).toBe('none');
+    // The implementer adds the first package.json with a test script.
+    writeFileSync(path.join(root, 'package.json'), testScript('node --test'));
+    expect(sh(FLOW_CHECK_RESOLVE_COMMAND, root).token).toBe('default');
+    expect(read(root, FLOW_CHECK_SCRIPT)).toContain('test');
+  });
+
   it('keeps a check script the author, the repository or discovery already wrote', () => {
     const { code, token, script } = resolveIn({ [FLOW_CHECK_SCRIPT]: 'npm run build:core\nnpm test\n', 'package.json': testScript('echo x') });
     expect(code).toBe(0);
