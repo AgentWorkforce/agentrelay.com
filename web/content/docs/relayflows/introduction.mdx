@@ -16,7 +16,7 @@ Every flow is built from the same small set of rungs, and you only climb as high
 1. **`run`** — a shell command. No model involved.
 2. **`llm`** — a bare model call. Prompt in, verified output out, no workspace, no tool use.
 3. **`agent`** — a harnessed coding agent in a workspace. Returns an artifact, not just text.
-4. **`human` / `dispatch` / `done`** — durable approval, handing work to a child flow, and a typed finish.
+4. **`human` / `dispatch` / `done`** — durable approval, handing work to a child flow, and a typed finish. `human` and `dispatch` are declared in the surface and pass `flows check`, but the 2.0.16 runtime refuses them (`unsupported_verb`); they ship in the release after 2.0.17. Today the shipped human gate is `f.done('needs_human')`, which parks the run for a person to resume.
 
 ## Simple Example Flow
 

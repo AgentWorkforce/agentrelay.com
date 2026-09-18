@@ -95,6 +95,13 @@ export default flow('ship-feature', async (f) => {
 
 `f.human` parks the run on a durable wait — nothing sits there blocking a thread, and the wait survives a restart exactly like a crash mid-step does. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. `f.dispatch` hands the plan to a named child flow and returns its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
 
+<Note>
+  Both verbs typecheck and pass `flows check` on 2.0.16 but are refused at
+  runtime (`unsupported_verb`); they ship in the release after 2.0.17. The
+  shipped human gate today is `f.done('needs_human')` — park, let a person
+  act, `flows resume`.
+</Note>
+
 ## Next
 
 <CardGroup cols={3}>
