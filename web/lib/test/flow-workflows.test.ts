@@ -456,6 +456,21 @@ describe('FLOW_BASE_CHECK_COMMAND', () => {
     expect(read(root, 'built/ok')).toBe('artifact\n');
   });
 
+  it('runs the branch recipe against the base even when the repository commits the check script', () => {
+    // The branch commits .relayflow/check.sh; the base has none. Checking the
+    // base out in place would delete it and report `none` instead of a verdict.
+    const { root, ids } = history([
+      { state: 'good' },
+      { state: 'bad', [FLOW_CHECK_SCRIPT]: 'echo "state is $(cat state)"\ngrep -q good state\n' },
+    ]);
+    const head = git(root, 'rev-parse', 'HEAD').trim();
+    expect(sh(`base=${ids[0]}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'pass' });
+    expect(read(root, '.relayflow/base-check.log')).toContain('state is good');
+    expect(git(root, 'rev-parse', 'HEAD').trim()).toBe(head);
+    expect(read(root, FLOW_CHECK_SCRIPT)).toContain('grep -q good state');
+    expect(git(root, 'status', '--porcelain', '--untracked-files=no').trim()).toBe('');
+  });
+
   it('never switches a tree with uncommitted changes; it compares in a throwaway worktree instead', () => {
     const { root, base } = compare('good', 'bad');
     writeFileSync(path.join(root, 'state'), 'bad but edited\n');

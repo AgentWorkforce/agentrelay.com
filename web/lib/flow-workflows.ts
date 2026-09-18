@@ -147,7 +147,7 @@ const PERL_LIMITER =
  */
 export const FLOW_CHECK_RUN_COMMAND = [
   'root="$PWD"',
-  `script="$root/${FLOW_CHECK_SCRIPT}"`,
+  `script="\${check_script:-$root/${FLOW_CHECK_SCRIPT}}"`,
   'check_dir="${check_dir:-$root}"',
   'check_out="${check_out:-$root/.relayflow/check.log}"',
   'mkdir -p "$(dirname "$check_out")"',
@@ -177,6 +177,10 @@ export const FLOW_CHECK_RUN_COMMAND = [
  * the agents' finished work still in the sandbox. A failure the base commit
  * shares is a problem for a person, not a reason to throw the work away.
  *
+ * Both sides run the branch's recipe: the script is copied aside before the
+ * base is checked out, because a repository may commit .relayflow/check.sh and
+ * the checkout would otherwise replace or delete it.
+ *
  * The base commit is checked in the same working tree when it can be: the
  * branch's checks ran in a tree the implementer had already built in, and a
  * default such as `make test` or `python3 -m pytest` does not install or
@@ -192,12 +196,13 @@ export const FLOW_BASE_CHECK_COMMAND = [
   'root="$PWD"',
   'tmp=',
   'if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1; then echo "relayflow: could not check out the base commit to compare against." >&2; echo unknown'
-    + '; elif git diff --quiet HEAD -- >/dev/null 2>&1 && git diff --cached --quiet >/dev/null 2>&1 && head=$(git rev-parse HEAD) && orig=$(git symbolic-ref -q --short HEAD || git rev-parse HEAD) && git checkout -q --detach "$base" >/dev/null 2>&1; then '
-    + 'check_dir="$root"; check_out="$root/.relayflow/base-check.log"'
+    + `; elif git diff --quiet HEAD -- >/dev/null 2>&1 && git diff --cached --quiet >/dev/null 2>&1 && head=$(git rev-parse HEAD) && orig=$(git symbolic-ref -q --short HEAD || git rev-parse HEAD) && recipe=$(mktemp "\${TMPDIR:-/tmp}/relayflow-recipe.XXXXXX") && { [ ! -f "$root/${FLOW_CHECK_SCRIPT}" ] || cp "$root/${FLOW_CHECK_SCRIPT}" "$recipe"; } && git checkout -q --detach "$base" >/dev/null 2>&1; then `
+    + 'check_dir="$root"; check_out="$root/.relayflow/base-check.log"; check_script="$recipe"'
     + '; token=$( ' + FLOW_CHECK_RUN_COMMAND + ' )'
+    + '; rm -f "$recipe"'
     + '; git checkout -q -f "$orig" >/dev/null 2>&1 || git checkout -q -f "$head" >/dev/null 2>&1'
     + '; if [ "$(git rev-parse HEAD 2>/dev/null)" = "$head" ]; then echo "$token"; else echo "relayflow: could not return to $orig after checking the base commit." >&2; echo unknown; fi'
-    + '; elif tmp=$(mktemp -d "${TMPDIR:-/tmp}/relayflow-base.XXXXXX") && git worktree add --detach -q "$tmp/base" "$base" >/dev/null 2>&1; then '
+    + '; elif if [ -n "${recipe:-}" ]; then rm -f "$recipe"; fi; tmp=$(mktemp -d "${TMPDIR:-/tmp}/relayflow-base.XXXXXX") && git worktree add --detach -q "$tmp/base" "$base" >/dev/null 2>&1; then '
     + 'check_dir="$tmp/base"; check_out="$root/.relayflow/base-check.log"; '
     + FLOW_CHECK_RUN_COMMAND
     + '; git worktree remove --force "$tmp/base" >/dev/null 2>&1; git worktree prune >/dev/null 2>&1; rm -rf "$tmp"'
