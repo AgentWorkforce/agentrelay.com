@@ -102,7 +102,7 @@ export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'loca
   // such a step runs unmetered, so a dollar cap cannot bound it. Wall-clock is
   // enforced on every step regardless of pricing, which is why it stays the
   // default here; `{ dollars, wallclock }` together is also valid.
-  const budget = '{ wallclock: "1h" }';
+  const budget = '{ wallclock: "2h" }';
   if (!draft.sources.length) return [{ id: 'empty', code: `import { flow } from "@relayflows/surface";
 
 export default flow("software-factory",

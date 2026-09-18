@@ -79,7 +79,7 @@ export function RunOptions({ draft, chosen, setDestination, onTrack, getJourneyI
       </ol>
       <details className={s.localRequirements} onToggle={event => onTrack('help_toggled', { section: 'local_requirements', open: event.currentTarget.open })}><summary>Requirements and local behavior</summary>
         <p>Node.js 22.18+, macOS (Apple silicon) or Linux (x64), your selected coding agents installed and signed in, and GitHub CLI authenticated. Start with a clean Git repository whose tests run the way its CI runs them; the flow reads your CI configuration to find the command, or you can set <code>checkCommand</code> in the flow.</p>
-        <p>The local version uses a one-hour runtime limit, not a dollar cap. Your coding agent’s usage charges still apply. Every preset stops at “needs_human” for you to review and merge the PR in GitHub.</p>
+        <p>The local version uses a two-hour runtime limit, not a dollar cap. Your coding agent’s usage charges still apply. Every preset stops at “needs_human” for you to review and merge the PR in GitHub.</p>
         <p>In GitHub, require approving reviews and passing CI checks in your target branch’s rules. A repository administrator needs to configure these protections.</p>
         <p>This runs one ticket. Automatic triggers from your issue tracker require a separate connection.</p>
       </details>

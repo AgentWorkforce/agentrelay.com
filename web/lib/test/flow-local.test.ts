@@ -341,7 +341,7 @@ describe('local flow starter kit', () => {
       const source = factorySource({ ...draft, workflow }, 'local');
       const file = ts.createSourceFile('local.flow.ts', source, ts.ScriptTarget.ES2022, true);
       expect((file as unknown as { parseDiagnostics: unknown[] }).parseDiagnostics).toEqual([]);
-      expect(source).toContain('wallclock: "1h"');
+      expect(source).toContain('wallclock: "2h"');
       expect(source).not.toContain('$8/run');
       expect(source).not.toContain('pr merge');
     }

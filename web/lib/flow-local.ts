@@ -446,7 +446,7 @@ If the agents commit nothing — a ticket with nothing to do in this repository 
 If the checks fail, a repair agent reads the output and fixes missing setup or its own bugs, never by weakening tests. Whatever still fails is compared with the commit the branch started from, and the pull request opens as a draft with both outputs in its body: the work is never thrown away. A change that breaks checks which pass on the starting commit ends as step_failed (exit code 1). Working files (summary.md, plans, reviews, .relayflow/) are kept out of the commits through .git/info/exclude, and removed from the branch before pushing if an agent committed them anyway.
 
 Local runtime behavior
-This local version uses a one-hour wall-clock budget. Model usage is billed by your coding-agent provider; this is not a dollar cap.
+This local version uses a two-hour wall-clock budget. Model usage is billed by your coding-agent provider; this is not a dollar cap.
 Every preset reports needs_human (exit code 3) after its checks and any agent reviews pass. This is the intended manual approval stop, not a failed run. Review and merge the PR in GitHub; the flow never merges automatically and does not resume automatically after approval.
 A run whose adversarial review does not pass ends as step_failed (exit code 1) instead. Its findings are written to review-blocked.md and posted to the pull request, and the pull request is left as a draft so it cannot be merged by accident.
 ${draft.workflow === 'prototype' ? 'Prototype worktrees remain available under the generated temporary directory for inspection.' : ''}

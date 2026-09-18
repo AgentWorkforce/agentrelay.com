@@ -217,7 +217,7 @@ describe('software factory onboarding', () => {
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
     for (const agents of [['claude', 'codex'], ['codex'], ['claude']] as FactoryDraft['agents'][]) {
       const source = factorySource({ ...completed, agents });
-      expect(source).toContain('{ budget: { wallclock: "1h" } }');
+      expect(source).toContain('{ budget: { wallclock: "2h" } }');
       expect(source).not.toMatch(/budget: "\$\d/);
     }
   });
