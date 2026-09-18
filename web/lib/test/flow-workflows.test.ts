@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
-  FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND,
+  FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND,
 } from '../flow-workflows';
 
 /**
@@ -537,5 +537,39 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     const root = fixture({});
     expect(sh(`check=pass; baseline=; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
     expect(read(root, '.relayflow/pr-body.md').startsWith('## Checks')).toBe(true);
+  });
+});
+
+describe('FLOW_OPEN_CHANGE_COMMAND', () => {
+  /** A bin dir with fakes that record their argv, one per line, and exit with `code`. */
+  function fakes(names: string[], code = 0) {
+    const root = fixture({});
+    const bin = path.join(root, 'bin');
+    mkdirSync(bin);
+    for (const name of names) {
+      writeFileSync(path.join(bin, name), `#!/bin/sh\nprintf '%s\\n' "${name}" "$@" > "${root}/${name}.args"\nexit ${code}\n`, { mode: 0o755 });
+    }
+    return { root, env: { PATH: `${bin}:/usr/bin:/bin` } };
+  }
+  const args = ' --title "Software factory change" --body-file .relayflow/pr-body.md --draft';
+
+  it('uses the hosted helper when Cloud put it on PATH (GitHub or GitLab alike)', () => {
+    const { root, env } = fakes(['relayflow-open-change', 'gh']);
+    expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(0);
+    expect(read(root, 'relayflow-open-change.args').trim().split('\n'))
+      .toEqual(['relayflow-open-change', '--title', 'Software factory change', '--body-file', '.relayflow/pr-body.md', '--draft']);
+    expect(read(root, 'gh.args')).toBe('');
+  });
+
+  it('falls back to gh pr create for a local run, with the same arguments', () => {
+    const { root, env } = fakes(['gh']);
+    expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(0);
+    expect(read(root, 'gh.args').trim().split('\n'))
+      .toEqual(['gh', 'pr', 'create', '--title', 'Software factory change', '--body-file', '.relayflow/pr-body.md', '--draft']);
+  });
+
+  it('keeps the exit status, so a failed create still fails the step', () => {
+    const { root, env } = fakes(['relayflow-open-change'], 3);
+    expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(3);
   });
 });

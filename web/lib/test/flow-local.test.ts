@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_PUBLISH_CHECK_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND } from '../flow-workflows';
 
 /**
  * What each deterministic step reports, keyed by the command itself: three
@@ -263,7 +263,7 @@ describe('local flow starter kit', () => {
         done: (reason: string) => { finish = reason; },
       }, localInput(draft));
     } finally { console.error = original; }
-    expect(commands.some(command => command.startsWith('gh pr create'))).toBe(false);
+    expect(commands.some(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
     expect(commands.some(command => command.startsWith('git push'))).toBe(false);
     expect(finish).toBe('needs_human');
     expect(messages.join('\n')).toContain('no commits');
@@ -281,7 +281,7 @@ describe('local flow starter kit', () => {
       }, localInput(selected));
       expect(finish).toBe('needs_human');
       const testIndex = commands.indexOf(FLOW_CHECK_RUN_COMMAND);
-      const createIndex = commands.findIndex(command => command.startsWith('gh pr create'));
+      const createIndex = commands.findIndex(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND));
       expect(testIndex).toBeGreaterThanOrEqual(0);
       expect(createIndex).toBeGreaterThan(testIndex);
       expect(localKitFiles(selected)['START-HERE.txt']).toContain('require a pull request, an approving review, and passing CI status checks');
@@ -301,7 +301,7 @@ describe('local flow starter kit', () => {
         run: async (command: string) => { commands.push(command); return answer(command, { check: 'fail', baseline: 'pass' }); },
         done: (reason: string) => { finish = reason; },
       }, localInput(selected));
-      const create = commands.find(command => command.startsWith('gh pr create')) ?? '';
+      const create = commands.find(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND)) ?? '';
       expect(create).toContain('--draft');
       expect(commands).toContain('git push --set-upstream origin HEAD');
       expect(finish).toBe('step_failed');
@@ -545,6 +545,18 @@ describe('relocating a kit that was extracted outside a repository', () => {
     expect(out).not.toContain('still holds the placeholder ticket');
     expect(code).toBe(1);
   }, 30_000);
+
+  it.each(['git@gitlab.com:acme-group/app.git', 'https://gitlab.com/acme-group/app.git', 'https://gitlab.example.com/acme/app.git'])(
+    'stops a GitLab repository before any agent runs, pointing at the Cloud deploy (%s)', async (origin) => {
+      const { root } = workspace();
+      const target = installed(root, 'gitlab-' + origin.length, { dependency: true, ticket: true });
+      git('-C', target, 'remote', 'set-url', 'origin', origin);
+      const { code, out, err } = await preflight(target, root, [], true, signedIn(root));
+      expect(err).toContain('this repository is on GitLab.');
+      expect(err).toContain('Deploy this flow to Agent Relay Cloud instead');
+      expect(out).not.toContain('Preconditions met');
+      expect(code).toBe(1);
+    }, 30_000);
 
   it('passes the same check once step 2 has run in that repository', async () => {
     const { root } = workspace();

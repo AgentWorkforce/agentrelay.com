@@ -304,12 +304,22 @@ try {
   await relocate();
 }
 
+let originUrl = "";
 try {
-  git("remote", "get-url", "origin");
+  originUrl = git("remote", "get-url", "origin").trim();
 } catch {
   fail("this repository has no origin remote.",
     "The flow ends with git push --set-upstream origin HEAD and gh pr create.",
     "Add one first: git remote add origin <url>");
+}
+
+// A local run opens its change with GitHub CLI, which cannot open a GitLab
+// merge request. Cloud runs can (they carry relayflow-open-change), so say
+// that here instead of letting the agents finish and the last step fail.
+if (/(^|[@/.])gitlab[.:]|gitlab\.com/i.test(originUrl)) {
+  fail("this repository is on GitLab.",
+    "Local runs open the pull request with GitHub CLI (gh pr create), which cannot open a GitLab merge request.",
+    "Deploy this flow to Agent Relay Cloud instead: hosted runs open the merge request for you.");
 }
 
 // Step 4 runs "npx flows" twice straight after this, and npx resolves from the
@@ -426,7 +436,7 @@ Requirements
 - Node.js 22.18+ (for native TypeScript), npm, and Git.
 - macOS on Apple silicon or Linux x64 (bundled runtime platforms).
 - ${names}, installed and signed in.
-- GitHub CLI (gh), signed in, and a repository with push access to origin.
+- GitHub CLI (gh), signed in, and a repository with push access to origin. A GitLab repository needs the Cloud deploy instead: local runs open the pull request with gh, which cannot open a GitLab merge request, and the preflight stops before any agent runs.
 - The flow runs your repository's own checks. Before changing any code, an agent reads your CI configuration, Makefile and README and writes .relayflow/check.sh; failing that it uses your ecosystem's default (a make or just test target, npm/pnpm/Yarn/Bun, cargo, go, pytest, bundle, Maven, Gradle, dotnet or mix). To use your own command instead, set checkCommand in software-factory.flow.mts, or commit a .relayflow/check.sh. The tools your checks need must be installed.
 
 1. Extract this kit into your repository root. Keep any existing files before replacing them. Open a terminal in that directory.

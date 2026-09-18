@@ -123,6 +123,7 @@
 .sourceIcon { width: 25px; height: 25px; flex-shrink: 0; position: relative; display: inline-flex; }
 .slackLogo { position: absolute; width: 140%; height: 140%; max-width: none; left: -20%; top: -20%; }
 .source_github { color: #edf4fb; }
+.source_gitlab { color: #fc6d26; }
 .source_linear { color: #9395ff; }
 .source_shortcut { color: #ac91ff; }
 .source_jira { color: #579dff; }

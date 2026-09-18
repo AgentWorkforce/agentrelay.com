@@ -280,6 +280,18 @@ export const FLOW_DROP_WORKING_FILES_COMMAND = [
 ].join('; ');
 
 /**
+ * Opens the change request, whichever host the repository lives on. Cloud puts
+ * `relayflow-open-change` on PATH for every repository run
+ * (AgentWorkforce/cloud#3801): on GitHub it is `gh pr create` with the same
+ * arguments and exit status, on GitLab it opens a merge request and prints its
+ * URL. A local run has no such helper and keeps `gh pr create`. The caller
+ * appends the arguments (`--title`, `--body-file`, `--draft`), which both
+ * accept.
+ */
+export const FLOW_OPEN_CHANGE_COMMAND =
+  'open_change() { if command -v relayflow-open-change >/dev/null 2>&1; then relayflow-open-change "$@"; else gh pr create "$@"; fi; }; open_change';
+
+/**
  * Decides whether there is anything to publish, before the branch is pushed and
  * before `gh pr create` runs.
  *
@@ -481,7 +493,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // draft, with the verdict, the script and the output in its body.
   const checkReport = ${JSON.stringify(FLOW_CHECK_REPORT_COMMAND)};
   await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; " + checkReport);
-  await f.run('gh pr create --title "Software factory change" --body-file .relayflow/pr-body.md' + (broken(check) ? " --draft" : ""));
+  // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
+  // merge request on GitLab. A local run has only gh.
+  const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
+  await f.run(openChange + ' --title "Software factory change" --body-file .relayflow/pr-body.md' + (broken(check) ? " --draft" : ""));
   if (broken(check) && baseline === "pass") {
     // The base commit passes and this branch does not: the change broke the
     // checks and repair could not fix it. That is this flow's verdict on its
