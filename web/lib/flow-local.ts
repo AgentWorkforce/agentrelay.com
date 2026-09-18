@@ -195,6 +195,17 @@ function quote(path) {
 // Everything the flow will need of the destination, checked before a single
 // file is written: the same three conditions this script enforces here, so a
 // relocated kit cannot land somewhere its own preflight would reject.
+// A local run opens its change with GitHub CLI, which cannot open a GitLab
+// merge request; Cloud runs can (they carry relayflow-open-change). Shared by
+// the main guard and repoProblem, so a relocated kit is refused the same way.
+const GITLAB_LOCAL_ADVICE = [
+  "Local runs open the pull request with GitHub CLI (gh pr create), which cannot open a GitLab merge request.",
+  "Deploy this flow to Agent Relay Cloud instead: hosted runs open the merge request for you.",
+];
+function isGitLabOrigin(url) {
+  return /(^|[@/.])gitlab[.:]|gitlab\.com/i.test(url);
+}
+
 function repoProblem(target) {
   const stat = statSync(target, { throwIfNoEntry: false });
   if (!stat) return "There is no " + target;
@@ -204,11 +215,13 @@ function repoProblem(target) {
   } catch {
     return "Not a Git repository: " + target;
   }
+  let origin = "";
   try {
-    git("-C", target, "remote", "get-url", "origin");
+    origin = git("-C", target, "remote", "get-url", "origin").trim();
   } catch {
     return "No origin remote there. The flow ends in git push and gh pr create, so add one first: git remote add origin <url>";
   }
+  if (isGitLabOrigin(origin)) return "That repository is on GitLab. " + GITLAB_LOCAL_ADVICE.join(" ");
   const unclean = dirtyPaths("-C", target);
   if (unclean.length) {
     return "Uncommitted changes there (" + unclean.slice(0, 3).join(", ") + (unclean.length > 3 ? ", ..." : "") + "). Commit or stash them first; the flow commits and pushes a branch.";
@@ -313,14 +326,8 @@ try {
     "Add one first: git remote add origin <url>");
 }
 
-// A local run opens its change with GitHub CLI, which cannot open a GitLab
-// merge request. Cloud runs can (they carry relayflow-open-change), so say
-// that here instead of letting the agents finish and the last step fail.
-if (/(^|[@/.])gitlab[.:]|gitlab\.com/i.test(originUrl)) {
-  fail("this repository is on GitLab.",
-    "Local runs open the pull request with GitHub CLI (gh pr create), which cannot open a GitLab merge request.",
-    "Deploy this flow to Agent Relay Cloud instead: hosted runs open the merge request for you.");
-}
+// Say this before the agents run rather than letting the last step fail.
+if (isGitLabOrigin(originUrl)) fail("this repository is on GitLab.", ...GITLAB_LOCAL_ADVICE);
 
 // Step 4 runs "npx flows" twice straight after this, and npx resolves from the
 // directory it runs in — never from wherever this script lives. So the install

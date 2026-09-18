@@ -415,6 +415,16 @@ describe('relocating a kit that was extracted outside a repository', () => {
     });
   }
 
+  it('refuses to relocate the kit into a GitLab repository its own preflight would reject', async () => {
+    const { root, download } = workspace();
+    const target = repo(root, 'gitlab-checkout');
+    git('-C', target, 'remote', 'set-url', 'origin', 'git@gitlab.com:acme-group/app.git');
+    const { code, out } = await preflight(download, root, [target]);
+    expect(out).toContain('That repository is on GitLab.');
+    expect(existsSync(join(target, LOCAL_PREFLIGHT))).toBe(false);
+    expect(code).toBe(1);
+  }, 30_000);
+
   it('copies the kit into the repository the user names and prints the sequence for it', async () => {
     const { root, download } = workspace();
     const target = repo(root, 'checkout (1)');
