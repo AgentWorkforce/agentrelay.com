@@ -47,10 +47,68 @@ flows undeploy <deployment-id>
 `--on <provider>[:key=value,…]` takes `github` (`repository`, `labels`, `contains`), `slack` (`channel`, `contains`), `linear` (`team`, `contains`), `jira` (`project`, `contains`) or `shortcut` (`workspace`, `contains`), each at most once; a GitHub source without `repository` is scoped to `--repo`. `--agents` names the coding-agent harnesses the flow uses (default `claude`); activation checks their credentials are connected and refuses with `flow_model_not_connected` otherwise. `--draft` saves without activating. Refusals are named — `flow_repository_not_connected`, `flow_name_taken`, … — rather than reported as a bare status.
 
 <Note>
-  Today a GitHub listener wakes on `issues.opened` and `issues.labeled`.
-  Pull-request events (`--on github:events=pull_request`) and hosted
-  schedules for v2 flows are in progress and not in 2.0.16; the local
-  `flows tick` schedule still works in the meantime.
+  A GitHub listener wakes on `issues.opened` and `issues.labeled` by default.
+  `--on github:events=pull_request` (2.0.17+) wakes instead on a pull request
+  being opened, pushed to, reopened, or reviewed; that run checks out the
+  PR's own head and receives `input.pullRequest` (`number`, `title`, `body`,
+  `headRef`, `headSha`, `baseRef`, `author`, `draft`, `labels`, `url`, and
+  `review` for a submitted review) beside `input.issue`. Comment and
+  check-run events are not wake sources yet. Hosted schedules are
+  `flows schedule <flow> --cron "…" | --every 15m` (2.0.18+): each fire
+  replays the exact request `flows run --cloud` would send, so `--sync-code`
+  and repository grants are refused on a schedule.
+</Note>
+
+## Human approval on Cloud
+
+A hosted run that reaches `f.human` parks the same way a local one does ([Human gates](/docs/relayflows/build#human-gates)) — then Cloud delivers the question to the person where they already are, and takes the answer from there. This flow drafts release notes for every pull request on a repo and asks one person before it posts them:
+
+```ts
+import { flow } from '@relayflows/surface';
+
+type Input = { pullRequest?: { number: number; title?: string } };
+
+export default flow<Input>('release-notes', { budget: '$5/run' }, async (f, input) => {
+  if (!input.pullRequest) return f.done('declined');
+
+  await f.agent('writer', {
+    task: `Draft release notes for pull request #${input.pullRequest.number} ("${input.pullRequest.title ?? ''}") into NOTES.md.`,
+  }).gate({ type: 'subprocess_gate', command: 'test -s NOTES.md' });
+
+  const notes = await f.run('cat NOTES.md');
+  const approved = await f.human(`Post these release notes on #${input.pullRequest.number}?\n\n${notes}`, { to: 'github:@khaliqgant' });
+  if (!approved) return f.done('declined');
+
+  await f.github.comment({ owner: 'acme', repo: 'api', number: input.pullRequest.number }, notes);
+  f.done('success');
+});
+```
+
+```bash
+flows deploy release-notes.flow.ts --repo acme/api --on github:events=pull_request --approver khaliqgant
+```
+
+When the run parks, Cloud records `completionReason: needs_human` with `humanWait { waitId, question, to }` on the run, and `to` decides where the question goes:
+
+| `to` | Delivered as | Who may answer |
+| --- | --- | --- |
+| `'slack:#marketing'` | a post in that channel | anyone in the channel |
+| `'slack:@khaliq'` | a DM, mentioning them | only that Slack user |
+| `'github:@khaliqgant'` | a comment on the triggering issue or PR, mentioning them | only that GitHub login |
+| `'khaliq'` | the deploy's `--approver`, on the Slack thread or issue/PR the run was triggered from | only that person |
+
+**Answering.** In Slack, reply **yes** or **no** in the thread under the question, or react ✅ / ❌ on it; in a DM a flat reply works too. On GitHub, comment `@relay yes <code>` or `@relay no <code>`, where `<code>` is the 8-character code printed in the question comment — it names the question, so two open questions on one PR can't be confused. The bot acknowledges (`Got it — yes. Resuming run <url>`) and the run resumes automatically with the answer applied; the resumed body continues from the gate with every earlier step memoized. Someone other than the addressed person gets `Only <@…> can answer this one.`; a second answer gets `This was already answered yes by <who>.` — the first decision stands.
+
+**What the flow needs connected.** A literal `slack:` or `github:` `to` is a requirement of the flow, like an `f.slack.post` in the same body: `flows check` lists it under `REQUIRES` (`slack (f.human to)` — on flows' current `main`, in the release after 2.0.19; 2.0.19 lists the helper calls only), and `flows deploy` / `flows run --cloud` offer to connect a missing provider in the terminal before submitting, or refuse with `integration_not_connected` under `--no-connect` or `--json`. A bare approver handle needs whichever provider the run was triggered from. A computed `to` (`input.approver`) is resolved by Cloud at park time.
+
+**The answer route.** The delivered channel is the intended way to answer, but the same wait is answerable over HTTP: `GET /api/v1/workflows/runs/<runId>/answer` shows the open question and any recorded answer; `POST` records one. Both take a dashboard session or a `cli:auth` login token, and only the run's owner or an organisation owner may decide there — the run's own credentials cannot, since a gate an agent could satisfy is not a gate. A wait that's already answered is `409`. The route records the decision without launching anything; `POST /api/v1/workflows/run` with `{ resume: <runId>, relayflowVersion: 'v2' }` and the run's original source applies it inside the resumed sandbox, where the flows CLI runs `flows answer` before `flows resume` so the kernel closes the wait exactly once.
+
+<Note>
+  Not yet: `flows answer --cloud` in the CLI (flows#475) — answer where the
+  question was delivered, or through the route. Removing a ✅ / ❌ reaction
+  does not retract an answer. A `timeout` on the question is recorded but
+  not enforced. Delivery needs a Cloud run: a local `flows run` prints the
+  `flows answer` invocation instead.
 </Note>
 
 ## Credentials
