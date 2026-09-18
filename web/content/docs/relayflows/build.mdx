@@ -102,7 +102,20 @@ interface Ctx {
 }
 ```
 
-This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control. **`human` and `dispatch` are declared and typecheck, but neither runs in 2.0.16** — verified: a flow that reaches `f.human` fails with `unsupported_verb: the initial authored executor does not lower f.human`, and the same for `f.dispatch`. Once wired, `human` is meant to park the run on a durable await instead of a blocking call — a wait the journal can survive a restart across — and `dispatch` is meant to hand work to a named child flow and return its typed result. Until then, treat both as the intended shape, not something to ship on.
+This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control.
+
+<Note>
+  `human` and `dispatch` are declared and typecheck, but neither runs in
+  2.0.16 — verified: a flow that reaches `f.human` fails with
+  `unsupported_verb: the initial authored executor does not lower f.human`,
+  and the same for `f.dispatch`. Both are being implemented on flows'
+  `feat/f-human` branch and land in the release after 2.0.17. Once wired,
+  `human` is meant to park the run on a durable await instead of a blocking
+  call — a wait the journal can survive a restart across — and `dispatch` is
+  meant to hand work to a named child flow and return its typed result.
+  Until then, the shipped human gate is `f.done('needs_human')`: the run
+  parks (exit `3`), a person acts, and `flows resume <run-id>` continues it.
+</Note>
 
 `done` takes one of four authored verdicts. `success` completes the run; `step_failed` says the flow's own checks did not pass (the adversarial review found problems, the tests went red) and exits `1`; `needs_human` parks the run (exit `3`); `declined` records a deliberate decision not to act on the input — a ticket that turned out not to be work — and exits `0` with a `DECLINED` diagnostic. `canceled` and `budget_exceeded` are in the `FlowCompletionReason` type but refused at runtime with `unsupported_completion`: they are kernel facts, recorded when the kernel cancels a run or exhausts its budget, not verdicts a body can declare.
 
@@ -123,7 +136,7 @@ A step that fails its check is recorded as `verification_failed`, with exactly w
 
 ## Permissions and recovery
 
-An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit. These are YAML step fields with no TypeScript equivalent; `f.dispatch` is not a working way to reach them today (see above — it doesn't execute in 2.0.16). Author the step in YAML if you need `permissions`/`recoveryMode`, or leave recovery to the kernel's default (`reset`) in TypeScript:
+An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit. These are YAML step fields with no TypeScript equivalent today; a TypeScript body leaves recovery to the kernel's default (`reset`), and will reach a YAML step through `f.dispatch` once that verb ships (see the Note above — it doesn't execute yet in 2.0.16). Author the step in YAML now if you need `permissions`/`recoveryMode` before then:
 
 <CodeGroup>
 ```typescript TypeScript
