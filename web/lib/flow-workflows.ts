@@ -114,6 +114,10 @@ export const FLOW_CHECK_RESOLVE_COMMAND = [
     + '; fi',
 ].join('; ');
 
+/** Runs its arguments in their own process group and stops the group after `$1` seconds, exiting 124. */
+const PERL_LIMITER =
+  "my $l = shift; my $p = fork; defined $p or exit 127; if (!$p) { setpgrp(0, 0); exec @ARGV or exit 127 } $SIG{ALRM} = sub { kill 'TERM', -$p; sleep 2; kill 'KILL', -$p; exit 124 }; alarm $l; waitpid($p, 0); exit($? & 127 ? 128 + ($? & 127) : $? >> 8)";
+
 /**
  * Runs FLOW_CHECK_SCRIPT and reports `pass`, `fail`, `timeout` or `none`.
  *
@@ -132,23 +136,30 @@ export const FLOW_CHECK_RESOLVE_COMMAND = [
  * repository's tests must see the machine a fresh CI runner would.
  *
  * `f.run` leases a command for at most 15 minutes and dies past it, so the
- * check stops itself first (`timeout`, 14 minutes by default) and reports that
- * instead of taking the run down. The caller may set `check_dir` (where to run,
- * default here) and `check_out` (the log).
+ * check stops itself first (14 minutes by default) and reports `timeout`
+ * instead of taking the run down. It uses `timeout` or `gtimeout` when one is
+ * installed and otherwise a small Perl limiter: macOS, the local kit's main
+ * platform, ships neither `timeout` nor `gtimeout`, and without a limiter a
+ * hung check ran into the lease and failed the run before anything was pushed.
+ * Every limiter stops the check's whole process group and exits 124. The
+ * caller may set `check_dir` (where to run, default here) and `check_out`
+ * (the log).
  */
 export const FLOW_CHECK_RUN_COMMAND = [
   'root="$PWD"',
-  `script="$root/${FLOW_CHECK_SCRIPT}"`,
+  `script="\${check_script:-$root/${FLOW_CHECK_SCRIPT}}"`,
   'check_dir="${check_dir:-$root}"',
   'check_out="${check_out:-$root/.relayflow/check.log}"',
   'mkdir -p "$(dirname "$check_out")"',
   'if [ ! -s "$script" ]; then echo "relayflow: there is no check script, so no checks ran." > "$check_out"; echo "relayflow: there is no check script, so no checks ran." >&2; echo none'
-    + '; else limit="${RELAYFLOW_CHECK_TIMEOUT:-840}"; if command -v timeout >/dev/null 2>&1; then guard="timeout $limit"; else guard=; fi'
+    + '; else limit="${RELAYFLOW_CHECK_TIMEOUT:-840}"; limiter='
+    + '; if command -v timeout >/dev/null 2>&1; then limiter=timeout; elif command -v gtimeout >/dev/null 2>&1; then limiter=gtimeout; elif command -v perl >/dev/null 2>&1; then limiter=perl; fi'
+    + `; run_limited() { case "$limiter" in (timeout|gtimeout) "$limiter" "$limit" "$@" ;; (perl) perl -e ${shq(PERL_LIMITER)} "$limit" "$@" ;; (*) "$@" ;; esac; }`
     + '; echo "relayflow: running $script in $check_dir" >&2'
-    + '; ( cd "$check_dir" && env -u GIT_CONFIG_COUNT -u GIT_CONFIG_GLOBAL -u GIT_CONFIG_NOSYSTEM $guard sh "$script" ) > "$check_out" 2>&1 < /dev/null; status=$?'
+    + '; ( cd "$check_dir" && unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM && run_limited sh "$script" ) > "$check_out" 2>&1 < /dev/null; status=$?'
     + '; tail -n 40 "$check_out" >&2'
     + '; if [ "$status" -eq 0 ]; then echo "relayflow: the checks passed." >&2; echo pass'
-    + '; elif [ -n "$guard" ] && [ "$status" -eq 124 ]; then echo "relayflow: the checks did not finish within ${limit}s." >&2; echo timeout'
+    + '; elif [ -n "$limiter" ] && [ "$status" -eq 124 ]; then echo "relayflow: the checks did not finish within ${limit}s." >&2; echo timeout'
     + '; else echo "relayflow: the checks failed with exit $status; the full output is in $check_out." >&2; echo fail; fi'
     + '; fi',
 ].join('; ');
@@ -165,11 +176,33 @@ export const FLOW_CHECK_RUN_COMMAND = [
  * Cloud's Git configuration leaking into the tests), and both runs died with
  * the agents' finished work still in the sandbox. A failure the base commit
  * shares is a problem for a person, not a reason to throw the work away.
+ *
+ * Both sides run the branch's recipe: the script is copied aside before the
+ * base is checked out, because a repository may commit .relayflow/check.sh and
+ * the checkout would otherwise replace or delete it.
+ *
+ * The base commit is checked in the same working tree when it can be: the
+ * branch's checks ran in a tree the implementer had already built in, and a
+ * default such as `make test` or `python3 -m pytest` does not install or
+ * generate anything, so a fresh worktree of the base could fail for missing
+ * setup while the branch failed on a real test — and a regression would read
+ * as pre-existing. Ignored build products (dependencies, generated files) stay
+ * where they are across the checkout. The branch is restored afterwards, by
+ * name, and anything the base run changed in tracked files is discarded. A
+ * tree with uncommitted changes to tracked files is never switched; it falls
+ * back to a throwaway worktree.
  */
 export const FLOW_BASE_CHECK_COMMAND = [
   'root="$PWD"',
   'tmp=',
-  'if [ -n "$base" ] && git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1 && tmp=$(mktemp -d "${TMPDIR:-/tmp}/relayflow-base.XXXXXX") && git worktree add --detach -q "$tmp/base" "$base" >/dev/null 2>&1; then '
+  'if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1; then echo "relayflow: could not check out the base commit to compare against." >&2; echo unknown'
+    + `; elif git diff --quiet HEAD -- >/dev/null 2>&1 && git diff --cached --quiet >/dev/null 2>&1 && head=$(git rev-parse HEAD) && orig=$(git symbolic-ref -q --short HEAD || git rev-parse HEAD) && recipe=$(mktemp "\${TMPDIR:-/tmp}/relayflow-recipe.XXXXXX") && { [ ! -f "$root/${FLOW_CHECK_SCRIPT}" ] || cp "$root/${FLOW_CHECK_SCRIPT}" "$recipe"; } && git checkout -q --detach "$base" >/dev/null 2>&1; then `
+    + 'check_dir="$root"; check_out="$root/.relayflow/base-check.log"; check_script="$recipe"'
+    + '; token=$( ' + FLOW_CHECK_RUN_COMMAND + ' )'
+    + '; rm -f "$recipe"'
+    + '; git checkout -q -f "$orig" >/dev/null 2>&1 || git checkout -q -f "$head" >/dev/null 2>&1'
+    + '; if [ "$(git rev-parse HEAD 2>/dev/null)" = "$head" ]; then echo "$token"; else echo "relayflow: could not return to $orig after checking the base commit." >&2; echo unknown; fi'
+    + '; elif if [ -n "${recipe:-}" ]; then rm -f "$recipe"; fi; tmp=$(mktemp -d "${TMPDIR:-/tmp}/relayflow-base.XXXXXX") && git worktree add --detach -q "$tmp/base" "$base" >/dev/null 2>&1; then '
     + 'check_dir="$tmp/base"; check_out="$root/.relayflow/base-check.log"; '
     + FLOW_CHECK_RUN_COMMAND
     + '; git worktree remove --force "$tmp/base" >/dev/null 2>&1; git worktree prune >/dev/null 2>&1; rm -rf "$tmp"'
@@ -196,6 +229,7 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + ' *) case "$baseline" in'
     + ` fail|timeout) printf '%s\\n' "**The checks fail on the base commit too**, so these failures were not introduced by this change: they come from the repository itself or from the environment the checks ran in. This pull request is a draft until someone looks." ;;`
     + ` pass) printf '%s\\n' "**This change breaks checks that pass on the base commit.** The flow tried to repair it and could not. The pull request is a draft so the work is not lost; it is not ready to merge." ;;`
+    + ` new) printf '%s\\n' "**The checks this change adds fail.** The repository had no checks before this change, so there is no base commit to compare with; the flow tried to repair them and could not. The pull request is a draft so the work is not lost; it is not ready to merge." ;;`
     + ` revision) printf '%s\\n' "**The latest revision breaks checks that passed before it.** It was pushed so the work is not lost, and the pull request is now a draft; it is not ready to merge." ;;`
     + ` *) printf '%s\\n' "**The checks failed**, and the base commit could not be checked for comparison, so it is not known whether this change caused them. This pull request is a draft until someone looks." ;;`
     + ' esac ;;'
@@ -466,9 +500,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   };
   const check = await checkAndRepair();
   // Only a failure pays for the comparison: pass, fail, timeout or unknown.
-  const baseline = broken(check)
-    ? (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, { timeout: "15m" })).trim()
-    : "";` });
+  // Checks this change introduced (nothing to run before it) have no base to
+  // compare with: the base lacks the files they need and would always fail,
+  // which read as "pre-existing". Their failure is this change's own.
+  const baseline = !broken(check)
+    ? ""
+    : checkPlan === "none"
+      ? "new"
+      : (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, { timeout: "15m" })).trim();` });
   sections.push({ id: 'pull-request', code: `  // Publish the branch and open the pull request without an agent.
   // Doing no work is a legitimate outcome: a repository with nothing to act on
   // leaves no commits and no summary.md. Pushing a branch at the base commit
@@ -497,11 +536,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
   await f.run(openChange + ' --title "Software factory change" --body-file .relayflow/pr-body.md' + (broken(check) ? " --draft" : ""));
-  if (broken(check) && baseline === "pass") {
-    // The base commit passes and this branch does not: the change broke the
-    // checks and repair could not fix it. That is this flow's verdict on its
-    // own work, the same as a failed review, so it reports step_failed.
-    console.error("Stopped: this change breaks checks that pass on the base commit, and repair could not fix it. The pull request is a draft with the output.");
+  if (broken(check) && (baseline === "pass" || baseline === "new")) {
+    // The base commit passes and this branch does not, or the checks are the
+    // change's own and fail: the change broke them and repair could not fix
+    // it. That is this flow's verdict on its own work, the same as a failed
+    // review, so it reports step_failed.
+    console.error(baseline === "new"
+      ? "Stopped: the checks this change adds fail, and repair could not fix them. The pull request is a draft with the output."
+      : "Stopped: this change breaks checks that pass on the base commit, and repair could not fix it. The pull request is a draft with the output.");
     return f.done("step_failed");
   }
   if (broken(check)) {

@@ -73,6 +73,14 @@ describe('software factory onboarding', () => {
     expect(readFactoryDraft(JSON.stringify({ ...unanswered, workflow: 'prototype' }))?.workflow).toBe('prototype');
   });
 
+  it('treats failing checks the change itself introduced as the change\'s own failure, not pre-existing', () => {
+    for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
+      const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
+      expect(source, workflow).toContain('checkPlan === "none"\n      ? "new"');
+      expect(source, workflow).toContain('(baseline === "pass" || baseline === "new")');
+    }
+  });
+
   it('resolves checks again after the implementer when none were found before it', () => {
     for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
       const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -144,6 +144,26 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
 
     const nothing = runChecksIn(fixture({ 'README.md': '#\n' }));
     expect(nothing).toMatchObject({ code: 0, token: 'none' });
+  });
+
+  it('stops a hung check itself where neither timeout nor gtimeout is installed, as on macOS', () => {
+    // Only the tools the command needs, plus perl: no timeout, no gtimeout.
+    const bin = fixture({});
+    const root0 = () => fixture({});
+    for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl']) {
+      const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
+      if (found) symlinkSync(found, path.join(bin, tool));
+    }
+    expect(sh('command -v timeout || command -v gtimeout', root0(), { PATH: bin }).stdout.trim()).toBe('');
+    const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30 &\necho $! > .relayflow/child.pid\nwait\n' });
+    const started = Date.now();
+    const result = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_TIMEOUT: '1' });
+    expect(result).toMatchObject({ code: 0, token: 'timeout' });
+    expect(Date.now() - started).toBeLessThan(15_000);
+    // The whole process group stops, not just the shell running the script.
+    const child = Number(read(root, '.relayflow/child.pid').trim());
+    expect(child).toBeGreaterThan(0);
+    expect(() => process.kill(child, 0)).toThrow();
   });
 
   it('prints exactly one token on stdout, whatever the tests print', () => {
@@ -415,6 +435,52 @@ describe('FLOW_BASE_CHECK_COMMAND', () => {
     expect(read(root, 'state')).toBe('bad');
   });
 
+  it('checks the base commit in the same tree, so build products the branch relied on are there too', () => {
+    // A default such as `make test` builds nothing: the branch passed its
+    // build step long ago, in this tree. A fresh worktree of the base would
+    // fail on the missing build and hide the regression as "pre-existing".
+    const { root, ids } = history([{ '.gitignore': 'built/\n', state: 'good' }, { state: 'bad' }]);
+    mkdirSync(path.join(root, '.relayflow'), { recursive: true });
+    mkdirSync(path.join(root, 'built'), { recursive: true });
+    writeFileSync(path.join(root, 'built/ok'), 'artifact\n');
+    writeFileSync(path.join(root, FLOW_CHECK_SCRIPT), 'test -f built/ok || { echo "missing build"; exit 2; }\ngrep -q good state\n');
+    const head = git(root, 'rev-parse', 'HEAD').trim();
+    const branch = git(root, 'symbolic-ref', '--short', 'HEAD').trim();
+    expect(sh(FLOW_CHECK_RUN_COMMAND, root).token).toBe('fail');
+    expect(sh(`base=${ids[0]}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'pass' });
+    expect(read(root, '.relayflow/base-check.log')).not.toContain('missing build');
+    // Back on the branch, by name, with the change and the build product intact.
+    expect(git(root, 'rev-parse', 'HEAD').trim()).toBe(head);
+    expect(git(root, 'symbolic-ref', '--short', 'HEAD').trim()).toBe(branch);
+    expect(read(root, 'state')).toBe('bad');
+    expect(read(root, 'built/ok')).toBe('artifact\n');
+  });
+
+  it('runs the branch recipe against the base even when the repository commits the check script', () => {
+    // The branch commits .relayflow/check.sh; the base has none. Checking the
+    // base out in place would delete it and report `none` instead of a verdict.
+    const { root, ids } = history([
+      { state: 'good' },
+      { state: 'bad', [FLOW_CHECK_SCRIPT]: 'echo "state is $(cat state)"\ngrep -q good state\n' },
+    ]);
+    const head = git(root, 'rev-parse', 'HEAD').trim();
+    expect(sh(`base=${ids[0]}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'pass' });
+    expect(read(root, '.relayflow/base-check.log')).toContain('state is good');
+    expect(git(root, 'rev-parse', 'HEAD').trim()).toBe(head);
+    expect(read(root, FLOW_CHECK_SCRIPT)).toContain('grep -q good state');
+    expect(git(root, 'status', '--porcelain', '--untracked-files=no').trim()).toBe('');
+  });
+
+  it('never switches a tree with uncommitted changes; it compares in a throwaway worktree instead', () => {
+    const { root, base } = compare('good', 'bad');
+    writeFileSync(path.join(root, 'state'), 'bad but edited\n');
+    const head = git(root, 'rev-parse', 'HEAD').trim();
+    expect(sh(`base=${base}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'pass' });
+    expect(git(root, 'rev-parse', 'HEAD').trim()).toBe(head);
+    expect(read(root, 'state')).toBe('bad but edited\n');
+    expect(git(root, 'worktree', 'list').trim().split('\n')).toHaveLength(1);
+  });
+
   it('says unknown, with exit 0, when the base commit cannot be checked out', () => {
     const { root } = compare('good', 'bad');
     for (const base of ['', 'deadbeef'.repeat(5)]) {
@@ -525,6 +591,9 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
 
     expect(report('timeout', 'unknown').body).toContain('could not be checked for comparison');
     expect(report('fail', 'revision').report).toContain('latest revision breaks checks that passed before it');
+    const introduced = report('fail', 'new');
+    expect(introduced.body).toContain('The checks this change adds fail');
+    expect(introduced.body).not.toContain('FAIL src/other.test.ts');
     expect(report('fail', 'fail', { '.relayflow/repair-notes.md': 'cargo is not installed.\n' }).body).toContain('cargo is not installed.');
   });
 
