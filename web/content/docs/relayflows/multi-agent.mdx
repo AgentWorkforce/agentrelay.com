@@ -66,16 +66,18 @@ steps:
 ```
 </CodeGroup>
 
-In TypeScript every `f.agent` call names its own `cli` and `model` ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)); the `name` argument labels the step in the journal. In YAML the `agents:` map declares each `{ cli, model }` pair once and a step's `agent:` selector resolves to it at compile time, and `flows check` flags a named agent nobody selects, or one a step overrides without using, so a stale declaration doesn't quietly rot in the spec.
+In TypeScript every `f.agent` call names its own `cli` and `model` (flows#310); the `name` argument labels the step in the journal. In YAML the `agents:` map declares each `{ cli, model }` pair once and a step's `agent:` selector resolves to it at compile time, and `flows check` flags a named agent nobody selects, or one a step overrides without using, so a stale declaration doesn't quietly rot in the spec.
 
 <Note>
   The reusable named-agent **map** is YAML/JSON authoring only today.
   TypeScript has no `agents:` header to select a declared pair from
-  ([flows#300](https://github.com/AgentWorkforce/flows/issues/300)); an
+  (flows#300); an
   ordinary object spread, as above, is the idiom until it does.
 </Note>
 
 ## Asking a human, then handing off
+
+`Ctx` declares both verbs, and this typechecks and passes `flows check` — but neither runs yet in 2.0.16. Verified directly: `flows run` on a flow that reaches `f.human` fails with `unsupported_verb: the initial authored executor does not lower f.human`, and the same for `f.dispatch`. Treat the shape below as the intended design, not something to ship on today:
 
 ```ts
 import { flow } from '@relayflows/surface';
@@ -93,7 +95,7 @@ export default flow('ship-feature', async (f) => {
 });
 ```
 
-`f.human` parks the run on a durable wait — nothing sits there blocking a thread, and the wait survives a restart exactly like a crash mid-step does. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. `f.dispatch` hands the plan to a named child flow and returns its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
+Once wired, `f.human` is meant to park the run on a durable wait — nothing sits there blocking a thread, and the wait would survive a restart exactly like a crash mid-step does. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. `f.dispatch` is meant to hand the plan to a named child flow and return its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything. Until then, do durable approval in YAML instead (`recoveryMode: manual` parks a step as `needs_human` with a diff for a person to resolve).
 
 ## Next
 

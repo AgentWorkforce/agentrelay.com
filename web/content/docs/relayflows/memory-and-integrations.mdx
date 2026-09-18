@@ -33,8 +33,12 @@ Under the hood this is [Relayloop](/docs/loop)'s `ai-hist pack` — the same sea
   included. In 2.0.16, `recall` and `why` read the local `ai-hist` SQLite
   database (`AI_HIST_DB` overrides the default path) with no journal step;
   `learn` and `memory: { agent: true }` refuse until the journal-backed
-  write lands. The `memory: { script: true }` header makes `flows check`
-  verify the database is reachable before the run starts.
+  write lands. The `memory: { script: true }` header makes the reachability
+  check happen — but verified for real, that check runs at `flows run` time,
+  not at `flows check`: a flow with an unreachable database passes `flows
+  check` cleanly and only fails when actually run, with `memory_unreachable:
+  Script memory requires the ai-hist Node SDK and a readable SQLite database
+  at AI_HIST_DB (or defaultDbPath()). Run ai-hist sync first.`
 </Note>
 
 ## Integrations

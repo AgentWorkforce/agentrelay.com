@@ -68,14 +68,20 @@ steps:
 
 Reach for YAML when you want the whole flow readable at a glance and checkable in CI. Reach for TypeScript when a step's next move depends on what a previous one returned: an `f.human` approval, ordinary `if`/`for` logic, an `f.dispatch` to a child flow.
 
-Both `edit` steps above name their own `cli` and `model` directly, the same way in either language ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required in TypeScript: omit them and the step falls back to the flow's `cli`, then the nearest `flows.json`'s project-wide default, the same resolution [Introduction](/docs/relayflows/introduction#a-whole-flow) covers.
+Both `edit` steps above name their own `cli` and `model` directly, the same way in either language (flows#310). Neither is required in TypeScript: omit them and the step falls back to the flow's `cli`, then the nearest `flows.json`'s project-wide default, the same resolution [Introduction](/docs/relayflows/introduction#a-whole-flow) covers.
 
 <Note>
   `recoveryMode`, `permissions`, and `surfaces`, the richer step fields
   covered further down, are YAML/JSON fields only today. TypeScript's
-  `f.agent` takes `{ task, workspace?, cli?, model? }`, and a `workspace`
-  with a `: readonly` / `: readwrite` annotation is refused, because nothing
-  enforces it yet. `budget` is available in both: the TypeScript form is the
+  `f.agent` takes `{ task, workspace?, cli?, model? }`, but under
+  `--local-agent` any `workspace` value is refused — not just an annotated
+  one. Verified: `workspace: 'repo: readonly'` and a bare `workspace: 'repo'`
+  both fail identically with `unsupported_workspace_permission: The local
+  agent worker accepts stream-only steps. Remove workspace or attach a
+  worker that holds its revision pins.` The local worker holds no revision
+  pins at all — omit `workspace` entirely for a step you run with
+  `--local-agent`; it's a real field only against a worker that supports it
+  (Cloud's). `budget` is available in both: the TypeScript form is the
   flow header, `flow('name', { budget: '$5/run' }, async (f) => …)`.
 </Note>
 
@@ -96,11 +102,11 @@ interface Ctx {
 }
 ```
 
-This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control. `human` parks the run on a durable await instead of a blocking call — it's a wait the journal can survive a restart across. `dispatch` hands work to a named child flow and returns its typed result.
+This is the whole kernel-level vocabulary a step body speaks: `run`, `llm`, `agent` for work, `human`, `dispatch`, `done` for control. **`human` and `dispatch` are declared and typecheck, but neither runs in 2.0.16** — verified: a flow that reaches `f.human` fails with `unsupported_verb: the initial authored executor does not lower f.human`, and the same for `f.dispatch`. Once wired, `human` is meant to park the run on a durable await instead of a blocking call — a wait the journal can survive a restart across — and `dispatch` is meant to hand work to a named child flow and return its typed result. Until then, treat both as the intended shape, not something to ship on.
 
 `done` takes one of four authored verdicts. `success` completes the run; `step_failed` says the flow's own checks did not pass (the adversarial review found problems, the tests went red) and exits `1`; `needs_human` parks the run (exit `3`); `declined` records a deliberate decision not to act on the input — a ticket that turned out not to be work — and exits `0` with a `DECLINED` diagnostic. `canceled` and `budget_exceeded` are in the `FlowCompletionReason` type but refused at runtime with `unsupported_completion`: they are kernel facts, recorded when the kernel cancels a run or exhausts its budget, not verdicts a body can declare.
 
-`f.run` returns the command's output; a step's `.summary` on `f.agent` is the CLI's final text. `artifacts` is always empty in 2.0.16 — populating it from what the agent actually wrote lands in the next release ([flows#449](https://github.com/AgentWorkforce/flows/pull/449)).
+`f.run` returns the command's output; a step's `.summary` on `f.agent` is the CLI's final text. `artifacts` is always empty in 2.0.16 — populating it from what the agent actually wrote lands in the next release (flows#449).
 
 ## Verification
 
@@ -111,13 +117,13 @@ Every step's exit code is checked automatically. On top of that:
 - **`json_schema`** on an `llm` step — the model's reply must parse and validate against the schema before anything downstream sees it. A schema of `{}` or `true` accepts anything and is flagged `vacuous_gate`.
 - **Named gates** — `references_input`, `regex_match`, `word_count_bounds`, and `subprocess_gate` (run a shell command against the output; exit `0` passes). Each lowers to a deterministic gate step in the same journal, so a resume replays the recorded verdict instead of re-judging.
 
-In TypeScript the same named gates attach postfix: `f.agent('review', {…}).gate({ type: 'subprocess_gate', command: 'test -s review.md' })`. A callback gate, `.gate((r) => r.artifacts.includes('review.md'))`, is refused in 2.0.16 (`unsupported_gate`: a closure can't be journaled); the next release runs it after the step and journals the verdict ([flows#449](https://github.com/AgentWorkforce/flows/pull/449)).
+In TypeScript the same named gates attach postfix: `f.agent('review', {…}).gate({ type: 'subprocess_gate', command: 'test -s review.md' })`. A callback gate, `.gate((r) => r.artifacts.includes('review.md'))`, is refused in 2.0.16 (`unsupported_gate`: a closure can't be journaled); the next release runs it after the step and journals the verdict (flows#449).
 
 A step that fails its check is recorded as `verification_failed`, with exactly which check failed. The agent insisting it went fine doesn't override that.
 
 ## Permissions and recovery
 
-An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit. These are YAML step fields; the TypeScript body reaches the same step through `f.dispatch`, or leaves recovery to the kernel's default (`reset`):
+An `agent` step declares what it's allowed to touch — `fileGlobs`, `accessPreset` — and what happens if it crashes mid-edit. These are YAML step fields with no TypeScript equivalent; `f.dispatch` is not a working way to reach them today (see above — it doesn't execute in 2.0.16). Author the step in YAML if you need `permissions`/`recoveryMode`, or leave recovery to the kernel's default (`reset`) in TypeScript:
 
 <CodeGroup>
 ```typescript TypeScript

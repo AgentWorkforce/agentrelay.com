@@ -9,6 +9,10 @@ Define complex sequences of tasks for agents instead of hoping they follow the r
 
 Every effect is journaled before it's treated as real. If a step's journal write fails, the step fails. There's no silent fallback and no "it probably worked." Flows makes that trade everywhere: less magic, more evidence.
 
+<BannerLink href="https://agentrelay.com/cloud" icon="rocket">
+  Don't want to install anything yet? Try Flows at agentrelay.com/cloud first — no local setup.
+</BannerLink>
+
 ## The ladder
 
 Every flow is built from the same small set of rungs, and you only climb as high as the task needs:
@@ -56,7 +60,7 @@ steps:
 
 `f.run` (a `deterministic` step in YAML) executes a shell command and returns its output. `f.agent` (an `agent` step) hands a task to a coding agent and returns a summary rather than a raw transcript. `f.done` finishes the run with one verdict from a closed set: `success`, `step_failed`, `needs_human`, or `declined`. There's no fifth option to guess about — `canceled` and `budget_exceeded` exist in the journal vocabulary, but only the kernel records them.
 
-Both steps above name their own `cli` and `model` directly — `f.agent`'s options are `{ task, workspace?, cli?, model? }`, matching the YAML step's fields ([flows#310](https://github.com/AgentWorkforce/flows/issues/310)). Neither is required: omit `cli` and a step falls back to its flow's `cli`, then the nearest `flows.json`'s project-wide default; omit `model` and Claude runs its adapter default (`claude-opus-5`) while Codex picks its own. Without a `cli` at step, flow, or project level, `flows check` and `flows run` refuse before anything is journaled — exit `2`, `REFUSED [cli_unresolved]`. If that `flows.json` also lists `models`, every model a step names must be on the list.
+Both steps above name their own `cli` and `model` directly — `f.agent`'s options are `{ task, workspace?, cli?, model? }`, matching the YAML step's fields (flows#310). Neither is required: omit `cli` and a step falls back to its flow's `cli`, then the nearest `flows.json`'s project-wide default; omit `model` and Claude runs its adapter default (`claude-opus-5`) while Codex picks its own. Without a `cli` at step, flow, or project level, `flows check` and `flows run` refuse before anything is journaled — exit `2`, `REFUSED [cli_unresolved]`. If that `flows.json` also lists `models`, every model a step names must be on the list.
 
 ## Verification
 

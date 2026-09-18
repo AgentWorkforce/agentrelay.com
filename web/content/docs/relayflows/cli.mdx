@@ -41,7 +41,7 @@ flows check my-flow.flow.ts
 flows check --watch my-flow.flow.ts     # re-check on every save
 ```
 
-Validates the flow: schema, step graph, verification blocks, helper and trigger declarations, and whether every declared CLI actually exists and is authenticated (a real `claude -p --model …` / `codex exec …` probe, not a version check). Nothing runs and nothing is spawned — `check` never opens the daemon socket, and refuses `--data-dir` for that reason. It prints one `GATE` line per verification and one `RESOLVED` line per `llm`/`agent` step naming the CLI and model and where they came from (step, named agent, flow, or `flows.json`).
+Validates the flow: schema, step graph, verification blocks, helper and trigger declarations, and whether every declared CLI actually exists and is authenticated (a real `claude -p --model …` / `codex exec …` probe, not a version check — that probe is a real subprocess, the one thing `check` does spawn). No flow runs, no daemon starts, no worker attaches — `check` never opens the daemon socket, and refuses `--data-dir` for that reason. It prints one `GATE` line per verification and one `RESOLVED` line per `llm`/`agent` step naming the CLI and model and where they came from (step, named agent, flow, or `flows.json`).
 
 An authored `.flow.ts` is checked too: its declared surface — agents, helpers, `tools`, triggers, the `use:` graph — is preflighted; its control flow is not, so a check pass says the declarations are sound, not that the body is. The same preflight runs again at the top of `flows run`.
 
@@ -53,10 +53,9 @@ If a `flows.json` is in scope and declares `models`, every model a step names mu
 flows run my-flow.flow.ts --local-agent --input '{}'   # TypeScript flow, local CLI
 flows run workflow.yaml                                  # YAML/spec.json flow
 flows run --cloud --wait workflow.yaml                   # hosted engine, block for the result
-flows run --cloud --wait my-flow.flow.ts --input '{}'    # hosted authored flow
 ```
 
-An authored `.flow.ts` requires `--input`: an existing JSON file, otherwise inline JSON (up to 1 MiB), handed to the body as its second argument.
+An authored `.flow.ts` requires `--input`: an existing JSON file, otherwise inline JSON (up to 1 MiB), handed to the body as its second argument. **`flows run --cloud <flow.ts> --input ...` is broken today** — verified for real, it fails immediately with `{"code":"http_error","message":"Cloud request failed with HTTP 400."}` against a flow that passes `flows check` cleanly, with or without `--wait`/`--sync-code` (flows#461). Only the YAML/`spec.json` form of `flows run --cloud` works; for an authored TypeScript flow, use `flows deploy` for a persistent listener instead.
 
 `--local-agent` attaches the SDK's agent and LLM workers to the daemon, running each declared CLI (`claude`, `codex`, or a custom wrapper) with whatever login it already has on your machine. Without it, the first `llm` or `agent` step parks the run (exit `3`) until a worker is attached. Only stream-only agent steps run this way; a step that declares a `workspace` surface needs a worker holding its revision pins.
 
@@ -66,7 +65,7 @@ Deterministic steps run in the **daemon's** working directory and environment �
 
 ## Cloud
 
-`flows run --cloud` submits the flow to hosted infrastructure; the receipt prints `ACCEPTED <run-id>` and, with `--wait`, the validated completion. `--sync-code` uploads the invoking directory first so the hosted run executes inside your working tree, and `flows sync <run-id>` brings the run's file changes back as a patch applied to your checkout, uncommitted. `flows deploy <flow.ts> --repo … --on …` turns a flow into a Cloud listener that launches one run per matching ticket; `flows deployments` lists them and `flows undeploy` removes one. See [Cloud](/docs/relayflows/cloud) for the details and credentials.
+`flows run --cloud` submits the flow to hosted infrastructure; the receipt prints `ACCEPTED <run-id>` and, with `--wait`, the validated completion. `--sync-code` uploads the invoking directory first so the hosted run executes inside your working tree, and `flows sync <run-id>` brings the run's file changes back as a patch applied to your checkout, uncommitted. This one-shot form only works for a YAML/`spec.json` flow today — see **Run**, above, for the authored-TypeScript bug. `flows deploy <flow.ts> --repo … --on …` turns a flow into a Cloud listener that launches one run per matching ticket, and that path works correctly regardless of language; `flows deployments` lists them and `flows undeploy` removes one. See [Cloud](/docs/relayflows/cloud) for the details and credentials.
 
 ## Resume and replay
 
@@ -105,6 +104,16 @@ flows run my-flow@sha256:<digest> --bucket file:///srv/flows
 ```
 
 `build` seals a flow into a content-addressed bundle (canonical spec, compiled TypeScript with pinned dependencies, preflight declaration); the digest form of `deploy` copies it into a file bucket, and `run <flow>@sha256:…` executes it from there with no checkout. Only `file://` buckets are supported today.
+
+**Verified for real, and this doesn't work the way the example above implies.** `flows build` on an ordinary authored `.flow.ts` — including a minimal, header-less one, and every flow shown elsewhere on this site — is refused:
+
+```
+REFUSED [bundle_invalid] TypeScript build requires Bun: ...
+error: authored flow() requires an exported spec declaration for build-time preflight;
+the body is not executed during build
+```
+
+`build` wants a separate exported `spec` declaration for build-time preflight, distinct from the `flow(name, header?, body)` default export every other example on this site uses; a flow with a non-empty header is refused outright (`unsupported authored flow header`). What exact shape `build` expects instead isn't documented anywhere in this site's docs or in `docs/SURFACE.md`. Until that's resolved, `flows build`/the digest-bundle path is unverified for a normal authored flow — treat this section as aspirational for TypeScript flows, not a working command to copy.
 
 ## `--json`
 
