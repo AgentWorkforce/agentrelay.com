@@ -8,7 +8,19 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
-import { FLOW_TEST_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_PUBLISH_CHECK_COMMAND } from '../flow-workflows';
+
+/**
+ * What each deterministic step reports, keyed by the command itself: three
+ * commands start `base=<commit>; ...`, so a prefix cannot tell them apart.
+ * `check` may be a function, for a sequence of check results.
+ */
+function answer(command: string, { publish = 'publish', clean = 'yes', check = 'pass' as string | (() => string), baseline = 'pass' } = {}) {
+  if (command === FLOW_CHECK_RUN_COMMAND) return typeof check === 'function' ? check() : check;
+  if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
+  if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
+  return command.startsWith('test -f') ? clean : '';
+}
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'bug, ready' } }, agents: ['claude', 'codex'], workflow: 'traditional', step: 3 };
 
@@ -78,8 +90,9 @@ describe('local flow starter kit', () => {
       expect(code).not.toContain('f.done("canceled")');
       expect(code).not.toContain('f.done("budget_exceeded")');
       // The reason the runtime does lower is used where the flow judges its own
-      // work. `simple` runs no review, so it has no such verdict to report.
-      expect(code.includes('f.done("step_failed")')).toBe(workflow !== 'simple');
+      // work: every preset when its change breaks checks the base commit
+      // passes, and the reviewing presets when a review does not pass.
+      expect(code).toContain('f.done("step_failed")');
       // The unshipped reason is named where a reader meets the park, so the
       // guard is not left looking like an unexplained choice.
       expect(source).toContain('AgentWorkforce/flows#438');
@@ -223,10 +236,10 @@ describe('local flow starter kit', () => {
     let finish = '';
     await compile(localKitFiles(draft)['software-factory.flow.mts'])({
       agent: async (name: string) => { calls.push(name); },
-      run: async (command: string) => command.startsWith('base=') ? 'publish' : command.startsWith('test -f') ? 'yes' : '',
+      run: async (command: string) => answer(command),
       done: (reason: string) => { finish = reason; },
     }, localInput(draft));
-    expect(calls).toEqual(['planner', 'plan-reviewer', 'implementer', 'adversary-1', 'adversary-2']);
+    expect(calls).toEqual(['planner', 'plan-reviewer', 'check-discovery', 'implementer', 'adversary-1', 'adversary-2']);
     expect(finish).toBe('needs_human');
     expect(factorySource(draft)).toContain('return f.done("needs_human")');
     expect(factorySource(draft, 'local')).not.toContain('f.human(');
@@ -246,7 +259,7 @@ describe('local flow starter kit', () => {
     try {
       await compile(localKitFiles(draft)['software-factory.flow.mts'])({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); return command.startsWith('base=') ? 'no-commits' : command.startsWith('test -f') ? 'yes' : ''; },
+        run: async (command: string) => { commands.push(command); return answer(command, { publish: 'no-commits' }); },
         done: (reason: string) => { finish = reason; },
       }, localInput(draft));
     } finally { console.error = original; }
@@ -263,11 +276,11 @@ describe('local flow starter kit', () => {
       const selected = { ...draft, workflow };
       await compile(factorySource(selected, 'local'))({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); return command.startsWith('base=') ? 'publish' : command.startsWith('test -f') ? 'yes' : ''; },
+        run: async (command: string) => { commands.push(command); return answer(command); },
         done: (reason: string) => { finish = reason; },
       }, localInput(selected));
       expect(finish).toBe('needs_human');
-      const testIndex = commands.indexOf(FLOW_TEST_COMMAND);
+      const testIndex = commands.indexOf(FLOW_CHECK_RUN_COMMAND);
       const createIndex = commands.findIndex(command => command.startsWith('gh pr create'));
       expect(testIndex).toBeGreaterThanOrEqual(0);
       expect(createIndex).toBeGreaterThan(testIndex);
@@ -275,43 +288,52 @@ describe('local flow starter kit', () => {
     }
   });
 
-  it('does not publish a PR or signal readiness if scripted tests fail', async () => {
+  it('opens only a draft, never a ready pull request, when a change breaks the checks', async () => {
+    // It used to throw away the work: the failing step killed the run with the
+    // agents' commits still unpushed. Now the work is pushed as a draft with the
+    // output, and the run still ends short of approval.
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const commands: string[] = [];
       let finish = '';
       const selected = { ...draft, workflow };
-      await expect(compile(factorySource(selected, 'local'))({
+      await compile(factorySource(selected, 'local'))({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); if (command === FLOW_TEST_COMMAND) throw Error('tests failed'); return ''; },
+        run: async (command: string) => { commands.push(command); return answer(command, { check: 'fail', baseline: 'pass' }); },
         done: (reason: string) => { finish = reason; },
-      }, localInput(selected))).rejects.toThrow('tests failed');
-      expect(commands.some(command => command.startsWith('git push') || command.startsWith('gh pr create'))).toBe(false);
-      expect(finish).toBe('');
+      }, localInput(selected));
+      const create = commands.find(command => command.startsWith('gh pr create')) ?? '';
+      expect(create).toContain('--draft');
+      expect(commands).toContain('git push --set-upstream origin HEAD');
+      expect(finish).toBe('step_failed');
     }
   });
 
-  it.each([false, true])('pushes fixer revisions only after passing tests (failure: %s)', async (fail) => {
+  it.each([false, true])('checks and pushes fixer revisions, drafting the pull request if they break passing checks (failure: %s)', async (fail) => {
     const calls: string[] = [];
     let checks = 0;
-    const run = compile(factorySource(draft, 'local'))({
+    let finish = '';
+    await compile(factorySource(draft, 'local'))({
       agent: async (name: string, options: { task: string }) => {
         calls.push(name);
         if (name === 'fixer') expect(options.task).toContain('Commit fixes without pushing');
       },
       run: async (command: string) => {
         calls.push(command);
-        if (command === FLOW_TEST_COMMAND && ++checks === 2 && fail) throw Error('revision failed');
-        return command.startsWith('base=') ? 'publish' : command.startsWith('test -f') ? 'no' : '';
+        return answer(command, { clean: 'no', check: () => (++checks >= 2 && fail ? 'fail' : 'pass') });
       },
-      done: () => {},
+      done: (reason: string) => { finish = reason; },
     }, localInput(draft));
-    if (fail) await expect(run).rejects.toThrow('revision failed');
-    else await run;
     const fixer = calls.indexOf('fixer');
     expect(fixer).toBeGreaterThan(0);
-    expect(calls[fixer + 1]).toBe(FLOW_TEST_COMMAND);
-    if (fail) expect(calls).not.toContain('git push');
-    else expect(calls[fixer + 2]).toBe('git push');
+    expect(calls[fixer + 1]).toBe(FLOW_CHECK_RUN_COMMAND);
+    // Pushed either way: the revision is work, and work is never thrown away.
+    expect(calls.indexOf('git push')).toBeGreaterThan(fixer);
+    if (fail) {
+      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf('git push'));
+      expect(finish).toBe('step_failed');
+    } else {
+      expect(calls).not.toContain(FLOW_CHECK_BLOCKED_COMMAND);
+    }
   });
 
   it('generates valid local source for every preset with an explicit runtime limit', () => {

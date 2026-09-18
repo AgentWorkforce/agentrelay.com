@@ -5,7 +5,7 @@ import { defaultAgentPrompt, resolveAgentSettings, type AgentRole, type FlowAgen
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
-const roleLabels: Record<AgentRole, string> = { planner: 'Plan', 'plan-reviewer': 'Review plan', 'prototype-1': 'Implementation 1', 'prototype-2': 'Implementation 2', 'prototype-3': 'Implementation 3', comparator: 'Compare', implementer: 'Implement', adversary: 'Review', fixer: 'Fix review findings' };
+const roleLabels: Record<AgentRole, string> = { planner: 'Plan', 'plan-reviewer': 'Review plan', 'prototype-1': 'Implementation 1', 'prototype-2': 'Implementation 2', 'prototype-3': 'Implementation 3', comparator: 'Compare', implementer: 'Implement', adversary: 'Review', fixer: 'Fix review findings', 'check-discovery': 'Find how to run checks', 'check-repair': 'Repair failing checks' };
 
 export function AgentStepEditor({ draft, roles, onChange, onClose, onTrack }: { draft: FactoryDraft; roles: AgentRole[]; onChange: (draft: FactoryDraft) => void; onClose: () => void; onTrack: FlowTrack }) {
   const dialog = useRef<HTMLDialogElement>(null);

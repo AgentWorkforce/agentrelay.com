@@ -114,7 +114,7 @@ const RUN = ${JSON.stringify(LOCAL_RUN)};
 const KIT_FILES = new Set([
   "START-HERE.txt", "flow-input.json", ${JSON.stringify(LOCAL_PREFLIGHT)},
   "software-factory.flow.mts", "package.json", "package-lock.json",
-  "node_modules/", ".relayflowd/", "summary.md",
+  "node_modules/", ".relayflowd/", ".relayflow/", "summary.md",
 ]);
 
 // KIT_FILES exempts names from the dirty-tree check; it is not a description of
@@ -427,7 +427,7 @@ Requirements
 - macOS on Apple silicon or Linux x64 (bundled runtime platforms).
 - ${names}, installed and signed in.
 - GitHub CLI (gh), signed in, and a repository with push access to origin.
-- The flow installs your repository's dependencies with its package manager (pnpm, Yarn, Bun, or npm, chosen by lockfile) and runs its test script. Without a package.json or a test script it reports that it skipped the tests and carries on. If your project uses another test command, change testCommand in software-factory.flow.mts before running.
+- The flow runs your repository's own checks. Before changing any code, an agent reads your CI configuration, Makefile and README and writes .relayflow/check.sh; failing that it uses your ecosystem's default (a make or just test target, npm/pnpm/Yarn/Bun, cargo, go, pytest, bundle, Maven, Gradle, dotnet or mix). To use your own command instead, set checkCommand in software-factory.flow.mts, or commit a .relayflow/check.sh. The tools your checks need must be installed.
 
 1. Extract this kit into your repository root. Keep any existing files before replacing them. Open a terminal in that directory.
 
@@ -443,6 +443,7 @@ ${LOCAL_PREFLIGHT} runs first and stops before any model usage if this is not a 
 
 The flows command then starts the local runtime and attaches the local worker. Coding agents use their existing local sign-in; no Agent Relay Cloud account is needed. This flow edits code, runs tests, pushes the branch, and opens a pull request.
 If the agents commit nothing — a ticket with nothing to do in this repository — the run stops before pushing: no branch, no pull request, and a line saying why.
+If the checks fail, a repair agent reads the output and fixes missing setup or its own bugs, never by weakening tests. Whatever still fails is compared with the commit the branch started from, and the pull request opens as a draft with both outputs in its body: the work is never thrown away. A change that breaks checks which pass on the starting commit ends as step_failed (exit code 1). Working files (summary.md, plans, reviews, .relayflow/) are kept out of the commits through .git/info/exclude, and removed from the branch before pushing if an agent committed them anyway.
 
 Local runtime behavior
 This local version uses a one-hour wall-clock budget. Model usage is billed by your coding-agent provider; this is not a dollar cap.
