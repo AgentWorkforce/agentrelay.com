@@ -241,6 +241,10 @@ export const relayflowsSection: ProductDocSection = {
         { title: 'Reliability', slug: 'reliability' },
       ],
     },
+    {
+      title: 'Cookbook',
+      items: [{ title: 'Recipes', slug: 'cookbook' }],
+    },
   ],
 };
 

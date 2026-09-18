@@ -1,9 +1,11 @@
 ---
 title: 'Flows'
-description: 'A deterministic script over agentic primitives: steps you can inspect, verify, and resume.'
+description: 'Stop babysitting agents. Script them — steps you can inspect, verify, and resume.'
 ---
 
-Flows turns a coding-agent task into steps you can inspect and verify. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed.
+**Stop babysitting agents. Script them.**
+
+Define complex sequences of tasks for agents instead of hoping they follow the rules in your prompt. A flow combines shell commands, model calls, and coding agents with a journal that records what each step did and why it completed — predictable, auditable, and dependable.
 
 Every effect is journaled before it's treated as real. If a step's journal write fails, the step fails. There's no silent fallback and no "it probably worked." Flows makes that trade everywhere: less magic, more evidence.
 
@@ -138,6 +140,10 @@ This is a real run, captured directly from the terminal. Every step carries a `c
     check, run, resume, observe.
   </Card>
 </CardGroup>
+
+<BannerLink href="/docs/relayflows/cookbook" icon="compass">
+  Don't start from a blank file — the cookbook has verified, copy-paste recipes for the automations people build first.
+</BannerLink>
 
 <BannerLink href="/docs/relayflows/multi-agent" icon="compass">
   See how far the ladder goes: named agents, cloud dispatch, memory, and integrations.
