@@ -11,7 +11,7 @@ This page covers what makes a run's completion trustworthy: not an agent's own r
 0   completionReason: success (a deliberate done("declined") also exits 0, with a DECLINED diagnostic)
 1   a declared completionReason failure, or an unknown outcome from a transport/runtime/protocol error
 2   refused before any journal write: invalid input, failed preflight, unreachable daemon, a run_not_found resume target
-3   parked — waiting on an llm/agent worker or a needs_human recovery wait
+3   parked — waiting on an llm/agent worker, a needs_human recovery wait, or a person's answer to f.human
 ```
 
 Exit `2` is the important one to build on: a bad spec, a missing CLI, or an unauthenticated agent fails before a journal entry is ever written, at `flows check` time or at the top of `flows run` — never at minute 27 of a real run. Preflight checks what it can check up front, so a run either starts clean or doesn't start.
@@ -27,7 +27,7 @@ Step:  success · verification_failed · retries_exhausted · lease_expired ·
 Run:   success · step_failed · canceled · budget_exceeded
 ```
 
-An authored TypeScript body declares its verdict with `f.done`: `success`, `step_failed`, `needs_human` (parks), or `declined` (a deliberate decision not to act; the kernel records `success` and the CLI adds a `DECLINED` diagnostic). `canceled` and `budget_exceeded` are the kernel's to record, never a body's. Handle every value in those lists and there's no case left over to surprise you later. A step that fails verification is recorded as `verification_failed`, with exactly which check failed. The agent reporting that it went fine doesn't change the outcome.
+An authored TypeScript body declares its verdict with `f.done`: `success`, `step_failed`, `needs_human` (parks), or `declined` (a deliberate decision not to act; the kernel records `success` and the CLI adds a `DECLINED` diagnostic). An `f.human` question parks the run the same way, on a kernel `wait.human`; the answer is a journaled `human-N` step recording who said what and when, so a resumed body branches on evidence, not on a chat message somebody remembers. `canceled` and `budget_exceeded` are the kernel's to record, never a body's. Handle every value in those lists and there's no case left over to surprise you later. A step that fails verification is recorded as `verification_failed`, with exactly which check failed. The agent reporting that it went fine doesn't change the outcome.
 
 ## Crashing mid-step
 
