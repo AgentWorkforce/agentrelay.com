@@ -568,6 +568,17 @@ describe('relocating a kit that was extracted outside a repository', () => {
       expect(code).toBe(1);
     }, 30_000);
 
+  it.each(['git@github.com:gitlab-org/app.git', 'https://github.com/acme/gitlab.git', 'https://github.com/gitlab-community/app.git', 'ssh://git@github.com/acme/gitlab.com.git'])(
+    'does not mistake a GitHub remote that mentions gitlab for GitLab (%s)', async (origin) => {
+      const { root } = workspace();
+      const target = installed(root, 'github-' + origin.length, { dependency: true, ticket: true });
+      git('-C', target, 'remote', 'set-url', 'origin', origin);
+      const { code, out, err } = await preflight(target, root, [], true, signedIn(root));
+      expect(err).not.toContain('this repository is on GitLab.');
+      expect(out).toContain('Preconditions met. Starting the flow.');
+      expect(code).toBe(0);
+    }, 30_000);
+
   it('passes the same check once step 2 has run in that repository', async () => {
     const { root } = workspace();
     const target = installed(root, 'installed', { dependency: true, ticket: true });

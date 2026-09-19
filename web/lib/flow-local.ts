@@ -202,8 +202,17 @@ const GITLAB_LOCAL_ADVICE = [
   "Local runs open the pull request with GitHub CLI (gh pr create), which cannot open a GitLab merge request.",
   "Deploy this flow to Agent Relay Cloud instead: hosted runs open the merge request for you.",
 ];
+// Judged on the remote's host alone, never on its path: github.com/gitlab-org/x
+// or a repository named gitlab is a GitHub remote. This script is a template
+// literal, so the patterns use [.] and [/] rather than backslash escapes, which
+// the template would silently drop.
+function originHost(url) {
+  const match = /^[a-z][a-z0-9+.-]*:[/][/](?:[^@/]*@)?([^/:]+)/i.exec(url) || /^(?:[^@/]*@)?([^/:]+):/.exec(url);
+  return match ? match[1].toLowerCase() : "";
+}
 function isGitLabOrigin(url) {
-  return /(^|[@/.])gitlab[.:]|gitlab\.com/i.test(url);
+  const host = originHost(url);
+  return host === "gitlab.com" || host.endsWith(".gitlab.com") || host.startsWith("gitlab.");
 }
 
 function repoProblem(target) {
