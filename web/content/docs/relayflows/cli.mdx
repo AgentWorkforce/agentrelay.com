@@ -3,21 +3,25 @@ title: 'CLI'
 description: 'Check a flow, run it locally or in Cloud, resume it, deploy it as a listener — the flows command surface.'
 ---
 
-The full surface of `relayflows` 2.0.16, as `flows --help` prints it:
+The full surface of `relayflows` 2.0.18, as `flows --help` prints it:
 
 ```text
 flows check [--watch] [--json] <flow.ts|flow.yaml|spec.json>
 flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] [--reuse-from <run-id>] <flow.yaml|spec.json>
 flows run [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] <flow.ts> --input <inline-json-or-file>
 flows resume [--allow-human-influenced] [--json] [--no-spawn] [--no-observer-link] [--data-dir <dir>] [--local-agent] <run-id>
+flows answer [--json] [--no-spawn] [--data-dir <dir>] [--note <text>] [--by <identity>] <run-id> <wait-id> <yes|no>
 flows replay [--allow-human-influenced] [--json] [--data-dir <dir>] <run-id> [--at <step-id>]
 
-flows run --cloud [--json] [--wait] [--sync-code] <flow.yaml|spec.json>
-flows run --cloud [--json] [--wait] [--sync-code] <flow.ts> --input <inline-json-or-file>
+flows run --cloud [--json] [--wait] [--sync-code] [--no-connect] <flow.yaml|spec.json>
+flows run --cloud [--json] [--wait] [--sync-code] [--no-connect] <flow.ts> --input <inline-json-or-file>
 flows sync [--json] [--dir <path>] <run-id>
-flows deploy <flow.ts> --repo <owner/name> --on <provider>[:key=value,...] [--on ...] --approver <handle> [--agents claude[,codex]] [--name <name>] [--draft] [--json]
+flows deploy <flow.ts> --repo <owner/name> --on <provider>[:key=value,...] [--on ...] --approver <handle> [--agents claude[,codex]] [--name <name>] [--draft] [--no-connect] [--json]
 flows deployments [--json]
 flows undeploy [--json] <deployment-id>
+flows schedule <flow.yaml|flow.ts> [--cron "<expr>" | --every <n><s|m|h|d>] [--tz <IANA>] [--input <inline-json-or-file>] [--name <name>] [--no-connect] [--json]
+flows schedules [--json]
+flows unschedule [--json] <schedule-id>
 
 flows build [--out <dir>] <flow.yaml|flow.ts>
 flows build --verify <bundle-dir>
@@ -77,6 +81,16 @@ flows replay <run-id> --at <step-id>    # read-only reconstruction up to a step
 
 `resume` picks a run back up from its journal. Completed steps aren't re-executed; only the work that never finished, or never got a recorded outcome, runs again. A `run_not_found` target exits `2`; any other failure exits `1`, because the journal may already have changed. `replay` walks the journal without executing anything. Both take `--allow-human-influenced` to proceed past a run whose journal records a human intervention.
 
+## Answer a human gate
+
+```bash
+flows answer <run-id> human-1 yes
+flows answer <run-id> human-1 no --note "not this week" --by slack:@khaliq
+flows resume --local-agent <run-id>
+```
+
+A run parked on `f.human` exits `3` and prints exactly these two commands with its own run and wait IDs. `answer` records the decision on the kernel's wait — `yes`/`no` (or `true`/`false`), an optional `--note`, and `answeredBy` from `--by` or your OS user, with the kernel's own timestamp and `attribution: client_asserted`. Nothing runs: `answer` attaches no worker, so it's followed by `resume`, which continues the body from the gate with everything before it memoized. Answering a wait the run isn't asking, or one already answered, is refused as `human_wait_unknown` (exit `2`) and names the open questions. There is no `--cloud` form yet (flows#475): a hosted run is answered where its question was delivered or through the run's answer route — see [Human approval on Cloud](/docs/relayflows/cloud#human-approval-on-cloud).
+
 ## Observer links
 
 ```bash
@@ -93,7 +107,7 @@ flows tick start --schedule-id daily --interval-ms 86400000 spec.json
 flows hn-monitor start spec.json
 ```
 
-`serve-webhook` receives provider events (`POST /providers/slack`, `POST /providers/github`, or a generic `POST /<name>`) and writes them to the daemon's inbox for a bound trigger spec. `tick` is a durable local schedule: each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named source built the same way. All of them are processes that must stay running; hosted schedules for v2 flows are not available yet.
+`serve-webhook` receives provider events (`POST /providers/slack`, `POST /providers/github`, or a generic `POST /<name>`) and writes them to the daemon's inbox for a bound trigger spec. `tick` is a durable local schedule: each interval gets a unique ID, so a restart can't fire the same interval twice, and `--max-catch-up` bounds how many missed intervals get replayed if the process was down. `hn-monitor` is a narrower, named source built the same way. All of them are processes that must stay running; `flows schedule` (2.0.18+) registers a cron on Cloud instead — see [Cloud](/docs/relayflows/cloud#deploy-it-as-a-listener).
 
 ## Bundles
 
@@ -117,7 +131,7 @@ the body is not executed during build
 
 ## `--json`
 
-`check`, `run`, `resume`, `replay`, `build`, `sync`, `deploy` (listener form), `deployments`, and `undeploy` accept `--json` for a single machine-readable object on stdout instead of the human-readable lines — the shape a CI step or another program should read. `tick start`, `hn-monitor start`, `serve-webhook`, and `observer` don't take it.
+`check`, `run`, `resume`, `answer`, `replay`, `build`, `sync`, `deploy` (listener form), `deployments`, `undeploy`, `schedule`, `schedules`, and `unschedule` accept `--json` for a single machine-readable object on stdout instead of the human-readable lines — the shape a CI step or another program should read. `tick start`, `hn-monitor start`, `serve-webhook`, and `observer` don't take it.
 
 ## Exit codes
 

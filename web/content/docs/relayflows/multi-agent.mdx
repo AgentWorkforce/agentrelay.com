@@ -77,7 +77,7 @@ In TypeScript every `f.agent` call names its own `cli` and `model` (flows#310); 
 
 ## Asking a human, then handing off
 
-`Ctx` declares both verbs, and this typechecks and passes `flows check` — but neither runs yet in 2.0.16. Treat the shape below as the intended design, not something to ship on today:
+`f.human` is the approval gate, and it ships (2.0.18+): the run parks on a durable wait, and the person's answer comes back as the boolean the body branches on. `f.dispatch` is declared and typechecks, but still fails closed at runtime — treat that half of the sample as the intended shape:
 
 ```ts
 import { flow } from '@relayflows/surface';
@@ -95,17 +95,15 @@ export default flow('ship-feature', async (f) => {
 });
 ```
 
-Once wired, `f.human` is meant to park the run on a durable wait — nothing sits there blocking a thread, and the wait would survive a restart exactly like a crash mid-step does. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. `f.dispatch` is meant to hand the plan to a named child flow and return its typed result, so one large flow decomposes into several smaller ones instead of a script that tries to do everything.
+`f.human` parks the run — nothing sits blocking a thread, and the wait survives a restart exactly like a crash mid-step does. Locally, `flows run` exits `3` and prints the `flows answer <run-id> human-1 yes|no` that records the decision; `flows resume <run-id>` continues the body from the gate, with every step before it memoized. On Cloud, a bare handle like `'khaliq'` names the deploy's approver: the question is delivered to the Slack thread or GitHub issue/PR the run was triggered from, they reply **yes** or **no** there, and the run resumes on its own. A "no" ends the run with `declined`, the verdict for choosing not to proceed; `canceled` is reserved for the kernel. [Human gates](/docs/relayflows/build#human-gates) has the full contract and the `to` forms; [Cloud](/docs/relayflows/cloud#human-approval-on-cloud) covers delivery.
 
 <Note>
-  Verified directly: `flows run` on a flow that reaches `f.human` fails with
-  `unsupported_verb: the initial authored executor does not lower f.human`,
-  and the same for `f.dispatch`. Both are being implemented on flows'
-  `feat/f-human` branch and ship in the release after 2.0.17. Until then, do
-  durable approval in YAML instead (`recoveryMode: manual` parks a step as
-  `needs_human` with a diff for a person to resolve), or use the shipped
-  human gate directly: `f.done('needs_human')` parks the run (exit `3`) for
-  a person to act on, then `flows resume <run-id>` continues it.
+  Verified directly: `flows run` on a flow that reaches `f.dispatch` fails
+  with `unsupported_verb: the initial authored executor does not lower
+  f.dispatch`. It is meant to hand the plan to a named child flow and return
+  its typed result, so one large flow decomposes into several smaller ones.
+  Until it lands, keep the implementation in the same body — an `f.agent`
+  step after the gate — rather than a second flow.
 </Note>
 
 ## Next
