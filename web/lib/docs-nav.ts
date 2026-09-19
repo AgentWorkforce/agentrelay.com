@@ -41,6 +41,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Events', slug: 'events' },
       { title: 'Event handlers', slug: 'event-handlers' },
       { title: 'Webhooks', slug: 'webhooks' },
+      { title: 'Provider subscriptions', slug: 'provider-subscriptions' },
     ],
   },
   {

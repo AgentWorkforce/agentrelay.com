@@ -38,6 +38,7 @@ Flags:
 | `--workspace-key <key>` | Join a pre-existing Relay workspace. |
 | `--state-dir <path>` | Write runtime state outside `.agentworkforce/relay/`. |
 | `--broker-name <name>` | Override the broker identity. Defaults to the project directory basename. |
+| `--force` | Take the enrolled node over from a live broker on this machine; evicts that broker's delivery socket. |
 | `--verbose` | Enable verbose startup logging (raises the node log level to `debug`). |
 | `--log-file <path>` | Write structured node logs — each capability registered and every action invoked/completed — to a file. |
 | `--log-level <level>` | Node log verbosity: `debug` \| `info` \| `warn` \| `error` (default `info`). |
@@ -52,6 +53,20 @@ agent-relay node up --background --workspace-key "$RELAY_WORKSPACE_KEY"
 ```
 
 The broker listens on a local API port starting from `3888` (override with `AGENT_RELAY_BROKER_PORT`). If this machine was enrolled as a Cloud-managed node with `agent-relay cloud enroll`, `node up` picks up the persisted enrollment automatically and serves under the enrolled node name.
+
+### One broker per enrolled node
+
+An enrolled node has one Cloud delivery socket. If two brokers served the same node id, the second registration would evict the first broker's socket and it would silently stop receiving messages. `node up` prevents this with a machine-local claim in `~/.agentworkforce/relay/node-claims/`: the first broker claims its enrolled node id, and a later `node up` for that node — including one pinned with `RELAY_NODE_ID` — refuses and names the holding broker's pid and state directory.
+
+If the refusal is wrong, or you want the takeover:
+
+```bash
+agent-relay node down --state-dir <holder's state dir>   # stop the running broker
+agent-relay node up --workspace-key <different key>       # serve a different enrolled node
+agent-relay node up --force                               # take the node over anyway
+```
+
+`--force` evicts the incumbent's delivery socket: the old broker keeps running but stops receiving realtime delivery. A crashed broker's stale claim never blocks a restart, `--local-only` claims nothing, and `node down` releases the claim on clean exit.
 
 ## Check Status
 
