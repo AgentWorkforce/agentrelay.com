@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { FLOW_REVIEW_BLOCKED_COMMAND, FLOW_TEST_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
 
@@ -15,16 +15,19 @@ const completed: FactoryDraft = { version: 4, sources: ['github'], sourceSetting
 const withoutComments = (source: string) => source.split('\n').filter(line => !line.trim().startsWith('//')).join('\n');
 
 /**
- * `publish` is what the deterministic publish check reports. That check is the
- * only command the flow builds as `base=<commit>; ...`, so the mock keys off
- * that prefix without having to reproduce the command itself.
+ * `publish` is what the deterministic publish check reports. `checks` is what
+ * each run of the repository's checks reports, in order (pass once the list is
+ * used up), and `baseline` what the base commit's check reports. Three
+ * commands are built as `base=<commit>; ...`, so the mock matches each by the
+ * command it ends with.
  */
-async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish') {
+async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish', checks: string[] = [], baseline = 'pass', edit = (source: string) => source) {
   const calls: string[] = [];
   const errors: string[] = [];
   let finish = '';
   let index = 0;
-  const source = factorySource(draft).replace('import { flow } from "@relayflows/surface";', '');
+  let checkIndex = 0;
+  const source = edit(factorySource(draft)).replace('import { flow } from "@relayflows/surface";', '');
   const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } });
   const exports: { default?: (ctx: unknown, input: unknown) => Promise<void> } = {};
   new Function('exports', 'flow', compiled.outputText)(exports, (_name: string, _options: unknown, body: unknown) => body);
@@ -33,7 +36,13 @@ async function runFactory(clean: boolean[], _approved = true, issue = matchingIs
   try {
     await exports.default!({
       agent: async (name: string, options: { cli: string; cwd?: string }) => { calls.push(`${name}:${options.cli}`); if (name.startsWith('prototype-')) { await Promise.resolve(); calls.push('finished:' + name + ':' + options.cwd); } },
-      run: async (command: string) => { calls.push(command); return command.startsWith('base=') ? publish : command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : ''; },
+      run: async (command: string) => {
+        calls.push(command);
+        if (command === FLOW_CHECK_RUN_COMMAND) return checks[checkIndex++] ?? 'pass';
+        if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
+        if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
+        return command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : '';
+      },
       human: async () => { throw new Error('Interactive human approval is unsupported'); },
       done: (reason: string) => { finish = reason; },
     }, { issue, approver: 'owner' });
@@ -62,6 +71,25 @@ describe('software factory onboarding', () => {
     expect(factorySource(unanswered)).not.toContain('f.human(');
     expect(() => cloudConnectionsHref(unanswered, 'id')).toThrow('Choose a workflow');
     expect(readFactoryDraft(JSON.stringify({ ...unanswered, workflow: 'prototype' }))?.workflow).toBe('prototype');
+  });
+
+  it('treats failing checks the change itself introduced as the change\'s own failure, not pre-existing', () => {
+    for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
+      const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
+      expect(source, workflow).toContain('checkPlan === "none"\n      ? "new"');
+      expect(source, workflow).toContain('(baseline === "pass" || baseline === "new")');
+    }
+  });
+
+  it('resolves checks again after the implementer when none were found before it', () => {
+    for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
+      const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
+      const implementer = source.indexOf('f.agent("implementer"');
+      const again = source.indexOf('if (checkPlan === "none") await f.run(resolveChecks);');
+      expect(implementer, workflow).toBeGreaterThan(-1);
+      expect(again, workflow).toBeGreaterThan(implementer);
+      expect(source.indexOf('await f.run(runChecks'), workflow).toBeGreaterThan(again);
+    }
   });
 
   it('rejects corrupt and unsupported persisted drafts', () => {
@@ -197,7 +225,7 @@ describe('software factory onboarding', () => {
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
     for (const agents of [['claude', 'codex'], ['codex'], ['claude']] as FactoryDraft['agents'][]) {
       const source = factorySource({ ...completed, agents });
-      expect(source).toContain('{ budget: { wallclock: "1h" } }');
+      expect(source).toContain('{ budget: { wallclock: "2h" } }');
       expect(source).not.toMatch(/budget: "\$\d/);
     }
   });
@@ -274,7 +302,7 @@ describe('software factory onboarding', () => {
     const { calls, finish } = await runFactory([false, true]);
     expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
     expect(calls).toContain('fixer:claude');
-    expect(calls.filter(call => call === FLOW_TEST_COMMAND)).toHaveLength(2);
+    expect(calls.filter(call => call === FLOW_CHECK_RUN_COMMAND)).toHaveLength(2);
     expect(calls).not.toContain('human');
     expect(finish).toBe('needs_human');
   });
@@ -320,7 +348,7 @@ describe('software factory onboarding', () => {
     const { calls } = await runFactory([true]);
     const push = calls.indexOf('git push --set-upstream origin HEAD');
     const create = calls.findIndex(call => call.startsWith('gh pr create'));
-    expect(push).toBeGreaterThan(calls.indexOf(FLOW_TEST_COMMAND));
+    expect(push).toBeGreaterThan(calls.indexOf(FLOW_CHECK_RUN_COMMAND));
     expect(create).toBeGreaterThan(push);
     expect(calls.indexOf('adversary-1:codex')).toBeGreaterThan(create);
   });
@@ -354,7 +382,7 @@ describe('software factory onboarding', () => {
       expect(calls).not.toContain(FLOW_REVIEW_BLOCKED_COMMAND);
       expect(calls.some(call => call.includes('pr merge'))).toBe(false);
       expect(factorySource({ ...completed, workflow })).not.toContain('f.human(');
-      expect(calls).toContain(FLOW_TEST_COMMAND);
+      expect(calls).toContain(FLOW_CHECK_RUN_COMMAND);
       expect(calls.some(call => call.startsWith('gh pr create'))).toBe(true);
     }
   });
@@ -397,9 +425,106 @@ describe('software factory onboarding', () => {
     }
   });
 
+  describe('checks', () => {
+    const reportCall = (calls: string[]) => calls.find(call => call.startsWith('check=')) ?? '';
+    const createCall = (calls: string[]) => calls.find(call => call.startsWith('gh pr create')) ?? '';
+
+    it('works out how to check the repository before the change, and excludes working files first', async () => {
+      const { calls } = await runFactory([true, true]);
+      expect(calls[0]).toContain('# relayflow working files');
+      expect(calls.indexOf('check-discovery:claude')).toBeLessThan(calls.indexOf('implementer:claude'));
+      expect(calls.indexOf('check-discovery:claude')).toBeGreaterThan(calls.indexOf('plan-reviewer:codex'));
+    });
+
+    it('uses the author\'s checkCommand instead of discovering one', async () => {
+      const { calls } = await runFactory([true, true], true, matchingIssue, completed, 'publish', [], 'pass',
+        source => source.replace('const checkCommand = "";', 'const checkCommand = "npm run build:core && npm test";'));
+      expect(calls).not.toContain('check-discovery:claude');
+      expect(calls).toContain("mkdir -p .relayflow && printf '%s\\n' 'set -e' 'npm run build:core && npm test' > .relayflow/check.sh");
+    });
+
+    it('opens a ready pull request when the checks pass, with the report as its body', async () => {
+      const { calls, finish } = await runFactory([true, true]);
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual([]);
+      expect(calls.some(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe(false);
+      expect(reportCall(calls)).toMatch(/^check=pass; baseline=; /);
+      expect(createCall(calls)).toBe('gh pr create --title "Software factory change" --body-file .relayflow/pr-body.md');
+      expect(finish).toBe('needs_human');
+    });
+
+    it('repairs missing setup and carries on as if the checks had passed', async () => {
+      // acbe30c1's shape: the first run fails for want of a build step, the
+      // repair agent adds it to the check script, and the rerun passes.
+      const { calls, finish } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'pass']);
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual(['check-repair-1:claude']);
+      expect(calls.some(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe(false);
+      expect(createCall(calls)).not.toContain('--draft');
+      expect(calls).toContain('adversary-1:codex');
+      expect(finish).toBe('needs_human');
+    });
+
+    it('opens a draft and keeps reviewing when the base commit fails the same checks', async () => {
+      // 139d1a46's shape: the failure is the environment's, not the change's.
+      const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'fail', 'fail'], 'fail');
+      expect(calls.filter(call => call.startsWith('check-repair'))).toHaveLength(2);
+      expect(calls.find(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe('base=abc123; ' + FLOW_BASE_CHECK_COMMAND);
+      expect(reportCall(calls)).toMatch(/^check=fail; baseline=fail; /);
+      expect(createCall(calls)).toContain('--draft');
+      expect(calls).toContain('git push --set-upstream origin HEAD');
+      expect(calls).toContain('adversary-2:codex');
+      expect(finish).toBe('needs_human');
+      expect(errors.join('\n')).toContain('not because of this change');
+    });
+
+    it('opens a draft with the output and stops as step_failed when the change broke the checks', async () => {
+      const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'fail', 'fail'], 'pass');
+      expect(reportCall(calls)).toMatch(/^check=fail; baseline=pass; /);
+      expect(createCall(calls)).toContain('--draft');
+      // The work is pushed, never thrown away; the reviews are not worth running.
+      expect(calls).toContain('git push --set-upstream origin HEAD');
+      expect(calls.some(call => call.startsWith('adversary-'))).toBe(false);
+      expect(finish).toBe('step_failed');
+      expect(errors.join('\n')).toContain('breaks checks that pass on the base commit');
+    });
+
+    it('treats a timeout like a failure and an unrecognised answer as one too', async () => {
+      const timedOut = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['timeout', 'pass']);
+      expect(timedOut.calls).toContain('check-repair-1:claude');
+      const garbled = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['???', 'pass']);
+      expect(garbled.calls).toContain('check-repair-1:claude');
+    });
+
+    it('says so, and still opens a ready pull request, when there is nothing to run', async () => {
+      const { calls, finish } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['none']);
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual([]);
+      expect(reportCall(calls)).toMatch(/^check=none; baseline=; /);
+      expect(createCall(calls)).not.toContain('--draft');
+      expect(finish).toBe('needs_human');
+    });
+
+    it('drops committed working files before deciding what to publish, and before every push', async () => {
+      const { calls } = await runFactory([false, true]);
+      const drops = calls.flatMap((call, index) => call.endsWith(FLOW_DROP_WORKING_FILES_COMMAND) ? [index] : []);
+      expect(drops).toHaveLength(2);
+      expect(drops[0]).toBeLessThan(calls.findIndex(call => call.endsWith(FLOW_PUBLISH_CHECK_COMMAND)));
+      expect(drops[1]).toBeLessThan(calls.indexOf('git push'));
+      expect(drops[1]).toBeGreaterThan(calls.indexOf('fixer:claude'));
+    });
+
+    it('pushes a review fix that breaks passing checks, then drafts the pull request and stops', async () => {
+      const { calls, finish } = await runFactory([false, true], true, matchingIssue, completed, 'publish', ['pass', 'fail', 'fail', 'fail']);
+      expect(calls).toContain('git push');
+      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf('git push'));
+      expect(calls.filter(call => call.startsWith('check=')).at(-1)).toMatch(/^check=fail; baseline=revision; /);
+      expect(calls).not.toContain('adversary-2:codex');
+      expect(finish).toBe('step_failed');
+    });
+  });
+
   it('simple skips agent reviews but still hands off for human approval and all presets persist', async () => {
     const { calls, finish } = await runFactory([], true, matchingIssue, { ...completed, workflow: 'simple' });
-    expect(calls.filter(call => /:(claude|codex)$/.test(call))).toEqual(['implementer:claude']);
+    // The only agent besides the implementer works out how to run the checks.
+    expect(calls.filter(call => /:(claude|codex)$/.test(call))).toEqual(['check-discovery:claude', 'implementer:claude']);
     expect(calls).not.toContain('human');
     expect(finish).toBe('needs_human');
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
