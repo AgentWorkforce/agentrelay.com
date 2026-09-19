@@ -370,7 +370,7 @@ const REVIEW_BLOCKED_HEADING ='**Relayflow: the adversarial review did not pass.
  * Puts the failed review where an operator acts on it: on the pull request.
  *
  * `done("step_failed")` is the honest end for a review that found problems, and
- * as of the 2.0.15 pin the runtime lowers it (AgentWorkforce/flows#436), so the
+ * since the 2.0.15 pin the runtime lowers it (AgentWorkforce/flows#436), so the
  * flow reports it. Up to 2.0.14 it did not: the authored executor lowered only
  * `success` and `needs_human` and threw `the initial authored executor cannot
  * lower done("step_failed")`, and a real run paid for it — 15 agent steps, a
@@ -553,7 +553,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   }` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'Always run two independent adversarial reviews, even if the first passes.' : 'Review the final implementation against the ticket and comparison findings.'}
   // A review that found problems is this flow's verdict on its own work, so it
-  // reports done("step_failed"). The pinned 2.0.15 runtime lowers that reason
+  // reports done("step_failed"). The pinned runtime (2.0.15 and later) lowers that reason
   // (AgentWorkforce/flows#436) and the CLI gives it exit 1, distinct from the
   // exit 3 a clean run parks with. An exit code cannot carry what the reviewer
   // found, so the step below still drafts the pull request and posts the

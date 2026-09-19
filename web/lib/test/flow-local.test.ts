@@ -76,13 +76,17 @@ describe('local flow starter kit', () => {
     // `run.cancel`, budget from the enforced budget) that a flow body cannot
     // declare. flows#401, which promised `canceled`, is closed and superseded
     // by #436. The guards in flow-onboarding.ts want a deliberate declination
-    // instead — `declined`, proposed in AgentWorkforce/flows#438 and
-    // implemented in PR #439, which is open and unmerged. When a pinned release
-    // contains it, turn those two f.done("needs_human") calls into
-    // f.done("declined"), and not before.
+    // instead — `declined` (AgentWorkforce/flows#438, merged as #439), which
+    // every release from 2.0.16 lowers. 2.0.22 contains it, yet the guards
+    // deliberately stay on f.done("needs_human"): the same source runs on Agent
+    // Relay Cloud, which has to render a declined run first. Switch the two
+    // guards in the same change that teaches Cloud `declined`.
+    // 2.0.22 also carries AgentWorkforce/flows#484: a Claude agent step ends on
+    // Claude's result, not on process exit, so a background task the agent
+    // started can no longer hold the run open until its wall-clock limit.
     expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
     expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
-    expect(RELAYFLOWS_VERSION).toBe('2.0.15');
+    expect(RELAYFLOWS_VERSION).toBe('2.0.22');
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const source = factorySource({ ...draft, workflow }, 'local');
       const code = withoutComments(source);
@@ -518,7 +522,7 @@ describe('relocating a kit that was extracted outside a repository', () => {
     if (options.dependency) {
       const pkg = join(target, 'node_modules', 'relayflows');
       mkdirSync(pkg, { recursive: true });
-      // The shape relayflows@2.0.15 really publishes: a bin and nothing to
+      // The shape relayflows really publishes (still true of 2.0.22): a bin and nothing to
       // import. A fake with a "main" let a bare resolve("relayflows") pass here
       // while it failed against every real install.
       mkdirSync(join(pkg, 'bin'), { recursive: true });

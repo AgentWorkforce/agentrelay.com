@@ -217,7 +217,7 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
 
 /**
  * The step that runs when an adversarial review does not pass. The run itself
- * reports `f.done("step_failed")` again: the 2.0.15 pin lowers that reason
+ * reports `f.done("step_failed")` again: every pin since 2.0.15 lowers that reason
  * (AgentWorkforce/flows#436), where 2.0.14 failed the whole run with
  * `unsupported_completion` after every agent had finished. An exit code still
  * cannot carry what the reviewer found, so this step puts the verdict where an
