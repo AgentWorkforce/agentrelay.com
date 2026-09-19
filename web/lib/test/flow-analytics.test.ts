@@ -86,6 +86,27 @@ describe('safe analytics payloads and correlation', () => {
     expect(JSON.parse(decodeURIComponent(url.hash.slice(1))).analytics).toEqual({ journeyId: id });
     expect(JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(draft, freshId)).hash.slice(1))).analytics).toBeUndefined();
   });
+
+  it('carries the anonymous PostHog distinct id beside the journey, and only when given', () => {
+    // Both apps are same-origin in production, so Cloud usually reads the same
+    // anonymous distinct_id from shared storage. Sending it in the handoff is
+    // what lets Cloud tell that continuity held, and alias the two people when
+    // it did not. It is a device id, never anything the visitor typed.
+    const draft = { ...DEFAULT_FACTORY, workflow: 'simple' as const, sources: ['markdown' as const], agents: ['claude' as const], step: 3 };
+    const distinctId = '0198f0aa-1c2d-7c3e-8f10-b2c3d4e5f607';
+    const analytics = (href: string) => JSON.parse(decodeURIComponent(new URL(href).hash.slice(1))).analytics;
+    expect(analytics(cloudConnectionsHref(draft, freshId, id, distinctId))).toEqual({ journeyId: id, distinctId });
+    // A journey can expire or be opted out of while PostHog still has an id,
+    // and PostHog can be absent while the journey exists; neither may drag the
+    // other into the payload or leave an empty analytics object behind.
+    expect(analytics(cloudConnectionsHref(draft, freshId, undefined, distinctId))).toEqual({ distinctId });
+    expect(analytics(cloudConnectionsHref(draft, freshId, id))).toEqual({ journeyId: id });
+    expect(analytics(cloudConnectionsHref(draft, freshId, id, ''))).toEqual({ journeyId: id });
+    expect(analytics(cloudConnectionsHref(draft, freshId, '', ''))).toBeUndefined();
+    // The id must stay in the fragment: a query would reach Cloud's server
+    // access logs and OAuth state.
+    expect(new URL(cloudConnectionsHref(draft, freshId, id, distinctId)).search).toBe('');
+  });
 });
 
 describe('mounted journey expiration', () => {

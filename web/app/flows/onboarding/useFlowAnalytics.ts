@@ -44,6 +44,16 @@ export function useFlowAnalytics(draft: FactoryDraft, stage: FlowStage, enabled:
     };
   }, []);
   const track: FlowTrack = useCallback((event, properties = {}) => tracker.current?.track(event, properties), []);
-  return { track, getJourneyId: () => ph && !ph.has_opted_out_capturing() ? tracker.current?.id : undefined,
+  // PostHog's anonymous device id for this visitor, carried into the Cloud
+  // handoff so Cloud can join the two apps' people even when same-origin
+  // browser storage did not survive the trip. Never sent when PostHog is
+  // absent or the visitor opted out.
+  const getDistinctId = useCallback(() => {
+    try {
+      if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || !ph || ph.has_opted_out_capturing()) return undefined;
+      return ph.get_distinct_id() || undefined;
+    } catch { return undefined; }
+  }, [ph]);
+  return { track, getJourneyId: () => ph && !ph.has_opted_out_capturing() ? tracker.current?.id : undefined, getDistinctId,
     markOutcome: (outcome: 'cloud_handoff' | 'local_kit_downloaded') => tracker.current?.markOutcome(outcome) };
 }

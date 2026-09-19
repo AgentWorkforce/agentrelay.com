@@ -8,9 +8,9 @@ import { LOCAL_INSTALL, LOCAL_RUN, localKitArchive } from '../../../lib/flow-loc
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
-export function RunOptions({ draft, chosen, setDestination, onTrack, getJourneyId, markOutcome, onNotice }: {
+export function RunOptions({ draft, chosen, setDestination, onTrack, getJourneyId, getDistinctId, markOutcome, onNotice }: {
   chosen: 'cloud' | 'local'; setDestination: (destination: 'cloud' | 'local') => void;
-  draft: FactoryDraft; onTrack: FlowTrack; getJourneyId: () => string | undefined; markOutcome: (outcome: 'cloud_handoff' | 'local_kit_downloaded') => void; onNotice: (message: string) => void;
+  draft: FactoryDraft; onTrack: FlowTrack; getJourneyId: () => string | undefined; getDistinctId: () => string | undefined; markOutcome: (outcome: 'cloud_handoff' | 'local_kit_downloaded') => void; onNotice: (message: string) => void;
 }) {
   const [copied, setCopied] = useState('');
   const [signingIn, setSigningIn] = useState(false);
@@ -24,8 +24,9 @@ export function RunOptions({ draft, chosen, setDestination, onTrack, getJourneyI
     setSigningIn(true);
     try {
       const handoffId = crypto.randomUUID();
-      const href = cloudConnectionsHref(draft, handoffId, getJourneyId());
-      onTrack('cloud_handoff_started', { handoff_id: handoffId, destination: 'cloud' });
+      const distinctId = getDistinctId();
+      const href = cloudConnectionsHref(draft, handoffId, getJourneyId(), distinctId);
+      onTrack('cloud_handoff_started', { handoff_id: handoffId, destination: 'cloud', distinct_id_sent: Boolean(distinctId) });
       markOutcome('cloud_handoff');
       window.location.assign(href);
     } catch {

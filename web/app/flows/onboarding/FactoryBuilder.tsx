@@ -68,7 +68,7 @@ export function FactoryBuilder() {
   const questionHeading = useRef<HTMLHeadingElement>(null);
   const copyTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousStep = useRef<number | null>(null);
-  const { track, getJourneyId, markOutcome } = useFlowAnalytics(draft, FLOW_STAGES[Math.max(0, routeStep + 1)], hydrated && !loadingStage);
+  const { track, getJourneyId, getDistinctId, markOutcome } = useFlowAnalytics(draft, FLOW_STAGES[Math.max(0, routeStep + 1)], hydrated && !loadingStage);
   const fieldStart = useRef<Record<string, number>>({});
   const storageStatus = useRef({ restored: false, failed: false, reported: false });
   const ready = draft.step === 3;
@@ -282,7 +282,7 @@ export function FactoryBuilder() {
           </div> : <div className={s.ready}>
             <h2 tabIndex={-1} ref={questionHeading}>Let’s run your first flow.</h2>
             <p className={s.runDescription}>Your software factory is built. Choose where to put it to work.</p>
-            <RunOptions draft={draft} chosen={destination} setDestination={setDestination} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} markOutcome={markOutcome} />
+            <RunOptions draft={draft} chosen={destination} setDestination={setDestination} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} getDistinctId={getDistinctId} markOutcome={markOutcome} />
             <details className={s.flowReview} onToggle={event => track('help_toggled', { section: 'review_flow', open: event.currentTarget.open })}>
               <summary>Review your flow<ChevronDown size={16} /></summary>
               <div className={s.reviewContent}>

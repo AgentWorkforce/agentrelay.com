@@ -8,6 +8,33 @@ the handoff payload and is preserved by parseFlowHandoff, which is what makes
 the cross-app report possible; a handoff carrying no usable journey still
 deploys and is counted with journey_id = null.
 
+IDENTITY CONTRACT (marketing -> Google -> Cloud)
+Marketing never calls identify: the visitor there is anonymous, and that is
+correct. Continuity rests on two mechanisms, in this order.
+1. Shared browser storage. Both apps are served from one origin in production
+   (marketing at agentrelay.com/, Cloud at agentrelay.com/cloud) and posthog-js
+   persists its anonymous distinct_id and session under the project token, so
+   the same anonymous person survives the handoff and the Google round trip.
+   This requires both apps to use the SAME project key; a different key is a
+   different project and no amount of identify will join the funnel.
+2. The handoff payload. cloudConnectionsHref (web/lib/flow-onboarding.ts) puts
+   the marketing anonymous distinct_id in the fragment as analytics.distinctId
+   beside analytics.journeyId, and cloud_handoff_started reports whether it was
+   sent as distinct_id_sent. Only PostHog's anonymous device id travels: no
+   email, name, repository, ticket, or anything typed into onboarding. It is in
+   the fragment, not the query, so it never reaches OAuth state or server logs.
+   It is absent when PostHog is not configured or the visitor opted out, so
+   distinct_id_sent = false is an expected state and not a failure.
+Cloud then: reports handoff_distinct_id_matches on cloud_import_received (did
+mechanism 1 hold?), calls identify(userId) on the first authenticated view
+before google_login_completed so pre-auth anonymous events merge into the user,
+and calls alias(analytics.distinctId) once per handoff when the marketing id
+differs from the anonymous id Cloud itself held — the repair for a handoff whose
+storage did not carry over (preview hosts, dev, blocked or partitioned storage).
+A server-side cloud_auth event at the Google callback records signup versus
+login on the user's own distinct_id, and reset() on logout keeps a shared
+machine from bleeding one person's identity into the next visitor.
+
 PRIMARY QUESTIONS
 1. Which step loses the most journeys?
 2. Where do people hesitate, change their answers, go back, or ask for help?
@@ -20,8 +47,12 @@ Use event property journey_id as the correlation key, not event counts.
 Filter funnel_version = 2 and exclude localhost, development, and staff traffic.
 Marketing and Cloud must send events to the same PostHog project for joined reports.
 A custom journey property does not automatically merge PostHog person identities:
-use a query/report grouped by journey_id for the cross-app funnel. Standard
-person-based funnels are appropriate only when identity continuity is verified.
+a report grouped by journey_id remains the reading that does not depend on
+identity at all, and stays the safe default for auditing the numbers.
+Person-based funnels are now valid once identify is verified in production (see
+IDENTITY CONTRACT above): confirm in PostHog that a $identify event follows
+Google sign-in and that cloud_auth arrives on the same distinct_id as the
+user id. Until that check is done, prefer the journey_id grouping.
 
 Acquisition (optional starting steps):
   flows_landing_viewed
@@ -36,13 +67,25 @@ Core setup, in order:
   flows_onboarding_step_viewed                 stage = connections
 
 Cloud branch (emitted by Cloud except where marked):
-  flows_onboarding_cloud_handoff_started       marketing side, beacon transport
-  flows_onboarding_cloud_import_received       from_fragment, has_journey
+  flows_onboarding_cloud_handoff_started       marketing side, beacon transport;
+                                               distinct_id_sent
+  flows_onboarding_cloud_import_received       from_fragment, has_journey,
+                                               handoff_distinct_id_matches
   flows_onboarding_google_redirect_started
+  $identify                                    Cloud, first authenticated view,
+                                               before google_login_completed
+  $create_alias                                Cloud, only when the marketing
+                                               distinct id did not carry over
+  cloud_auth                                   Cloud server side at the Google
+                                               callback; action = signup/login,
+                                               provider, signup_source; NOT
+                                               prefixed flows_onboarding_
   flows_onboarding_google_login_completed      a stored (not fragment) handoff on
                                                an authenticated view: the return trip
   flows_onboarding_cloud_flow_saved            flow_id
-  flows_onboarding_cloud_dashboard_viewed      from = run_complete/run_panel/deployed
+  flows_onboarding_cloud_dashboard_viewed      from = run_complete/run_panel/deployed;
+                                               deployed is the terminal step of the
+                                               cross-app funnel
   flows_onboarding_connection_setup_clicked    not implemented
   flows_onboarding_connection_setup_viewed     not implemented
 
@@ -106,6 +149,12 @@ configured_filters: filter field names only, such as github.labels; never values
 other_agent_selected, has_extra_instructions: booleans only.
 handoff_id: correlates a particular Cloud attempt.
 flow_id: correlates a successfully saved Cloud flow.
+distinct_id_sent: whether the handoff carried the marketing anonymous PostHog
+  distinct id. False when PostHog is unconfigured or the visitor opted out.
+handoff_distinct_id_matches: Cloud side. True when Cloud's own anonymous
+  distinct_id equals the one the handoff carried, which means shared same-origin
+  storage survived the trip; false means Cloud aliased to repair it; null when
+  no id was carried or no PostHog client was available to compare.
 PostHog's normal device/browser/referrer/session properties remain available.
 
 Cloud events additionally carry surface=cloud, cloud_step, cloud_step_index,
@@ -168,9 +217,15 @@ INTERPRETATION AND COVERAGE LIMITS
 - Session replay depends on PostHog project enablement and sampling. Inputs are
   masked and code/configuration surfaces are blocked. Analytics do not collect
   raw repository names, tickets, source filters, generated code, or write-in names.
-- Both web apps need NEXT_PUBLIC_POSTHOG_KEY and the intended host at build time.
-  PostHog project ingestion, replay enablement, and reports need a post-deployment
-  check by an authorized operator. None were verified against production here.
+- Both web apps need NEXT_PUBLIC_POSTHOG_KEY and the intended host, and both
+  must use the SAME project key: marketing's GitHub Actions variable has to equal
+  the Cloud project key. Different keys mean different projects and no joined
+  funnel, whatever identify does. PostHog project ingestion, replay enablement,
+  and reports need a post-deployment check by an authorized operator. None were
+  verified against production here.
+- The carried distinct id proves only what the browser reported. An alias merges
+  two anonymous people into one user; it cannot recover events PostHog never
+  received because the SDK was absent, blocked, or opted out.
 
 RELEASE VALIDATION
 Use a nonproduction PostHog project first. Complete one fresh Cloud journey,
