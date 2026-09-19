@@ -3,6 +3,12 @@ export const ISSUE_SOURCES = [
     { key: 'repository', label: 'Repository', placeholder: 'owner/repository' },
     { key: 'labels', label: 'Required labels', placeholder: 'ready-for-agent, bug' },
   ] },
+  { id: 'gitlab', label: 'GitLab', fields: [
+    // The project's full path, which Cloud also uses as the GitLab deploy
+    // target when no GitHub source is chosen (AgentWorkforce/cloud#3801).
+    { key: 'project', label: 'Project', placeholder: 'group/project' },
+    { key: 'labels', label: 'Required labels', placeholder: 'ready-for-agent, bug' },
+  ] },
   { id: 'linear', label: 'Linear', fields: [
     { key: 'team', label: 'Team', placeholder: 'Engineering' },
     { key: 'project', label: 'Project', placeholder: 'Website' },
@@ -37,6 +43,16 @@ export type SourceFilterKey = typeof ISSUE_SOURCES[number]['fields'][number]['ke
 export type SourceSettings = Partial<Record<SourceFilterKey, string>> & { mentioned?: boolean };
 export type SourcePreferences = Partial<Record<IssueSourceId, SourceSettings>>;
 export const sourceLabel = (id: IssueSourceId) => ISSUE_SOURCES.find(source => source.id === id)!.label;
+
+/**
+ * Where the flow's change request opens. Mirrors Cloud's deploy-page inference
+ * (flow-handoff `suggestedRepository`): a GitHub source keeps GitHub; a GitLab
+ * source without one makes the GitLab project the target.
+ */
+export type RepositoryHost = 'github' | 'gitlab';
+export function repositoryHost(sources: readonly IssueSourceId[]): RepositoryHost {
+  return !sources.includes('github') && sources.includes('gitlab') ? 'gitlab' : 'github';
+}
 
 export function validSourcePreferences(value: unknown): value is SourcePreferences {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;

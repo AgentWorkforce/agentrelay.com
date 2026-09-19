@@ -195,6 +195,26 @@ function quote(path) {
 // Everything the flow will need of the destination, checked before a single
 // file is written: the same three conditions this script enforces here, so a
 // relocated kit cannot land somewhere its own preflight would reject.
+// A local run opens its change with GitHub CLI, which cannot open a GitLab
+// merge request; Cloud runs can (they carry relayflow-open-change). Shared by
+// the main guard and repoProblem, so a relocated kit is refused the same way.
+const GITLAB_LOCAL_ADVICE = [
+  "Local runs open the pull request with GitHub CLI (gh pr create), which cannot open a GitLab merge request.",
+  "Deploy this flow to Agent Relay Cloud instead: hosted runs open the merge request for you.",
+];
+// Judged on the remote's host alone, never on its path: github.com/gitlab-org/x
+// or a repository named gitlab is a GitHub remote. This script is a template
+// literal, so the patterns use [.] and [/] rather than backslash escapes, which
+// the template would silently drop.
+function originHost(url) {
+  const match = /^[a-z][a-z0-9+.-]*:[/][/](?:[^@/]*@)?([^/:]+)/i.exec(url) || /^(?:[^@/]*@)?([^/:]+):/.exec(url);
+  return match ? match[1].toLowerCase() : "";
+}
+function isGitLabOrigin(url) {
+  const host = originHost(url);
+  return host === "gitlab.com" || host.endsWith(".gitlab.com") || host.startsWith("gitlab.");
+}
+
 function repoProblem(target) {
   const stat = statSync(target, { throwIfNoEntry: false });
   if (!stat) return "There is no " + target;
@@ -204,11 +224,13 @@ function repoProblem(target) {
   } catch {
     return "Not a Git repository: " + target;
   }
+  let origin = "";
   try {
-    git("-C", target, "remote", "get-url", "origin");
+    origin = git("-C", target, "remote", "get-url", "origin").trim();
   } catch {
     return "No origin remote there. The flow ends in git push and gh pr create, so add one first: git remote add origin <url>";
   }
+  if (isGitLabOrigin(origin)) return "That repository is on GitLab. " + GITLAB_LOCAL_ADVICE.join(" ");
   const unclean = dirtyPaths("-C", target);
   if (unclean.length) {
     return "Uncommitted changes there (" + unclean.slice(0, 3).join(", ") + (unclean.length > 3 ? ", ..." : "") + "). Commit or stash them first; the flow commits and pushes a branch.";
@@ -304,13 +326,17 @@ try {
   await relocate();
 }
 
+let originUrl = "";
 try {
-  git("remote", "get-url", "origin");
+  originUrl = git("remote", "get-url", "origin").trim();
 } catch {
   fail("this repository has no origin remote.",
     "The flow ends with git push --set-upstream origin HEAD and gh pr create.",
     "Add one first: git remote add origin <url>");
 }
+
+// Say this before the agents run rather than letting the last step fail.
+if (isGitLabOrigin(originUrl)) fail("this repository is on GitLab.", ...GITLAB_LOCAL_ADVICE);
 
 // Step 4 runs "npx flows" twice straight after this, and npx resolves from the
 // directory it runs in — never from wherever this script lives. So the install
@@ -426,7 +452,7 @@ Requirements
 - Node.js 22.18+ (for native TypeScript), npm, and Git.
 - macOS on Apple silicon or Linux x64 (bundled runtime platforms).
 - ${names}, installed and signed in.
-- GitHub CLI (gh), signed in, and a repository with push access to origin.
+- GitHub CLI (gh), signed in, and a repository with push access to origin. A GitLab repository needs the Cloud deploy instead: local runs open the pull request with gh, which cannot open a GitLab merge request, and the preflight stops before any agent runs.
 - The flow runs your repository's own checks. Before changing any code, an agent reads your CI configuration, Makefile and README and writes .relayflow/check.sh; failing that it uses your ecosystem's default (a make or just test target, npm/pnpm/Yarn/Bun, cargo, go, pytest, bundle, Maven, Gradle, dotnet or mix). To use your own command instead, set checkCommand in software-factory.flow.mts, or commit a .relayflow/check.sh. The tools your checks need must be installed.
 
 1. Extract this kit into your repository root. Keep any existing files before replacing them. Open a terminal in that directory.

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { ListFilter, ChevronDown } from 'lucide-react';
-import { SiGithub, SiLinear, SiShortcut, SiJira, SiMarkdown } from 'react-icons/si';
+import { SiGithub, SiGitlab, SiLinear, SiShortcut, SiJira, SiMarkdown } from 'react-icons/si';
 import { ISSUE_SOURCES, sourceLabel, type IssueSourceId, type SourceSettings } from '../../../lib/flow-sources';
 import type { FactoryDraft } from '../../../lib/flow-onboarding';
 import type { FlowTrack } from '../../../lib/flow-analytics';
@@ -10,7 +10,7 @@ import s from './onboarding.module.css';
 
 export function SourceIcon({ id }: { id: IssueSourceId }) {
   if (id === 'slack') return <span className={s.sourceIcon}><img src="/integration-logos/slack.svg" alt="" className={s.slackLogo} width={35} height={35} /></span>;
-  const Icon = { github: SiGithub, linear: SiLinear, shortcut: SiShortcut, jira: SiJira, markdown: SiMarkdown }[id];
+  const Icon = { github: SiGithub, gitlab: SiGitlab, linear: SiLinear, shortcut: SiShortcut, jira: SiJira, markdown: SiMarkdown }[id];
   return <Icon className={`${s.sourceIcon} ${s[`source_${id}`]}`} aria-hidden="true" />;
 }
 

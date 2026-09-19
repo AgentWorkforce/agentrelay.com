@@ -1,7 +1,7 @@
 import { CODING_AGENTS } from './flow-agents';
 import { resolveAgentSettings, rolesForStep } from './flow-agent-settings';
 import type { FactoryDraft } from './flow-onboarding';
-import { sourceLabel, sourceSummary } from './flow-sources';
+import { repositoryHost, sourceLabel, sourceSummary } from './flow-sources';
 import { WORKFLOWS, WORKFLOW_STEP_DETAILS } from './flow-workflows';
 
 /** Display-only snapshot of the same plan shown by WorkflowPlan. Never executed by Cloud. */
@@ -34,7 +34,7 @@ export function flowPreview(draft: FactoryDraft) {
           description: WORKFLOW_STEP_DETAILS[step],
           owner: human ? 'You' : !agents.length ? 'Script' : agents.length > 1 ? 'Parallel' : agents[0].label,
           detail: agents.map(agent => agents.length > 1 ? `${agent.label} · ${agent.model}` : agent.model).join('\n'),
-          icons: step === 'Open PR' ? ['github'] : agents.map(agent => agent.id),
+          icons: step === 'Open PR' ? [repositoryHost(draft.sources)] : agents.map(agent => agent.id),
           ...(review ? { badge: '2 rounds' } : {}),
         };
       }),

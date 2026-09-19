@@ -3,13 +3,13 @@ import { resolveAgentSettings, rolesForStep, type AgentRole } from '../../../lib
 import { GitBranch, Layers3, Zap, UserRound, LockKeyhole, Terminal, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { WORKFLOWS, WORKFLOW_STEP_DETAILS, workflowAgents } from '../../../lib/flow-workflows';
-import { SiGithub } from 'react-icons/si';
+import { SiGithub, SiGitlab } from 'react-icons/si';
 import Claude from '@lobehub/icons/es/Claude';
 import Codex from '@lobehub/icons/es/Codex';
 import Cursor from '@lobehub/icons/es/Cursor';
 import OpenCode from '@lobehub/icons/es/OpenCode';
 import { agentLabel, canContinue, isCodingAgent, type CodingAgent, type FactoryDraft } from '../../../lib/flow-onboarding';
-import { sourceLabel, sourceSummary } from '../../../lib/flow-sources';
+import { repositoryHost, sourceLabel, sourceSummary } from '../../../lib/flow-sources';
 import { SourceIcon } from './SourcePicker';
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
@@ -103,7 +103,7 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
                   <Node className={`${s.processNode} ${human ? s.processGate : ''} ${agents.length ? s.processEditable : ''}`} {...(agents.length ? { type: 'button' as const, 'aria-label': `Edit ${step} agent settings`, onClick: () => { setEditing(roles); onTrack('agent_settings_opened', { role: roles[0] }); } } : {})}>
                     <span className={`${s.processAvatars} ${agents.length > 1 ? s.processAgentCluster : ''}`}>
                       {agents.map((id, agentIndex) => <ProcessAgent key={agentIndex} id={id} />)}
-                      {script && <span className={s.processPerson}>{step === 'Open PR' ? <SiGithub size={21} aria-hidden="true" /> : <Terminal size={21} aria-hidden="true" />}</span>}
+                      {script && <span className={s.processPerson}>{step === 'Open PR' ? (repositoryHost(draft.sources) === 'gitlab' ? <SiGitlab size={21} aria-hidden="true" /> : <SiGithub size={21} aria-hidden="true" />) : <Terminal size={21} aria-hidden="true" />}</span>}
                       {human && <span className={s.processPerson}><UserRound size={21} aria-hidden="true" /></span>}
                     </span>
                     <span className={s.processText}>
