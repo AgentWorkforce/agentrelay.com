@@ -1,9 +1,9 @@
 ---
 title: 'Provider Subscriptions'
-description: 'Bind a provider resource — a GitHub repo, a Linear team, a Slack channel — to an agent or channel so provider events wake it directly.'
+description: 'Bind a provider resource — a repo, a team, a channel — to an agent so provider events wake it.'
 ---
 
-Provider subscriptions wire an external resource to a Relay recipient. When an event fires on the provider — an issue opened, a comment posted — it materializes through Relayfile as mounted files and arrives as a Relay message that wakes the bound agent.
+Provider subscriptions bind an external resource to a Relay recipient. When an event fires — an issue opened, a comment posted — Relayfile writes it to the mounted tree and Relay delivers it as a message that wakes the recipient.
 
 ```bash
 agent-relay integration subscribe github \
@@ -12,24 +12,24 @@ agent-relay integration subscribe github \
   --events issues,issue_comment
 ```
 
-The recipient can be an agent (`@watcher`) or a channel (`#triage`). `@watcher` does not need to exist yet — see `--spawn` below.
+The recipient is an agent (`@watcher`) or a channel (`#triage`). The agent does not need to exist yet; `--spawn` creates it.
 
 ## What the agent sees
 
-Each event arrives as a message from the provider identity (for example `github`) naming the event type and the Relayfile path that holds the payload:
+Each event is a message from the provider identity (`github`) with the event type and the Relayfile path holding the payload:
 
 ```
 Relay message from github: Github issue_comment.created
 Relayfile path: /github/repos/AgentWorkforce/software-garden/issues/531/comments/5744794683/meta.json
 ```
 
-The agent reads the mounted file for the full payload — the same tree documented in [Relayfile integrations](/docs/file/integrations). It can answer in-channel, which posts back to the issue or thread when the provider supports writeback.
+The mounted file holds the full payload — the same tree as [Relayfile integrations](/docs/file/integrations). An in-channel reply posts back to the issue or thread when the provider supports writeback.
 
-Events that arrive while the node's delivery socket is down are queued durably and replayed to the session on reconnect, so a subscription survives broker restarts without losing events. See [Delivery](/docs/delivery).
+Events that arrive while the node is disconnected queue durably and replay on reconnect, so a subscription survives broker restarts. See [Delivery](/docs/delivery).
 
 ## Spawning a recipient
 
-`--spawn <cli>` launches a fresh agent and confirms it is live before subscribing:
+`--spawn <cli>` launches a new agent and confirms it is live before subscribing:
 
 ```bash
 agent-relay integration subscribe github \
@@ -45,7 +45,7 @@ agent-relay integration subscribe --list                                   # act
 agent-relay integration unsubscribe github --resource AgentWorkforce/software-garden
 ```
 
-Unsubscribing removes the resource binding and its inbound webhook; agents and channels are untouched.
+Unsubscribing removes the binding and its inbound webhook; agents and channels are untouched.
 
 <CardGroup cols={2}>
   <Card title="Events" href="/docs/events">
