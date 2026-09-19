@@ -84,12 +84,18 @@ export function cloudBlockedReason(draft: FactoryDraft): string {
   return isMarkdownOnly(draft) ? MARKDOWN_ONLY_CLOUD_NOTE : '';
 }
 
-export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, journeyId?: string): string {
+export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, journeyId?: string, distinctId?: string): string {
   if (!canContinue(draft, 2)) throw new Error('Choose a workflow before continuing to Cloud.');
   // The fragment is read only by Cloud's browser deploy page, which keeps it in
   // localStorage across Google sign-in. Source code and ticket filters must not
   // enter OAuth state, cookies, or server access logs.
-  const payload = { version: 1, handoffId, ...(journeyId ? { analytics: { journeyId } } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
+  // distinctId is PostHog's anonymous device identifier for this visitor, and
+  // nothing else: no email, name, or anything typed into onboarding. Both apps
+  // are same-origin in production, so Cloud normally reads the same anonymous
+  // id from shared browser storage. Carrying it here lets Cloud measure whether
+  // that continuity actually held and merge the two people when it did not.
+  const analytics = { ...(journeyId ? { journeyId } : {}), ...(distinctId ? { distinctId } : {}) };
+  const payload = { version: 1, handoffId, ...(Object.keys(analytics).length ? { analytics } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
     workflow: draft.workflow, preview: flowPreview(draft), sources: draft.sources, sourceSettings: draft.sourceSettings,
     agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
   const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
