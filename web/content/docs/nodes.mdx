@@ -215,6 +215,8 @@ A node enrolls with `POST /v1/nodes` using the workspace key. The request carrie
 
 A node id supplied or pinned by an operator (`node_id` in the enroll request, used with its node token) is taken as-is. Otherwise the id derives from the machine identity, the working directory, and the workspace, so several nodes on one host — for example one per project directory — do not collide.
 
+The agent runtime additionally guards enrolled ids machine-locally: a running broker records a claim for its enrolled node id, and a second broker starting for the same node on that host is refused rather than allowed to evict the incumbent's delivery socket. See [Broker lifecycle → One broker per enrolled node](/docs/cli-broker-lifecycle#one-broker-per-enrolled-node).
+
 ## Presence And Context
 
 Workspace observers see node presence events as `node.online`, `node.heartbeat`, and `node.offline`. Each event carries a node payload matching the roster entry.

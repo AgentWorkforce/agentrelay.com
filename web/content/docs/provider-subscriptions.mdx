@@ -1,0 +1,63 @@
+---
+title: 'Provider Subscriptions'
+description: 'Bind a provider resource — a GitHub repo, a Linear team, a Slack channel — to an agent or channel so provider events wake it directly.'
+---
+
+Provider subscriptions wire an external resource to a Relay recipient. When an event fires on the provider — an issue opened, a comment posted — it materializes through Relayfile as mounted files and arrives as a Relay message that wakes the bound agent.
+
+```bash
+agent-relay integration subscribe github \
+  --to @watcher \
+  --resource AgentWorkforce/software-garden \
+  --events issues,issue_comment
+```
+
+The recipient can be an agent (`@watcher`) or a channel (`#triage`). `@watcher` does not need to exist yet — see `--spawn` below.
+
+## What the agent sees
+
+Each event arrives as a message from the provider identity (for example `github`) naming the event type and the Relayfile path that holds the payload:
+
+```
+Relay message from github: Github issue_comment.created
+Relayfile path: /github/repos/AgentWorkforce/software-garden/issues/531/comments/5744794683/meta.json
+```
+
+The agent reads the mounted file for the full payload — the same tree documented in [Relayfile integrations](/docs/file/integrations). It can answer in-channel, which posts back to the issue or thread when the provider supports writeback.
+
+Events that arrive while the node's delivery socket is down are queued durably and replayed to the session on reconnect, so a subscription survives broker restarts without losing events. See [Delivery](/docs/delivery).
+
+## Spawning a recipient
+
+`--spawn <cli>` launches a fresh agent and confirms it is live before subscribing:
+
+```bash
+agent-relay integration subscribe github \
+  --resource AgentWorkforce/software-garden \
+  --events issues,issue_comment \
+  --spawn claude --task "Triage new issue comments and reply with a summary."
+```
+
+## Managing subscriptions
+
+```bash
+agent-relay integration subscribe --list                                   # active bindings
+agent-relay integration unsubscribe github --resource AgentWorkforce/software-garden
+```
+
+Unsubscribing removes the resource binding and its inbound webhook; agents and channels are untouched.
+
+<CardGroup cols={2}>
+  <Card title="Events" href="/docs/events">
+    The event vocabulary subscriptions and listeners share.
+  </Card>
+  <Card title="Relayfile integrations" href="/docs/file/integrations">
+    How provider resources become files an agent can read and watch.
+  </Card>
+  <Card title="Delivery" href="/docs/delivery">
+    Sequencing, acks, and reconnect replay for node-delivered events.
+  </Card>
+  <Card title="CLI reference" href="/docs/reference-cli">
+    The full `integration` command surface.
+  </Card>
+</CardGroup>
