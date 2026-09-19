@@ -357,7 +357,7 @@ describe('software factory onboarding', () => {
     const { calls, finish } = await runFactory([false, false, false]);
     expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
     expect(calls).not.toContain('human');
-    // done("step_failed") is the honest reason, and as of the 2.0.15 pin the
+    // done("step_failed") is the honest reason, and since the 2.0.15 pin the
     // runtime lowers it (AgentWorkforce/flows#436). Before that it did not: a
     // real run did all 15 steps, opened AgentWorkforce/cloud-e2e-sandbox#25,
     // and then died as FAILED [protocol_error] unsupported_completion — the one
