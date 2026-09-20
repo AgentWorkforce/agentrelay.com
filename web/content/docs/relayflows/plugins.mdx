@@ -1,0 +1,137 @@
+---
+title: 'Plugins'
+description: 'Install a schema-2 flow extension onto a base flow — flows-plugin.json, flows add, flows plugin, and the trust tiers the gallery displays.'
+---
+
+A **flow plugin** is a directory in a public GitHub repository whose `flows-plugin.json` says what it contributes to a base flow. Helper plugins (`kind` absent or `"helper"`) still install from npm as `@flows/helper-*` and extend `Ctx` with verbs; that v1 path is unchanged. Schema 2 adds a second kind on the same file:
+
+```json
+{ "schema": 2, "kind": "flow-extension" }
+```
+
+The entry default-exports `flow()` and declares handlers, hooks, triggers, permissions, compat, and the same mandatory `preflight`. Browse the vendored catalog on the [plugin gallery](/flows/plugins). Each card's **Install plugin** badge opens Cloud with the base flow and the plugin source:
+
+```text
+/cloud/flows/deploy?flow=<base url>&plugin=<plugin url>
+```
+
+`plugin` may repeat. The badge helper appends each one so a second plugin does not overwrite the first.
+
+<BannerLink href="/flows/plugins" icon="rocket">
+  See the plugin gallery — Babysitter on Software Garden, with the install badge.
+</BannerLink>
+
+## `flows-plugin.json` schema 2
+
+`kind` absent or `"helper"` keeps today's v1 semantics byte-for-byte. `"schema": 2, "kind": "flow-extension"` is additive: it requires `entry`, `compat`, and `source` (filled by `flows add`); it forbids `verbs` (a flow extension that also wants verbs ships a helper plugin beside it). Unknown top-level keys are refused (`plugin_manifest_invalid`). `preflight` is mandatory.
+
+Worked example — Babysitter on Software Garden:
+
+```json
+{
+  "schema": 2,
+  "kind": "flow-extension",
+  "name": "babysitter",
+  "version": "0.1.0",
+  "description": "Live-state PR babysitter: parallel review lenses, deterministic reconciliation, exact-head merge gate.",
+  "compat": {
+    "surface": "^2.0.22",
+    "sdk": "^2.0.22",
+    "base": [{ "name": "software-factory", "version": "^2.0.0" }]
+  },
+  "entry": "babysitter.flow.ts",
+  "extends": { "handlers": true, "hooks": ["merge-gate"], "verbs": [], "gates": [] },
+  "triggers": [
+    { "provider": "github", "event": "pull_request", "actions": ["opened", "synchronize", "reopened", "ready_for_review"] },
+    { "provider": "github", "event": "pull_request_review", "actions": ["submitted"] },
+    { "provider": "github", "event": "check_run", "actions": ["completed"] },
+    { "provider": "github", "event": "issue_comment", "actions": ["created"] }
+  ],
+  "permissions": {
+    "integrations": ["github"],
+    "harnesses": ["claude"],
+    "mcp": [],
+    "writes": ["github:pull_request:comment"],
+    "budget": { "dollars": 8, "wallclock": "45m" }
+  },
+  "preflight": { "credentials": [], "servers": ["https://api.github.com"] }
+}
+```
+
+Rules that matter at review time:
+
+- `name` is kebab-case (`^[a-z0-9]+(-[a-z0-9]+)*$`).
+- `compat.surface` / `compat.sdk` are semver ranges checked against the pinned runtime. Mismatch is `plugin_incompatible`, never a warning.
+- `compat.base[]` names the base `flow()` and a version range. A base without `version` matches only `"*"`.
+- `permissions.writes` is a **declaration for review**, labelled UNENFORCED until gate 8 (#442) turns it into scope enforcement. The honest statement until then: the plugin can do anything the deployment can.
+- Manifest triggers are validated against the surface registry `providerEventTypes`. An event the registry cannot route is `plugin_event_unroutable`.
+
+<Warning>
+  GitHub `pull_request.ready_for_review`, `pull_request.labeled`, and `pull_request.unlabeled` are not in the surface registry yet. A Babysitter manifest that declares them is refused `plugin_event_unroutable` until the relayfile adapter catalog grows. The gallery states this fail-closed; it does not paper over it.
+</Warning>
+
+## `flows add`
+
+Input forms accepted (ref may be a tag, branch, or sha **at input only**):
+
+```text
+flows add github:<owner>/<repo>@<ref>#<path>
+flows add https://github.com/<owner>/<repo>/tree/<ref>/<path>
+flows add <owner>/<repo>@<ref>#<path>
+flows add <helper-name|@flows/helper-name>
+```
+
+The GitHub path is public, unauthenticated, https only. Private repositories are out of scope and answer 404 (`plugin_source_unresolved`). Resolution:
+
+1. Ref → 40-hex sha.
+2. Tree at that commit, refusing symlinks, submodules, traversal, files over 256 KB, or a plugin over 2 MB.
+3. Content digest = sha256 of the canonical `[{bytes,path,sha256}]` payload (the same routine sealed bundles use).
+4. Bytes land at `.flows/plugins/<name>@sha256:<digest>/`, never in `node_modules`.
+5. `flows.json.plugins` records the canonical `github:<owner>/<repo>@<sha>#<path>` — a branch or tag is never persisted.
+6. `flows.lock.json` (version 2) records name, version, source, digest, manifest hash, and declaration order. That order is composition order.
+
+A later re-fetch that yields a different digest for the same sha is `plugin_source_drift`.
+
+## `flows plugin`
+
+```text
+flows plugin list [--json]
+flows plugin verify [--json] [--offline]
+flows plugin remove [--json] <name>
+flows plugin update [--json] [--yes] [--to <ref>] [<name>]
+```
+
+- **list** reads `flows.lock.json`.
+- **verify** re-hashes the store against the lock and, unless `--offline`, re-fetches the pinned commit. Drift is exit 2.
+- **remove** drops the name from `flows.json.plugins` and the lock (order is rebuilt) and deletes the store directory only if nothing else references it.
+- **update** re-resolves, shows the permissions / events / budget diff, and requires `--yes` (refuse otherwise, exit 2).
+
+`flows check` composes base + plugins, runs plugin preflight, compat, and event routability, and prints one `EXTENSION` line per composed extension. `flows deploy … [--plugin <github ref>]…` is send-only: it does not rewrite the working tree's `flows.json`.
+
+## Trust tiers
+
+The gallery and the deploy wizard display a tier. **The label is never used to skip a check.**
+
+| Tier | How it is assigned |
+| --- | --- |
+| **first-party** | `AgentWorkforce/*` at a sha reachable from `main` |
+| **verified** | bundle `identity.json` keyid matches a publisher key registered in Cloud |
+| **community** | anything else |
+
+Babysitter in catalog v1 is **community**: the owner is AgentWorkforce, but the pinned sha is not reachable from `main` until the babysitter branch merges. That is the honest label, not a downgrade of the code.
+
+<Note>
+  `permissions.writes` stays a reviewed declaration labelled UNENFORCED until gate 8. Displaying a first-party or verified badge does not enforce write scope, skip the digest, or route an event the registry does not carry.
+</Note>
+
+## Install badge
+
+`flowPluginBadgeMarkdown()` renders the README form. `plugin` is appended so repeats survive:
+
+```markdown
+[![Install plugin](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Fblob%2Fmain%2Fexamples%2Fsoftware-factory%2Fsoftware-factory.flow.ts&plugin=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Ftree%2F05c3dff138883322e80cb793b1f5a097ad510572%2Fexamples%2Fbabysitter)
+```
+
+The first plugin in the vendored catalog is Babysitter. Its base flow URL is Software Garden (`software-factory`); its plugin URL is the tree at the pinned sha. The [plugin gallery](/flows/plugins) shows the live badge.
+
+The catalog itself is versioned JSON, `{version:1, plugins:[{name, description, source:{owner,repo,path}, ref, digest, compat, tier, base}]}`. Any public repo with a `flows-plugin.json` is installable by URL; the catalog is a curated index, not a gate.
