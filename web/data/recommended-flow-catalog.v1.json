@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "catalogVersion": 1,
+  "flows": [
+    {
+      "id": "software-factory",
+      "version": 1,
+      "name": "Software Garden",
+      "summary": "Turn GitHub issues into reviewed, tested pull requests.",
+      "description": "Implement a ticket, run the repository checks outside the agent, put the change through adversarial review, and open a pull request for a human decision.",
+      "defaultLabel": "Software Garden",
+      "supportedRepositoryHosts": ["github"],
+      "defaultTrigger": {
+        "provider": "github",
+        "settings": {}
+      },
+      "inputs": {
+        "required": ["approver"],
+        "defaults": {
+          "agents": ["claude"]
+        },
+        "allowedAgents": ["claude"]
+      },
+      "source": {
+        "kind": "github",
+        "owner": "AgentWorkforce",
+        "repo": "flows",
+        "path": "examples/software-factory/software-factory.flow.ts",
+        "release": "v2.0.22",
+        "ref": "b4dd665eb433bd7f52d1045543aef5f14fb7891e",
+        "url": "https://github.com/AgentWorkforce/flows/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts",
+        "rawUrl": "https://raw.githubusercontent.com/AgentWorkforce/flows/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts",
+        "mediaType": "text/typescript",
+        "sha256": "41c2137179455881a0fcf568006d2b41e24386ba1cf7dc2c6051871b6f744368"
+      }
+    }
+  ]
+}
