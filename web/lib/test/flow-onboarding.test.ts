@@ -113,7 +113,7 @@ describe('software factory onboarding', () => {
     expect(readFactoryDraft(JSON.stringify(draft))?.agents).toEqual(['windsurf', 'gemini']);
   });
 
-  it.each(['cursor', 'opencode'] as const)('uses %s throughout a workflow without falling back to Claude', async agent => {
+  it.each(['grok', 'opencode'] as const)('uses %s throughout a workflow without falling back to Claude', async agent => {
     const draft = { ...completed, agents: [agent] };
     expect(primaryAgent(draft)).toBe(agent);
     expect(factorySource(draft)).toContain(`const builder = "${agent}"`);
@@ -125,14 +125,14 @@ describe('software factory onboarding', () => {
     expect(calls.some(call => call.endsWith(':claude'))).toBe(false);
   });
 
-  it('assigns Cursor and OpenCode distinct prototype and review roles', async () => {
-    const draft: FactoryDraft = { ...completed, agents: ['cursor', 'opencode'], workflow: 'prototype' };
+  it('assigns Grok and OpenCode distinct prototype and review roles', async () => {
+    const draft: FactoryDraft = { ...completed, agents: ['grok', 'opencode'], workflow: 'prototype' };
     const { calls } = await runFactory([true], true, matchingIssue, draft);
-    expect(calls).toContain('prototype-1:cursor');
+    expect(calls).toContain('prototype-1:grok');
     expect(calls).toContain('prototype-2:opencode');
-    expect(calls).toContain('prototype-3:cursor');
+    expect(calls).toContain('prototype-3:grok');
     expect(calls).toContain('comparator:opencode');
-    expect(calls).toContain('implementer:cursor');
+    expect(calls).toContain('implementer:grok');
   });
 
   it('restores incomplete drafts to the first unanswered question', () => {
