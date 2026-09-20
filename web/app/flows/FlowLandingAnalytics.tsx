@@ -18,7 +18,7 @@ export function FlowLandingAnalytics() {
       const link = (event.target as Element).closest?.('a[href]');
       if (!(link instanceof HTMLAnchorElement)) return;
       const url = new URL(link.href);
-      if (url.origin !== window.location.origin || url.pathname !== '/flows/onboarding') return;
+      if (!url.pathname.endsWith('/api/auth/google/start') || url.searchParams.get('source') !== 'flows') return;
       const placement = url.searchParams.get('utm_content');
       capture('flows_onboarding_entry_clicked', { placement: ['hero', 'nav', 'mobile_nav'].includes(placement ?? '') ? placement : 'other' });
     };

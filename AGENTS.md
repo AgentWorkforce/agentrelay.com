@@ -42,7 +42,7 @@ These rules are repository law for every agent session in this checkout.
 ## Working discipline
 
 - For paired local Flows onboarding, Google sign-in, and dashboard tests, use
-  `npm run dev:flows` from the sibling `../cloud` repo root. Cloud owns the
+  `npm run dev:onboarding` from the sibling `../cloud` repo root. Cloud owns the
   paired launcher; read `../cloud/README.md`'s Local Setup section first. Do not start
   the two Next apps separately or use `dev:teams` for the Flows journey. Use
   the printed local URL exactly. Identify occupied ports and their owning
