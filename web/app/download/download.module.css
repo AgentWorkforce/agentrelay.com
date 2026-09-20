@@ -1,0 +1,20 @@
+.page { min-height: 100dvh; background: var(--bg); color: var(--fg); }
+.main { max-width: 980px; margin: 0 auto; padding: 150px 32px 100px; }
+.eyebrow { margin: 0 0 24px; font-size: 12px; font-weight: 600; letter-spacing: .12em; color: var(--fg-muted); }
+.main h1 { font-size: clamp(40px, 6vw, 68px); font-weight: 500; line-height: 1.08; letter-spacing: -.04em; margin: 0; }
+.main h1 em { color: var(--primary); font-weight: 400; }
+.description { font-size: 18px; line-height: 1.6; color: var(--fg-muted); margin: 24px 0 36px; }
+.downloads { display: flex; flex-wrap: wrap; gap: 20px; }
+.option { display: flex; flex-direction: column; gap: 10px; }
+.option > span { color: var(--fg-muted); font-size: 12px; }
+.download { min-height: 48px; gap: 8px; cursor: pointer; }
+.download:focus-visible, .releaseNotes:focus-visible { outline: 2px solid var(--primary); outline-offset: 5px; }
+.requirements { margin: 32px 0 8px; font-size: 13px; color: var(--fg-muted); }
+.install { margin: 0; font-size: 14px; line-height: 1.6; color: var(--fg-muted); }
+.releaseNotes { display: inline-flex; align-items: center; gap: 6px; margin-top: 28px; padding: 8px 0; font-size: 14px; color: var(--fg); text-decoration: underline; text-underline-offset: 4px; }
+.releaseNotes:hover { color: var(--primary); }
+@media (max-width: 600px) {
+  .main { padding: 120px 24px 64px; }
+  .downloads { flex-direction: column; }
+  .download { justify-content: center; width: 100%; }
+}
