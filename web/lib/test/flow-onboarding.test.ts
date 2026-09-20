@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
 
-const matchingIssue = { source: 'github', title: 'Fix login', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app' };
+const matchingIssue = { source: 'github', title: '  Fix   login  ', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 
 const completed: FactoryDraft = { version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready, bug' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'traditional', step: 3 };
 
@@ -41,6 +41,7 @@ async function runFactory(clean: boolean[], _approved = true, issue = matchingIs
         if (command === FLOW_CHECK_RUN_COMMAND) return checks[checkIndex++] ?? 'pass';
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
+        if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
         return command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : '';
       },
       human: async () => { throw new Error('Interactive human approval is unsupported'); },
@@ -220,6 +221,19 @@ describe('software factory onboarding', () => {
     // still says why it stopped, so nothing reads as work that landed.
     expect(empty.finish).toBe('needs_human');
     expect(withoutComments(source)).not.toContain('f.done("canceled")');
+  });
+
+  it('refuses placeholder titles and missing GitHub identifiers before agents, push, or PR creation', async () => {
+    for (const issue of [
+      { ...matchingIssue, title: 'Software factory change' },
+      { ...matchingIssue, identifier: '' },
+      { ...matchingIssue, identifier: '507' },
+    ]) {
+      const { calls, finish, errors } = await runFactory([true], true, issue);
+      expect(calls).toEqual([]);
+      expect(finish).toBe('needs_human');
+      expect(errors.join('\n')).toContain('No branch was pushed and no pull request was opened');
+    }
   });
 
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
@@ -448,7 +462,12 @@ describe('software factory onboarding', () => {
       expect(calls.filter(call => call.startsWith('check-repair'))).toEqual([]);
       expect(calls.some(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe(false);
       expect(reportCall(calls)).toMatch(/^check=pass; baseline=; /);
-      expect(createCall(calls)).toBe(FLOW_OPEN_CHANGE_COMMAND + ' --title "Software factory change" --body-file .relayflow/pr-body.md');
+      const prepare = calls.find(call => call.endsWith(FLOW_PREPARE_CHANGE_METADATA_COMMAND)) ?? '';
+      const validate = calls.find(call => call.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) ?? '';
+      expect(prepare).toContain("reference='Fixes #507'");
+      expect(validate).toContain("identifier='#507'");
+      expect(calls.indexOf(validate)).toBeLessThan(calls.indexOf('git push --set-upstream origin HEAD'));
+      expect(createCall(calls)).toBe(FLOW_OPEN_CHANGE_COMMAND + " --title 'Fix login' --body-file .relayflow/pr-body.md");
       expect(finish).toBe('needs_human');
     });
 

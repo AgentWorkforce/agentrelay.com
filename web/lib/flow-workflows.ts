@@ -326,6 +326,35 @@ export const FLOW_OPEN_CHANGE_COMMAND =
   'open_change() { if command -v relayflow-open-change >/dev/null 2>&1; then relayflow-open-change "$@"; else gh pr create "$@"; fi; }; open_change';
 
 /**
+ * Adds the deterministic provider reference after the generated check report.
+ * The reference is supplied through a shell-quoted variable by the generated
+ * flow; grep matches a complete, fixed line so an agent-written matching line
+ * is retained rather than duplicated.
+ */
+export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
+  'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body; exit 0; fi',
+  'if [ -n "$reference" ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi',
+  'echo prepared',
+].join('; ');
+
+/**
+ * Final fail-closed contract immediately before a branch is pushed or a
+ * change request is opened. It deliberately exits zero with one verdict: an
+ * invalid verdict is handled by the flow instead of being retried as a flaky
+ * command. GitHub inputs must have exactly one normalized closing line.
+ */
+export const FLOW_VALIDATE_CHANGE_METADATA_COMMAND = [
+  'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body',
+  'elif [ -z "$title" ]; then echo empty-title',
+  'elif [ "${#title}" -gt 240 ]; then echo title-too-long',
+  'elif [ "$(printf %s "$title" | tr "[:upper:]" "[:lower:]")" = "software factory change" ] || [ "$(printf %s "$title" | tr "[:upper:]" "[:lower:]")" = "replace with your ticket title" ]; then echo placeholder-title',
+  'elif [ "$source" = github ] && ! printf "%s\\n" "$identifier" | grep -Eq "^#[1-9][0-9]*$"; then echo malformed-github-identifier',
+  'elif [ "$source" = github ]; then expected="Fixes $identifier"; count=$(grep -xcF "$expected" .relayflow/pr-body.md || true); if [ "$count" -eq 0 ]; then echo missing-github-closing-reference; elif [ "$count" -ne 1 ]; then echo duplicate-github-closing-reference; else echo valid; fi',
+  'else echo valid',
+  'fi',
+].join('; ');
+
+/**
  * Decides whether there is anything to publish, before the branch is pushed and
  * before `gh pr create` runs.
  *
@@ -411,7 +440,35 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     return `cli: ${cli},${value.model ? `\n    model: ${JSON.stringify(value.model)},` : ''}\n    task: task + "\\n" + ${JSON.stringify(value.prompt)}${context},`;
   };
   const prototypeConfigs = (['prototype-1', 'prototype-2', 'prototype-3'] as const).map(config);
-  const sections = [{ id: 'task', code: `  const task = issue.title + "\\n" + issue.body + "\\n" +
+  const sections = [{ id: 'task', code: `  const normalizedTitle = issue.title.trim().replace(/\\s+/g, " ");
+  // Bound by Unicode code points so a truncated title never ends in half of a
+  // surrogate pair. The final shell validation independently enforces the cap.
+  const changeTitle = Array.from(normalizedTitle).slice(0, 240).join("").trim();
+  const placeholderTitle = ["software factory change", "replace with your ticket title"]
+    .includes(changeTitle.toLowerCase());
+  const issueSource = issue.source.trim().toLowerCase();
+  const issueIdentifier = issue.identifier?.trim() ?? "";
+  const issueUrl = issue.url?.trim() ?? "";
+  if (!changeTitle || placeholderTitle) {
+    console.error("Stopped: the pull-request title is empty or still a placeholder. No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
+  if (issueSource === "github" && !/^#[1-9]\\d*$/.test(issueIdentifier)) {
+    console.error("Stopped: a GitHub ticket must carry its normalized identifier in #<number> form. No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
+  // GitHub receives its exact closing keyword. Other providers get a stable
+  // native reference when one is available; Markdown invents no identifier.
+  const changeReference = issueSource === "github"
+    ? "Fixes " + issueIdentifier
+    : issueSource === "gitlab" && /^#[1-9]\\d*$/.test(issueIdentifier)
+      ? "Closes " + issueIdentifier
+      : issueUrl
+        ? "Ticket: " + issueUrl
+        : issueIdentifier
+          ? "Ticket: " + issueIdentifier
+          : "";
+  const task = issue.title + "\\n" + issue.body + "\\n" +
     ${JSON.stringify(instructions.trim() || 'Follow existing patterns. Keep changes focused and add regression tests.')};
   // Files the agents write for each other (summary.md, plans, reviews, and
   // .relayflow/) are never part of the change; keep them out of every commit.
@@ -523,8 +580,8 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     console.error("Stopped: the agents made no commits on this branch, so there is nothing to publish. No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
   }
-  await f.run("git push --set-upstream origin HEAD");
   if (publish !== "publish") {
+    await f.run("git push --set-upstream origin HEAD");
     console.error("Stopped: the branch was pushed, but no summary.md was written, so there is no pull-request body. Open the pull request by hand, or run again.");
     return f.done("needs_human");
   }
@@ -532,10 +589,19 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // draft, with the verdict, the script and the output in its body.
   const checkReport = ${JSON.stringify(FLOW_CHECK_REPORT_COMMAND)};
   await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; " + checkReport);
+  const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
+  await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
+  const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};
+  const metadataVerdict = (await f.run("title=" + shellQuote(changeTitle) + "; source=" + shellQuote(issueSource) + "; identifier=" + shellQuote(issueIdentifier) + "; " + validateChangeMetadata)).trim();
+  if (metadataVerdict !== "valid") {
+    console.error("Stopped: invalid pull-request metadata (" + metadataVerdict + "). No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
+  await f.run("git push --set-upstream origin HEAD");
   // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
-  await f.run(openChange + ' --title "Software factory change" --body-file .relayflow/pr-body.md' + (broken(check) ? " --draft" : ""));
+  await f.run(openChange + " --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md" + (broken(check) ? " --draft" : ""));
   if (broken(check) && (baseline === "pass" || baseline === "new")) {
     // The base commit passes and this branch does not, or the checks are the
     // change's own and fail: the change broke them and repair could not fix

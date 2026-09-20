@@ -106,6 +106,10 @@ export type Issue = {
   title: string;
   body: string;
   labels: string[];${optional}
+  // Normalized by Cloud for every connected ticket provider. A local input
+  // may leave either field blank when that provider has no such metadata.
+  identifier?: string;
+  url?: string;
 };`;
 }
 
