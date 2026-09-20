@@ -93,6 +93,11 @@ export function SiteNav({
             {!hideLinks && (
               <ul className={s.links}>
                 <li>
+                  <Link href="/download" className={s.link}>
+                    Download
+                  </Link>
+                </li>
+                <li>
                   <Link href="/docs" className={s.link}>
                     Docs
                   </Link>
@@ -158,6 +163,11 @@ export function SiteNav({
               }
             }}
           >
+            {!hideLinks && (
+              <Link href="/download" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+                Download
+              </Link>
+            )}
             {!hideLinks && !hideMobileDocsLink && (
               <Link href="/docs" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                 Docs
