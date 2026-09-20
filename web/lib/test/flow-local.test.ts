@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 
 /**
  * What each deterministic step reports, keyed by the command itself: three
@@ -19,10 +19,17 @@ function answer(command: string, { publish = 'publish', clean = 'yes', check = '
   if (command === FLOW_CHECK_RUN_COMMAND) return typeof check === 'function' ? check() : check;
   if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
   if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
+  if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
   return command.startsWith('test -f') ? clean : '';
 }
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'bug, ready' } }, agents: ['claude', 'codex'], workflow: 'traditional', step: 3 };
+const localRunInput = (selected = draft) => {
+  const input = localInput(selected);
+  return 'issue' in input ? { ...input, issue: {
+    ...input.issue, title: 'Fix login', body: 'Users cannot sign in.', identifier: '#507',
+  } } : input;
+};
 
 /**
  * The generated flow's comments name the completion reasons it deliberately
@@ -119,6 +126,7 @@ describe('local flow starter kit', () => {
     // matching what localInput prefills, an unedited ticket reaches an agent.
     expect(issue.body).toBe(PLACEHOLDER_BODY);
     expect(issue.title).toBe(PLACEHOLDER_TITLE);
+    expect((issue as { identifier?: string }).identifier).toBe('');
     expect(script).toContain(JSON.stringify(PLACEHOLDER_BODY));
     // body, not title: a `contains` filter overwrites title at build time.
     const filtered = { ...draft, sourceSettings: { github: { repository: 'acme/app', contains: 'Please fix' } } };
@@ -131,9 +139,10 @@ describe('local flow starter kit', () => {
   it('prompts on a terminal and fails fast without one instead of hanging', () => {
     const script = localKitFiles(draft)[LOCAL_PREFLIGHT];
     expect(script).toContain('createInterface');
-    expect(script).toContain('untouched && !process.stdin.isTTY');
+    expect(script).toContain('(untouched || missingGithubIdentifier) && !process.stdin.isTTY');
     // The non-interactive refusal has to name the file and both fields.
     expect(script).toContain('Set issue.title and issue.body to the real ticket');
+    expect(script).toContain('issue.identifier to #<number>');
     expect(script).toContain('writeFileSync(INPUT, JSON.stringify(input, null, 2)');
   });
 
@@ -242,7 +251,7 @@ describe('local flow starter kit', () => {
       agent: async (name: string) => { calls.push(name); },
       run: async (command: string) => answer(command),
       done: (reason: string) => { finish = reason; },
-    }, localInput(draft));
+    }, localRunInput());
     expect(calls).toEqual(['planner', 'plan-reviewer', 'check-discovery', 'implementer', 'adversary-1', 'adversary-2']);
     expect(finish).toBe('needs_human');
     expect(factorySource(draft)).toContain('return f.done("needs_human")');
@@ -265,7 +274,7 @@ describe('local flow starter kit', () => {
         agent: async () => {},
         run: async (command: string) => { commands.push(command); return answer(command, { publish: 'no-commits' }); },
         done: (reason: string) => { finish = reason; },
-      }, localInput(draft));
+      }, localRunInput());
     } finally { console.error = original; }
     expect(commands.some(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
     expect(commands.some(command => command.startsWith('git push'))).toBe(false);
@@ -282,7 +291,7 @@ describe('local flow starter kit', () => {
         agent: async () => {},
         run: async (command: string) => { commands.push(command); return answer(command); },
         done: (reason: string) => { finish = reason; },
-      }, localInput(selected));
+      }, localRunInput(selected));
       expect(finish).toBe('needs_human');
       const testIndex = commands.indexOf(FLOW_CHECK_RUN_COMMAND);
       const createIndex = commands.findIndex(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND));
@@ -304,7 +313,7 @@ describe('local flow starter kit', () => {
         agent: async () => {},
         run: async (command: string) => { commands.push(command); return answer(command, { check: 'fail', baseline: 'pass' }); },
         done: (reason: string) => { finish = reason; },
-      }, localInput(selected));
+      }, localRunInput(selected));
       const create = commands.find(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND)) ?? '';
       expect(create).toContain('--draft');
       expect(commands).toContain('git push --set-upstream origin HEAD');
@@ -326,7 +335,7 @@ describe('local flow starter kit', () => {
         return answer(command, { clean: 'no', check: () => (++checks >= 2 && fail ? 'fail' : 'pass') });
       },
       done: (reason: string) => { finish = reason; },
-    }, localInput(draft));
+    }, localRunInput());
     const fixer = calls.indexOf('fixer');
     expect(fixer).toBeGreaterThan(0);
     expect(calls[fixer + 1]).toBe(FLOW_CHECK_RUN_COMMAND);
@@ -531,7 +540,7 @@ describe('relocating a kit that was extracted outside a repository', () => {
     }
     if (options.ticket) {
       writeFileSync(join(target, 'flow-input.json'), JSON.stringify({ approver: 'local',
-        issue: { source: 'github', title: 'Fix login', body: 'Users cannot sign in.', labels: ['bug', 'ready'], repository: 'acme/app' } }, null, 2) + '\n');
+        issue: { source: 'github', title: 'Fix login', body: 'Users cannot sign in.', labels: ['bug', 'ready'], repository: 'acme/app', identifier: '#507' } }, null, 2) + '\n');
     }
     return target;
   }

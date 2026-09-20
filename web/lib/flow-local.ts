@@ -84,6 +84,9 @@ export function localInput(draft: FactoryDraft) {
     source, title: contains?.trim() || PLACEHOLDER_TITLE,
     body: PLACEHOLDER_BODY,
     labels: labels?.split(',').map(label => label.trim()).filter(Boolean) ?? [],
+    // Cloud supplies this from provider metadata. A local GitHub run must ask
+    // for the real number rather than manufacture one on the user's behalf.
+    ...(source === 'github' ? { identifier: '' } : {}),
     ...fields,
   } };
 }
@@ -386,43 +389,57 @@ if (existsSync(INPUT)) {
     // body is the sentinel, not title: a "contains" filter overwrites title
     // when the kit is built, so only body is reliably the placeholder.
     const untouched = issue.body === PLACEHOLDER_BODY;
-    if (untouched && !process.stdin.isTTY) {
-      fail(INPUT + " still holds the placeholder ticket.",
-        "Set issue.title and issue.body to the real ticket, then run again.",
+    const missingGithubIdentifier = issue.source === "github" && !/^#[1-9]\\d*$/.test((issue.identifier || "").trim());
+    if ((untouched || missingGithubIdentifier) && !process.stdin.isTTY) {
+      fail(INPUT + " does not contain complete ticket metadata.",
+        "Set issue.title and issue.body to the real ticket and, for GitHub, set issue.identifier to #<number>.",
         "Nothing here can be asked without a terminal, so the run stops rather",
         "than sending a coding agent after " + JSON.stringify(PLACEHOLDER_TITLE) + ".");
     }
-    if (untouched) {
+    if (untouched || missingGithubIdentifier) {
       const { rl, ask } = prompter();
       try {
-        console.log(INPUT + " still holds the placeholder ticket. Fill it in now.");
+        console.log(INPUT + " needs complete ticket metadata. Fill it in now.");
         console.log("");
-        let title = "";
-        while (!title) {
-          const answer = await ask("Ticket title: ");
-          // Ctrl+D or a closed pipe at the prompt ends with the same advice as
-          // the no-terminal path, not an unhandled rejection.
-          if (answer === null) {
-            fail("the ticket was not entered.",
-              "Set issue.title and issue.body in " + INPUT + ", then run again.");
+        if (untouched) {
+          let title = "";
+          while (!title) {
+            const answer = await ask("Ticket title: ");
+            // Ctrl+D or a closed pipe at the prompt ends with the same advice as
+            // the no-terminal path, not an unhandled rejection.
+            if (answer === null) {
+              fail("the ticket was not entered.",
+                "Set issue.title and issue.body in " + INPUT + ", then run again.");
+            }
+            title = answer.trim();
+            if (!title) console.log("  A title is required.");
           }
-          title = answer.trim();
-          if (!title) console.log("  A title is required.");
+          console.log("Description and acceptance criteria. Finish with an empty line.");
+          const lines = [];
+          for (;;) {
+            const line = await ask("> ");
+            // Ctrl+D ends the description, exactly as the empty line does.
+            if (line === null || !line.trim()) break;
+            lines.push(line);
+          }
+          const body = lines.join("\\n").trim();
+          if (!body) {
+            fail("no description was entered.",
+              "Run again and describe the work, or edit " + INPUT + " by hand.");
+          }
+          input.issue = { ...issue, title, body };
         }
-        console.log("Description and acceptance criteria. Finish with an empty line.");
-        const lines = [];
-        for (;;) {
-          const line = await ask("> ");
-          // Ctrl+D ends the description, exactly as the empty line does.
-          if (line === null || !line.trim()) break;
-          lines.push(line);
+        if (missingGithubIdentifier) {
+          let identifier = "";
+          while (!/^#[1-9]\\d*$/.test(identifier)) {
+            const answer = await ask("GitHub issue number (for example #507): ");
+            if (answer === null) fail("the GitHub issue number was not entered.",
+              "Set issue.identifier to #<number> in " + INPUT + ", then run again.");
+            identifier = answer.trim();
+            if (!/^#[1-9]\\d*$/.test(identifier)) console.log("  Use # followed by the issue number.");
+          }
+          input.issue = { ...input.issue, identifier };
         }
-        const body = lines.join("\\n").trim();
-        if (!body) {
-          fail("no description was entered.",
-            "Run again and describe the work, or edit " + INPUT + " by hand.");
-        }
-        input.issue = { ...issue, title, body };
         writeFileSync(INPUT, JSON.stringify(input, null, 2) + "\\n");
         console.log("");
         console.log("Saved to " + INPUT + ".");

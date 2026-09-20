@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
-  FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND,
+  FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND,
 } from '../flow-workflows';
 
 /**
@@ -620,13 +620,13 @@ describe('FLOW_OPEN_CHANGE_COMMAND', () => {
     }
     return { root, env: { PATH: `${bin}:/usr/bin:/bin` } };
   }
-  const args = ' --title "Software factory change" --body-file .relayflow/pr-body.md --draft';
+  const args = ' --title "Fix login" --body-file .relayflow/pr-body.md --draft';
 
   it('uses the hosted helper when Cloud put it on PATH (GitHub or GitLab alike)', () => {
     const { root, env } = fakes(['relayflow-open-change', 'gh']);
     expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(0);
     expect(read(root, 'relayflow-open-change.args').trim().split('\n'))
-      .toEqual(['relayflow-open-change', '--title', 'Software factory change', '--body-file', '.relayflow/pr-body.md', '--draft']);
+      .toEqual(['relayflow-open-change', '--title', 'Fix login', '--body-file', '.relayflow/pr-body.md', '--draft']);
     expect(read(root, 'gh.args')).toBe('');
   });
 
@@ -634,11 +634,58 @@ describe('FLOW_OPEN_CHANGE_COMMAND', () => {
     const { root, env } = fakes(['gh']);
     expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(0);
     expect(read(root, 'gh.args').trim().split('\n'))
-      .toEqual(['gh', 'pr', 'create', '--title', 'Software factory change', '--body-file', '.relayflow/pr-body.md', '--draft']);
+      .toEqual(['gh', 'pr', 'create', '--title', 'Fix login', '--body-file', '.relayflow/pr-body.md', '--draft']);
   });
 
   it('keeps the exit status, so a failed create still fails the step', () => {
     const { root, env } = fakes(['relayflow-open-change'], 3);
     expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(3);
+  });
+});
+
+describe('change metadata contract', () => {
+  const prepare = (root: string, reference: string) =>
+    sh(`reference='${reference}'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
+  const validate = (root: string, title: string, source: string, identifier: string, titleLength = Array.from(title).length) =>
+    sh(`title='${title}'; title_length=${titleLength}; source='${source}'; identifier='${identifier}'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root);
+
+  it('adds exactly one normalized GitHub closing line and accepts the final artifacts', () => {
+    const root = fixture({ '.relayflow/pr-body.md': '## Summary\n\nImplemented login recovery.\n' });
+    expect(prepare(root, 'Fixes #507').token).toBe('prepared');
+    expect(prepare(root, 'Fixes #507').token).toBe('prepared');
+    const lines = read(root, '.relayflow/pr-body.md').split('\n');
+    expect(lines.filter(line => line === 'Fixes #507')).toHaveLength(1);
+    expect(validate(root, 'Fix login', 'github', '#507').token).toBe('valid');
+  });
+
+  it('refuses placeholder titles and a missing or malformed GitHub closing contract', () => {
+    const missing = fixture({ '.relayflow/pr-body.md': '## Summary\n' });
+    expect(validate(missing, 'Software factory change', 'github', '#507').token).toBe('placeholder-title');
+    expect(validate(missing, 'Fix login', 'github', '507').token).toBe('malformed-github-identifier');
+    expect(validate(missing, 'Fix login', 'github', '#507').token).toBe('missing-github-closing-reference');
+
+    const duplicate = fixture({ '.relayflow/pr-body.md': 'Fixes #507\n\nFixes #507\n' });
+    expect(validate(duplicate, 'Fix login', 'github', '#507').token).toBe('duplicate-github-closing-reference');
+  });
+
+  it('enforces the title cap in Unicode code points rather than UTF-8 bytes', () => {
+    const root = fixture({ '.relayflow/pr-body.md': 'Fixes #507\n' });
+    const atLimit = '修'.repeat(240);
+    expect(Buffer.byteLength(atLimit, 'utf8')).toBeGreaterThan(240);
+    expect(validate(root, atLimit, 'github', '#507')).toMatchObject({ code: 0, token: 'valid' });
+    expect(validate(root, 'x'.repeat(241), 'github', '#507').token).toBe('title-too-long');
+    expect(validate(root, 'Fix login', 'github', '#507', Number.NaN).token).toBe('malformed-title-length');
+  });
+
+  it('keeps deterministic non-GitHub references without inventing an issue number', () => {
+    const linked = fixture({ '.relayflow/pr-body.md': '## Summary\n' });
+    prepare(linked, 'Ticket: https://linear.app/acme/issue/ENG-42');
+    expect(read(linked, '.relayflow/pr-body.md')).toContain('Ticket: https://linear.app/acme/issue/ENG-42');
+    expect(validate(linked, 'Fix login', 'linear', 'ENG-42').token).toBe('valid');
+
+    const markdown = fixture({ '.relayflow/pr-body.md': '## Summary\n' });
+    prepare(markdown, '');
+    expect(read(markdown, '.relayflow/pr-body.md')).toBe('## Summary\n');
+    expect(validate(markdown, 'tasks.md', 'markdown', '').token).toBe('valid');
   });
 });

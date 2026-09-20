@@ -3,6 +3,7 @@ import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, readFactoryDraft, cloudConnectionsHref, type FactoryDraft } from '../flow-onboarding';
 import { resolveAgentSettings } from '../flow-agent-settings';
 import { localKitFiles } from '../flow-local';
+import { FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude', 'codex', 'cursor', 'opencode'], workflow: 'prototype', step: 3 };
 async function execute(value: FactoryDraft) {
@@ -15,8 +16,8 @@ async function execute(value: FactoryDraft) {
     // "base=..." is the publish check; without a verdict it understands, the
     // flow correctly stops before the reviews rather than opening a pull
     // request for work that was never committed.
-    run: async (command: string) => command.startsWith('base=') ? 'publish' : command.startsWith('mktemp') ? '/tmp/prototypes' : command.includes('review.clean &&') ? 'yes' : 'base', done: () => {} },
-  { issue: { source: 'github', title: 'Ticket title', body: 'Ticket body', labels: [] } });
+    run: async (command: string) => command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND) ? 'valid' : command.startsWith('base=') ? 'publish' : command.startsWith('mktemp') ? '/tmp/prototypes' : command.includes('review.clean &&') ? 'yes' : 'base', done: () => {} },
+  { issue: { source: 'github', title: 'Ticket title', body: 'Ticket body', labels: [], identifier: '#507' } });
   return calls;
 }
 

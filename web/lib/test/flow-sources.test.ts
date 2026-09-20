@@ -104,10 +104,14 @@ describe('generated issue source filters', () => {
 
   it('declares only the fields the chosen sources can deliver', () => {
     const github = issueSourceCode(['github'], {}, 'cloud');
+    expect(github).toContain('identifier?: string;');
+    expect(github).toContain('url?: string;');
     expect(github).toContain('repository?: string;');
     expect(github).not.toContain('channel?');
     expect(github).not.toContain('mentioned?');
     const slack = issueSourceCode(['slack'], {}, 'cloud');
+    expect(slack).toContain('identifier?: string;');
+    expect(slack).toContain('url?: string;');
     expect(slack).toContain('channel?: string;');
     expect(slack).toContain('mentioned?: boolean;');
     expect(slack).not.toContain('repository?');
