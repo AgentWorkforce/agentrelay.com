@@ -646,8 +646,8 @@ describe('FLOW_OPEN_CHANGE_COMMAND', () => {
 describe('change metadata contract', () => {
   const prepare = (root: string, reference: string) =>
     sh(`reference='${reference}'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
-  const validate = (root: string, title: string, source: string, identifier: string) =>
-    sh(`title='${title}'; source='${source}'; identifier='${identifier}'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root);
+  const validate = (root: string, title: string, source: string, identifier: string, titleLength = Array.from(title).length) =>
+    sh(`title='${title}'; title_length=${titleLength}; source='${source}'; identifier='${identifier}'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root);
 
   it('adds exactly one normalized GitHub closing line and accepts the final artifacts', () => {
     const root = fixture({ '.relayflow/pr-body.md': '## Summary\n\nImplemented login recovery.\n' });
@@ -666,6 +666,15 @@ describe('change metadata contract', () => {
 
     const duplicate = fixture({ '.relayflow/pr-body.md': 'Fixes #507\n\nFixes #507\n' });
     expect(validate(duplicate, 'Fix login', 'github', '#507').token).toBe('duplicate-github-closing-reference');
+  });
+
+  it('enforces the title cap in Unicode code points rather than UTF-8 bytes', () => {
+    const root = fixture({ '.relayflow/pr-body.md': 'Fixes #507\n' });
+    const atLimit = '修'.repeat(240);
+    expect(Buffer.byteLength(atLimit, 'utf8')).toBeGreaterThan(240);
+    expect(validate(root, atLimit, 'github', '#507')).toMatchObject({ code: 0, token: 'valid' });
+    expect(validate(root, 'x'.repeat(241), 'github', '#507').token).toBe('title-too-long');
+    expect(validate(root, 'Fix login', 'github', '#507', Number.NaN).token).toBe('malformed-title-length');
   });
 
   it('keeps deterministic non-GitHub references without inventing an issue number', () => {

@@ -465,6 +465,7 @@ describe('software factory onboarding', () => {
       const prepare = calls.find(call => call.endsWith(FLOW_PREPARE_CHANGE_METADATA_COMMAND)) ?? '';
       const validate = calls.find(call => call.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) ?? '';
       expect(prepare).toContain("reference='Fixes #507'");
+      expect(validate).toContain('title_length=9');
       expect(validate).toContain("identifier='#507'");
       expect(calls.indexOf(validate)).toBeLessThan(calls.indexOf('git push --set-upstream origin HEAD'));
       expect(createCall(calls)).toBe(FLOW_OPEN_CHANGE_COMMAND + " --title 'Fix login' --body-file .relayflow/pr-body.md");

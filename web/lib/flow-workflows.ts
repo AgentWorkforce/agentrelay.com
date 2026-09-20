@@ -346,7 +346,8 @@ export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
 export const FLOW_VALIDATE_CHANGE_METADATA_COMMAND = [
   'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body',
   'elif [ -z "$title" ]; then echo empty-title',
-  'elif [ "${#title}" -gt 240 ]; then echo title-too-long',
+  'elif ! printf "%s\\n" "$title_length" | grep -Eq "^[0-9]+$"; then echo malformed-title-length',
+  'elif [ "$title_length" -gt 240 ]; then echo title-too-long',
   'elif [ "$(printf %s "$title" | tr "[:upper:]" "[:lower:]")" = "software factory change" ] || [ "$(printf %s "$title" | tr "[:upper:]" "[:lower:]")" = "replace with your ticket title" ]; then echo placeholder-title',
   'elif [ "$source" = github ] && ! printf "%s\\n" "$identifier" | grep -Eq "^#[1-9][0-9]*$"; then echo malformed-github-identifier',
   'elif [ "$source" = github ]; then expected="Fixes $identifier"; count=$(grep -xcF "$expected" .relayflow/pr-body.md || true); if [ "$count" -eq 0 ]; then echo missing-github-closing-reference; elif [ "$count" -ne 1 ]; then echo duplicate-github-closing-reference; else echo valid; fi',
@@ -441,9 +442,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   };
   const prototypeConfigs = (['prototype-1', 'prototype-2', 'prototype-3'] as const).map(config);
   const sections = [{ id: 'task', code: `  const normalizedTitle = issue.title.trim().replace(/\\s+/g, " ");
-  // Bound by Unicode code points so a truncated title never ends in half of a
-  // surrogate pair. The final shell validation independently enforces the cap.
+  // Bound and measure by Unicode code points so neither truncation nor the
+  // final shell validation can split or byte-count a multibyte character.
   const changeTitle = Array.from(normalizedTitle).slice(0, 240).join("").trim();
+  const changeTitleLength = Array.from(changeTitle).length;
   const placeholderTitle = ["software factory change", "replace with your ticket title"]
     .includes(changeTitle.toLowerCase());
   const issueSource = issue.source.trim().toLowerCase();
@@ -592,7 +594,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
   await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
   const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};
-  const metadataVerdict = (await f.run("title=" + shellQuote(changeTitle) + "; source=" + shellQuote(issueSource) + "; identifier=" + shellQuote(issueIdentifier) + "; " + validateChangeMetadata)).trim();
+  const metadataVerdict = (await f.run("title=" + shellQuote(changeTitle) + "; title_length=" + changeTitleLength + "; source=" + shellQuote(issueSource) + "; identifier=" + shellQuote(issueIdentifier) + "; " + validateChangeMetadata)).trim();
   if (metadataVerdict !== "valid") {
     console.error("Stopped: invalid pull-request metadata (" + metadataVerdict + "). No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
