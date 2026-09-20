@@ -4,7 +4,7 @@ import { DEFAULT_FACTORY, factorySource, readFactoryDraft, cloudConnectionsHref,
 import { resolveAgentSettings } from '../flow-agent-settings';
 import { localKitFiles } from '../flow-local';
 
-const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude', 'codex', 'grok', 'opencode'], workflow: 'prototype', step: 3 };
+const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude', 'codex', 'grok', 'cursor'], workflow: 'prototype', step: 3 };
 async function execute(value: FactoryDraft) {
   const source = factorySource(value).replace('import { flow } from "@relayflows/surface";', '');
   const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } });
@@ -22,25 +22,25 @@ async function execute(value: FactoryDraft) {
 
 describe('per-step agent settings', () => {
   it('inherits CLI models and adapts assignments to the selected agents', () => {
-    expect(resolveAgentSettings('traditional', 'planner', ['grok', 'opencode'])).toMatchObject({ agent: 'grok', model: '' });
-    expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'opencode'])).toMatchObject({ agent: 'opencode', model: '' });
+    expect(resolveAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: '' });
+    expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: '' });
     expect(resolveAgentSettings('prototype', 'prototype-2', ['codex']).agent).toBe('codex');
     expect(resolveAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
   });
 
-  it('keeps old Cursor settings readable while falling back to a supported agent', () => {
-    const saved = { 'simple:implementer': { agent: 'cursor' as const, model: 'cursor-model', prompt: 'Custom work' } };
+  it('keeps old OpenCode settings readable while falling back to a supported agent', () => {
+    const saved = { 'simple:implementer': { agent: 'opencode' as const, model: 'opencode-model', prompt: 'Custom work' } };
     expect(readFactoryDraft(JSON.stringify({ ...draft, agentSettings: saved })))?.toMatchObject({ agentSettings: saved });
-    expect(resolveAgentSettings('simple', 'implementer', ['cursor'], saved)).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
+    expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
   });
 
   it('runs distinct prototype overrides while preserving ticket and worktree context', async () => {
     const prompt = 'Use "quotes", `ticks`, ${literal}, and a newline.\nWrite prototype-notes.md.';
     const calls = await execute({ ...draft, task: 'Keep changes focused.', agentSettings: {
       'prototype:prototype-1': { agent: 'grok', model: 'model-one', prompt },
-      'prototype:prototype-2': { agent: 'opencode', model: 'model-two' },
+      'prototype:prototype-2': { agent: 'cursor', model: 'model-two' },
       'prototype:comparator': { agent: 'codex', prompt: 'Write comparison.md.' },
-      'prototype:implementer': { agent: 'opencode', model: 'build-model' },
+      'prototype:implementer': { agent: 'cursor', model: 'build-model' },
     } });
     expect(calls['prototype-1']).toMatchObject({ cli: 'grok', model: 'model-one', cwd: '/tmp/prototypes/1' });
     expect(calls['prototype-1'].task).toContain(prompt);
@@ -49,7 +49,7 @@ describe('per-step agent settings', () => {
     expect(calls['prototype-2'].model).toBe('model-two');
     expect(calls['prototype-3'].model).toBeUndefined();
     expect(calls.comparator.task).toContain('/tmp/prototypes/1, /tmp/prototypes/2, /tmp/prototypes/3');
-    expect(calls.implementer).toMatchObject({ cli: 'opencode', model: 'build-model' });
+    expect(calls.implementer).toMatchObject({ cli: 'cursor', model: 'build-model' });
   });
 
   it('applies the shared reviewer settings to both traditional rounds', async () => {

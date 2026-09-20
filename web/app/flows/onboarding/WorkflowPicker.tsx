@@ -7,7 +7,7 @@ import { SiGithub, SiGitlab } from 'react-icons/si';
 import Claude from '@lobehub/icons/es/Claude';
 import Codex from '@lobehub/icons/es/Codex';
 import Grok from '@lobehub/icons/es/Grok';
-import OpenCode from '@lobehub/icons/es/OpenCode';
+import Cursor from '@lobehub/icons/es/Cursor';
 import { agentLabel, canContinue, isCodingAgent, type CodingAgent, type FactoryDraft } from '../../../lib/flow-onboarding';
 import { repositoryHost, sourceLabel, sourceSummary } from '../../../lib/flow-sources';
 import { SourceIcon } from './SourcePicker';
@@ -15,7 +15,7 @@ import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
 function ProcessAgent({ id }: { id: CodingAgent }) {
-  const Icon = { claude: Claude.Color, codex: Codex.Color, opencode: OpenCode, grok: Grok }[id];
+  const Icon = { claude: Claude.Color, codex: Codex.Color, cursor: Cursor, grok: Grok }[id];
   return <span className={s.processAgent} role="img" aria-label={agentLabel(id)} title={agentLabel(id)}><Icon size={21} aria-hidden="true" /></span>;
 }
 
