@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 77,
+  "count": 78,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -70,6 +70,7 @@
     "https://agentrelay.com/docs/workspaces",
     "https://agentrelay.com/enterprise",
     "https://agentrelay.com/file",
+    "https://agentrelay.com/flows/plugins",
     "https://agentrelay.com/openclaw",
     "https://agentrelay.com/openclaw/skill",
     "https://agentrelay.com/pear",
