@@ -1,0 +1,295 @@
+export type AgentSignupProduct = 'teams' | 'flows';
+
+export function isAgentSignupProduct(value: string): value is AgentSignupProduct {
+  return value === 'teams' || value === 'flows';
+}
+
+export function agentSignupPrompt(product: AgentSignupProduct, origin: string): string {
+  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Read and follow ${origin}/signup/agent/${product}. Handle the setup and API calls, open authorization pages for me to approve, and verify that setup completed.`;
+}
+
+/** Bundled strings: these instructions must also work on Workers without a filesystem. */
+export function agentSignupInstructions(product: AgentSignupProduct, site: string, cloud: string): string {
+  const title = product === 'teams' ? 'Teams' : 'Flows';
+  const shared = `# Agent Relay ${title}: agent-driven signup
+
+You are setting up Agent Relay on behalf of the user who gave you this URL.
+Do the API calls, installation, configuration, and verification yourself. Keep
+working across browser approvals; do not hand the user a checklist to execute.
+The user handles Google sign-in, device approval, and any provider or operating
+system consent. Never approve access on their behalf or ask for their password.
+
+Site: ${site}
+Cloud API base: ${cloud}
+All API paths below are relative to that Cloud base, including its /cloud prefix.
+Use this exact environment throughout; never fall back from local development
+to production. The Teams desktop app currently requires macOS 13 or later.
+Flows can be configured from any machine with HTTPS and Node.js 22+ for the CLI.
+
+## 1. Sign up and obtain an API session
+
+Use the existing OAuth device flow. No API key, invitation, dashboard wizard,
+or pre-existing Agent Relay account is required.
+
+POST /api/v1/auth/device/start with Content-Type: application/json:
+
+~~~json
+{"client_name":"My agent — ${title} setup","signup_source":"${product}"}
+~~~
+
+Expect HTTP 201 with device_code, user_code, verification_uri_complete,
+verification_uri, interval (seconds), and expires_in (seconds). Keep device_code
+private. Open verification_uri_complete in the user's browser and show the
+user_code so they can compare it. The page lets them sign in with Google,
+review the requesting device, and Approve or Deny. The signup marker in the
+returned URL creates the right account type; preserve it through sign-in.
+Do not call /auth/device/approve yourself.
+
+For a fresh signup, you can open ${cloud}/api/auth/google/start?next=<encoded-return-path>
+first, where encoded-return-path is the URL-encoded pathname plus query of
+verification_uri_complete. This opens Google immediately and returns to the
+same device approval with its code and signup marker intact.
+
+While the browser is open, wait interval seconds between POSTs to
+/api/v1/auth/device/token with this JSON (substitute the private device_code):
+
+~~~json
+{"grant_type":"urn:ietf:params:oauth:grant-type:device_code","device_code":"<device_code>"}
+~~~
+
+- authorization_pending: keep waiting; respect a returned interval.
+- slow_down: increase the interval by at least 5 seconds.
+- HTTP 429: respect Retry-After and increase the interval.
+- HTTP 5xx or request timeout: retry with backoff, bounded by expires_in.
+- access_denied: stop. expired_token or invalid_grant: explain and start a new
+  grant only if the user still wants to continue. Never poll past expiry.
+
+HTTP 200 returns access_token, refresh_token, access_token_expires_at,
+refresh_token_expires_at, api_url and token_type. Keep credentials in memory
+or a private file (directory 0700, file 0600) outside repositories. Never echo
+tokens, put them in chat or URLs, or dump full authentication responses.
+Use Authorization: Bearer <access_token> for subsequent Cloud requests.
+Reject an api_url pointing at another origin; keep using the Cloud base above.
+Set a 30-second request timeout and check every response status before proceeding.
+
+Before expiry, POST /api/v1/auth/token/refresh with {"refreshToken":"<refresh_token>"}.
+The response uses camelCase: accessToken, refreshToken, accessTokenExpiresAt,
+refreshTokenExpiresAt, apiUrl. Replace both stored tokens atomically. Serialize
+refreshes: the refresh token rotates and must not be shared between machines.
+An invalid/expired refresh requires a new device login, not an endless retry.
+
+GET /api/v1/auth/whoami. Require authenticated: true and read user.id,
+user.email, currentWorkspace.id, and currentOrganization.id. New signups create
+a workspace automatically. Reuse it; do not create duplicate accounts/workspaces.
+If currentWorkspace is missing, or an existing account is in the wrong workspace,
+resolve that with the user before connecting or activating anything. Never
+silently replace an existing connection to another account.
+
+## Credential handoff to the supported CLI
+
+When running a child process, pass these through its environment from your
+private session object (never interpolate their values into logged commands):
+
+~~~text
+CLOUD_API_URL=${cloud}
+CLOUD_API_ACCESS_TOKEN=<access_token>
+CLOUD_API_REFRESH_TOKEN=<refresh_token>
+CLOUD_API_ACCESS_TOKEN_EXPIRES_AT=<access_token_expires_at>
+CLOUD_API_REFRESH_TOKEN_EXPIRES_AT=<refresh_token_expires_at>
+~~~
+
+The official CLI consumes this session. The bundled desktop probe uses
+CLOUD_API_ACCESS_TOKEN to exchange for its own scoped History session, so it
+does not need a second Google login. Refresh the parent session before starting
+a long command; do not concurrently refresh it from parent and child processes.
+Do not overwrite an existing CLI auth file or copy a session to another machine.
+`;
+  return shared + (product === 'teams' ? teamsInstructions(site) : flowsInstructions(site, cloud));
+}
+
+function teamsInstructions(site: string): string {
+  const local = new URL(site).protocol === 'http:';
+  const name = local ? 'Agent Relay Dev' : 'Agent Relay';
+  const download = local
+    ? `${site}/cloud/desktop-downloads/AgentRelay-Dev-macOS-<arch>.dmg`
+    : 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-macOS-<arch>.dmg';
+  return `
+## 2. Download and install the desktop app
+
+Run sw_vers -productVersion and uname -m on the user's Mac. arm64 means Apple
+silicon; x86_64 means the x64 download. If this agent runs in a remote sandbox,
+it must obtain access to the user's Mac before installation; installing into
+the sandbox does not connect their computer. Report an unsupported OS honestly.
+
+Download ${download} and the same URL plus .sha256. Replace <arch> with arm64
+or x64. Use a private temporary directory, follow HTTPS release redirects, and
+fail on HTTP errors. Verify SHA-256 before mounting. For local development,
+only the architecture built by the Cloud launcher is available; a missing DMG
+means the local stack must be built, never that you should download production.
+
+Use hdiutil attach -nobrowse with a private mount point, then ditto the mounted
+${name}.app into ~/Applications/${name}.app (create ~/Applications if needed).
+Detach the image and clean up the temporary download after copying. Check for
+an already installed app in /Applications and ~/Applications first: reuse the
+correct app instead of overwriting a running or newer installation. Preserve
+macOS signing/quarantine checks. If macOS requires consent, let the user approve
+the normal Open / Privacy & Security prompt; do not strip quarantine or disable
+Gatekeeper. A checksum mismatch is a hard stop.
+The desktop app supports https://agentrelay.com and the local development stack;
+other preview hosts require a separately configured app. Do not connect a
+production app to a preview URL.
+
+## 3. Connect the app using its bundled CLI
+
+Set PROBE to the absolute path of the installed app's
+Contents/Helpers/agent-relay-probe. Use the bundled executable, not an unrelated
+binary on PATH. Run it with --help and verify support for cloud install --json
+and --selected-sessions-only. Read installs --json first, keeping local paths
+and account details private. Reuse a matching account/workspace install.
+
+Run this with the private credential environment from step 1. Substitute the
+actual user.id and currentWorkspace.id returned by whoami:
+
+~~~sh
+"$PROBE" cloud install --site-url '${site}' --account '<user.id>' --workspace '<currentWorkspace.id>' --selected-sessions-only --json
+~~~
+
+This exchanges credentials, catalogs local sessions, and starts the background
+collector. Consume the NDJSON events until the process exits successfully;
+do not declare success when the process merely starts. If it requests another
+approval, verify the environment and credential expiry before retrying.
+
+Selected sessions is the default: signing up is not consent to upload all past
+conversations. When the user has selected sessions to share, list the catalog
+and pass their exact session keys to sessions include:
+
+~~~sh
+"$PROBE" sessions list --site-url '${site}' --account '<user.id>' --workspace '<currentWorkspace.id>' --limit 500 --json
+"$PROBE" sessions include --site-url '${site}' --account '<user.id>' --workspace '<currentWorkspace.id>' --session '<selected-key>' --json
+~~~
+
+Repeat --session for multiple keys. Do not choose sessions for the user.
+Only when explicitly requested, use --new-sessions-only or --include-existing
+instead of --selected-sessions-only during installation. Do not start duplicate
+collectors or silently stop an existing uploader for another environment.
+
+## 4. Verify and open the app
+
+~~~sh
+"$PROBE" status --site-url '${site}' --account '<user.id>' --workspace '<currentWorkspace.id>' --json
+~~~
+
+Require running: true, paused: false, and the expected siteUrl, accountId, and
+workspaceId. Check delivery and lastCycle for failures. If sessions were selected,
+poll sessions list with a bounded wait until those sessions report uploaded;
+do not equate a running collector with uploaded content. If none were selected,
+report that the app is connected and no sessions have been shared yet.
+
+Open the installed ${name}.app after setup; it discovers the probe's saved
+connection. To select the exact account/workspace when multiple installs exist,
+open ${local ? 'agentrelay-dev' : 'agentrelay'}://connect?site=<encoded-site>&account=<encoded-user.id>&workspace=<encoded-currentWorkspace.id>
+with the installed app. URL-encode the three values; the link contains identifiers
+only, never tokens. Open ${site}/cloud/dashboard/sessions for the team history. Report
+the installed app, account/workspace, sharing choice, and verification outcome.
+Delete temporary authentication files after use; retain the app-managed scoped
+credentials so background collection continues. The user can pause, select
+sessions, or disconnect in the app.
+`;
+}
+
+function flowsInstructions(site: string, cloud: string): string {
+  return `
+## 2. Choose the flow and repository
+
+Ask only for missing product choices: repository, desired workflow/trigger, and
+approver. Infer them from the user's request and current repository where clear.
+Do not invent a repository or enable automation on an unrelated project.
+
+GET ${site}/api/v1/flows/catalog and select a matching entry from flows.
+GET ${site}/api/v1/flows/catalog/<id> for its full contract. Use the catalog's
+supportedRepositoryHosts, defaultTrigger, inputs.required, inputs.defaults, and
+inputs.allowedAgents. Download source.rawUrl, verify its bytes against
+source.sha256, and use that source text unchanged for a recommended flow.
+The source is TypeScript, not the source URL. Do not guess a template or hash.
+For custom flows use ${site}/docs/relayflows/markdown/build.md and
+${site}/docs/relayflows/markdown/cloud.md for the authoring contract.
+
+## 3. Connect the required tools and coding agents
+
+Use bearer-authenticated POST /api/v1/integrations/connect-link:
+
+~~~json
+{"provider":"github","workspaceId":"<currentWorkspace.id>"}
+~~~
+
+Open the returned connectUrl for the user to approve. Keep token/sessionToken
+private. Connect only the repository and tools the chosen flow requires.
+For GitHub the user must grant repository access. Repeat with the chosen trigger
+provider if different. Reuse existing ready connections rather than relinking.
+Check GET /api/v1/workspaces/<workspaceId>/integrations/<provider>/status
+until ready is true (poll with backoff and a bounded timeout); a returned connect
+link or a closed popup alone does not prove the integration is ready.
+
+Connect the coding agent required by the catalog using the official Relay CLI
+with the private credential environment from step 1 and a PTY:
+
+~~~sh
+npx --yes agent-relay@latest cloud connect anthropic --api-url '${cloud}'
+~~~
+
+Use anthropic for Claude or openai for Codex, according to the selected flow.
+The command drives provider login; open its authorization URL for the user,
+and keep the process alive until it confirms the credential is connected.
+Google approval does not grant GitHub or model-provider access: those services
+may require their own consent. Never fabricate credentials or claim consent
+happened. If already connected, GET /api/v1/cloud-agents lets you inspect the
+account's credential state without reconnecting. Provider or sandbox service
+configuration failures must be fixed before activation can succeed.
+
+## 4. Activate through the same API as web onboarding
+
+POST /api/v1/flows/deploy with Content-Type: application/json and the bearer
+session. Construct the body from the chosen catalog entry and user choices:
+
+~~~json
+{
+  "workspaceId": "<currentWorkspace.id>",
+  "name": "<user's flow name>",
+  "workflow": "<catalog id>",
+  "source": "<verified TypeScript source text>",
+  "handoffId": "<one UUID generated for this setup>",
+  "inputs": {"approver": "<approver email>", "agents": ["<allowed coding agent>"]},
+  "mode": "activate",
+  "repository": {"owner": "<repository owner>", "name": "<repository name>"},
+  "sources": [{"provider": "<trigger provider>", "settings": {}}]
+}
+~~~
+
+Use the catalog's defaultTrigger for sources and apply the user's trigger
+settings. For GitLab set repository.host to gitlab and use the namespace path
+as owner. Reuse the handoffId on retry. Before retrying an ambiguous network
+failure, GET /api/v1/flows/listeners and check whether the flow already exists;
+do not create a new ID/name on every retry. Activation subscribes to matching
+future events and can run work; confirm the intended repository and trigger
+with the user if they have not specified them.
+
+HTTP 201 must contain agentId and status: listening. A draft is not completion.
+For a 409 workspace_mismatch, verify the active workspace; for connection
+preflight failures, fix the indicated connection before retrying. If the user
+wants to save incomplete work, use mode: draft explicitly and report that it
+is inactive. Never mask activation failures by silently falling back to draft.
+
+## 5. Verify
+
+GET /api/v1/flows/listeners/<agentId>. Require listener.status: listening and
+verify its repository and sources match the request. Open
+${site}/cloud/dashboard/workflows/listeners/<agentId> for the user. Report the flow name,
+workspace, repository, trigger, and verified listening state. This proves
+activation; only an actual completed run proves execution. Do not create a
+real issue or launch paid work merely to make the onboarding check turn green.
+Delete temporary authentication files after the work is complete.
+
+The desktop app is optional for Flows. If the user also wants local session
+sharing, follow ${site}/signup/agent/teams using the same signed-in account.
+`;
+}

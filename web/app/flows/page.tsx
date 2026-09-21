@@ -17,6 +17,7 @@ import home from '../landing.module.css';
 import s from './flows.module.css';
 import { FlowExamples } from './FlowExamples';
 import { IntegrationMarquee } from './IntegrationMarquee';
+import { AgentSignup } from '../../components/AgentSignup';
 
 export const metadata: Metadata = {
   title: 'Flows: Script your agents',
@@ -98,6 +99,7 @@ export default function FlowsPage() {
                 Chat with founders
               </a>
             </div>
+            <AgentSignup product="flows" />
           </div>
         </section>
 

@@ -216,6 +216,8 @@ export function getLlmsText(): string {
     '',
     '## Documentation',
     '',
+    formatLink({ title: 'Sign up for Teams with an agent', url: absoluteUrl('/signup/agent/teams'), description: 'Google authorization, desktop installation, session sharing, and verification.' }),
+    formatLink({ title: 'Sign up for Flows with an agent', url: absoluteUrl('/signup/agent/flows'), description: 'Google authorization, repository and provider connections, flow activation, and verification.' }),
     formatLink({
       title: 'Full documentation content',
       url: absoluteUrl('/llms-full.txt'),

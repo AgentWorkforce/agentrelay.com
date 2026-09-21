@@ -1,0 +1,12 @@
+.root { width: min(100%, 520px); margin: 18px auto 0; color: #c3d6e4; text-align: left; }
+.root summary { width: fit-content; margin: 0 auto; cursor: pointer; font-size: 15px; text-underline-offset: 5px; }
+.root summary:hover { color: #fff; text-decoration: underline; }
+.root summary:focus-visible, .actions button:focus-visible, .actions a:focus-visible { outline: 2px solid #9bd0ed; outline-offset: 5px; }
+.root summary span { margin-left: 5px; }
+.panel { margin-top: 16px; padding: 20px; border: 1px solid #426077; border-radius: 12px; background: #102a3d; }
+.panel p { margin: 0 0 14px; font-size: 14px; line-height: 1.65; }
+.panel textarea { box-sizing: border-box; width: 100%; min-height: 145px; padding: 12px; resize: vertical; border: 1px solid #426077; border-radius: 6px; background: #091d2b; color: #e4f0f8; font: 13px/1.7 var(--font-mono), monospace; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 14px; font-size: 13px; }
+.actions button { border: 1px solid #85b8d7; border-radius: 6px; padding: 9px 14px; background: #c1e4f6; color: #102333; cursor: pointer; font: inherit; font-weight: 600; }
+.actions a { color: #c1e4f6; text-underline-offset: 4px; }
+.panel .status { margin: 8px 0 0; min-height: 22px; font-size: 12px; }

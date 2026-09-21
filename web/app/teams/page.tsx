@@ -14,6 +14,7 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { TEAMS_OG_ALT, TEAMS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
+import { AgentSignup } from '../../components/AgentSignup';
 import home from '../landing.module.css';
 import flows from '../flows/flows.module.css';
 import { IntegrationMarquee } from '../flows/IntegrationMarquee';
@@ -68,6 +69,7 @@ export default function TeamsPage() {
                 </a>
                 <p className={s.signupNote}>No credit card required</p>
               </div>
+              <AgentSignup product="teams" />
             </div>
           </section>
 
