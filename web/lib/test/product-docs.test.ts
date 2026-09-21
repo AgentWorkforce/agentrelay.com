@@ -5,6 +5,7 @@ import {
   fileSection,
   getProductDocSlugs,
   getProductSearchIndex,
+  relayflowsSection,
 } from '../product-docs';
 
 describe('Factory product docs', () => {
@@ -66,5 +67,14 @@ describe('Relayfile product docs', () => {
     expect(searchEntry).toMatchObject({ title: 'Review bot agent brief' });
     expect(searchEntry?.headings).toContain('The run protocol');
     expect(searchEntry?.headings).toContain('Publish the review');
+  });
+});
+
+describe('Flows product docs', () => {
+  it('lists plugins next to recommended flows', () => {
+    const goingFurther = relayflowsSection.nav.find((group) => group.title === 'Going further');
+
+    expect(goingFurther?.items).toContainEqual({ title: 'Plugins', slug: 'plugins' });
+    expect(getProductDocSlugs(relayflowsSection)).toContain('plugins');
   });
 });
