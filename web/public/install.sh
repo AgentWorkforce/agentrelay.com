@@ -53,7 +53,7 @@ else fail "A SHA-256 tool (sha256sum or shasum) is required."; fi
 probe_tmp=$(mktemp -d "${TMPDIR:-/tmp}/agent-relay-probe.XXXXXX")
 trap 'rm -rf "$probe_tmp"' EXIT HUP INT TERM
 download="$SITE_URL/downloads/agent-relay-probe/$platform/agent-relay-probe"
-printf '%s\n' "Downloading Agent Relay Probe for $platform…"
+printf '%s\n' "Downloading Agent Relay Probe for ${platform}…"
 curl --proto "$CURL_PROTOCOL" --max-time 120 --max-filesize 104857600 -fsS "$download" -o "$probe_tmp/agent-relay-probe" || fail "The native probe build is not available on this site for your platform."
 curl --proto "$CURL_PROTOCOL" --max-time 30 --max-filesize 1024 -fsS "$download.sha256" -o "$probe_tmp/checksum" || fail "Could not download the probe checksum."
 expected=$(awk 'NR == 1 { print $1 }' "$probe_tmp/checksum")
