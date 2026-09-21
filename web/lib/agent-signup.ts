@@ -4,10 +4,10 @@ export function isAgentSignupProduct(value: string): value is AgentSignupProduct
   return value === 'teams' || value === 'flows';
 }
 
-export const agentSignupInteractionPolicy = 'Do NOT use computer use, browser automation, screenshots, DOM inspection, or mouse/keyboard control. Fetch the guide over HTTP and perform setup through its documented APIs. Use terminal commands only for HTTP requests and the documented installation/CLI operations. The user owns the screen: open approval URLs with the OS URL opener (or give the user the link), then wait and poll the documented API. Never operate the approval page or the desktop app UI.';
+const agentSignupInteractionPolicy = 'Do NOT use computer use, browser automation, screenshots, DOM inspection, or mouse/keyboard control. Fetch the guide over HTTP and perform setup through its documented APIs. Use terminal commands only for HTTP requests and the documented installation/CLI operations. The user owns the screen: open approval URLs with the OS URL opener (or give the user the link), then wait and poll the documented API. Never operate the approval page or the desktop app UI.';
 
 export function agentSignupPrompt(product: AgentSignupProduct, origin: string): string {
-  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Fetch and follow ${origin}/signup/agent/${product}. ${agentSignupInteractionPolicy} Use the exact Cloud API base, endpoints, request bodies, and polling rules in the guide. Verify completion through API/CLI responses.`;
+  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Fetch and follow ${origin}/signup/agent/${product} over HTTP for the exact APIs and setup steps. Do NOT use computer use, browser automation, or screen control. Use the documented APIs and CLI commands; leave sign-in and approval pages to me. For desktop installation, download the prebuilt binary from the guide—never clone, build, or compile the app.`;
 }
 
 /** Bundled strings: these instructions must also work on Workers without a filesystem. */
@@ -27,6 +27,9 @@ code). If no opener is available, give the link to the user. Do not launch a
 browser-control tool. Verify approval by polling the API, never by inspecting
 the browser. If an operation has no documented API or CLI, report the blocker
 and ask the user for that specific action; never fall back to computer use.
+For desktop installation, download the prebuilt binary from this guide. Never
+clone the desktop repository, install build dependencies, run a build, compile
+from source, or generate a DMG. A missing binary is a blocker, not a build task.
 The user handles Google sign-in, device approval, and any provider or operating
 system consent. Never approve access on their behalf or ask for their password.
 
@@ -191,7 +194,7 @@ function teamsInstructions(site: string): string {
     ? `${site}/cloud/desktop-downloads/AgentRelay-Dev-macOS-<arch>.dmg`
     : 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-macOS-<arch>.dmg';
   return `
-## 2. Download and install the desktop app
+## 2. Download and install the prebuilt desktop binary
 
 Run sw_vers -productVersion and uname -m on the user's Mac. arm64 means Apple
 silicon; x86_64 means the x64 download. If this agent runs in a remote sandbox,
@@ -201,8 +204,10 @@ the sandbox does not connect their computer. Report an unsupported OS honestly.
 Download ${download} and the same URL plus .sha256. Replace <arch> with arm64
 or x64. Use a private temporary directory, follow HTTPS release redirects, and
 fail on HTTP errors. Verify SHA-256 before mounting. For local development,
-only the architecture built by the Cloud launcher is available; a missing DMG
-means the local stack must be built, never that you should download production.
+use only the prebuilt DMG already served by the local stack. If the DMG or its
+checksum is unavailable for this architecture, stop and report the missing
+prebuilt artifact. Do not build it, run the development launcher to produce it,
+or switch to a production download.
 
 Use hdiutil attach -nobrowse with a private mount point, then ditto the mounted
 ${name}.app into ~/Applications/${name}.app (create ~/Applications if needed).

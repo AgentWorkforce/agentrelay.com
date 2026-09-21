@@ -1,4 +1,4 @@
-import { agentSignupInteractionPolicy, type AgentSignupProduct } from './agent-signup';
+import { agentSignupPrompt, type AgentSignupProduct } from './agent-signup';
 
 export type SignupProgress = {
   id: string; product: AgentSignupProduct; step: number;
@@ -17,8 +17,7 @@ export function isSignupProgress(value: unknown): value is SignupProgress {
 }
 
 export function trackedSignupPrompt(product: AgentSignupProduct, origin: string, endpoint: string, session: Pick<SignupSession, 'id' | 'writeToken'>) {
-  const cloud = endpoint.replace(/\/api\/v1\/signup\/agent\/sessions\/?$/, '');
-  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Fetch ${origin}/signup/agent/${product} over HTTP and follow its full API runbook. Report your progress so I can watch the signup page.\n\n${agentSignupInteractionPolicy}\n\nCloud API base: ${cloud}\nStart sign-in: POST ${cloud}/api/v1/auth/device/start with {"client_name":"My agent — ${product === 'teams' ? 'Teams' : 'Flows'} setup","signup_source":"${product}"}. Open the returned verification_uri_complete for me to approve, then poll POST ${cloud}/api/v1/auth/device/token at its returned interval, using the guide’s request body. Verify identity with GET ${cloud}/api/v1/auth/whoami. Follow the guide for the remaining product-specific endpoints and CLI commands.\n\nProgress session: ${session.id}\nProgress API: ${endpoint}/${session.id}\nProgress token: ${session.writeToken}\n\nGET the Progress API for its revision; PATCH it with Authorization: Bearer <Progress token> and JSON {"step":1,"state":"working","revision":<current revision>}. Follow the guide’s steps and waiting/complete states. The Progress token is only for progress updates; use the device flow’s access_token for account APIs. Keep tokens private. Verify setup from API/CLI responses, without operating my screen.`;
+  return `${agentSignupPrompt(product, origin)}\n\nReport real progress using the guide’s protocol so I can watch the signup page.\n\nProgress session: ${session.id}\nProgress API: ${endpoint}/${session.id}\nProgress token: ${session.writeToken}\n\nKeep this token private; it authorizes progress updates only.`;
 }
 
 export const signupSteps = {

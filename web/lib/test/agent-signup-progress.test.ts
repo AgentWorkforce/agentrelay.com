@@ -16,12 +16,10 @@ describe('signup progress handoff', () => {
     expect(prompt).toContain(`http://localhost:3100/signup/agent/${product}`);
     expect(prompt).toContain(`Progress session: ${id}`);
     expect(prompt).toContain('Do NOT use computer use, browser automation');
-    expect(prompt).toContain('without operating my screen');
-    expect(prompt).toContain('Cloud API base: http://localhost:3100/cloud');
-    expect(prompt).toContain('POST http://localhost:3100/cloud/api/v1/auth/device/start');
-    expect(prompt).toContain('POST http://localhost:3100/cloud/api/v1/auth/device/token');
-    expect(prompt).toContain('GET http://localhost:3100/cloud/api/v1/auth/whoami');
-    expect(prompt).toContain(`"signup_source":"${product}"`);
+    expect(prompt).toContain('download the prebuilt binary');
+    expect(prompt).toContain('never clone, build, or compile the app');
+    expect(prompt).toContain(`Progress API: http://localhost:3100/cloud/api/v1/signup/agent/sessions/${id}`);
+    expect(prompt).not.toContain('/api/v1/auth/device/start');
     expect(prompt).toContain(`Progress token: ${token}`);
     expect(prompt.match(/https?:\/\/\S+/g)?.every(url => !url.includes(token))).toBe(true);
     const guide = agentSignupInstructions(product, 'http://localhost:3100', 'http://localhost:3100/cloud');
@@ -31,9 +29,12 @@ describe('signup progress handoff', () => {
     expect(guide).toContain('NOT a Cloud access token');
     expect(guide).toContain('Do NOT use computer use, browser automation');
     expect(guide).toContain('Verify approval by polling the API');
+    expect(guide).toContain('A missing binary is a blocker, not a build task.');
     expect(guide).toContain('POST http://localhost:3100/cloud/api/v1/auth/device/start');
     if (product === 'teams') {
       expect(guide).toContain('there is no public HTTP endpoint that installs an app');
+      expect(guide).toContain('Do not build it, run the development launcher to produce it');
+      expect(guide).not.toContain('the local stack must be built');
       expect(guide).toContain("Do not inspect the app's");
       expect(guide).toContain("attachment as unverified and keep progress waiting at step 5");
     } else {
