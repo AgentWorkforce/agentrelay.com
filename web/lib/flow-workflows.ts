@@ -427,6 +427,42 @@ export const FLOW_REVIEW_BLOCKED_COMMAND = [
   'if gh pr comment --body-file review-blocked.md >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi',
 ].join('; ');
 
+/** Upper bound, in bytes, on everything FLOW_REPORT_REVIEW_FINDINGS_COMMAND prints. */
+export const FLOW_REVIEW_FINDINGS_LIMIT = 2000;
+const REVIEW_FINDINGS_BODY_LIMIT = 1700;
+
+/**
+ * Says why a run that ends in `done("step_failed")` on a failed review failed.
+ *
+ * The runtime records that ending as "its own checks did not pass. No step
+ * failed, so there is no step-level evidence to inspect": every step succeeded,
+ * so nothing in the run outcome says what the reviewer found. Cloud run
+ * f92bf832 (AgentWorkforce/cloud#3919) did all 20 steps and ended on exactly
+ * that, while its second reviewer had written "One P2 remains: ...".
+ *
+ * `done()` takes only a reason today. AgentWorkforce/flows#542 proposes
+ * `done("step_failed", { detail })`; once that ships, pass this text as the
+ * detail and drop this step. Until then the findings go to this step's stdout,
+ * which the journal keeps and `flows status` shows for the step.
+ *
+ * review.md is agent-authored, so this prints a bounded excerpt, never the
+ * file: blank lines and control characters removed, cut at
+ * REVIEW_FINDINGS_BODY_LIMIT bytes, and the whole output stays within
+ * FLOW_REVIEW_FINDINGS_LIMIT. Like the commands above it always exits 0.
+ */
+export const FLOW_REPORT_REVIEW_FINDINGS_COMMAND = [
+  'export LC_ALL=C',
+  `findings() { tr -d '\\000-\\010\\013-\\037\\177' < review.md | sed '/^[[:space:]]*$/d'; }`,
+  'size=0',
+  'if [ -s review.md ]; then size=$(findings | wc -c | tr -d " "); fi',
+  'if [ "$size" -eq 0 ]; then echo "relayflow report-review-findings: review.clean absent and review.md missing or empty" && exit 0; fi',
+  'echo "relayflow report-review-findings: review.clean absent; remaining findings from review.md:"',
+  `findings | head -c ${REVIEW_FINDINGS_BODY_LIMIT}`,
+  'echo',
+  `if [ "$size" -gt ${REVIEW_FINDINGS_BODY_LIMIT} ]; then echo "relayflow report-review-findings: cut at ${REVIEW_FINDINGS_BODY_LIMIT} of $size bytes; the full review is in review-blocked.md."; fi`,
+  'exit 0',
+].join('; ');
+
 export function workflowAgents(selected: readonly string[]) {
   const builder = selected.filter(isCodingAgent)[0] ?? 'claude';
   const reviewer = selected.filter(isCodingAgent).find(id => id !== builder) ?? builder;
@@ -627,6 +663,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // found, so the step below still drafts the pull request and posts the
   // findings to it.
   const reviewBlockedCommand = ${JSON.stringify(FLOW_REVIEW_BLOCKED_COMMAND)};
+  const reportReviewFindingsCommand = ${JSON.stringify(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)};
   let clean = false;
   for (let round = 0; round < ${workflow === 'traditional' ? 2 : 1}; round++) {
     await f.run("rm -f review.clean");
@@ -656,9 +693,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Unresolved feedback stops the flow short of approval.
   if (!clean) {
     await f.run(reviewBlockedCommand);
+    // report-review-findings: the run outcome says only that "its own checks
+    // did not pass", so this step prints why (a bounded excerpt of review.md)
+    // where the journal and flows status show it. Move this text into
+    // done("step_failed", { detail }) once AgentWorkforce/flows#542 ships.
+    const reviewFindings = (await f.run(reportReviewFindingsCommand)).trim();
     // Says only what is certain: the step above reports per branch whether it
     // could draft the pull request or comment on it.
-    console.error("The adversarial review did not pass. The findings are in review-blocked.md, and on the pull request if it could be reached. This branch is not approved.");
+    console.error("The adversarial review did not pass. The findings are in review-blocked.md, and on the pull request if it could be reached. This branch is not approved.\\n" + reviewFindings);
     return f.done("step_failed");
   }` });
   sections.push({ id: 'gate', code: `  // Require approving reviews and passing CI checks in GitHub branch rules.

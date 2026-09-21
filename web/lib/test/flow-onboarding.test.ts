@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
 
@@ -42,6 +42,7 @@ async function runFactory(clean: boolean[], _approved = true, issue = matchingIs
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
         if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
+        if (command === FLOW_REPORT_REVIEW_FINDINGS_COMMAND) return 'relayflow report-review-findings: review.clean absent; remaining findings from review.md:\nOne P2 remains.\n';
         return command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : '';
       },
       human: async () => { throw new Error('Interactive human approval is unsupported'); },
@@ -368,7 +369,7 @@ describe('software factory onboarding', () => {
   });
 
   it('marks the pull request and parks, never approves, if all reviews fail', async () => {
-    const { calls, finish } = await runFactory([false, false, false]);
+    const { calls, finish, errors } = await runFactory([false, false, false]);
     expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
     expect(calls).not.toContain('human');
     // done("step_failed") is the honest reason, and since the 2.0.15 pin the
@@ -380,6 +381,14 @@ describe('software factory onboarding', () => {
     expect(finish).toBe('step_failed');
     expect(calls).toContain(FLOW_REVIEW_BLOCKED_COMMAND);
     expect(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND)).toBeGreaterThan(calls.lastIndexOf('adversary-2:codex'));
+    // The run outcome says only "its own checks did not pass", so the findings
+    // are printed by a step of their own just before done("step_failed"), and
+    // repeated in the stop message (AgentWorkforce/flows#542 would carry them
+    // on done() itself).
+    expect(calls.indexOf(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)).toBeGreaterThan(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND));
+    expect(calls.at(-1)).toBe(FLOW_REPORT_REVIEW_FINDINGS_COMMAND);
+    expect(errors.join('\n')).toContain('One P2 remains.');
+    expect(factorySource(completed)).toContain('AgentWorkforce/flows#542');
     expect(withoutComments(factorySource(completed))).toContain('f.done("step_failed")');
     // Named in the generated flow itself, so a reader meets the release that
     // made the honest reason lowerable rather than guessing.
@@ -394,6 +403,7 @@ describe('software factory onboarding', () => {
       // with the same reason, so the difference has to be visible somewhere. It
       // is — a clean run never marks the pull request as unapproved.
       expect(calls).not.toContain(FLOW_REVIEW_BLOCKED_COMMAND);
+      expect(calls).not.toContain(FLOW_REPORT_REVIEW_FINDINGS_COMMAND);
       expect(calls.some(call => call.includes('pr merge'))).toBe(false);
       expect(factorySource({ ...completed, workflow })).not.toContain('f.human(');
       expect(calls).toContain(FLOW_CHECK_RUN_COMMAND);
