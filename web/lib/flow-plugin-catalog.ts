@@ -43,7 +43,7 @@ export const FLOW_PLUGIN_TRUST_TIER_DISCLAIMER =
   'Tiers are displayed only. They never skip digest, compat, or event-routability checks.';
 
 export const SOFTWARE_FACTORY_FLOW_URL =
-  'https://github.com/AgentWorkforce/flows/blob/main/examples/software-factory/software-factory.flow.ts';
+  'https://github.com/AgentWorkforce/flows/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts';
 
 export const BASE_FLOW_URLS: Record<string, string> = {
   'software-factory': SOFTWARE_FACTORY_FLOW_URL,

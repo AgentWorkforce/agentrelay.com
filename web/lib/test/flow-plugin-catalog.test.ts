@@ -74,6 +74,8 @@ describe('flowPluginBadgeMarkdown', () => {
     const url = new URL(href!);
     expect(url.pathname).toBe('/cloud/flows/deploy');
     expect(url.searchParams.get('flow')).toBe(SOFTWARE_FACTORY_FLOW_URL);
+    expect(SOFTWARE_FACTORY_FLOW_URL).toContain('/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/');
+    expect(SOFTWARE_FACTORY_FLOW_URL).not.toContain('/blob/main/');
     expect(url.searchParams.getAll('plugin')).toEqual([pluginA]);
   });
 
