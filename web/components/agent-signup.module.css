@@ -1,106 +1,16 @@
-.root {
-  width: 100%;
-  min-width: 0;
-  margin: 30px auto 0;
-  color: #c3d6e4;
-  text-align: left;
+.button { composes: btn btn-secondary from global; gap: 12px; white-space: nowrap; }
+.icons { position: relative; display: inline-block; width: 24px; height: 24px; flex-shrink: 0; }
+.icons > span { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; animation: agentIcon 16s infinite; }
+.icons > span:nth-child(2) { animation-delay: 4s; }
+.icons > span:nth-child(3) { animation-delay: 8s; }
+.icons > span:nth-child(4) { animation-delay: 12s; }
+.logo { width: 24px; height: 24px; }
+@keyframes agentIcon {
+  0%, 20% { opacity: 1; transform: translateY(0) scale(1); }
+  25%, 95% { opacity: 0; transform: translateY(-4px) scale(.85); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
 }
-
-.agents {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-
-.agent {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 11px 18px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: #c3d6e4;
-  font: inherit;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background 150ms ease, border-color 150ms ease;
-}
-
-.agent:hover { background: #ffffff0a; color: #fff; }
-.agent[aria-pressed='true'] { border-color: #7096b0; background: #a1d2f01c; color: #f3f9fd; }
-.logo { width: 24px; height: 24px; flex-shrink: 0; }
-.root button:focus-visible, .root a:focus-visible, .root textarea:focus-visible { outline: 2px solid #9bd0ed; outline-offset: 4px; }
-
-.panel {
-  padding: 26px;
-  border: 1px solid #36556c;
-  border-radius: 22px;
-  background: #0b2031;
-  box-shadow: 0 12px 32px #03111b1a;
-}
-
-.panel .heading { margin: 0 0 8px; color: #f0f7fc; font-size: 23px; font-weight: 500; line-height: 1.3; }
-.panel .instructions { margin: 0 0 22px; font-size: 15px; line-height: 1.6; }
-.promptRow { display: flex; overflow: hidden; border: 1px solid #395970; border-radius: 14px; background: #19364b; }
-.promptRow:focus-within { overflow: visible; }
-.promptRow textarea {
-  box-sizing: border-box;
-  display: block;
-  width: 100%;
-  min-width: 0;
-  min-height: 156px;
-  field-sizing: content;
-  padding: 20px 22px;
-  resize: vertical;
-  border: 0;
-  border-radius: 14px 0 0 14px;
-  background: transparent;
-  color: #f0f7fc;
-  font: inherit;
-  font-size: 18px;
-  line-height: 1.65;
-}
-.copy {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-width: 118px;
-  padding: 20px;
-  border: 0;
-  border-left: 1px solid #395970;
-  border-radius: 0 14px 14px 0;
-  background: #ffffff04;
-  color: #c1e4f6;
-  font: inherit;
-  font-size: 17px;
-  font-weight: 500;
-  cursor: pointer;
-}
-.copy:hover { background: #a1d2f014; color: #fff; }
-.footer { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 18px; margin-top: 16px; font-size: 12px; line-height: 1.6; }
-.footer .status { margin: 0; }
-.footer a { display: inline-flex; align-items: center; gap: 4px; color: #c1e4f6; text-underline-offset: 4px; }
-
-@media (max-width: 600px) {
-  .root { margin-top: 24px; }
-  .agents { justify-content: flex-start; gap: 8px 4px; margin-bottom: 14px; }
-  .agent { padding: 9px 12px; font-size: 14px; gap: 8px; }
-  .logo { width: 20px; height: 20px; }
-  .panel { padding: 20px 16px; border-radius: 18px; }
-  .panel .heading { font-size: 21px; }
-  .panel .instructions { font-size: 14px; margin-bottom: 18px; }
-  .promptRow { flex-direction: column; }
-  .promptRow textarea { min-height: 245px; padding: 16px; border-radius: 14px 14px 0 0; font-size: 16px; }
-  .copy { min-height: 52px; padding: 12px; border-top: 1px solid #395970; border-left: 0; border-radius: 0 0 14px 14px; }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .agent { transition: none; }
+  .icons > span { animation: none; }
+  .icons > span:first-child { opacity: 1; }
 }

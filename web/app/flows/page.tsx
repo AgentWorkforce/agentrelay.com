@@ -95,11 +95,8 @@ export default function FlowsPage() {
                 Try Free with Cloud
                 <ArrowRight aria-hidden="true" size={17} strokeWidth={2} />
               </a>
-              <a href="/khaliq" className={s.ctaSecondary}>
-                Chat with founders
-              </a>
+              <AgentSignup product="flows" />
             </div>
-            <AgentSignup product="flows" />
           </div>
         </section>
 

@@ -26,6 +26,50 @@ Use this exact environment throughout; never fall back from local development
 to production. The Teams desktop app currently requires macOS 13 or later.
 Flows can be configured from any machine with HTTPS and Node.js 22+ for the CLI.
 
+## Live progress (when the user's prompt includes a progress session)
+
+The user is watching a setup page. Report real milestones using the Progress API
+and Progress token supplied in their prompt. The token authorizes progress only;
+it is NOT a Cloud access token. Never send account tokens, OAuth codes, passwords,
+logs, approval URLs, or personal information to the progress endpoint. Do not put
+the progress token in URLs or output it in your final reply. Use the same site
+and /cloud origin shown above; never forward it to another environment.
+
+GET the supplied Progress API URL to obtain the current revision and product.
+Check that the product matches this guide. Start by PATCHing that URL with
+Authorization: Bearer <Progress token> and Content-Type: application/json:
+
+~~~json
+{"step":1,"state":"working","revision":0}
+~~~
+
+Use the revision returned by the latest GET/PATCH, not the example's literal 0.
+PATCH before each numbered progress step below. A move to the next step marks
+the previous step done; do not skip steps or report success before checking it.
+Set state: waiting when you need the user to approve access or choose an option.
+Set state: working at the same step when you resume, and state: failed if work
+cannot continue. After completing step 5's verification, PATCH step: 5,
+state: complete. Only report complete after the actual checks succeed.
+
+${product === 'teams' ? `Progress steps for Teams:
+1. Sign in: before device authorization (section 1).
+2. Install the app: before download and installation (section 2).
+3. Connect the workspace: before cloud install (section 3).
+4. Choose what to share: before asking for/selecting sessions in section 3.
+   Report waiting while the user chooses. Respect an explicit choice to share none.
+5. Check everything works: before status, upload, and app verification (section 4).` : `Progress steps for Flows correspond to sections 1 through 5 below:
+1. Sign in. 2. Choose the flow/repository. 3. Connect tools.
+4. Activate the flow. 5. Verify the listening state.`}
+
+On HTTP 409, GET current progress and reconcile; never overwrite newer progress
+or regress a step. If a PATCH response is lost, GET before retrying. If a step is
+already complete, verify the actual account/app/flow state before continuing;
+progress reports alone are not proof that setup succeeded. On 429, honor
+Retry-After. Retry transient network/5xx failures with bounded backoff. On 404,
+stop reporting (the session expired or the token is invalid) and tell the user;
+do not recreate or switch their session silently. A progress service outage
+must not roll back working setup or cause duplicate installation/activation.
+
 ## 1. Sign up and obtain an API session
 
 Use the existing OAuth device flow. No API key, invitation, dashboard wizard,

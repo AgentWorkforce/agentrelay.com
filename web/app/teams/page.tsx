@@ -67,9 +67,9 @@ export default function TeamsPage() {
                 <a className={home.ctaPrimary} href={signupHref}>
                   {signupLabel}
                 </a>
+                <AgentSignup product="teams" />
                 <p className={s.signupNote}>No credit card required</p>
               </div>
-              <AgentSignup product="teams" />
             </div>
           </section>
 
