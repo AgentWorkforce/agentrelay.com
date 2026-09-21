@@ -4,8 +4,10 @@ export function isAgentSignupProduct(value: string): value is AgentSignupProduct
   return value === 'teams' || value === 'flows';
 }
 
+export const agentSignupInteractionPolicy = 'Do NOT use computer use, browser automation, screenshots, DOM inspection, or mouse/keyboard control. Fetch the guide over HTTP and perform setup through its documented APIs. Use terminal commands only for HTTP requests and the documented installation/CLI operations. The user owns the screen: open approval URLs with the OS URL opener (or give the user the link), then wait and poll the documented API. Never operate the approval page or the desktop app UI.';
+
 export function agentSignupPrompt(product: AgentSignupProduct, origin: string): string {
-  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Read and follow ${origin}/signup/agent/${product}. Handle the setup and API calls, open authorization pages for me to approve, and verify that setup completed.`;
+  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Fetch and follow ${origin}/signup/agent/${product}. ${agentSignupInteractionPolicy} Use the exact Cloud API base, endpoints, request bodies, and polling rules in the guide. Verify completion through API/CLI responses.`;
 }
 
 /** Bundled strings: these instructions must also work on Workers without a filesystem. */
@@ -14,8 +16,17 @@ export function agentSignupInstructions(product: AgentSignupProduct, site: strin
   const shared = `# Agent Relay ${title}: agent-driven signup
 
 You are setting up Agent Relay on behalf of the user who gave you this URL.
+${agentSignupInteractionPolicy}
 Do the API calls, installation, configuration, and verification yourself. Keep
-working across browser approvals; do not hand the user a checklist to execute.
+working across user approvals; do not hand the user a checklist to execute.
+The signup page is a spectator view for the user. Do not read or control it;
+report progress only with GET/PATCH on the supplied Progress API URL.
+For an approval URL, use the OS URL opener (for example macOS open with the
+URL passed as a separate subprocess argument, never interpolated into shell
+code). If no opener is available, give the link to the user. Do not launch a
+browser-control tool. Verify approval by polling the API, never by inspecting
+the browser. If an operation has no documented API or CLI, report the blocker
+and ask the user for that specific action; never fall back to computer use.
 The user handles Google sign-in, device approval, and any provider or operating
 system consent. Never approve access on their behalf or ask for their password.
 
@@ -25,6 +36,28 @@ All API paths below are relative to that Cloud base, including its /cloud prefix
 Use this exact environment throughout; never fall back from local development
 to production. The Teams desktop app currently requires macOS 13 or later.
 Flows can be configured from any machine with HTTPS and Node.js 22+ for the CLI.
+
+## API map — use these interfaces, not the UI
+
+Use an HTTP client such as fetch or curl. Send JSON request bodies with
+Content-Type: application/json. The sections below specify exact bodies,
+response fields, authentication, polling and error handling.
+
+- Sign-in: POST ${cloud}/api/v1/auth/device/start, then poll POST
+  ${cloud}/api/v1/auth/device/token. Only the user approves the returned URL.
+- Identity/workspace: GET ${cloud}/api/v1/auth/whoami with the access token.
+- Refresh: POST ${cloud}/api/v1/auth/token/refresh before token expiry.
+- Progress: GET/PATCH the exact Progress API URL in the user's prompt;
+  PATCH uses the separate Progress token, not the account access token.
+${product === 'teams' ? `- Desktop install/connect/share/status: the bundled agent-relay-probe CLI
+  in sections 2–4. These are local machine operations, not dashboard clicks;
+  there is no public HTTP endpoint that installs an app on the user's Mac.` : `- Flow catalog: GET ${site}/api/v1/flows/catalog and /<id>.
+- Tool consent links: POST ${cloud}/api/v1/integrations/connect-link;
+  poll GET ${cloud}/api/v1/workspaces/<workspaceId>/integrations/<provider>/status.
+- Coding-agent credentials: the official cloud connect CLI in section 3;
+  GET ${cloud}/api/v1/cloud-agents inspects existing connections.
+- Activation: POST ${cloud}/api/v1/flows/deploy with the body in section 4.
+- Verification: GET ${cloud}/api/v1/flows/listeners/<agentId>.`}
 
 ## Live progress (when the user's prompt includes a progress session)
 
@@ -162,7 +195,7 @@ function teamsInstructions(site: string): string {
 
 Run sw_vers -productVersion and uname -m on the user's Mac. arm64 means Apple
 silicon; x86_64 means the x64 download. If this agent runs in a remote sandbox,
-it must obtain access to the user's Mac before installation; installing into
+it needs authorized terminal access to the user's Mac before installation; installing into
 the sandbox does not connect their computer. Report an unsupported OS honestly.
 
 Download ${download} and the same URL plus .sha256. Replace <arch> with arm64
@@ -238,8 +271,12 @@ URL-encode the three values; the link contains identifiers only, never tokens.
 The app discovers the probe's saved connection. If it is already attached to a
 different account/workspace, the link will report a conflict, not switch accounts.
 Ask the user to explicitly log out/switch in Account before retrying; do not
-disconnect an existing workspace automatically. Confirm the app's Account view
-matches the target. Open ${site}/cloud/dashboard/sessions for the team history. Report
+disconnect an existing workspace automatically. The probe's JSON status verifies
+the collector, not whether the app accepted the handoff. Do not inspect the app's
+Account view yourself. Ask the user to confirm that the visible app account and
+workspace match the target after handoff. Until confirmed, report the app
+attachment as unverified and keep progress waiting at step 5; do not mark setup
+complete. Open ${site}/cloud/dashboard/sessions for the team history. Report
 the installed app, account/workspace, sharing choice, and verification outcome.
 Delete temporary authentication files after use; retain the app-managed scoped
 credentials so background collection continues. The user can pause, select

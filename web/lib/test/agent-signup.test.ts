@@ -21,6 +21,7 @@ describe('agent signup instructions', () => {
     expect(content).toContain('/api/v1/auth/device/token');
     expect(content).toContain('/api/v1/auth/whoami');
     expect(content).toContain('/api/v1/auth/token/refresh');
+    expect(agentSignupPrompt(product as 'teams' | 'flows', 'https://agentrelay.com')).toContain('Do NOT use computer use, browser automation');
     if (product === 'teams') {
       expect(content).toContain('--selected-sessions-only --json');
       expect(content).toContain('releases/latest/download/AgentRelay-macOS-<arch>.dmg');
