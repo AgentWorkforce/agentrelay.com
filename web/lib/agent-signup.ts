@@ -76,8 +76,16 @@ Check that the product matches this guide. Start by PATCHing that URL with
 Authorization: Bearer <Progress token> and Content-Type: application/json:
 
 ~~~json
-{"step":1,"state":"working","revision":0}
+{"step":1,"state":"working","revision":0,"agent":"<your agent type>"}
 ~~~
+
+Replace agent with your actual coding agent: codex, claude_code, grok, opencode,
+cursor, gemini_cli, other, or unknown. Report the tool running this setup, not
+its underlying model or the agents the user will run later. Use unknown if you
+cannot determine it; never guess from the logos on the page. Include agent in
+your first PATCH. It is stored once for signup funnel attribution; later PATCHes
+may omit it. A different known agent returns 409 agent_conflict: preserve the
+original attribution and omit agent when resuming from a different tool.
 
 Use the revision returned by the latest GET/PATCH, not the example's literal 0.
 PATCH before each numbered progress step below. A move to the next step marks

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useSignupAnalytics } from './useSignupAnalytics';
+import type { SignupAnalyticsContext } from '../lib/agent-signup-analytics';
 import Link from 'next/link';
 import Grok from '@lobehub/icons/es/Grok';
 import { ArrowLeft, ArrowUpRight, Check, Copy, RefreshCw } from 'lucide-react';
@@ -32,7 +34,7 @@ async function readProgress(id: string, signal?: AbortSignal): Promise<SignupPro
   return data;
 }
 
-async function startSession(product: AgentSignupProduct): Promise<{ progress: SignupProgress; token?: string }> {
+async function startSession(product: AgentSignupProduct, analytics?: SignupAnalyticsContext): Promise<{ progress: SignupProgress; token?: string }> {
   const requestedId = new URL(window.location.href).searchParams.get('session');
   let saved: SignupSession | undefined;
   try {
@@ -48,7 +50,7 @@ async function startSession(product: AgentSignupProduct): Promise<{ progress: Si
   }
   const response = await fetch(apiPath, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ product }), signal: AbortSignal.timeout(10_000),
+    body: JSON.stringify({ product, ...(analytics ? { analytics } : {}) }), signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) throw new Error('Could not start a setup session. Please try again.');
   const session: unknown = await response.json();
@@ -59,6 +61,11 @@ async function startSession(product: AgentSignupProduct): Promise<{ progress: Si
 }
 
 export function AgentSignupJourney({ product }: { product: AgentSignupProduct }) {
+  const analytics = useSignupAnalytics(product);
+  const viewed = useRef(false);
+  const lifecycle = useRef(0);
+  const trackedExpired = useRef(false);
+  const latest = useRef({ step: 0, owner: false });
   const [progress, setProgress] = useState<SignupProgress>();
   const [token, setToken] = useState<string>();
   const [origin, setOrigin] = useState('');
@@ -77,11 +84,34 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const endpoint = origin ? new URL(apiPath, origin).href : '';
   const prompt = progress && token ? trackedSignupPrompt(product, origin, endpoint, { id: progress.id, writeToken: token }) : '';
 
+  latest.current = { step: active, owner: Boolean(token) };
+  useEffect(() => {
+    const generation = ++lifecycle.current;
+    const leave = () => { if (latest.current.owner) analytics.leave(latest.current.step); };
+    const show = () => analytics.resume();
+    window.addEventListener('pagehide', leave);
+    window.addEventListener('pageshow', show);
+    return () => {
+      window.removeEventListener('pagehide', leave);
+      window.removeEventListener('pageshow', show);
+      // Ignore StrictMode's cleanup/setup probe, but include SPA Back exits.
+      queueMicrotask(() => { if (lifecycle.current === generation) leave(); });
+    };
+  }, [analytics]);
+  useEffect(() => {
+    if (expired && token && !trackedExpired.current) { trackedExpired.current = true; analytics.track('expired', active); }
+  }, [expired, token, active, analytics]);
+
   useEffect(() => {
     let cancelled = false;
     setOrigin(window.location.origin);
     // Keep a single creation request through React StrictMode's effect replay.
-    boot.current ||= startSession(product);
+    // Watcher links must not create a second funnel or inherit the owner's identity.
+    const requested = new URL(window.location.href).searchParams.get('session');
+    let owner = !requested;
+    try { owner ||= JSON.parse(sessionStorage.getItem(storageKey(product)) || 'null')?.id === requested; } catch { /* Read-only until proven otherwise. */ }
+    if (owner && !viewed.current) { analytics.track('page_viewed'); viewed.current = true; }
+    boot.current ||= startSession(product, owner ? analytics.context() : undefined);
     void boot.current.then(({ progress: initial, token: writeToken }) => {
       if (cancelled) return;
       setProgress(initial); setToken(writeToken); setError('');
@@ -90,12 +120,13 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
       window.history.replaceState(window.history.state, '', url);
     }).catch((cause) => {
       if (!cancelled) {
+        if (owner) analytics.track('session_error');
         setError(cause instanceof Error && cause.name !== 'TimeoutError' ? cause.message : 'We couldn’t start live setup. Check your connection and try again.');
         if (cause instanceof ProgressError && cause.expired) setExpired(true);
       }
     });
     return () => { cancelled = true; };
-  }, [product, attempt]);
+  }, [product, attempt, analytics]);
 
   useEffect(() => {
     if (!progress || complete) return;
@@ -125,10 +156,11 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   }, [progress?.id, progress?.expiresAt, complete, product]);
 
   async function copy() {
-    try { await navigator.clipboard.writeText(prompt); setCopyMessage('Copied. Paste it into your agent.'); }
-    catch { setShowPrompt(true); setCopyMessage('Select and copy the prompt below.'); requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.select(); }); }
+    try { await navigator.clipboard.writeText(prompt); setCopyMessage('Copied. Paste it into your agent.'); analytics.track('prompt_copied'); }
+    catch { analytics.track('manual_copy_shown'); setShowPrompt(true); setCopyMessage('Select and copy the prompt below.'); requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.select(); }); }
   }
   function restart() {
+    analytics.restart(Boolean(token));
     try { sessionStorage.removeItem(storageKey(product)); } catch { /* Best effort. */ }
     window.location.assign(window.location.pathname);
   }
@@ -139,7 +171,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const heading = complete ? 'All yours.' : active ? title : 'Leave it to your agent.';
 
   return (
-    <div className={s.page} data-mode={mode}>
+    <div className={`${s.page} ph-sensitive ph-no-capture`} data-mode={mode}>
       <SignupAtmosphere className={s.atmosphere} step={complete ? 6 : active} mode={mode} />
       <Link href={`/${product}`} className={s.back} aria-label={`Back to ${product}`}><ArrowLeft size={18} /></Link>
       <main className={s.main}>
@@ -154,7 +186,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
               <span title="OpenCode"><AgentToolLogo provider="opencode" className={s.agentLogo} /></span>
             </div>
           )}
-          {complete ? <a className={s.primary} href={teamsCloudUrl(product === 'teams' ? '/dashboard/sessions' : '/dashboard')}>Open {product === 'teams' ? 'your workspace' : 'dashboard'} <ArrowUpRight size={17} /></a>
+          {complete ? <a onClick={() => { if (token) analytics.track('dashboard_opened', active); }} className={s.primary} href={teamsCloudUrl(product === 'teams' ? '/dashboard/sessions' : '/dashboard')}>Open {product === 'teams' ? 'your workspace' : 'dashboard'} <ArrowUpRight size={17} /></a>
             : !active ? <button type="button" className={s.primary} disabled={!prompt || expired} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
           <p className={s.copyStatus} role="status">{complete ? '' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
           <div className={s.progress} role="status" aria-live="polite">
@@ -162,7 +194,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
             <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
           </div>
           {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => { boot.current = null; setError(''); setAttempt(value => value + 1); }}>Try again <RefreshCw size={12} /></button>}</div>}
-          <details className={s.details}>
+          <details className={s.details} onToggle={event => { if (event.currentTarget.open && token) analytics.track('details_opened', active); }}>
             <summary>Setup details</summary>
             <div className={s.detailBody}>
               <ol className={s.steps}>{[...steps, { title: 'Ready to go' }].map((step, index) => {
