@@ -161,7 +161,9 @@ approval, verify the environment and credential expiry before retrying.
 
 Selected sessions is the default: signing up is not consent to upload all past
 conversations. When the user has selected sessions to share, list the catalog
-and pass their exact session keys to sessions include:
+and pass their exact session keys to sessions include. Each JSON row has source
+and session_id; construct the key as SOURCE:SESSION_ID (for example codex:abc123).
+The list response does not contain a precomputed key. Never pass a bare session_id:
 
 ~~~sh
 "$PROBE" sessions list --site-url '${site}' --account '<user.id>' --workspace '<currentWorkspace.id>' --limit 500 --json
@@ -179,17 +181,21 @@ collectors or silently stop an existing uploader for another environment.
 "$PROBE" status --site-url '${site}' --account '<user.id>' --workspace '<currentWorkspace.id>' --json
 ~~~
 
-Require running: true, paused: false, and the expected siteUrl, accountId, and
-workspaceId. Check delivery and lastCycle for failures. If sessions were selected,
+Require running: true, paused: false, and the expected site_url, account_id, and
+workspace_id. These are the CLI's JSON field names. Check delivery and last_cycle
+for failures. If sessions were selected,
 poll sessions list with a bounded wait until those sessions report uploaded;
 do not equate a running collector with uploaded content. If none were selected,
 report that the app is connected and no sessions have been shared yet.
 
-Open the installed ${name}.app after setup; it discovers the probe's saved
-connection. To select the exact account/workspace when multiple installs exist,
-open ${local ? 'agentrelay-dev' : 'agentrelay'}://connect?site=<encoded-site>&account=<encoded-user.id>&workspace=<encoded-currentWorkspace.id>
-with the installed app. URL-encode the three values; the link contains identifiers
-only, never tokens. Open ${site}/cloud/dashboard/sessions for the team history. Report
+Use this as the initial handoff to the installed ${name}.app:
+${local ? 'agentrelay-dev' : 'agentrelay'}://connect?site=<encoded-site>&account=<encoded-user.id>&workspace=<encoded-currentWorkspace.id>
+URL-encode the three values; the link contains identifiers only, never tokens.
+The app discovers the probe's saved connection. If it is already attached to a
+different account/workspace, the link will report a conflict, not switch accounts.
+Ask the user to explicitly log out/switch in Account before retrying; do not
+disconnect an existing workspace automatically. Confirm the app's Account view
+matches the target. Open ${site}/cloud/dashboard/sessions for the team history. Report
 the installed app, account/workspace, sharing choice, and verification outcome.
 Delete temporary authentication files after use; retain the app-managed scoped
 credentials so background collection continues. The user can pause, select
@@ -202,7 +208,10 @@ function flowsInstructions(site: string, cloud: string): string {
 ## 2. Choose the flow and repository
 
 Ask only for missing product choices: repository, desired workflow/trigger, and
-approver. Infer them from the user's request and current repository where clear.
+approver. For GitHub use the approver's GitHub login as github:@handle (for
+example github:@octocat), not their Google email. Human-gate replies are matched
+to the provider identity. Infer choices from the user's request and current
+repository where clear.
 Do not invent a repository or enable automation on an unrelated project.
 
 GET ${site}/api/v1/flows/catalog and select a matching entry from flows.
@@ -249,24 +258,41 @@ configuration failures must be fixed before activation can succeed.
 ## 4. Activate through the same API as web onboarding
 
 POST /api/v1/flows/deploy with Content-Type: application/json and the bearer
-session. Construct the body from the chosen catalog entry and user choices:
+session. This is the direct-source listener API used by flows deploy, not the
+browser onboarding handoff: source is TypeScript text, repository is singular,
+and sources contains provider/settings objects. The catalog supplies the source
+reference and defaults; it is not itself a deploy request. The current endpoint
+does not accept a flowId/repositories-only catalog activation request or fetch
+the source for you. For multiple repositories, submit one deployment per
+repository with a distinct name and handoffId.
+
+For the catalog's Software Garden entry, construct this body, substituting the
+workspace, verified source, repository, GitHub approver and a new UUID:
 
 ~~~json
 {
   "workspaceId": "<currentWorkspace.id>",
-  "name": "<user's flow name>",
-  "workflow": "<catalog id>",
+  "name": "Platform Garden",
+  "workflow": "software-factory",
   "source": "<verified TypeScript source text>",
   "handoffId": "<one UUID generated for this setup>",
-  "inputs": {"approver": "<approver email>", "agents": ["<allowed coding agent>"]},
+  "inputs": {"approver": "github:@octocat", "agents": ["claude"]},
   "mode": "activate",
-  "repository": {"owner": "<repository owner>", "name": "<repository name>"},
-  "sources": [{"provider": "<trigger provider>", "settings": {}}]
+  "repository": {"owner": "acme", "name": "api"},
+  "sources": [{"provider": "github", "settings": {"repository": "acme/api"}}]
 }
 ~~~
 
-Use the catalog's defaultTrigger for sources and apply the user's trigger
-settings. For GitLab set repository.host to gitlab and use the namespace path
+For another catalog entry use its id as workflow, allowed agents, and
+defaultTrigger for sources, then apply the user's trigger settings. Scope a
+GitHub issue trigger with settings.repository set to the chosen owner/name;
+for GitLab use settings.project. Cloud does not derive this filter from the
+deployment repository. An empty filter can trigger on other repositories in
+the workspace. Only use a different trigger scope when explicitly requested.
+Give each repository its own trigger filter for multi-repository setup. Do not send
+the example acme repository or octocat approver unchanged. The workflow field
+is a label, not a source lookup; keep the verified source in the request.
+For GitLab set repository.host to gitlab and use the namespace path
 as owner. Reuse the handoffId on retry. Before retrying an ambiguous network
 failure, GET /api/v1/flows/listeners and check whether the flow already exists;
 do not create a new ID/name on every retry. Activation subscribes to matching

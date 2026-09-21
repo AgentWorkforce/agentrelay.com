@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GET } from '../../app/signup/agent/[product]/route';
 import { agentSignupPrompt } from '../agent-signup';
+import { getRecommendedFlow } from '../recommended-flow-catalog';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -23,6 +24,10 @@ describe('agent signup instructions', () => {
     if (product === 'teams') {
       expect(content).toContain('--selected-sessions-only --json');
       expect(content).toContain('releases/latest/download/AgentRelay-macOS-<arch>.dmg');
+      expect(content).toContain('site_url, account_id, and\nworkspace_id');
+      expect(content).toContain('last_cycle');
+      expect(content).toContain('SOURCE:SESSION_ID');
+      expect(content).toContain('will report a conflict, not switch accounts');
     } else {
       expect(content).toContain('"mode": "activate"');
       expect(content).toContain('/api/v1/flows/listeners/<agentId>');
@@ -54,5 +59,26 @@ describe('agent signup instructions', () => {
     })).text();
     expect(content).toContain('Cloud API base: https://agentrelay.com/cloud');
     expect(content).not.toContain('origin-web.agentrelay.com');
+  });
+
+  it('uses the direct-source listener body and a provider-addressable approver', async () => {
+    const content = await (await GET(new Request('https://agentrelay.com/signup/agent/flows'), {
+      params: Promise.resolve({ product: 'flows' }),
+    })).text();
+    const examples = [...content.matchAll(/~~~json\n([\s\S]*?)\n~~~/g)].map(match => JSON.parse(match[1]));
+    const deploy = examples.find(body => body.mode === 'activate');
+    const flow = getRecommendedFlow('software-factory')!;
+    expect(deploy).toMatchObject({
+      workflow: flow.id,
+      source: expect.any(String),
+      handoffId: expect.any(String),
+      repository: { owner: 'acme', name: 'api' },
+      sources: [{ ...flow.defaultTrigger, settings: { ...flow.defaultTrigger.settings, repository: 'acme/api' } }],
+      inputs: { approver: 'github:@octocat', agents: flow.inputs.defaults.agents },
+    });
+    expect(deploy).not.toHaveProperty('flowId');
+    expect(deploy).not.toHaveProperty('repositories');
+    expect(content).toContain('one deployment per');
+    expect(content).not.toContain('<approver email>');
   });
 });
