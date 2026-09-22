@@ -3,6 +3,11 @@ import ts from 'typescript';
 import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
+import { FLOW_PUSH_COMMAND } from '../flow-workflows';
+
+// Every push goes through the workflow-file guard (run 065fd98f).
+const PUSH = 'base=abc123; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
+const REVISION_PUSH = 'base=abc123; comment=yes; ' + FLOW_PUSH_COMMAND;
 
 const matchingIssue = { source: 'github', title: '  Fix   login  ', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 
@@ -331,7 +336,7 @@ describe('software factory onboarding', () => {
     // pushed at the base commit is not worth leaving behind either.
     const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'no-commits');
     expect(calls.some(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
-    expect(calls.some(call => call.startsWith('git push'))).toBe(false);
+    expect(calls.some(call => call.includes(FLOW_PUSH_COMMAND))).toBe(false);
     expect(finish).toBe('needs_human');
     // The reason reaches the operator, so "nothing was built" is never silent.
     expect(errors.join('\n')).toContain('no commits');
@@ -342,7 +347,7 @@ describe('software factory onboarding', () => {
     // body is what is missing, and `gh pr create --body-file summary.md` would
     // fail on exactly that.
     const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'no-summary');
-    expect(calls).toContain('git push --set-upstream origin HEAD');
+    expect(calls).toContain(PUSH);
     expect(calls.some(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
     expect(finish).toBe('needs_human');
     expect(errors.join('\n')).toContain('summary.md');
@@ -353,14 +358,14 @@ describe('software factory onboarding', () => {
     // anything else, the flow must not push a branch or open a pull request on
     // the strength of output it did not understand.
     const { calls, finish } = await runFactory([true, true], true, matchingIssue, completed, 'unexpected output');
-    expect(calls.some(call => call.startsWith('git push'))).toBe(false);
+    expect(calls.some(call => call.includes(FLOW_PUSH_COMMAND))).toBe(false);
     expect(calls.some(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
     expect(finish).toBe('needs_human');
   });
 
   it('tests and pushes the branch before opening its pull request', async () => {
     const { calls } = await runFactory([true]);
-    const push = calls.indexOf('git push --set-upstream origin HEAD');
+    const push = calls.indexOf(PUSH);
     const create = calls.findIndex(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND));
     expect(push).toBeGreaterThan(calls.indexOf(FLOW_CHECK_RUN_COMMAND));
     expect(create).toBeGreaterThan(push);
@@ -467,7 +472,7 @@ describe('software factory onboarding', () => {
       expect(prepare).toContain("reference='Fixes #507'");
       expect(validate).toContain('title_length=9');
       expect(validate).toContain("identifier='#507'");
-      expect(calls.indexOf(validate)).toBeLessThan(calls.indexOf('git push --set-upstream origin HEAD'));
+      expect(calls.indexOf(validate)).toBeLessThan(calls.indexOf(PUSH));
       expect(createCall(calls)).toBe(FLOW_OPEN_CHANGE_COMMAND + " --title 'Fix login' --body-file .relayflow/pr-body.md");
       expect(finish).toBe('needs_human');
     });
@@ -490,7 +495,7 @@ describe('software factory onboarding', () => {
       expect(calls.find(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe('base=abc123; ' + FLOW_BASE_CHECK_COMMAND);
       expect(reportCall(calls)).toMatch(/^check=fail; baseline=fail; /);
       expect(createCall(calls)).toContain('--draft');
-      expect(calls).toContain('git push --set-upstream origin HEAD');
+      expect(calls).toContain(PUSH);
       expect(calls).toContain('adversary-2:codex');
       expect(finish).toBe('needs_human');
       expect(errors.join('\n')).toContain('not because of this change');
@@ -501,7 +506,7 @@ describe('software factory onboarding', () => {
       expect(reportCall(calls)).toMatch(/^check=fail; baseline=pass; /);
       expect(createCall(calls)).toContain('--draft');
       // The work is pushed, never thrown away; the reviews are not worth running.
-      expect(calls).toContain('git push --set-upstream origin HEAD');
+      expect(calls).toContain(PUSH);
       expect(calls.some(call => call.startsWith('adversary-'))).toBe(false);
       expect(finish).toBe('step_failed');
       expect(errors.join('\n')).toContain('breaks checks that pass on the base commit');
@@ -527,14 +532,14 @@ describe('software factory onboarding', () => {
       const drops = calls.flatMap((call, index) => call.endsWith(FLOW_DROP_WORKING_FILES_COMMAND) ? [index] : []);
       expect(drops).toHaveLength(2);
       expect(drops[0]).toBeLessThan(calls.findIndex(call => call.endsWith(FLOW_PUBLISH_CHECK_COMMAND)));
-      expect(drops[1]).toBeLessThan(calls.indexOf('git push'));
+      expect(drops[1]).toBeLessThan(calls.indexOf(REVISION_PUSH));
       expect(drops[1]).toBeGreaterThan(calls.indexOf('fixer:claude'));
     });
 
     it('pushes a review fix that breaks passing checks, then drafts the pull request and stops', async () => {
       const { calls, finish } = await runFactory([false, true], true, matchingIssue, completed, 'publish', ['pass', 'fail', 'fail', 'fail']);
-      expect(calls).toContain('git push');
-      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf('git push'));
+      expect(calls).toContain(REVISION_PUSH);
+      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf(REVISION_PUSH));
       expect(calls.filter(call => call.startsWith('check=')).at(-1)).toMatch(/^check=fail; baseline=revision; /);
       expect(calls).not.toContain('adversary-2:codex');
       expect(finish).toBe('step_failed');
