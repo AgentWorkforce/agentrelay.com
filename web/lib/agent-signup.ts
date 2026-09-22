@@ -311,7 +311,9 @@ Do not invent a repository or enable automation on an unrelated project.
 GET ${site}/api/v1/flows/catalog and select a matching entry from flows.
 GET ${site}/api/v1/flows/catalog/<id> for its full contract. Use the catalog's
 supportedRepositoryHosts, defaultTrigger, inputs.required, inputs.defaults, and
-inputs.allowedAgents. Download source.rawUrl, verify its bytes against
+inputs.allowedAgents. Name a model per harness in inputs.models when the house
+default is wrong (for example {"claude": "claude-sonnet-4"}); omit it to fund
+the house default for each declared agent. Download source.rawUrl, verify its bytes against
 source.sha256, and use that source text unchanged for a recommended flow.
 The source is TypeScript, not the source URL. Do not guess a template or hash.
 For custom flows use ${site}/docs/relayflows/markdown/build.md and
@@ -333,8 +335,11 @@ Check GET /api/v1/workspaces/<workspaceId>/integrations/<provider>/status
 until ready is true (poll with backoff and a bounded timeout); a returned connect
 link or a closed popup alone does not prove the integration is ready.
 
-Connect the coding agent required by the catalog using the official Relay CLI
-with the private credential environment from step 1 and a PTY:
+Do not connect a Claude or Codex subscription yet. The first three runs use
+Cloud's own model key, so no provider login is needed to activate. After those
+runs, activation and launches will ask for your own subscription; only then use
+the official Relay CLI with the private credential environment from step 1 and
+a PTY:
 
 ~~~sh
 npx --yes agent-relay@latest cloud connect anthropic --api-url '${cloud}'
@@ -345,9 +350,8 @@ The command drives provider login; open its authorization URL for the user,
 and keep the process alive until it confirms the credential is connected.
 Google approval does not grant GitHub or model-provider access: those services
 may require their own consent. Never fabricate credentials or claim consent
-happened. If already connected, GET /api/v1/cloud-agents lets you inspect the
-account's credential state without reconnecting. Provider or sandbox service
-configuration failures must be fixed before activation can succeed.
+happened. GET /api/v1/cloud-agents lets you inspect the account's credential
+state without reconnecting.
 
 ## 4. Activate through the same API as web onboarding
 
