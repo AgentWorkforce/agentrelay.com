@@ -93,7 +93,9 @@ describe('local flow starter kit', () => {
     // started can no longer hold the run open until its wall-clock limit.
     expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
     expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
-    expect(RELAYFLOWS_VERSION).toBe('2.0.22');
+    // 2.0.26 adds the full Babysitter GitHub trigger vocabulary and keeps the
+    // local starter on the same released Surface/SDK graph as the catalog.
+    expect(RELAYFLOWS_VERSION).toBe('2.0.26');
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const source = factorySource({ ...draft, workflow }, 'local');
       const code = withoutComments(source);

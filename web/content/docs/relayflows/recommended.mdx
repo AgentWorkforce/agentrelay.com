@@ -9,7 +9,7 @@ Recommended flows are maintained starting points. The catalog is public, version
 
 Software Garden is the display name of the first recommended flow. Its stable catalog and authored flow ID is `software-factory`: a GitHub issue starts implementation, deterministic repository checks, adversarial review, and a pull request for a human decision.
 
-The released source uses Claude Code for implementation and review, so catalog version 1 allows and defaults only that harness. A future catalog version can point at a new released source with a different requirement; clients do not rewrite the authored flow.
+The released source uses Claude Code for implementation and review, so catalog version 2 allows and defaults only that harness. A future catalog version can point at a new released source with a different requirement; clients do not rewrite the authored flow.
 
 Software Garden currently supports GitHub repositories. Each activation supplies one or more repositories, and Cloud scopes a GitHub listener to each one. The catalog deliberately does not define Babysitter behavior. Babysitter is a [flow plugin](/docs/relayflows/plugins) installed onto Software Garden, not a recommended flow of its own.
 
@@ -22,12 +22,12 @@ GET https://agentrelay.com/api/v1/flows/catalog
 GET https://agentrelay.com/api/v1/flows/catalog/software-factory
 ```
 
-The list response starts with `schemaVersion: 1` and `catalogVersion: 1`. Every flow has a stable `id`, its own numeric `version`, display copy, repository-host support, trigger defaults, required/default activation inputs, and an immutable source reference.
+The list response starts with `schemaVersion: 1` and `catalogVersion: 2`. Every flow has a stable `id`, its own numeric `version`, display copy, repository-host support, trigger defaults, required/default activation inputs, and an immutable source reference.
 
 The catalog does not copy or generate the flow body. `source` names the canonical `AgentWorkforce/flows` owner, repository, path, release tag, full commit SHA, GitHub blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch:
 
 ```text
-https://github.com/AgentWorkforce/flows/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts
+https://github.com/AgentWorkforce/flows/blob/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts
 ```
 
 CI and the production release workflow resolve the release tag, fetch the pinned raw file with a size bound, and verify the digest. A broken, moved, mutable, or drifted source therefore fails before the catalog can ship. Cloud fetches it through the existing trusted source loader and stores the fetched body only as that deployment's immutable snapshot and provenance.
