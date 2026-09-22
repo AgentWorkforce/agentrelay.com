@@ -7,9 +7,9 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev --webpack",
+    "dev": "next dev --webpack --port 24368",
     "build": "next build --webpack",
-    "start": "next start",
+    "start": "next start --port 24368",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "cf:build": "opennextjs-cloudflare build",
