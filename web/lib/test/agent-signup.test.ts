@@ -97,6 +97,8 @@ describe('agent signup instructions', () => {
     expect(content).toContain('flow_credentials_unavailable');
     expect(content).toContain('Do not ask the user to connect');
     expect(content).toContain('internal house-key proxy');
+    expect(content).toContain('type: notice');
+    expect(content).toContain('completed signup');
     expect(content).not.toContain('deploy Nango syncs');
     expect(content).not.toContain('until ready is true');
     expect(content).not.toContain('<approver email>');

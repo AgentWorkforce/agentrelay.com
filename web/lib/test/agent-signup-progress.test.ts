@@ -12,6 +12,8 @@ describe('signup progress handoff', () => {
     expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'pending' }})).toBe(true);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'select', status: 'pending' }})).toBe(false);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered', answer: 'private/repo' }})).toBe(false);
+    expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'draft_saved', label: 'Preview saved.', type: 'notice', status: 'pending', actionHref: `/dashboard/workflows/listeners/${id}` }})).toBe(true);
+    expect(isSignupProgress({...progress, inputRequest: { id, key: 'draft_saved', label: 'Preview saved.', type: 'notice', status: 'pending', actionHref: 'https://evil.test' }})).toBe(false);
   });
   it.each(['teams', 'flows'] as const)('carries the %s progress capability separately from URLs and preserves the local environment', (product) => {
     const token = 'a'.repeat(64);

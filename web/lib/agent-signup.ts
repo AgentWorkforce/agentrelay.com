@@ -147,6 +147,18 @@ a different question while one is pending returns 409 input_pending.
 The original browser tab can answer; a read-only watcher link cannot.
 Do not include answers in progress PATCH bodies or in final chat output.
 
+If the user explicitly chooses to save an inactive preview, verify the draft
+through GET /api/v1/flows/listeners/<agentId>, then POST a non-interactive
+notice to the same Progress API URL. Use type: notice, a concise label, and
+actionHref set only to /dashboard/workflows/listeners/<agentId> (a UUID). The
+page will show a preview link and say activation is still pending. Notices
+cannot collect answers and must not be used to claim an inactive draft is a
+completed signup:
+
+~~~json
+{"key":"draft_saved","label":"Your Flow is saved as an inactive preview. It will not run until activated.","type":"notice","actionHref":"/dashboard/workflows/listeners/537e4857-5590-42e8-8731-66441b466542"}
+~~~
+
 Poll GET on the same Progress API URL with Authorization: Bearer <Progress token>
 every 3 seconds until inputRequest.id matches and status is answered. The
 authenticated GET includes inputRequest.answer. An unauthenticated GET never

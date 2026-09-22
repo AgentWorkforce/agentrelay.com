@@ -23,6 +23,9 @@
 .inputCard button:disabled { opacity: .5; cursor: default; }
 .inputCard .inputError { margin: 12px 0 0; color: #efb6a8; font-size: 12px; }
 .inputSent { margin: 0; color: #a9d6c9; font-size: 13px; }
+.inputAction { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; padding: 0 15px; border-radius: 8px; background: #8dc7e9; color: #09202e; font-size: 13px; font-weight: 700; text-decoration: none; }
+.inputAction:hover { background: #b3ddf4; }
+.inputAction:focus-visible { outline: 2px solid #d4efff; outline-offset: 3px; }
 .progress { margin: 32px 0 0; color: #9eb9cb; font-size: 11px; line-height: 1.7; }
 .progressDots { display: flex; gap: 6px; justify-content: center; margin-bottom: 11px; }
 .progressDots i { width: 23px; height: 2px; border-radius: 3px; background: #294355; transition: background 1s; }
