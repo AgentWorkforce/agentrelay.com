@@ -395,6 +395,15 @@ runs, activation and launches will ask for your own subscription; only then use
 the official Relay CLI with the private credential environment from step 1 and
 a PTY:
 
+This promotion depends on Cloud's internal house-key proxy and account
+enrollment. If local activation returns flow_credentials_unavailable or
+flow_model_not_connected before the three promotional runs, treat it as an
+internal configuration or eligibility issue. Do not ask the user to connect
+Claude/Codex, provide an API key, or choose an inactive draft as a workaround.
+Report the blocker through the Progress API and have an internal developer
+verify the proxy, promotion flag, provider readiness, and enrollment. Never
+copy a house key into the agent environment or expose it in this guide.
+
 ~~~sh
 npx --yes agent-relay@latest cloud connect anthropic --api-url '${cloud}'
 ~~~
