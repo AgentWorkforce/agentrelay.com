@@ -46,6 +46,15 @@ describe('agent signup instructions', () => {
     expect(agentSignupPrompt('teams', 'http://127.0.0.1:3199')).toContain('http://127.0.0.1:3199/signup/agent/teams');
   });
 
+  it('uses the browser local hostname when Next normalizes the request URL', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CLOUD_URL', '/cloud');
+    const content = await (await GET(new Request('http://localhost:3100/signup/agent/flows', { headers: { host: '127.0.0.1:3100' } }), {
+      params: Promise.resolve({ product: 'flows' }),
+    })).text();
+    expect(content).toContain('Cloud API base: http://127.0.0.1:3100/cloud');
+    expect(content).toContain('POST the Progress API URL to request a choice');
+  });
+
   it.each(['unknown', 'Teams', 'flows/extra'])('returns 404 for unsupported product %s', async (product) => {
     const response = await GET(new Request('https://agentrelay.com/signup/agent/unknown'), {
       params: Promise.resolve({ product }),
@@ -80,6 +89,9 @@ describe('agent signup instructions', () => {
     expect(deploy).not.toHaveProperty('flowId');
     expect(deploy).not.toHaveProperty('repositories');
     expect(content).toContain('one deployment per');
+    expect(content).toContain('Ask for the approver\'s');
+    expect(content).toContain('GitHub username in plain language');
+    expect(content).toContain('Normalize the');
     expect(content).not.toContain('<approver email>');
   });
 });

@@ -19,8 +19,9 @@ You are setting up Agent Relay on behalf of the user who gave you this URL.
 ${agentSignupInteractionPolicy}
 Do the API calls, installation, configuration, and verification yourself. Keep
 working across user approvals; do not hand the user a checklist to execute.
-The signup page is a spectator view for the user. Do not read or control it;
-report progress only with GET/PATCH on the supplied Progress API URL.
+${product === 'flows' ? `The signup page is a live view for the user. Do not read or control it;
+report progress and request choices only through the supplied Progress API URL.` : `The signup page is a spectator view for the user. Do not read or control it;
+report progress only with GET/PATCH on the supplied Progress API URL.`}
 For an approval URL, use the OS URL opener (for example macOS open with the
 URL passed as a separate subprocess argument, never interpolated into shell
 code). If no opener is available, give the link to the user. Do not launch a
@@ -52,6 +53,7 @@ response fields, authentication, polling and error handling.
 - Refresh: POST ${cloud}/api/v1/auth/token/refresh before token expiry.
 - Progress: GET/PATCH the exact Progress API URL in the user's prompt;
   PATCH uses the separate Progress token, not the account access token.
+${product === 'flows' ? '- Web input: POST the Progress API URL to request a choice, then GET it with the Progress token to read the answer. The original browser tab submits the choice with PUT.' : ''}
 ${product === 'teams' ? `- Desktop install/connect/share/status: the bundled agent-relay-probe CLI
   in sections 2–4. These are local machine operations, not dashboard clicks;
   there is no public HTTP endpoint that installs an app on the user's Mac.` : `- Flow catalog: GET ${site}/api/v1/flows/catalog and /<id>.
@@ -67,7 +69,8 @@ ${product === 'teams' ? `- Desktop install/connect/share/status: the bundled age
 The user is watching a setup page. Report real milestones using the Progress API
 and Progress token supplied in their prompt. The token authorizes progress only;
 it is NOT a Cloud access token. Never send account tokens, OAuth codes, passwords,
-logs, approval URLs, or personal information to the progress endpoint. Do not put
+logs, approval URLs, or sensitive personal information to the progress endpoint.
+${product === 'flows' ? 'The web-input protocol may carry a repository name or public GitHub approver handle when the user chooses it; do not request emails or secrets.' : ''} Do not put
 the progress token in URLs or output it in your final reply. Use the same site
 and /cloud origin shown above; never forward it to another environment.
 
@@ -113,6 +116,49 @@ Retry-After. Retry transient network/5xx failures with bounded backoff. On 404,
 stop reporting (the session expired or the token is invalid) and tell the user;
 do not recreate or switch their session silently. A progress service outage
 must not roll back working setup or cause duplicate installation/activation.
+
+${product === 'flows' ? `## Web input — ask on the signup page, never in chat
+
+When a repository, workflow, trigger, approver, or confirmation is missing,
+use the Progress API to show the question in the user's original signup tab.
+Do not ask the user to answer in your chat. Do not operate the page yourself.
+Only request non-secret choices; never ask for passwords, OAuth codes, API keys,
+or sensitive personal data through this endpoint. Sign-in and provider consent stay on
+their own approval pages, opened for the user as described below.
+
+First PATCH the current progress step to state: waiting using its latest
+revision. Then POST the exact Progress API URL with Authorization: Bearer
+<Progress token> and Content-Type: application/json:
+
+~~~json
+{"key":"repository","label":"Which owner/repository should this flow use?","type":"text"}
+~~~
+
+For a choice list use type: select and options, for example:
+
+~~~json
+{"key":"workflow","label":"Which workflow should we activate?","type":"select","options":["software-factory","code-review"]}
+~~~
+
+Keys are stable lowercase identifiers (up to 40 characters); labels are at
+most 160 characters. Ask one question at a time. The response has
+inputRequest.id and status: pending. Repeating the same key is idempotent;
+a different question while one is pending returns 409 input_pending.
+The original browser tab can answer; a read-only watcher link cannot.
+Do not include answers in progress PATCH bodies or in final chat output.
+
+Poll GET on the same Progress API URL with Authorization: Bearer <Progress token>
+every 3 seconds until inputRequest.id matches and status is answered. The
+authenticated GET includes inputRequest.answer. An unauthenticated GET never
+includes the answer. Check the answer against the catalog/repository contract,
+then PATCH the current step back to working using the latest revision. If the
+session expires or the page cannot accept input, report that blocker; do not
+silently switch to chat questions or fabricate a choice.
+
+The bearer token is shared only with the agent and the original browser tab;
+keep it out of URLs and logs. Its authorization does not grant Cloud account
+access. PUT is for the browser to submit a choice, not an agent shortcut.
+` : ''}
 
 ## 1. Sign up and obtain an API session
 
@@ -301,10 +347,12 @@ function flowsInstructions(site: string, cloud: string): string {
   return `
 ## 2. Choose the flow and repository
 
-Ask only for missing product choices: repository, desired workflow/trigger, and
-approver. For GitHub use the approver's GitHub login as github:@handle (for
-example github:@octocat), not their Google email. Human-gate replies are matched
-to the provider identity. Infer choices from the user's request and current
+Request missing product choices through the web-input protocol above:
+repository, desired workflow/trigger, and approver. Ask for the approver's
+GitHub username in plain language (for example, "octocat" or "@octocat"),
+not an internal provider-address format or their Google email. Normalize the
+answer to github:@handle when constructing the deploy API request. Human-gate
+replies are matched to that provider identity. Infer choices from the user's request and current
 repository where clear.
 Do not invent a repository or enable automation on an unrelated project.
 
