@@ -11,10 +11,10 @@ describe('recommended flow catalog', () => {
     const catalog = getRecommendedFlowCatalog();
     expect(catalog).toEqual({
       schemaVersion: 1,
-      catalogVersion: 1,
+      catalogVersion: 2,
       flows: [{
         id: 'software-factory',
-        version: 1,
+        version: 2,
         name: 'Software Garden',
         summary: expect.any(String),
         description: expect.any(String),
@@ -31,12 +31,12 @@ describe('recommended flow catalog', () => {
           owner: 'AgentWorkforce',
           repo: 'flows',
           path: 'examples/software-factory/software-factory.flow.ts',
-          release: 'v2.0.22',
-          ref: 'b4dd665eb433bd7f52d1045543aef5f14fb7891e',
-          url: 'https://github.com/AgentWorkforce/flows/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts',
-          rawUrl: 'https://raw.githubusercontent.com/AgentWorkforce/flows/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts',
+          release: 'v2.0.26',
+          ref: '8b33ebab8347514f80d9da5a81206a087f641714',
+          url: 'https://github.com/AgentWorkforce/flows/blob/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts',
+          rawUrl: 'https://raw.githubusercontent.com/AgentWorkforce/flows/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts',
           mediaType: 'text/typescript',
-          sha256: '41c2137179455881a0fcf568006d2b41e24386ba1cf7dc2c6051871b6f744368',
+          sha256: '49c993220b9c34fab2d4b0e51911656f62b8b657f534d988691960d45bb9d9b6',
         },
       }],
     });
@@ -75,7 +75,7 @@ describe('recommended flow catalog HTTP surface', () => {
     await expect(detail.json()).resolves.toMatchObject({
       id: 'software-factory',
       name: 'Software Garden',
-      source: { ref: 'b4dd665eb433bd7f52d1045543aef5f14fb7891e' },
+      source: { ref: '8b33ebab8347514f80d9da5a81206a087f641714' },
     });
   });
 

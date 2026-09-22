@@ -2,14 +2,15 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
+import { assertRecommendedFlowSourceContract } from './recommended-flow-contract.mjs';
 
 const execFileAsync = promisify(execFile);
 const catalogUrl = new URL('../data/recommended-flow-catalog.v1.json', import.meta.url);
 const catalog = JSON.parse(await readFile(catalogUrl, 'utf8'));
 const MAX_SOURCE_BYTES = 1024 * 1024;
 
-if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 1 || !Array.isArray(catalog.flows)) {
-  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 1, with a flows array');
+if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 2 || !Array.isArray(catalog.flows)) {
+  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 2, with a flows array');
 }
 
 for (const flow of catalog.flows) {
@@ -47,6 +48,7 @@ for (const flow of catalog.flows) {
   }
   if (!response.body) throw new Error(`${flow.id}: source response has no body`);
   const hash = createHash('sha256');
+  const chunks = [];
   const reader = response.body.getReader();
   let received = 0;
   while (true) {
@@ -58,10 +60,12 @@ for (const flow of catalog.flows) {
       throw new Error(`${flow.id}: source exceeds ${MAX_SOURCE_BYTES} bytes`);
     }
     hash.update(value);
+    chunks.push(Buffer.from(value));
   }
   const actualHash = hash.digest('hex');
   if (actualHash !== source.sha256) {
     throw new Error(`${flow.id}: source hash is ${actualHash}, expected ${source.sha256}`);
   }
+  assertRecommendedFlowSourceContract(flow, Buffer.concat(chunks).toString('utf8'));
   console.log(`${flow.id}: verified ${source.release} (${source.ref}) sha256:${actualHash}`);
 }

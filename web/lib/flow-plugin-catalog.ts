@@ -10,13 +10,14 @@ export type FlowPluginCatalogEntry = {
   source: { owner: string; repo: string; path: string };
   ref: string;
   digest: string;
+  manifestSha256: string;
   compat: { surface: string; sdk: string; base: string[] };
   tier: FlowPluginTrustTier;
   base: string[];
 };
 
 export type FlowPluginCatalog = {
-  version: 1;
+  version: 2;
   plugins: FlowPluginCatalogEntry[];
 };
 
@@ -43,7 +44,7 @@ export const FLOW_PLUGIN_TRUST_TIER_DISCLAIMER =
   'Tiers are displayed only. They never skip digest, compat, or event-routability checks.';
 
 export const SOFTWARE_FACTORY_FLOW_URL =
-  'https://github.com/AgentWorkforce/flows/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/examples/software-factory/software-factory.flow.ts';
+  'https://github.com/AgentWorkforce/flows/blob/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts';
 
 export const BASE_FLOW_URLS: Record<string, string> = {
   'software-factory': SOFTWARE_FACTORY_FLOW_URL,

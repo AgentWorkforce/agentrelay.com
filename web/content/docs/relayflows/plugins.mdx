@@ -32,29 +32,29 @@ Worked example — Babysitter on Software Garden:
   "schema": 2,
   "kind": "flow-extension",
   "name": "babysitter",
-  "version": "0.1.0",
-  "description": "Live-state PR babysitter: parallel review lenses, deterministic reconciliation, exact-head merge gate.",
+  "version": "0.2.0",
+  "description": "Native Babysitter for Software Factory: turns a verified PR delivery into one cloud:babysitter-turn request.",
   "compat": {
-    "surface": "^2.0.22",
-    "sdk": "^2.0.22",
+    "surface": "^2.0.26",
+    "sdk": "^2.0.26",
     "base": [{ "name": "software-factory", "version": "^2.0.0" }]
   },
   "entry": "babysitter.flow.ts",
-  "extends": { "handlers": true, "hooks": ["merge-gate"], "verbs": [], "gates": [] },
+  "extends": { "handlers": true, "hooks": [] },
   "triggers": [
-    { "provider": "github", "event": "pull_request", "actions": ["opened", "synchronize", "reopened", "ready_for_review"] },
-    { "provider": "github", "event": "pull_request_review", "actions": ["submitted"] },
+    { "provider": "github", "event": "pull_request", "actions": ["opened", "synchronize", "reopened", "ready_for_review", "closed", "labeled", "unlabeled"] },
+    { "provider": "github", "event": "pull_request_review", "actions": ["submitted", "dismissed"] },
     { "provider": "github", "event": "check_run", "actions": ["completed"] },
     { "provider": "github", "event": "issue_comment", "actions": ["created"] }
   ],
   "permissions": {
     "integrations": ["github"],
-    "harnesses": ["claude"],
+    "harnesses": ["codex"],
     "mcp": [],
-    "writes": ["github:pull_request:comment"],
-    "budget": { "dollars": 8, "wallclock": "45m" }
+    "writes": ["cloud:babysitter-turn"],
+    "budget": { "dollars": 1, "wallclock": "5m" }
   },
-  "preflight": { "credentials": [], "servers": ["https://api.github.com"] }
+  "preflight": { "credentials": [], "servers": [] }
 }
 ```
 
@@ -67,7 +67,7 @@ Rules that matter at review time:
 - Manifest triggers are validated against the surface registry `providerEventTypes`. An event the registry cannot route is `plugin_event_unroutable`.
 
 <Warning>
-  GitHub `pull_request.ready_for_review`, `pull_request.labeled`, and `pull_request.unlabeled` are not in the surface registry yet. A Babysitter manifest that declares them is refused `plugin_event_unroutable` until the relayfile adapter catalog grows. The gallery states this fail-closed; it does not paper over it.
+  Relayflows 2.0.26 carries all eleven Babysitter event identities, but the authored executor still refuses a matching handler before either body starts because schema-2 permissions are not isolated there. Cloud may enable Babysitter only through the separately authorized existing-session lineage path; an arbitrary labelled pull request is not execution authority.
 </Warning>
 
 ## `flows add`
@@ -118,7 +118,7 @@ The gallery and the deploy wizard display a tier. **The label is never used to s
 | **verified** | bundle `identity.json` keyid matches a publisher key registered in Cloud |
 | **community** | anything else |
 
-Babysitter in catalog v1 is **community**: the owner is AgentWorkforce, but the pinned sha is not reachable from `main` until the babysitter branch merges. That is the honest label, not a downgrade of the code.
+Babysitter in catalog v2 is **first-party**: its `v2.0.26` commit is reachable from `AgentWorkforce/flows` main. The label does not widen runtime authority.
 
 <Note>
   `permissions.writes` stays a reviewed declaration labelled UNENFORCED until gate 8. Displaying a first-party or verified badge does not enforce write scope, skip the digest, or route an event the registry does not carry.
@@ -129,9 +129,9 @@ Babysitter in catalog v1 is **community**: the owner is AgentWorkforce, but the 
 `flowPluginBadgeMarkdown()` renders the README form. `plugin` is appended so repeats survive:
 
 ```markdown
-[![Install plugin](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Fblob%2Fb4dd665eb433bd7f52d1045543aef5f14fb7891e%2Fexamples%2Fsoftware-factory%2Fsoftware-factory.flow.ts&plugin=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Ftree%2F05c3dff138883322e80cb793b1f5a097ad510572%2Fexamples%2Fbabysitter)
+[![Install plugin](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Fblob%2F8b33ebab8347514f80d9da5a81206a087f641714%2Fexamples%2Fsoftware-factory%2Fsoftware-factory.flow.ts&plugin=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Ftree%2F8b33ebab8347514f80d9da5a81206a087f641714%2Fextensions%2Fbabysitter)
 ```
 
 The first plugin in the vendored catalog is Babysitter. Its base flow URL is Software Garden (`software-factory`); its plugin URL is the tree at the pinned sha. The [plugin gallery](/flows/plugins) shows the live badge.
 
-The catalog itself is versioned JSON, `{version:1, plugins:[{name, description, source:{owner,repo,path}, ref, digest, compat, tier, base}]}`. Any public repo with a `flows-plugin.json` is installable by URL; the catalog is a curated index, not a gate.
+The catalog itself is versioned JSON, `{version:2, plugins:[{name, description, source:{owner,repo,path}, ref, digest, manifestSha256, compat, tier, base}]}`. Any public repo with a `flows-plugin.json` is installable by URL; the catalog is a curated index, not a gate.

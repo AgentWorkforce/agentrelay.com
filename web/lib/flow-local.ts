@@ -52,12 +52,12 @@ import { workflowAgents } from './flow-workflows';
  * Cloud, which must render a `declined` run before any flow emits one. Switch
  * the two guards together with that Cloud change, not as part of a pin bump.
  *
- * 2.0.22 is the current release. Beyond the above it carries
+ * 2.0.26 is the current release. Beyond the above it carries
  * AgentWorkforce/flows#484: a Claude agent step completes on Claude's own
  * result rather than on process exit, so an agent that started a background
  * task no longer holds the run open until its wall-clock limit.
  */
-export const RELAYFLOWS_VERSION = '2.0.22';
+export const RELAYFLOWS_VERSION = '2.0.26';
 export const LOCAL_PREFLIGHT = 'relay-preflight.mjs';
 
 export const LOCAL_INSTALL = `npm install --save-dev relayflows@${RELAYFLOWS_VERSION} @relayflows/surface@${RELAYFLOWS_VERSION}`;
