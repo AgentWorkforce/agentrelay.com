@@ -253,6 +253,99 @@ describe('FLOW_PUSH_COMMAND', () => {
     expect(read(bin, 'gh.body')).toContain('+    paths: [src/**, docs/**]');
   });
 
+  // Review on #114: when every commit only edits workflows, withholding
+  // leaves nothing to publish. Pushing the base as the branch would make
+  // `gh pr create` fail with the patch lost, so a first push fails loudly
+  // with the patch in its output instead.
+  it('fails loudly with the patch in its output when every change is a workflow edit', () => {
+    const { root, remote, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
+    const orig = commit(root, 'ci: only', { '.github/workflows/ci.yml': CI_EDITED });
+    write(root, { '.relayflow/pr-body.md': BODY });
+    const result = push(root, base);
+    expect(result.code).not.toBe(0);
+    expect(remoteHead(remote)).toBe('');
+    expect(git(root, 'rev-parse', 'HEAD').trim()).toBe(orig);
+    expect(result.stderr).toContain('every change in this run edits .github/workflows');
+    expect(result.stderr).toContain('+    paths: [src/**, docs/**]');
+    expect(read(root, '.relayflow/workflow-changes.patch')).toContain('+    paths: [src/**, docs/**]');
+    expect(result.stderr).not.toContain('ghs_SECRETTOKEN');
+  });
+
+  it('comments the patch on the open pull request when a revision only edits workflows', () => {
+    const { root, remote, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
+    commit(root, 'feature', { 'src/x.ts': 'x\n' });
+    expect(push(root, base).code).toBe(0);
+    const before = remoteHead(remote);
+    commit(root, 'review: ci only', { '.github/workflows/ci.yml': CI_EDITED });
+    const bin = mkdtempSync(path.join(tmpdir(), 'flow-push-guard-bin-'));
+    roots.push(bin);
+    writeFileSync(path.join(bin, 'gh'), '#!/bin/sh\nprintf "%s " "$@" > "$(dirname "$0")/gh.args"\ncat "$4" > "$(dirname "$0")/gh.body"\n');
+    chmodSync(path.join(bin, 'gh'), 0o755);
+    const result = push(root, base, '', 'comment=yes; ', bin);
+    expect(result.code).toBe(0);
+    expect(remoteHead(remote)).toBe(before);
+    expect(read(bin, 'gh.body')).toContain('+    paths: [src/**, docs/**]');
+  });
+
+  // Review on #114: without a temp file git's output cannot be scrubbed, so
+  // the guard must refuse rather than fall back to an unscrubbed push.
+  it('refuses to push when it cannot create the temp file that scrubs git output', () => {
+    const { root, remote, base } = setup({ 'README.md': '#\n' });
+    commit(root, 'feature', { 'src/x.ts': 'x\n' });
+    const result = push(root, base, ' --set-upstream origin HEAD', 'TMPDIR=/nonexistent/relayflow-tmp; export TMPDIR; ');
+    expect(result.code).toBe(1);
+    expect(remoteHead(remote)).toBe('');
+    expect(result.stderr).toContain('could not create a temporary file, so the push was not attempted');
+  });
+
+  // Review on #114: resetting a workflow path must not destroy an agent's
+  // staged or unstaged edits to it.
+  it('keeps uncommitted edits to a withheld workflow file exactly as they were', () => {
+    const { root, remote, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
+    commit(root, 'feature and ci', { 'src/x.ts': 'x\n', '.github/workflows/ci.yml': CI_EDITED });
+    const correction = CI_EDITED + '# a correction still in progress\n';
+    write(root, { '.github/workflows/ci.yml': correction });
+    const result = push(root, base);
+    expect(result.code).toBe(0);
+    expect(show(remote, `${remoteHead(remote)}:.github/workflows/ci.yml`)).toBe(CI);
+    expect(read(root, '.github/workflows/ci.yml')).toBe(correction);
+    expect(result.stderr).toContain('.github/workflows/ci.yml has uncommitted edits, so it was left as it is.');
+  });
+
+  // Review on #114: a second refusal must not orphan the first withheld history.
+  it('keeps the earlier withheld commits reachable after a second refusal', () => {
+    const { root, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
+    commit(root, 'one', { 'src/x.ts': 'x\n', '.github/workflows/ci.yml': CI_EDITED });
+    expect(push(root, base).code).toBe(0);
+    const first = git(root, 'rev-parse', 'refs/relayflow/withheld-workflows').trim();
+    commit(root, 'two', { 'src/y.ts': 'y\n', '.github/workflows/ci.yml': CI_EDITED + '# again\n' });
+    expect(push(root, base, '').code).toBe(0);
+    const second = git(root, 'rev-parse', 'refs/relayflow/withheld-workflows').trim();
+    expect(second).not.toBe(first);
+    expect(git(root, 'rev-parse', `refs/relayflow/withheld-workflows-history/${first}`).trim()).toBe(first);
+  });
+
+  // Review on #114: the whole section, not just the patch, must fit GitHub's
+  // 65,536-character body limit.
+  it('keeps the pull-request body under GitHub\'s limit even with a long file list', () => {
+    const files: Record<string, string> = { 'README.md': '#\n' };
+    const edits: Record<string, string> = { 'src/x.ts': 'x\n' };
+    for (let i = 0; i < 120; i += 1) {
+      const name = `.github/workflows/${'w'.repeat(120)}-${i}.yml`;
+      files[name] = 'name: w\n';
+      edits[name] = 'name: w\n' + '# padding padding padding\n'.repeat(20);
+    }
+    const { root, base } = setup(files);
+    commit(root, 'many workflows', edits);
+    write(root, { '.relayflow/pr-body.md': BODY + 'x'.repeat(20000) + '\n' });
+    const result = push(root, base);
+    expect(result.code).toBe(0);
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(body.length).toBeLessThanOrEqual(65536);
+    expect(body).toContain('…and 70 more');
+    expect(body.split('````').length % 2).toBe(1);
+  }, 60_000);
+
   it('bounds the patch in the pull-request body and says where the rest is', () => {
     const { root, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
     commit(root, 'ci', { '.github/workflows/ci.yml': CI + '# padding\n'.repeat(4000), 'docs/a.md': 'a\n' });

@@ -371,7 +371,9 @@ const SCRUB_URL_CREDENTIALS = "sed -e 's#://[^/@[:space:]]*@#://#g'";
  */
 export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
   'wf=.github/workflows',
-  'err=$(mktemp "${TMPDIR:-/tmp}/relayflow-push.XXXXXX") || { git push "$@"; return; }',
+  // Without the temp file git's output cannot be scrubbed of a credentialed
+  // remote URL, so refuse rather than push unscrubbed.
+  'err=$(mktemp "${TMPDIR:-/tmp}/relayflow-push.XXXXXX") || { echo "relayflow push-guard: could not create a temporary file, so the push was not attempted (its output could not be scrubbed of credentials)." >&2; return 1; }',
   'git push "$@" 2>"$err"; status=$?',
   `${SCRUB_URL_CREDENTIALS} "$err" >&2`,
   'if [ "$status" -eq 0 ]; then rm -f "$err"; return 0; fi',
@@ -393,23 +395,44 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
     + 'echo "$c $new" >> "$tmp/map"; done',
   'new=$(relayflow_new "$orig")',
   'if [ "$ok" != yes ] || [ "$new" = "$orig" ]; then echo "relayflow push-guard: could not withhold the workflow edits." >&2; rm -rf "$tmp" "$err"; return "$status"; fi',
+  'mkdir -p .relayflow; patch=.relayflow/workflow-changes.patch; section=.relayflow/workflow-changes.md',
+  'git diff --full-index "$mb" "$orig" -- "$wf" > "$patch"',
+  'n=$(git diff --name-only "$mb" "$orig" -- "$wf" | wc -l | tr -d " ")',
+  // Builds the reviewer-facing section. The heading, explanation and a file
+  // list capped at 50 entries are written and measured first; only the room
+  // left under GitHub's 65,536-character body/comment limit (kept at 65,000,
+  // minus what the body already holds and ~400 bytes of fences and notes)
+  // goes to the patch.
+  'relayflow_section() { '
+    + 'used=0; if [ "${comment:-}" != yes ] && [ -f .relayflow/pr-body.md ]; then used=$(wc -c < .relayflow/pr-body.md | tr -d " "); fi; '
+    + `{ printf '\\n## Workflow changes not applied\\n\\n%s\\n\\n' "The GitHub App token this run pushes with lacks the \\\`workflows\\\` permission, so GitHub refused the commits that change \\\`.github/workflows/\\\`. The rest of the work is pushed; these edits were taken out of its commits. Apply them manually:"; `
+    + `git diff --name-status "$mb" "$orig" -- "$wf" | awk -F '\\t' '{ printf "- %s \\140%s\\140\\n", substr($1, 1, 1), $NF }' | head -n 50; `
+    + `if [ "$n" -gt 50 ]; then printf -- '- …and %s more\\n' "$((n - 50))"; fi; } > "$tmp/head"; `
+    + 'overhead=$(( $(wc -c < "$tmp/head" | tr -d " ") + 400 )); '
+    + 'limit=${RELAYFLOW_WITHHELD_PATCH_LIMIT:-61440}; room=$((65000 - used - overhead)); if [ "$room" -lt "$limit" ]; then limit=$room; fi; size=$(wc -c < "$patch" | tr -d " "); '
+    + `{ cat "$tmp/head"; if [ "$limit" -le 0 ]; then printf '\\n%s\\n' "_The patch ($size bytes) does not fit in the pull request body. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; `
+    + `elif [ "$size" -le "$limit" ]; then printf '\\n\`\`\`\`diff\\n'; cat "$patch"; printf '\`\`\`\`\\n'; `
+    + `else printf '\\n\`\`\`\`diff\\n'; head -c "$limit" "$patch" | sed '$d'; printf '\`\`\`\`\\n\\n%s\\n' "_Truncated to $limit of $size bytes. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; fi; } > "$section"; }`,
+  // Workflow paths with uncommitted (staged, unstaged or untracked) edits
+  // relative to the original tip are never reset below: only committed edits
+  // are withheld, and an agent's in-progress work stays exactly as it was.
+  'dirty=$( { git diff --name-only "$orig" -- "$wf"; git diff --cached --name-only "$orig" -- "$wf"; git ls-files --others --exclude-standard -- "$wf"; } 2>/dev/null | sort -u)',
+  // Every new change was a workflow edit: pushing would publish a branch with
+  // no change, and GitHub cannot open a pull request for it. For a revision
+  // (pull request already open) the patch goes to it as a comment; otherwise
+  // the step fails with the patch in its output rather than losing it silently.
+  'if [ -z "$(git rev-list "$new" --not --remotes 2>/dev/null)" ]; then relayflow_section; cat "$patch" >&2; '
+    + 'if [ "${comment:-}" = yes ] && gh pr comment --body-file "$section" >/dev/null 2>&1; then echo "relayflow push-guard: every new change edits $wf, which this token cannot push, so nothing else was pushed; posted the withheld workflow changes to the pull request." >&2; rm -rf "$tmp" "$err"; return 0; fi; '
+    + 'echo "relayflow push-guard: every change in this run edits $wf, which this token cannot push, so there is nothing else to publish. The edits are in $patch and printed above." >&2; rm -rf "$tmp" "$err"; return "$status"; fi',
   'git update-ref -m "relayflow: withhold workflow edits" HEAD "$new" "$orig"',
   'git push "$@" 2>"$tmp/push"; again=$?',
   `${SCRUB_URL_CREDENTIALS} "$tmp/push" >&2`,
   `if [ "$again" -ne 0 ]; then git update-ref -m "relayflow: restore after a failed push" HEAD "$orig" "$new"; echo "relayflow push-guard: the push failed again after withholding the workflow edits. The original error was:" >&2; ${SCRUB_URL_CREDENTIALS} "$err" >&2; rm -rf "$tmp" "$err"; return "$again"; fi`,
+  'previous=$(git rev-parse --verify --quiet refs/relayflow/withheld-workflows 2>/dev/null || :)',
+  'if [ -n "$previous" ] && [ "$previous" != "$orig" ]; then git update-ref "refs/relayflow/withheld-workflows-history/$previous" "$previous"; fi',
   'git update-ref refs/relayflow/withheld-workflows "$orig"',
-  'git diff --name-only --no-renames "$new" "$orig" -- "$wf" | while IFS= read -r p; do if git cat-file -e "$new:$p" 2>/dev/null; then git checkout -q "$new" -- "$p"; else git rm -q -f --ignore-unmatch -- "$p" >/dev/null 2>&1; rm -f -- "$p"; fi; done',
-  'mkdir -p .relayflow; patch=.relayflow/workflow-changes.patch; section=.relayflow/workflow-changes.md',
-  'git diff --full-index "$mb" "$orig" -- "$wf" > "$patch"',
-  'n=$(git diff --name-only "$mb" "$orig" -- "$wf" | wc -l | tr -d " ")',
-  'if [ -s "$patch" ]; then '
-    + 'used=0; if [ "${comment:-}" != yes ] && [ -f .relayflow/pr-body.md ]; then used=$(wc -c < .relayflow/pr-body.md | tr -d " "); fi; '
-    + 'limit=${RELAYFLOW_WITHHELD_PATCH_LIMIT:-61440}; room=$((61000 - used)); if [ "$room" -lt "$limit" ]; then limit=$room; fi; size=$(wc -c < "$patch" | tr -d " "); '
-    + `{ printf '\\n## Workflow changes not applied\\n\\n%s\\n\\n' "The GitHub App token this run pushes with lacks the \\\`workflows\\\` permission, so GitHub refused the commits that change \\\`.github/workflows/\\\`. The rest of the work is pushed; these edits were taken out of its commits. Apply them manually:"; `
-    + `git diff --name-status "$mb" "$orig" -- "$wf" | awk -F '\\t' '{ printf "- %s \\140%s\\140\\n", substr($1, 1, 1), $NF }'; `
-    + `if [ "$limit" -le 0 ]; then printf '\\n%s\\n' "_The patch ($size bytes) does not fit in the pull request body. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; `
-    + `elif [ "$size" -le "$limit" ]; then printf '\\n\`\`\`\`diff\\n'; cat "$patch"; printf '\`\`\`\`\\n'; `
-    + `else printf '\\n\`\`\`\`diff\\n'; head -c "$limit" "$patch" | sed '$d'; printf '\`\`\`\`\\n\\n%s\\n' "_Truncated to $limit of $size bytes. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; fi; } > "$section"; `
+  'git diff --name-only --no-renames "$new" "$orig" -- "$wf" | while IFS= read -r p; do if printf "%s\\n" "$dirty" | grep -qxF -- "$p"; then echo "relayflow push-guard: $p has uncommitted edits, so it was left as it is." >&2; continue; fi; if git cat-file -e "$new:$p" 2>/dev/null; then git checkout -q "$new" -- "$p"; else git rm -q -f --ignore-unmatch -- "$p" >/dev/null 2>&1; rm -f -- "$p"; fi; done',
+  'if [ -s "$patch" ]; then relayflow_section; '
     + 'if [ "$size" -gt "$limit" ]; then cat "$patch" >&2; fi; '
     + 'if [ "${comment:-}" = yes ]; then if gh pr comment --body-file "$section" >/dev/null 2>&1; then echo "relayflow push-guard: posted the withheld workflow changes to the pull request." >&2; else echo "relayflow push-guard: could not comment on the pull request; $section holds the withheld workflow changes." >&2; fi; '
     + 'elif [ -f .relayflow/pr-body.md ]; then cat "$section" >> .relayflow/pr-body.md; fi; fi',
