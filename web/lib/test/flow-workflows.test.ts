@@ -5,7 +5,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
-  FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND,
+  FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
+  FLOW_VALIDATE_CHANGE_METADATA_COMMAND,
 } from '../flow-workflows';
 
 /**
@@ -298,6 +299,49 @@ describe('FLOW_REVIEW_BLOCKED_COMMAND', () => {
     }
     expect(FLOW_REVIEW_BLOCKED_COMMAND).not.toContain('pr merge');
     expect(FLOW_REVIEW_BLOCKED_COMMAND).not.toContain('pr ready;');
+  });
+});
+
+/**
+ * The step that says why a failed review failed. The run outcome for
+ * done("step_failed") names no step and no finding (Cloud run f92bf832), so
+ * until done() carries a detail (AgentWorkforce/flows#542) this step's stdout
+ * is where the reason is recorded. review.md is agent-authored: the output
+ * must stay bounded, and like every other step it must exit 0.
+ */
+describe('FLOW_REPORT_REVIEW_FINDINGS_COMMAND', () => {
+  const report = (files: Record<string, string>) => sh(FLOW_REPORT_REVIEW_FINDINGS_COMMAND, fixture(files));
+
+  it('prints the remaining findings from review.md', () => {
+    const { code, stdout } = report({ 'review.md': '## Findings\n\nOne P2 remains: cleanup can report success while an allocation stays invisible.\n' });
+    expect(code).toBe(0);
+    expect(stdout).toContain('report-review-findings: review.clean absent; remaining findings from review.md:');
+    expect(stdout).toContain('One P2 remains: cleanup can report success while an allocation stays invisible.');
+    expect(stdout).not.toContain('cut at');
+  });
+
+  it('bounds a long review and says it was cut', () => {
+    const review = '## Findings\n\n' + Array.from({ length: 400 }, (_, index) => `- P3 finding ${index}: ${'x'.repeat(60)}`).join('\n') + '\nTHE-LAST-LINE\n';
+    const { code, stdout } = report({ 'review.md': review });
+    expect(code).toBe(0);
+    expect(Buffer.byteLength(stdout)).toBeLessThanOrEqual(FLOW_REVIEW_FINDINGS_LIMIT);
+    expect(stdout).toContain('- P3 finding 0:');
+    expect(stdout).not.toContain('THE-LAST-LINE');
+    expect(stdout).toContain('the full review is in review-blocked.md.');
+  });
+
+  it('drops terminal control characters and blank lines from the agent-written text', () => {
+    const { stdout } = report({ 'review.md': 'P1: \u001b[31mred\u001b[0m\n\n\n\nP2: next\n' });
+    expect(stdout).not.toContain('\u001b');
+    expect(stdout).toContain('P1: [31mred[0m\nP2: next');
+  });
+
+  it('falls back to a fixed sentence when review.md is missing or empty', () => {
+    for (const files of [{}, { 'review.md': '' }, { 'review.md': '\n  \n' }] as Record<string, string>[]) {
+      const { code, stdout } = report(files);
+      expect(code).toBe(0);
+      expect(stdout.trim()).toBe('relayflow report-review-findings: review.clean absent and review.md missing or empty');
+    }
   });
 });
 
