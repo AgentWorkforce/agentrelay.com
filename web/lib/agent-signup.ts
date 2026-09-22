@@ -380,8 +380,14 @@ private. Connect only the repository and tools the chosen flow requires.
 For GitHub the user must grant repository access. Repeat with the chosen trigger
 provider if different. Reuse existing ready connections rather than relinking.
 Check GET /api/v1/workspaces/<workspaceId>/integrations/<provider>/status
-until ready is true (poll with backoff and a bounded timeout); a returned connect
-link or a closed popup alone does not prove the integration is ready.
+until oauth.connected is true (poll with backoff and a bounded timeout); a
+returned connect link or a closed popup alone does not prove the connection.
+For the GitHub-triggered Software Garden flow, activation separately checks
+that the connected GitHub App covers the selected repository. Its trigger
+does not require background data indexing, so do not block solely because
+the broader status.ready is false from queued syncs.
+If a different flow declares Relayfile data that requires synced records,
+verify that readiness separately before activating it.
 
 Do not connect a Claude or Codex subscription yet. The first three runs use
 Cloud's own model key, so no provider login is needed to activate. After those
