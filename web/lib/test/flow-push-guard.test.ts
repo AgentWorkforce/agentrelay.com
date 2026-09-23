@@ -111,7 +111,10 @@ const CI = 'name: ci\non:\n  pull_request:\n    paths: [src/**]\njobs: {}\n';
 const CI_EDITED = 'name: ci\non:\n  pull_request:\n    paths: [src/**, docs/**]\njobs: {}\n';
 const BODY = 'Consolidates the docs.\n\nFixes #40\n';
 
-describe('FLOW_PUSH_COMMAND', () => {
+// Each case spawns roughly 50–150 real git processes (setup, the push command,
+// the remote's hook). Alone that is 1–3s, but under the full suite's parallel
+// load it passes vitest's 5s default, so give every case room to finish.
+describe('FLOW_PUSH_COMMAND', { timeout: 30_000 }, () => {
   it('pushes a branch without workflow edits exactly as git push does', () => {
     const { root, remote, base } = setup({ 'README.md': '#\n' });
     const head = commit(root, 'docs', { 'docs/a.md': 'a\n' });
