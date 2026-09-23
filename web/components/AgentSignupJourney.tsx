@@ -242,11 +242,15 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
             <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : notice ? `${active} of 5 · Preview saved; activation pending` : inputRequest?.status === 'pending' ? 'Waiting for your answer' : active ? `${active} of 5 · ${paused ? (product === 'flows' && inputRequest?.status === 'answered' ? 'Answer received' : 'Waiting for your approval') : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
           </div>
           {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => {
-            boot.current = null; setError(''); setExpired(false); trackedExpired.current = false;
-            try { sessionStorage.removeItem(storageKey(product)); } catch { /* Storage is optional. */ }
-            const url = new URL(window.location.href);
-            url.searchParams.delete('session');
-            window.history.replaceState(window.history.state, '', url);
+            boot.current = null; setError('');
+            if (expired) {
+              // Only a dead session gets replaced; transient failures retry the same one.
+              setExpired(false); trackedExpired.current = false;
+              try { sessionStorage.removeItem(storageKey(product)); } catch { /* Storage is optional. */ }
+              const url = new URL(window.location.href);
+              url.searchParams.delete('session');
+              window.history.replaceState(window.history.state, '', url);
+            }
             setAttempt(value => value + 1);
           }}>Try again <RefreshCw size={12} /></button>}</div>}
           <details className={s.details} onToggle={event => { if (event.currentTarget.open && token) analytics.track('details_opened', active); }}>
