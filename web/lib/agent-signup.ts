@@ -336,7 +336,10 @@ until ready is true (poll with backoff and a bounded timeout); a returned connec
 link or a closed popup alone does not prove the integration is ready.
 
 Do not connect a Claude or Codex subscription yet. The first three runs use
-Cloud's own model key, so no provider login is needed to activate. After those
+Cloud's own model key, so no provider login is needed to activate. If the chosen
+flow declares more than one coding agent in inputs.agents, included Cloud runs
+can fund only one of them per run — connect your own subscription for at least
+one declared agent before activating a multi-agent flow. After the included
 runs, activation and launches will ask for your own subscription; only then use
 the official Relay CLI with the private credential environment from step 1 and
 a PTY:

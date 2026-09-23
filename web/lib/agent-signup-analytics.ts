@@ -36,6 +36,17 @@ export class SignupTracker {
     } catch { return undefined; }
   }
 
+  /** Wait briefly for PostHog so early funnel events and the session POST share one journeyId. Telemetry never blocks setup longer than `timeoutMs`. */
+  async contextWhenReady(timeoutMs = 2000): Promise<SignupAnalyticsContext | undefined> {
+    const attempts = Math.max(1, Math.ceil(timeoutMs / 150));
+    for (let i = 0; i <= attempts; i++) {
+      const context = this.context();
+      if (context) return context;
+      if (i < attempts) await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    return undefined;
+  }
+
   track(event: SignupBrowserEvent, step = 0) {
     try {
       const context = this.context();

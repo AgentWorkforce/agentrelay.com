@@ -110,8 +110,14 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
     const requested = new URL(window.location.href).searchParams.get('session');
     let owner = !requested;
     try { owner ||= JSON.parse(sessionStorage.getItem(storageKey(product)) || 'null')?.id === requested; } catch { /* Read-only until proven otherwise. */ }
-    if (owner && !viewed.current) { analytics.track('page_viewed'); viewed.current = true; }
-    boot.current ||= startSession(product, owner ? analytics.context() : undefined);
+    if (owner && !viewed.current) viewed.current = true;
+    boot.current ||= (async () => {
+      // Wait briefly for PostHog so page_viewed, the session POST, and later
+      // events share one journey_id; never block setup on telemetry.
+      const context = owner ? await analytics.contextWhenReady() : undefined;
+      if (owner) analytics.track('page_viewed');
+      return startSession(product, context);
+    })();
     void boot.current.then(({ progress: initial, token: writeToken }) => {
       if (cancelled) return;
       setProgress(initial); setToken(writeToken); setError('');
@@ -168,7 +174,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const detail = expired ? 'Start a new session to keep watching setup.' : complete ? 'Your agent has verified setup. You’re ready to go.' : failed ? 'Check your agent’s conversation to resolve the issue. Progress will resume here.' : paused ? 'Follow the approval request in your agent’s conversation. We’ll pick up right here.' : active ? steps[active - 1].detail : 'The show starts when you paste the prompt into your agent.';
   const mode = expired || error ? 'offline' : complete ? 'complete' : failed ? 'failed' : paused ? 'paused' : active ? 'working' : 'waiting';
 
-  const heading = complete ? 'All yours.' : active ? title : 'Leave it to your agent.';
+  const heading = complete ? 'All yours.' : expired || failed || active ? title : 'Leave it to your agent.';
 
   return (
     <div className={`${s.page} ph-sensitive ph-no-capture`} data-mode={mode}>
@@ -177,8 +183,8 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
       <main className={s.main}>
         <div className={s.content}>
           <h1>{heading}</h1>
-          <p className={s.subtitle}>{complete ? 'Your agent has verified setup. You’re ready to go.' : active ? detail : 'Give this prompt to your coding agent and hang out here to watch it sign you up.'}</p>
-          {!complete && !active && (
+          <p className={s.subtitle}>{complete ? 'Your agent has verified setup. You’re ready to go.' : expired || failed || active ? detail : 'Give this prompt to your coding agent and hang out here to watch it sign you up.'}</p>
+          {!complete && !active && !expired && !failed && (
             <div className={s.agents} role="img" aria-label="Codex, Claude Code, Grok, and OpenCode">
               <span title="Codex"><AgentToolLogo provider="codex" className={s.agentLogo} /></span>
               <span title="Claude Code"><AgentToolLogo provider="claude" className={s.agentLogo} /></span>
@@ -187,13 +193,20 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
             </div>
           )}
           {complete ? <a onClick={() => { if (token) analytics.track('dashboard_opened', active); }} className={s.primary} href={teamsCloudUrl(product === 'teams' ? '/dashboard/sessions' : '/dashboard')}>Open {product === 'teams' ? 'your workspace' : 'dashboard'} <ArrowUpRight size={17} /></a>
-            : !active ? <button type="button" className={s.primary} disabled={!prompt || expired} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
-          <p className={s.copyStatus} role="status">{complete ? '' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
+            : !active && !expired ? <button type="button" className={s.primary} disabled={!prompt} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
+          <p className={s.copyStatus} role="status">{complete ? '' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (expired ? '' : progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
           <div className={s.progress} role="status" aria-live="polite">
             <div className={s.progressDots} aria-hidden="true">{steps.map((step, index) => <i key={step.title} data-done={complete || active > index + 1} data-current={!complete && active === index + 1} />)}</div>
             <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
           </div>
-          {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => { boot.current = null; setError(''); setAttempt(value => value + 1); }}>Try again <RefreshCw size={12} /></button>}</div>}
+          {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => {
+            boot.current = null; setError(''); setExpired(false); trackedExpired.current = false;
+            try { sessionStorage.removeItem(storageKey(product)); } catch { /* Storage is optional. */ }
+            const url = new URL(window.location.href);
+            url.searchParams.delete('session');
+            window.history.replaceState(window.history.state, '', url);
+            setAttempt(value => value + 1);
+          }}>Try again <RefreshCw size={12} /></button>}</div>}
           <details className={s.details} onToggle={event => { if (event.currentTarget.open && token) analytics.track('details_opened', active); }}>
             <summary>Setup details</summary>
             <div className={s.detailBody}>
