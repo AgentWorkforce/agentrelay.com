@@ -15,7 +15,9 @@ export function InvestorStrip() {
     </span>,
     <Image key="3" className={s.investorCortical} src="/investors/cortical-ventures.webp" alt="Cortical Ventures" {...LOGO_IMAGE_PROPS} width={220} height={32} />,
     <span key="4" className={s.investorYonder} role="img" aria-label="Yonder">
-      <svg aria-hidden="true" viewBox="0 0 28 28">
+      {/* Intrinsic size so the mark can't render page-wide (as a giant circle)
+          if it paints before investor-strip.module.css has loaded. */}
+      <svg aria-hidden="true" viewBox="0 0 28 28" width="25" height="25">
         <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" />
         <path d="M4.5 18.5 10.6 9l3.5 5 3.1-4.3 6.3 8.8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
