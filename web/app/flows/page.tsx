@@ -17,6 +17,7 @@ import home from '../landing.module.css';
 import s from './flows.module.css';
 import { FlowExamples } from './FlowExamples';
 import { IntegrationMarquee } from './IntegrationMarquee';
+import { AgentSignup } from '../../components/AgentSignup';
 
 export const metadata: Metadata = {
   title: 'Flows: Script your agents',
@@ -94,9 +95,7 @@ export default function FlowsPage() {
                 Try Free with Cloud
                 <ArrowRight aria-hidden="true" size={17} strokeWidth={2} />
               </a>
-              <a href="/khaliq" className={s.ctaSecondary}>
-                Chat with founders
-              </a>
+              <AgentSignup product="flows" />
             </div>
           </div>
         </section>

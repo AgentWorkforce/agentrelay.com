@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { PostHogProvider } from '@posthog/next';
+import { WebsitePostHogProvider } from './WebsitePostHogProvider';
 import { Geist_Mono, Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 
@@ -118,19 +118,10 @@ const siteStructuredData = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   const postHogKey = process.env.NEXT_PUBLIC_POSTHOG_KEY;
   const content = postHogKey ? (
-    <PostHogProvider
-      clientOptions={{
-        api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? POSTHOG_HOST,
-        autocapture: true,
-        capture_exceptions: true,
-        capture_heatmaps: true,
-        session_recording: { maskAllInputs: true, blockSelector: '.ph-sensitive' },
-        capture_pageleave: true,
-      }}
-    >
+    <WebsitePostHogProvider apiKey={postHogKey} host={process.env.NEXT_PUBLIC_POSTHOG_HOST ?? POSTHOG_HOST}>
       <WebsitePostHogPageView />
       {children}
-    </PostHogProvider>
+    </WebsitePostHogProvider>
   ) : (
     children
   );
