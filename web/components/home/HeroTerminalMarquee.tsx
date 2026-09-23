@@ -15,7 +15,7 @@ type TerminalLine = {
   text: string;
 };
 
-type TerminalCard = {
+export type TerminalCard = {
   /** Which agent's terminal this is; drives the name and mark in the title bar. */
   agent: TerminalAgent;
   /** Repository context shown inside the terminal session. */
@@ -26,7 +26,7 @@ type TerminalCard = {
   size: 'sm' | 'md' | 'lg';
 };
 
-type TerminalStyle = CSSProperties & {
+export type TerminalStyle = CSSProperties & {
   '--line-delay'?: string;
   '--term-cycle'?: string;
   '--term-phase'?: string;
@@ -41,7 +41,7 @@ type RelayRoute = {
   target: { x: number; y: number };
 };
 
-const AGENT_META: Record<
+export const AGENT_META: Record<
   TerminalAgent,
   {
     activityGlyph: string;
@@ -170,7 +170,7 @@ const RELAY_ROUTES: RelayRoute[] = [
  * The cards are illustrative chrome, so the whole band is aria-hidden and holds
  * nothing focusable; the hero's real content is the column above it.
  */
-const ROW_ONE: TerminalCard[] = [
+export const ROW_ONE: TerminalCard[] = [
   {
     agent: 'claude',
     repo: 'agentrelay/web',
@@ -223,7 +223,7 @@ const ROW_ONE: TerminalCard[] = [
   },
 ];
 
-const ROW_TWO: TerminalCard[] = [
+export const ROW_TWO: TerminalCard[] = [
   {
     agent: 'grok',
     repo: 'relay/web',
@@ -266,7 +266,7 @@ const ROW_TWO: TerminalCard[] = [
   },
 ];
 
-const ROW_THREE: TerminalCard[] = [
+export const ROW_THREE: TerminalCard[] = [
   {
     agent: 'grok',
     repo: 'relay/search',
@@ -427,16 +427,10 @@ function GrokTerminalBody({ card }: { card: TerminalCard }) {
         <span>{terminalLineCopy(prompt)}</span>
       </div>
       <div className={s.heroGrokEvents}>
-        <span
-          className={s.heroGrokCycleLine}
-          style={{ '--line-delay': '0.5s' } as TerminalStyle}
-        >
+        <span className={s.heroGrokCycleLine} style={{ '--line-delay': '0.5s' } as TerminalStyle}>
           ◆ user_prompt_submit
         </span>
-        <span
-          className={s.heroGrokCycleLine}
-          style={{ '--line-delay': '0.9s' } as TerminalStyle}
-        >
+        <span className={s.heroGrokCycleLine} style={{ '--line-delay': '0.9s' } as TerminalStyle}>
           ◆ Thought for 3.2s
         </span>
         <span
@@ -635,6 +629,97 @@ function ClaudeTerminalBody({ card }: { card: TerminalCard }) {
   );
 }
 
+/**
+ * One agent session card: title bar plus the agent-specific animated body.
+ * Exported so other pages (the 404) can scatter the same terminals around.
+ */
+export function HeroTerminalCard({
+  avatar,
+  card,
+  className,
+  idPrefix,
+  showAvatar = false,
+  style,
+}: {
+  avatar?: { src: string; name: string };
+  card: TerminalCard;
+  className?: string;
+  idPrefix: string;
+  showAvatar?: boolean;
+  style?: TerminalStyle;
+}) {
+  const meta = AGENT_META[card.agent];
+
+  return (
+    <article
+      className={`${s.heroTerm} ${SIZE_CLASS[card.size]}${className ? ` ${className}` : ''}`}
+      data-agent={card.agent}
+      style={style}
+    >
+      <header className={s.heroTermBar}>
+        <span className={s.heroTermTraffic}>
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className={s.heroTermTitle}>
+          <TerminalAgentLogo agent={card.agent} idPrefix={idPrefix} />
+          {meta.label}
+        </span>
+        {showAvatar && avatar && (
+          <Image
+            className={s.heroTermAvatar}
+            src={avatar.src}
+            alt={avatar.name}
+            width={24}
+            height={24}
+          />
+        )}
+      </header>
+
+      {card.agent === 'grok' ? (
+        <GrokTerminalBody card={card} />
+      ) : card.agent === 'opencode' ? (
+        <OpenCodeTerminalBody card={card} />
+      ) : card.agent === 'codex' ? (
+        <CodexTerminalBody card={card} />
+      ) : card.agent === 'claude' ? (
+        <ClaudeTerminalBody card={card} />
+      ) : (
+        <div className={s.heroTermBody}>
+          <div className={s.heroTermSession}>
+            <span className={s.heroTermSessionName}>{meta.session}</span>
+            <span className={s.heroTermMode}>{meta.mode}</span>
+            <span className={s.heroTermRepo}>~/{card.repo}</span>
+          </div>
+          <div className={s.heroTermTranscript}>
+            {card.lines.map((line, lineIndex) => (
+              <span
+                className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
+                key={line.text}
+                style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
+              >
+                <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
+                <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
+              </span>
+            ))}
+          </div>
+          <div className={s.heroTermComposer}>
+            <span className={s.heroTermLivePrompt}>
+              <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
+              <span className={s.heroTermCursor} />
+            </span>
+            <span className={s.heroTermState}>
+              <span className={s.heroTermActivityGlyph}>{meta.activityGlyph}</span>
+              {meta.state}
+            </span>
+          </div>
+        </div>
+      )}
+    </article>
+  );
+}
+
 const TEAM_AVATARS = [
   { src: '/authors/will.png', name: 'Will Washburn' },
   { src: '/authors/khaliq.jpeg', name: 'Khaliq Gant' },
@@ -673,78 +758,16 @@ function TerminalRow({
             };
 
             return (
-              <article
-                className={`${s.heroTerm} ${SIZE_CLASS[card.size]}`}
-                data-agent={card.agent}
+              <HeroTerminalCard
+                card={card}
+                idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
                 key={`${rowKey}-${copy}-${index}`}
+                showAvatar={showAvatars}
+                avatar={avatar}
                 style={terminalStyle}
-              >
-                <header className={s.heroTermBar}>
-                  <span className={s.heroTermTraffic}>
-                    <span />
-                    <span />
-                    <span />
-                  </span>
-                  <span className={s.heroTermTitle}>
-                    <TerminalAgentLogo
-                      agent={card.agent}
-                      idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                    />
-                    {meta.label}
-                  </span>
-                  {showAvatars && (
-                    <Image
-                      className={s.heroTermAvatar}
-                      src={avatar.src}
-                      alt={avatar.name}
-                      width={24}
-                      height={24}
-                    />
-                  )}
-                </header>
-
-                {card.agent === 'grok' ? (
-                  <GrokTerminalBody card={card} />
-                ) : card.agent === 'opencode' ? (
-                  <OpenCodeTerminalBody card={card} />
-                ) : card.agent === 'codex' ? (
-                  <CodexTerminalBody card={card} />
-                ) : card.agent === 'claude' ? (
-                  <ClaudeTerminalBody card={card} />
-                ) : (
-                  <div className={s.heroTermBody}>
-                    <div className={s.heroTermSession}>
-                      <span className={s.heroTermSessionName}>{meta.session}</span>
-                      <span className={s.heroTermMode}>{meta.mode}</span>
-                      <span className={s.heroTermRepo}>~/{card.repo}</span>
-                    </div>
-                    <div className={s.heroTermTranscript}>
-                      {card.lines.map((line, lineIndex) => (
-                        <span
-                          className={`${s.heroTermLine} ${TONE_CLASS[line.tone]}`}
-                          key={line.text}
-                          style={{ '--line-delay': `${lineIndex * 0.58}s` } as TerminalStyle}
-                        >
-                          <span className={s.heroTermLineMarker}>{LINE_MARKER[line.tone]}</span>
-                          <span className={s.heroTermLineCopy}>{terminalLineCopy(line)}</span>
-                        </span>
-                      ))}
-                    </div>
-                    <div className={s.heroTermComposer}>
-                      <span className={s.heroTermLivePrompt}>
-                        <span className={s.heroTermPromptGlyph}>{meta.prompt}</span>
-                        <span className={s.heroTermCursor} />
-                      </span>
-                      <span className={s.heroTermState}>
-                        <span className={s.heroTermActivityGlyph}>{meta.activityGlyph}</span>
-                        {meta.state}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </article>
+              />
             );
-          })
+          }),
         )}
       </div>
     </div>
@@ -755,9 +778,24 @@ export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boo
   return (
     <div aria-hidden="true" className={s.heroMarquee} data-marquee-band="">
       <RelayNetwork />
-      <TerminalRow showAvatars={showAvatars} cards={ROW_ONE} rowClass={s.heroMarqueeTrackOne} rowKey="one" />
-      <TerminalRow showAvatars={showAvatars} cards={ROW_TWO} rowClass={s.heroMarqueeTrackTwo} rowKey="two" />
-      <TerminalRow showAvatars={showAvatars} cards={ROW_THREE} rowClass={s.heroMarqueeTrackThree} rowKey="three" />
+      <TerminalRow
+        showAvatars={showAvatars}
+        cards={ROW_ONE}
+        rowClass={s.heroMarqueeTrackOne}
+        rowKey="one"
+      />
+      <TerminalRow
+        showAvatars={showAvatars}
+        cards={ROW_TWO}
+        rowClass={s.heroMarqueeTrackTwo}
+        rowKey="two"
+      />
+      <TerminalRow
+        showAvatars={showAvatars}
+        cards={ROW_THREE}
+        rowClass={s.heroMarqueeTrackThree}
+        rowKey="three"
+      />
     </div>
   );
 }
