@@ -4,7 +4,7 @@ import { ArrowLeft, BookOpen } from 'lucide-react';
 
 import { AgentToolLogo } from '../components/AgentToolLogos';
 import { LogoIcon, LogoWordmark } from '../components/SiteNav';
-import { LostField } from './not-found/LostField';
+import { LostField } from './not-found/LostFieldLazy';
 import { RouteReadout } from './not-found/RouteReadout';
 import s from './not-found/not-found.module.css';
 

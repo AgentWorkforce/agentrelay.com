@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import HermesAgent from '@lobehub/icons/es/HermesAgent';
-import OpenClaw from '@lobehub/icons/es/OpenClaw';
+import { HermesAgent, OpenClawColor } from '../brand-icons';
 import { ArrowRight } from 'lucide-react';
 import { SiSwift } from 'react-icons/si';
 
@@ -99,7 +98,7 @@ export function QuickStart() {
                 <TypeScriptLogo className={s.installAgentLogoIcon} />
               </span>
               <span className={s.installAgentLogo} title="OpenClaw">
-                <OpenClaw.Color className={s.installAgentLogoIcon} size="2.8rem" />
+                <OpenClawColor className={s.installAgentLogoIcon} size="2.8rem" />
               </span>
               <span className={s.installAgentLogo} title="Swift">
                 <SiSwift aria-hidden="true" className={s.installAgentLogoIcon} />

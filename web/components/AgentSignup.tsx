@@ -2,7 +2,7 @@
 
 import { useSignupAnalytics } from './useSignupAnalytics';
 import Link from 'next/link';
-import Grok from '@lobehub/icons/es/Grok';
+import { Grok } from './brand-icons';
 import { AgentToolLogo } from './AgentToolLogos';
 import type { AgentSignupProduct } from '../lib/agent-signup';
 import s from './agent-signup.module.css';
