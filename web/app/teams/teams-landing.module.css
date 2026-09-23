@@ -9,8 +9,6 @@
   background: #0d2638;
 }
 
-.setupSection { scroll-margin-top: 100px; }
-
 .page .integrationsSection,
 .page .activitySection { --section-bg: #193650; }
 
@@ -28,43 +26,6 @@
   margin-top: 16px;
 }
 
-.setupSteps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(2rem, 5vw, 4.5rem);
-  margin: 3.5rem 0 0;
-  padding: 0 1rem;
-  list-style: none;
-}
-
-.setupSteps > li { min-width: 0; }
-.setupSteps svg { width: 28px; height: 28px; color: var(--flows-accent-strong); }
-.setupSteps h3 { margin: 1.3rem 0 0.8rem; font-size: 1.15rem; font-weight: 500; }
-.setupSteps p { margin: 0; color: var(--flows-muted); font-size: 1rem; line-height: 1.75; }
-
-.historyFeature {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(3rem, 7vw, 7rem);
-}
-
-.journey { display: grid; justify-items: center; padding: 1rem 0; }
-.journeySource, .journeyDestination { text-align: center; }
-.journeySource > svg, .journeyDestination > svg { width: 42px; height: 42px; margin: 0 auto 1rem; color: var(--flows-accent-strong); stroke-width: 1.3; }
-.journeySource > span, .journeyDestination > span { font-size: 1.15rem; font-weight: 500; }
-.journey p { margin: 0.6rem 0 0; font-size: 0.9rem; color: var(--flows-muted); }
-.journeyLine { height: 45px; width: 1px; background: var(--flows-line-strong); margin: 14px 0; }
-.journeyRelay { display: flex; align-items: center; gap: 12px; padding: 16px 26px; border: 1px solid var(--flows-line-strong); border-radius: 8px; background: var(--flows-band-dark); font-size: 1rem; }
-.journeyRelay svg { width: 24px; color: var(--flows-accent-strong); }
-
-.historyCopy h2 { margin: 0; font-family: var(--font-heading), sans-serif; font-size: clamp(2rem, 3.7vw, 3.2rem); font-weight: 500; line-height: 1.12; letter-spacing: -0.03em; }
-.historyCopy > p { margin: 1.5rem 0 0; color: var(--flows-muted); font-size: 1.08rem; line-height: 1.75; }
-.historyDetails { display: grid; gap: 1.25rem; margin: 2rem 0 0; padding: 0; list-style: none; }
-.historyDetails li { display: flex; align-items: flex-start; gap: 14px; color: var(--flows-muted); font-size: 0.95rem; line-height: 1.7; }
-.historyDetails svg { flex-shrink: 0; width: 19px; height: 19px; margin-top: 4px; color: var(--flows-accent-strong); }
-.finalSection { padding-bottom: 3rem; }
-
 @media (max-width: 960px) {
   .activitySection { grid-template-columns: 1fr; gap: 2.5rem; }
   .activityIntro { max-width: 640px; }
@@ -75,11 +36,6 @@
 @media (max-width: 700px) {
   .activityIntro h2 { font-size: clamp(1.7rem, 8.4vw, 2.2rem); }
   .productScreenshot figcaption { font-size: 12px; }
-  .setupSteps { grid-template-columns: 1fr; gap: 2rem; max-width: 440px; margin: 2.5rem auto 0; padding: 0; }
-  .setupSteps h3 { margin-top: 1rem; }
-  .historyFeature { grid-template-columns: 1fr; gap: 3.5rem; }
-  .historyCopy { order: -1; }
-  .journey { padding: 0; }
 }
 
 /* Session detail follows the team-wide activity view. */

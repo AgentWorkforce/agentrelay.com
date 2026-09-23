@@ -1986,31 +1986,6 @@
   z-index: 2;
 }
 
-.hero {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  align-items: start;
-  gap: 32px;
-  max-width: 1280px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 44px 40px 48px;
-  min-height: auto;
-}
-
-.heroLeft {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding-top: 56px;
-}
-
-.heroRight {
-  position: relative;
-  align-self: stretch;
-  min-height: 580px;
-}
-
 /* ── Home hero: one centred column over the terminal marquee ─────────────
    The product pages keep the two-column `.hero` above; the home page runs a
    single centred column so the marquee band underneath gets the full width. */
@@ -3386,40 +3361,6 @@
   opacity: 0.78;
 }
 
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--line);
-  padding: 6px 16px;
-  border-radius: 100px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--primary);
-  width: fit-content;
-}
-
-.badgeDot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 6px color-mix(in srgb, var(--primary) 50%, transparent);
-  animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.4;
-  }
-}
-
 .headline {
   margin: 0;
   font-family: var(--font-heading), sans-serif;
@@ -3442,13 +3383,6 @@
   color: var(--fg-muted);
   max-width: 48ch;
   font-weight: 400;
-}
-
-.ctas {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding-top: 4px;
 }
 
 .installCommand {
@@ -4048,258 +3982,11 @@
   stroke-width: 2;
 }
 
-.skillCallout {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  width: 100%;
-  max-width: 720px;
-  margin: -4px auto 0;
-  padding: 14px 16px;
-  border: 1px solid rgba(156, 207, 255, 0.18);
-  border-radius: 8px;
-  background: rgba(7, 17, 31, 0.36);
-  color: var(--fg-muted);
-}
-
-.skillCalloutText {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  font-size: 0.88rem;
-  line-height: 1.5;
-}
-
-.skillCalloutText strong {
-  color: var(--fg);
-  font-size: 0.82rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.skillCalloutLink {
-  flex-shrink: 0;
-  color: rgba(180, 220, 255, 0.9);
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-decoration: none;
-}
-
-.skillCalloutLink:hover {
-  color: var(--fg);
-}
-
-.agentPromptCopy {
-  position: relative;
-  min-height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0.72rem 0.9rem;
-  border: 1px solid rgba(156, 207, 255, 0.14);
-  border-radius: 0.75rem;
-  background:
-    linear-gradient(180deg, rgba(156, 207, 255, 0.055), rgba(156, 207, 255, 0.012)), rgba(5, 12, 22, 0.5);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    inset 0 -1px 0 rgba(156, 207, 255, 0.035),
-    0 10px 24px rgba(3, 10, 20, 0.1);
-  -webkit-backdrop-filter: blur(18px) saturate(145%);
-  backdrop-filter: blur(18px) saturate(145%);
-  color: color-mix(in srgb, var(--fg) 76%, transparent);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    background 0.2s,
-    border-color 0.2s,
-    box-shadow 0.2s,
-    color 0.2s,
-    transform 0.15s var(--ease-out-quint);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .agentPromptCopy:hover {
-    border-color: rgba(156, 207, 255, 0.22);
-    background:
-      linear-gradient(180deg, rgba(156, 207, 255, 0.08), rgba(156, 207, 255, 0.024)), rgba(7, 17, 31, 0.5);
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.05),
-      inset 0 -1px 0 rgba(156, 207, 255, 0.05),
-      0 12px 28px rgba(3, 10, 20, 0.12);
-    transform: translateY(-1px);
-  }
-}
-
-.agentPromptCopy:active {
-  transform: scale(0.99);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .installCommand:hover,
-  .installCommand:active,
-  .agentPromptCopy:hover,
-  .agentPromptCopy:active {
+.installCommand:active {
     transform: none;
   }
-}
-
-.agentPromptCopy:focus-within {
-  outline: 2px solid color-mix(in srgb, var(--primary) 55%, white 20%);
-  outline-offset: 3px;
-}
-
-.agentPromptText {
-  position: relative;
-  min-width: 0;
-  flex: 1 1 auto;
-  display: grid;
-  gap: 4px;
-  padding-left: 14px;
-  transition: margin-left 0.18s ease;
-}
-
-.agentPromptText::before {
-  position: absolute;
-  top: 2px;
-  bottom: 2px;
-  left: 0;
-  width: 3px;
-  border-radius: 999px;
-  background: rgba(116, 184, 226, 0.48);
-  content: '';
-}
-
-.agentPromptPreview {
-  display: block;
-  max-width: none;
-  overflow: hidden;
-  color: rgba(196, 211, 226, 0.72);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.agentPromptPanel {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  width: min(560px, calc(100vw - 48px));
-  max-height: min(440px, calc(100vh - 160px));
-  overflow: auto;
-  padding: 0;
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--bg-elevated) 96%, var(--primary) 4%);
-  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
-  color: var(--fg);
-  z-index: 8;
-}
-
-.agentPromptPanelTitle {
-  position: sticky;
-  top: 0;
-  display: block;
-  padding: 0.72rem 0.85rem;
-  border-bottom: 1px solid var(--line);
-  background: color-mix(in srgb, var(--bg-elevated) 96%, var(--primary) 4%);
-  color: var(--primary);
-  font-size: 0.76rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.agentPromptPanelBody {
-  display: block;
-  padding: 0.85rem;
-  color: var(--fg-muted);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.78rem;
-  line-height: 1.5;
-  white-space: pre-wrap;
-}
-
-.agentPromptActions {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.agentPromptShow,
-.agentPromptCta {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.agentPromptShow {
-  position: absolute;
-  top: 50%;
-  left: 0.9rem;
-  color: var(--fg-muted);
-  opacity: 0;
-  pointer-events: none;
-  white-space: nowrap;
-  transform: translate(4px, -50%);
-  transition:
-    color 0.18s,
-    opacity 0.18s,
-    transform 0.18s;
-}
-
-.agentPromptCopy:hover .agentPromptText,
-.agentPromptCopy:focus .agentPromptText,
-.agentPromptCopy:focus-within .agentPromptText,
-.agentPromptCopy[data-prompt-open='true'] .agentPromptText {
-  margin-left: 7.9rem;
-}
-
-.agentPromptCopy:hover .agentPromptShow,
-.agentPromptCopy:focus .agentPromptShow,
-.agentPromptCopy:focus-within .agentPromptShow,
-.agentPromptCopy[data-prompt-open='true'] .agentPromptShow {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translate(0, -50%);
-}
-
-.agentPromptShow:hover {
-  color: var(--fg);
-}
-
-.agentPromptCta {
-  color: rgba(156, 207, 255, 0.62);
-  pointer-events: none;
-  transition: color 0.18s ease;
-}
-
-.agentPromptCopy:hover .agentPromptCta,
-.agentPromptCopy:focus .agentPromptCta,
-.agentPromptCopy:focus-within .agentPromptCta {
-  color: rgba(180, 220, 255, 0.82);
-}
-
-.agentPromptShow svg,
-.agentPromptCta svg {
-  width: 0.95rem;
-  height: 0.95rem;
 }
 
 /* ---- FEATURES SECTION ---- */
@@ -5150,11 +4837,6 @@
   margin: 0;
 }
 
-.titleUnderlineWord {
-  position: relative;
-  display: inline-block;
-}
-
 .titleUnderline {
   position: absolute;
   left: 0;
@@ -5256,13 +4938,6 @@
   transform: translateY(0);
 }
 
-.featureDesc {
-  font-size: 1.05rem;
-  line-height: 1.7;
-  color: var(--fg-muted);
-  margin: 0;
-}
-
 .featureList {
   display: grid;
   gap: 12px;
@@ -5347,58 +5022,6 @@
 }
 
 /* Preview: Terminal */
-.previewTerminal {
-  position: relative;
-  z-index: 1;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--terminal-bg);
-  border-radius: 10px 10px 0 0;
-  margin: 14px 0 0 14px;
-  overflow: hidden;
-  box-shadow: -4px -4px 24px color-mix(in srgb, black 20%, transparent);
-}
-
-.previewTitleBar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--terminal-panel);
-  border-bottom: 1px solid var(--terminal-line);
-}
-
-.previewDots {
-  display: flex;
-  gap: 6px;
-}
-
-.previewDots span {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-}
-
-.previewTitleText {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.68rem;
-  color: var(--terminal-muted);
-}
-
-.previewCode {
-  flex: 1;
-  margin: 0;
-  padding: 16px;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  line-height: 1.65;
-  color: var(--terminal-fg);
-  background: transparent;
-  border: none;
-  overflow: hidden;
-  white-space: pre;
-}
 
 /* Terminal syntax colors */
 .codeKeyword {
@@ -5406,20 +5029,6 @@
 }
 .codeString {
   color: var(--terminal-string);
-}
-.codeType {
-  color: var(--terminal-type);
-}
-.codeMethod {
-  color: var(--primary);
-}
-.codeComment {
-  color: var(--terminal-muted);
-  font-style: italic;
-}
-.codeCursor {
-  color: var(--terminal-keyword);
-  animation: blink 1.2s step-end infinite;
 }
 
 @keyframes blink {
@@ -5734,55 +5343,17 @@
   pointer-events: none;
 }
 
-.previewAccentWebhook,
-.previewAccentSearch,
-.previewAccentCommand {
+.previewAccentSearch {
   position: absolute;
   inset: 0;
   z-index: 0;
-}
-
-.previewAccentWebhook {
-  background: linear-gradient(45deg, #182235 0%, #24364f 48%, #4a90c2 100%);
 }
 
 .previewAccentSearch {
   background: #232d3a;
 }
 
-.previewAccentCommand {
-  background: linear-gradient(135deg, #c1674b 0%, #b45542 50%, #cd866a 100%);
-}
-
-.previewAccentWebhook::before,
-.previewAccentCommand::before {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 40% 50% at 80% 70%, rgba(255, 255, 255, 0.15) 0%, transparent 70%),
-    radial-gradient(ellipse 35% 40% at 25% 35%, rgba(255, 255, 255, 0.1) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 30% at 50% 90%, rgba(255, 255, 255, 0.12) 0%, transparent 60%);
-  content: '';
-}
-
-.previewAccentCommand::after {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 320'%3E%3Cpath d='M-20,80 Q100,20 250,120 T500,90' fill='none' stroke='rgba(255,255,255,0.22)' stroke-width='2'/%3E%3Cpath d='M-20,140 Q120,70 280,170 T520,140' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='1.5'/%3E%3Cpath d='M-20,210 Q80,150 220,235 T500,210' fill='none' stroke='rgba(255,255,255,0.1)' stroke-width='1.25'/%3E%3C/svg%3E");
-  background-size: cover;
-  content: '';
-}
-
-.previewAccentWebhook::after {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 320'%3E%3Cpath d='M-40,245 C50,205 78,122 160,126 C256,131 262,64 440,84' fill='none' stroke='rgba(255,255,255,0.22)' stroke-width='2'/%3E%3Cpath d='M-35,196 C68,180 94,90 186,98 C272,106 304,178 438,145' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='1.5'/%3E%3Cpath d='M-30,92 C64,130 116,38 198,52 C282,66 310,250 438,216' fill='none' stroke='rgba(255,255,255,0.11)' stroke-width='1.25'/%3E%3Cpath d='M62,340 C112,260 92,174 172,164 C254,154 286,304 370,260' fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='1'/%3E%3C/svg%3E");
-  background-size: cover;
-  content: '';
-}
-
-.searchPreview,
-.commandsPreview {
+.searchPreview {
   position: absolute;
   inset: 22px;
   z-index: 1;
@@ -5798,15 +5369,6 @@
   background: rgba(7, 17, 31, 0.72);
   box-shadow: 0 14px 32px rgba(2, 7, 18, 0.24);
   backdrop-filter: blur(12px);
-}
-
-.commandPrompt code {
-  overflow: hidden;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .searchPreview {
@@ -5861,8 +5423,7 @@
   gap: 9px;
 }
 
-.searchResults > div,
-.commandMenu > div {
+.searchResults > div {
   display: grid;
   gap: 4px;
   min-height: 50px;
@@ -5870,8 +5431,7 @@
   border-radius: 10px;
 }
 
-.searchResults strong,
-.commandMenu strong {
+.searchResults strong {
   overflow: hidden;
   color: #ffffff;
   font-size: 0.76rem;
@@ -5880,8 +5440,7 @@
   white-space: nowrap;
 }
 
-.searchResults span,
-.commandMenu span {
+.searchResults span {
   overflow: hidden;
   color: rgba(240, 246, 252, 0.68);
   font-size: 0.68rem;
@@ -5954,137 +5513,6 @@
     transform: none;
     transition: none;
   }
-}
-
-.actionsHeader {
-  display: grid;
-  gap: 14px;
-  max-width: 760px;
-}
-
-.actionsHeader .featureTitle {
-  margin-bottom: 0;
-}
-
-.actionsHeader .featureDesc {
-  max-width: 68ch;
-}
-
-.actionsGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
-}
-
-.actionCard {
-  display: grid;
-  align-content: start;
-  gap: 18px;
-  min-width: 0;
-}
-
-.actionCardVisual {
-  display: grid;
-  min-height: 330px;
-  overflow: hidden;
-  border: 1px solid rgba(156, 207, 255, 0.16);
-  border-radius: 14px;
-  background: radial-gradient(circle at 18% 16%, rgba(116, 184, 226, 0.14), transparent 32%), #07111f;
-  box-shadow: 0 18px 38px rgba(2, 7, 18, 0.3);
-}
-
-.toolSurface {
-  display: grid;
-  align-content: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 24px;
-}
-
-.toolSurfaceTitle {
-  display: flex;
-  gap: 8px;
-}
-
-.toolSurfaceTitle span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border: 1px solid rgba(156, 207, 255, 0.16);
-  border-radius: 999px;
-  background: rgba(156, 207, 255, 0.08);
-  color: rgba(225, 242, 255, 0.82);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-}
-
-.toolCommand,
-.toolList > div {
-  min-width: 0;
-  border: 1px solid rgba(156, 207, 255, 0.12);
-  border-radius: 10px;
-  background: #0e1729;
-}
-
-.toolCommand {
-  display: grid;
-  grid-template-columns: 22px minmax(0, 1fr);
-  align-items: center;
-  min-height: 44px;
-  gap: 8px;
-  padding: 0 12px;
-}
-
-.toolCommand span {
-  color: rgba(116, 184, 226, 0.84);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.76rem;
-  font-weight: 900;
-}
-
-.toolCommand code {
-  overflow: hidden;
-  color: rgba(248, 250, 252, 0.9);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolList {
-  display: grid;
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.toolList > div {
-  display: grid;
-  gap: 4px;
-  min-height: 52px;
-  padding: 10px 12px;
-}
-
-.toolList strong {
-  overflow: hidden;
-  color: #ffffff;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.toolList span {
-  overflow: hidden;
-  color: rgba(240, 246, 252, 0.62);
-  font-size: 0.68rem;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .editorWindow {
@@ -6209,82 +5637,6 @@
 .commandsEditorPreview .editorCode code {
   font-size: clamp(0.68rem, 1.1vw, 0.88rem);
   line-height: 1.9;
-}
-
-.actionCardCopy {
-  display: grid;
-  gap: 8px;
-}
-
-.actionCardCopy h4 {
-  margin: 0;
-  color: var(--fg);
-  font-family: var(--font-heading), sans-serif;
-  font-size: 1.5rem;
-  font-weight: 650;
-  line-height: 1.15;
-  letter-spacing: 0;
-}
-
-.actionCardCopy p {
-  margin: 0;
-  color: color-mix(in srgb, var(--fg-muted) 92%, white 8%);
-  font-size: 0.98rem;
-  line-height: 1.65;
-}
-
-.commandsPreview {
-  align-content: center;
-  display: flex;
-  inset: 0;
-}
-
-.commandsCard {
-  display: grid;
-  align-content: center;
-  flex: 1;
-  gap: 10px;
-  width: 100%;
-  height: 100%;
-  padding: 24px;
-  border: 0;
-  border-radius: 0;
-  background: #07111f;
-  box-shadow: none;
-}
-
-.commandPrompt {
-  display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  align-items: center;
-  min-height: 52px;
-  padding: 0 14px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.055);
-}
-
-.commandPrompt span {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
-  background: rgba(248, 250, 252, 0.1);
-  color: rgba(248, 250, 252, 0.8);
-  font-family: var(--font-geist-mono), monospace;
-  font-weight: 900;
-}
-
-.commandMenu {
-  display: grid;
-  gap: 9px;
-}
-
-.commandMenu > div {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.045);
 }
 
 .durableTimelinePreview {
@@ -6947,103 +6299,6 @@
 
 /* ---- SELF-MANAGING AGENTS SECTION ---- */
 
-.selfManageWrapper {
-  background: var(--section-bg);
-  border-top: 1px solid var(--line);
-  transition: background 0.3s ease;
-}
-
-.selfManageSection {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 84px 40px 96px;
-}
-
-.selfManageHeader {
-  max-width: 760px;
-  margin: 0 auto 48px;
-  text-align: center;
-}
-
-.selfManageTitle {
-  font-family: var(--font-heading), sans-serif;
-  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  color: var(--fg);
-  opacity: 0.85;
-  margin: 0 0 14px;
-}
-
-.selfManageSubtitle {
-  font-size: 1.05rem;
-  line-height: 1.65;
-  color: var(--fg-muted);
-  margin: 0 auto;
-}
-
-.selfManageGrid {
-  display: grid;
-  grid-template-columns: minmax(240px, 0.7fr) minmax(0, 1.55fr);
-  align-items: stretch;
-  gap: 28px;
-}
-
-.selfManageCard {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 360px;
-  padding: 34px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--card-bg);
-}
-
-.selfManageCardTitle {
-  font-family: var(--font-heading), sans-serif;
-  font-size: clamp(1.3rem, 2vw, 1.8rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  color: var(--fg);
-  margin: 0 0 12px;
-}
-
-.selfManageCardText {
-  color: var(--fg-muted);
-  font-size: 0.98rem;
-  line-height: 1.65;
-  margin: 0;
-}
-
-.selfManageCodeCard {
-  position: relative;
-  min-height: 430px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  background: var(--surface);
-  overflow: hidden;
-}
-
-.selfManageTerminal {
-  position: absolute;
-  inset: 18px 0 0 18px;
-  height: auto;
-  margin: 0;
-  border-radius: 10px 0 0 0;
-  box-shadow: -6px -6px 28px color-mix(in srgb, black 22%, transparent);
-}
-
-.selfManagePreviewCode {
-  padding: 18px 20px;
-  font-size: 0.9rem;
-  line-height: 1.65;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
 @media (max-width: 960px) {
   .featuresSection {
     grid-template-columns: 1fr;
@@ -7126,19 +6381,6 @@
     font-size: 0.95rem;
   }
 
-  .actionsGrid {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-
-  .actionCardVisual {
-    min-height: 300px;
-  }
-
-  .toolSurface {
-    padding: 20px;
-  }
-
   .editorWindow {
     margin: 18px;
   }
@@ -7152,20 +6394,8 @@
     line-height: 1.7;
   }
 
-  .actionCardCopy h4 {
-    font-size: 1.35rem;
-  }
-
-  .actionCardCopy p {
-    font-size: 0.95rem;
-  }
-
   .featureTitle {
     font-size: 2.25rem;
-  }
-
-  .featureDesc {
-    font-size: 0.98rem;
   }
 
   .featureList {
@@ -7223,116 +6453,26 @@
     inset: 0 24px 12px 0;
   }
 
-  .searchPreview,
-  .commandsPreview {
+  .searchPreview {
     inset: 16px;
     gap: 9px;
-  }
-
-  .commandsPreview {
-    inset: 0;
-  }
-
-  .commandsCard {
-    padding: 20px;
   }
 
   .searchPreview {
     padding-top: 0;
   }
 
-  .searchResults,
-  .commandMenu {
+  .searchResults {
     gap: 7px;
   }
 
-  .searchResults > div,
-  .commandMenu > div {
+  .searchResults > div {
     min-height: 43px;
     padding: 8px 10px;
-  }
-
-  .commandPrompt {
-    min-height: 46px;
-  }
-
-  .selfManageSection {
-    padding: 72px 24px 80px;
-  }
-
-  .selfManageGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .selfManageCard {
-    min-height: auto;
-  }
-
-  .selfManageCodeCard {
-    min-height: 380px;
   }
 }
 
 /* ---- SDK SECTION ---- */
-
-.sdkWrapper {
-  background: var(--section-bg);
-  transition: background 0.3s ease;
-}
-
-.sdkSection {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  align-items: center;
-  gap: 60px;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 72px 40px 80px;
-}
-
-.sdkText {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.sdkTitle {
-  font-family: var(--font-heading), sans-serif;
-  font-size: clamp(1.8rem, 3.5vw, 2.6rem);
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.15;
-  color: var(--fg);
-  opacity: 0.85;
-  margin: 0;
-}
-
-.sdkSubtitle {
-  font-size: 1.05rem;
-  line-height: 1.65;
-  color: var(--fg-muted);
-  max-width: 38ch;
-  margin: 0;
-}
-
-.sdkLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.92rem;
-  font-weight: 600;
-  color: var(--primary);
-  text-decoration: none;
-  transition: gap 0.2s ease;
-}
-
-.sdkLink:hover {
-  gap: 10px;
-}
-
-.sdkCode {
-  min-width: 0;
-}
 
 /* ---- BYOH SECTION ---- */
 
@@ -7666,40 +6806,14 @@
   margin: 0 0 16px;
 }
 
-.deployCardCode {
-  display: inline-block;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.8rem;
-  padding: 6px 12px;
-  border-radius: 6px;
-  background: var(--code-bg);
-  color: var(--code-fg);
-}
-
 /* ---- RESPONSIVE ---- */
 
 @media (max-width: 960px) {
-  .hero {
-    grid-template-columns: 1fr;
-    padding: 64px 32px 52px;
-    gap: 24px;
-    margin-top: -80px;
-    min-height: auto;
-  }
 
   /* min-width: 0 stops the single grid track from being floored by the install
      command's min-content width, which pushed the hero column ~34px past the
      gutter and clipped the right edge of the copy button on phones. The
      command itself already scrolls inside the button. */
-  .heroLeft {
-    gap: 28px;
-    padding-top: 0;
-    min-width: 0;
-  }
-
-  .heroRight {
-    min-height: 320px;
-  }
 
   .headline {
     font-size: clamp(2.85rem, 10.5vw, 4.35rem);
@@ -7720,12 +6834,6 @@
 
   .heroMarquee {
     margin-top: 52px;
-  }
-
-  .sdkSection {
-    grid-template-columns: 1fr;
-    padding: 60px 24px 80px;
-    gap: 36px;
   }
 
   .byohSection {
@@ -7805,27 +6913,13 @@
     grid-template-columns: 1fr;
   }
 
-  .skillCallout {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .installCommand,
-  .agentPromptCopy {
+  .installCommand {
     width: 100%;
     max-width: none;
   }
 }
 
 @media (max-width: 600px) {
-  .hero {
-    padding: 76px 28px 56px;
-    gap: 28px;
-  }
-
-  .heroLeft {
-    gap: 26px;
-  }
 
   .headline {
     font-size: clamp(3.05rem, 11.5vw, 4.5rem);
@@ -7902,12 +6996,6 @@
     margin-left: -188px;
   }
 
-  .ctas {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
   .ctaPrimary,
   .ctaSecondary {
     justify-content: center;
@@ -7930,12 +7018,6 @@
   .installSubtitle,
   .deployCardText {
     font-size: 1rem;
-  }
-
-  .heroRight {
-    min-height: 0;
-    align-self: center;
-    width: 100%;
   }
 
   .installSection {
@@ -8007,35 +7089,6 @@
   /* Keep the prompt box as a single row so Copy stays inline, matching the
      install command above it. The hover-reveal "Show prompt" toggle isn't
      reachable on touch, so it stays out of the flow on small screens. */
-  .agentPromptActions {
-    flex-shrink: 0;
-  }
-
-  .agentPromptText {
-    padding-right: 8px;
-  }
-
-  .skillCallout {
-    padding: 14px;
-  }
-
-  .selfManageCard {
-    padding: 28px;
-  }
-
-  .selfManageCodeCard {
-    min-height: 360px;
-  }
-
-  .selfManageTerminal {
-    inset: 16px 0 0 16px;
-  }
-
-  .selfManagePreviewCode {
-    padding: 16px;
-    font-size: 0.72rem;
-    line-height: 1.55;
-  }
 }
 
 /* ---- ALL AGENTS WORK ON THE RELAY ---- */

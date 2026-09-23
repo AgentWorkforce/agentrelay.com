@@ -1,9 +1,8 @@
 import Image from 'next/image';
 import type { CSSProperties } from 'react';
 
-import Grok from '@lobehub/icons/es/Grok';
-
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
+import { Grok } from '../brand-icons';
 import s from '../../app/landing.module.css';
 
 type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
@@ -673,6 +672,8 @@ export function HeroTerminalCard({
             alt={avatar.name}
             width={24}
             height={24}
+            loading="eager"
+            unoptimized
           />
         )}
       </header>
@@ -720,11 +721,13 @@ export function HeroTerminalCard({
   );
 }
 
+// Display-sized copies (scripts/generate-web-images.mjs): the originals are
+// 150–800 KB each and production serves /_next/image sources untouched.
 const TEAM_AVATARS = [
-  { src: '/authors/will.png', name: 'Will Washburn' },
-  { src: '/authors/khaliq.jpeg', name: 'Khaliq Gant' },
-  { src: '/authors/mary.png', name: 'Mary' },
-  { src: '/authors/ingrid.png', name: 'Ingrid' },
+  { src: '/authors/will-128.webp', name: 'Will Washburn' },
+  { src: '/authors/khaliq-128.webp', name: 'Khaliq Gant' },
+  { src: '/authors/mary-128.webp', name: 'Mary' },
+  { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
 ];
 
 function TerminalRow({

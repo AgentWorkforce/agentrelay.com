@@ -17,7 +17,7 @@ export function DeploymentCall({
     'Review hosted, private cloud, or self-managed options',
     'Leave with a clear path from discovery to production',
   ],
-  contact = { name: 'Khaliq Gant', role: 'Founder and CTO', image: '/authors/khaliq.jpeg', href: '/khaliq' },
+  contact = { name: 'Khaliq Gant', role: 'Founder and CTO', image: '/authors/khaliq-128.webp', href: '/khaliq' },
 }: { title?: string; example?: 'flow' | 'agent'; contact?: Contact; description?: string; topics?: readonly string[] } = {}) {
   return (
         <section className={`${s.ctaSection} ${layout.section}`}>
@@ -36,7 +36,7 @@ export function DeploymentCall({
               </ul>
 
               <div className={`${s.ctaOwner} ${layout.owner}`}>
-                <Image alt={contact.name} height={56} src={contact.image} width={56} />
+                <Image alt={contact.name} height={56} src={contact.image} width={56} unoptimized />
                 <div>
                   <strong>{contact.name}</strong>
                   <span>{contact.role}</span>

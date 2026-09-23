@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bot, Check, CircleAlert, Database, FileOutput, RotateCcw, UserRoundCheck, Webhook } from 'lucide-react';
 
 import { AgentToolLogo, type AgentTool } from '../components/AgentToolLogos';
+import { useOnScreen } from '../components/useOnScreen';
 import s from './landing.module.css';
 
 type AgentTimelineItem = {
@@ -113,20 +114,24 @@ function getTimelineDelay(index: number) {
 
 export function DurableDeliveryTimeline() {
   const [cursor, setCursor] = useState(INITIAL_TIMELINE_CURSOR);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(rootRef);
   const items = Array.from({ length: VISIBLE_TIMELINE_ITEMS }, (_, offset) =>
     getTimelineItem(cursor - VISIBLE_TIMELINE_ITEMS + 1 + offset)
   );
 
   useEffect(() => {
+    if (!onScreen) return;
+
     const timeoutId = window.setTimeout(() => {
       setCursor((current) => current + 1);
     }, getTimelineDelay(cursor));
 
     return () => window.clearTimeout(timeoutId);
-  }, [cursor]);
+  }, [cursor, onScreen]);
 
   return (
-    <div className={s.durableTimelinePreview} aria-label="Durable message delivery timeline">
+    <div className={s.durableTimelinePreview} aria-label="Durable message delivery timeline" ref={rootRef}>
       <span className={s.durableTimelineLine} />
       {items.map((item) => {
         if (item.kind === 'agent') {
@@ -213,6 +218,8 @@ function WorkflowTraceIcon({ kind }: { kind: WorkflowTraceItem['kind'] }) {
 
 export function DurableWorkflowTrace() {
   const [activeStep, setActiveStep] = useState(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(rootRef);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -220,16 +227,17 @@ export function DurableWorkflowTrace() {
       setActiveStep(WORKFLOW_TRACE.length - 1);
       return undefined;
     }
+    if (!onScreen) return undefined;
 
     const timeoutId = window.setTimeout(() => {
       setActiveStep((current) => (current + 1) % WORKFLOW_TRACE.length);
     }, WORKFLOW_STEP_DELAYS_MS[activeStep]);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeStep]);
+  }, [activeStep, onScreen]);
 
   return (
-    <div className={s.workflowTracePreview} aria-label="Durable workflow execution trace">
+    <div className={s.workflowTracePreview} aria-label="Durable workflow execution trace" ref={rootRef}>
       <div className={s.workflowTraceHeader}>
         <span>run_01J7</span>
         <strong>{activeStep === WORKFLOW_TRACE.length - 1 ? 'completed' : 'running'}</strong>

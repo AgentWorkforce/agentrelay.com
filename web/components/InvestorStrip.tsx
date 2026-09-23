@@ -1,14 +1,19 @@
 import Image from 'next/image';
 import s from './investor-strip.module.css';
 
+// The strip sits in the hero, above the fold, so the logos load with the page
+// instead of lazily after layout (which made them pop in late). They're small
+// and already web-ready, so they skip the /_next/image round trip too.
+const LOGO_IMAGE_PROPS = { loading: 'eager', unoptimized: true } as const;
+
 export function InvestorStrip() {
   const logos = [
-    <Image key="0" className={s.investorHustle} src="/investors/hustle-fund.svg" alt="Hustle Fund" width={205} height={27} />,
-    <Image key="1" className={s.investorActive} src="/investors/active-capital.svg" alt="Active Capital" width={185} height={30} />,
+    <Image key="0" className={s.investorHustle} src="/investors/hustle-fund.svg" alt="Hustle Fund" {...LOGO_IMAGE_PROPS} width={205} height={27} />,
+    <Image key="1" className={s.investorActive} src="/investors/active-capital.svg" alt="Active Capital" {...LOGO_IMAGE_PROPS} width={185} height={30} />,
     <span key="2" className={s.investorYc} role="img" aria-label="Y Combinator">
       <span aria-hidden="true">Y</span><strong aria-hidden="true">Combinator</strong>
     </span>,
-    <Image key="3" className={s.investorCortical} src="/investors/cortical-ventures.webp" alt="Cortical Ventures" width={220} height={32} />,
+    <Image key="3" className={s.investorCortical} src="/investors/cortical-ventures.webp" alt="Cortical Ventures" {...LOGO_IMAGE_PROPS} width={220} height={32} />,
     <span key="4" className={s.investorYonder} role="img" aria-label="Yonder">
       <svg aria-hidden="true" viewBox="0 0 28 28">
         <circle cx="14" cy="14" r="12" fill="none" stroke="currentColor" strokeWidth="2" />
