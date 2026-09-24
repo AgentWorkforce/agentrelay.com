@@ -4,6 +4,26 @@ import { SITE_URL } from './site';
 export const FLOW_PLUGIN_TRUST_TIERS = ['first-party', 'verified', 'community'] as const;
 export type FlowPluginTrustTier = (typeof FLOW_PLUGIN_TRUST_TIERS)[number];
 
+export type FlowPluginDeploymentEvidence = {
+  pullRequestUrl: string;
+  mergedCommit: string;
+  mergedAt: string;
+  deploymentUrl: string;
+  deployedAt: string;
+};
+
+export type FlowPluginActivationDependency = {
+  id: string;
+  repository: string;
+  requiredState: 'merged-and-deployed';
+  evidence: FlowPluginDeploymentEvidence | null;
+};
+
+export type FlowPluginActivationGate = {
+  state: 'blocked' | 'ready';
+  dependencies: FlowPluginActivationDependency[];
+};
+
 export type FlowPluginCatalogEntry = {
   name: string;
   description: string;
@@ -12,12 +32,14 @@ export type FlowPluginCatalogEntry = {
   digest: string;
   manifestSha256: string;
   compat: { surface: string; sdk: string; base: string[] };
+  runtime: { package: '@relayflows/sdk'; version: string; release: string };
+  activation: FlowPluginActivationGate;
   tier: FlowPluginTrustTier;
   base: string[];
 };
 
 export type FlowPluginCatalog = {
-  version: 2;
+  version: 3;
   plugins: FlowPluginCatalogEntry[];
 };
 
@@ -89,6 +111,34 @@ export function pluginHasUnroutableTriggers(plugin: FlowPluginCatalogEntry): boo
   return plugin.description.includes('plugin_event_unroutable');
 }
 
+const FULL_SHA = /^[0-9a-f]{40}$/;
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+
+export function flowPluginDependencyHasDeploymentEvidence(
+  dependency: FlowPluginActivationDependency,
+): boolean {
+  const evidence = dependency.evidence;
+  if (!evidence || dependency.requiredState !== 'merged-and-deployed') return false;
+  try {
+    const pullRequestUrl = new URL(evidence.pullRequestUrl);
+    const deploymentUrl = new URL(evidence.deploymentUrl);
+    return pullRequestUrl.origin === 'https://github.com'
+      && new RegExp(`^/${dependency.repository}/pull/[1-9][0-9]*$`).test(pullRequestUrl.pathname)
+      && FULL_SHA.test(evidence.mergedCommit)
+      && ISO_TIMESTAMP.test(evidence.mergedAt)
+      && deploymentUrl.protocol === 'https:'
+      && ISO_TIMESTAMP.test(evidence.deployedAt);
+  } catch {
+    return false;
+  }
+}
+
+export function flowPluginIsActivatable(plugin: FlowPluginCatalogEntry): boolean {
+  return plugin.activation.state === 'ready'
+    && plugin.activation.dependencies.length > 0
+    && plugin.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence);
+}
+
 function originFrom(appOrigin: string): string {
   return appOrigin.replace(/\/+$/, '');
 }
@@ -111,6 +161,7 @@ export function flowPluginInstallPath(input: { flowUrl: string; plugins: string[
 }
 
 export function flowPluginInstallHref(plugin: FlowPluginCatalogEntry): string | null {
+  if (!flowPluginIsActivatable(plugin)) return null;
   const flowUrl = pluginInstallFlowUrl(plugin);
   if (!flowUrl) return null;
   return flowPluginInstallPath({ flowUrl, plugins: [flowPluginSourceUrl(plugin)] });

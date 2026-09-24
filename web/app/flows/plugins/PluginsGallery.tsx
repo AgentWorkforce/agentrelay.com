@@ -60,8 +60,8 @@ export function PluginsGallery() {
           <FadeIn direction="up" delay={120}>
             <p className={s.subtitle}>
               A curated catalog of schema-2 flow extensions. Each card pins a public GitHub
-              directory and an install badge that opens Cloud with the base flow and the plugin
-              source.
+              directory. Install controls appear only after every declared runtime dependency has
+              merge and deployment evidence.
             </p>
           </FadeIn>
 
@@ -106,7 +106,7 @@ export function PluginsGallery() {
           const pluginUrl = flowPluginSourceUrl(plugin);
           const tier = FLOW_PLUGIN_TRUST_TIER_COPY[plugin.tier];
           const badgeMarkdown =
-            flowUrl &&
+            installHref && flowUrl &&
             flowPluginBadgeMarkdown({
               flowUrl,
               plugins: [pluginUrl],
@@ -130,7 +130,14 @@ export function PluginsGallery() {
                   ))}
                   <span className={s.chip}>sha {plugin.ref.slice(0, 12)}</span>
                   <span className={s.chip}>sha256:{plugin.digest.slice(0, 12)}</span>
+                  <span className={s.chip}>runtime {plugin.runtime.version}</span>
                 </div>
+                {plugin.activation.state === 'blocked' ? (
+                  <p className={s.note}>
+                    Catalog only: activation remains blocked until the Cloud capability adapter
+                    and Relay native existing-session delivery are both merged and deployed.
+                  </p>
+                ) : null}
                 {pluginHasUnroutableTriggers(plugin) ? (
                   <p className={s.note}>
                     Fail-closed: GitHub <code>pull_request.ready_for_review</code>,{' '}

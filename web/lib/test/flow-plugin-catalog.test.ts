@@ -4,9 +4,11 @@ import {
   FLOW_PLUGIN_TRUST_TIERS,
   SOFTWARE_FACTORY_FLOW_URL,
   flowPluginBadgeMarkdown,
+  flowPluginDependencyHasDeploymentEvidence,
   flowPluginGithubRef,
   flowPluginInstallHref,
   flowPluginInstallPath,
+  flowPluginIsActivatable,
   flowPluginSourceUrl,
   getFlowPlugin,
   getFlowPluginCatalog,
@@ -21,8 +23,8 @@ const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 describe('flow plugin catalog', () => {
   const catalog = getFlowPluginCatalog();
 
-  it('is version 2 with unique kebab-case plugin names', () => {
-    expect(catalog.version).toBe(2);
+  it('is version 3 with unique kebab-case plugin names', () => {
+    expect(catalog.version).toBe(3);
     expect(Array.isArray(catalog.plugins)).toBe(true);
     expect(catalog.plugins.length).toBeGreaterThan(0);
     const names = catalog.plugins.map((plugin) => plugin.name);
@@ -38,6 +40,24 @@ describe('flow plugin catalog', () => {
       digest: 'bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee',
       manifestSha256: '5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226',
       compat: { surface: '^2.0.26', sdk: '^2.0.26', base: ['software-factory'] },
+      runtime: { package: '@relayflows/sdk', version: '2.0.31', release: 'v2.0.31' },
+      activation: {
+        state: 'blocked',
+        dependencies: [
+          {
+            id: 'cloud-babysitter-capability-adapter',
+            repository: 'AgentWorkforce/cloud',
+            requiredState: 'merged-and-deployed',
+            evidence: null,
+          },
+          {
+            id: 'relay-native-existing-session-delivery',
+            repository: 'AgentWorkforce/relay',
+            requiredState: 'merged-and-deployed',
+            evidence: null,
+          },
+        ],
+      },
       tier: 'first-party',
       base: ['software-factory'],
     });
@@ -45,10 +65,54 @@ describe('flow plugin catalog', () => {
     expect(babysitter!.digest).toMatch(HEX64);
     expect(babysitter!.manifestSha256).toMatch(HEX64);
     expect(babysitter!.description).not.toContain('plugin_event_unroutable');
-    expect(babysitter!.description).toContain('fail-closed');
+    expect(babysitter!.description).toContain('catalog-only');
     expect(babysitter!.description).toContain('no GitHub write or merge authority');
     expect(FLOW_PLUGIN_TRUST_TIERS.includes(babysitter!.tier)).toBe(true);
     expect(pluginHasUnroutableTriggers(babysitter!)).toBe(false);
+    expect(flowPluginIsActivatable(babysitter!)).toBe(false);
+    expect(flowPluginInstallHref(babysitter!)).toBeNull();
+  });
+
+  it('requires merge and deployment evidence for every dependency before activation', () => {
+    const babysitter = getFlowPlugin('babysitter')!;
+    const evidence = (repository: string, pull: number) => ({
+      pullRequestUrl: `https://github.com/${repository}/pull/${pull}`,
+      mergedCommit: 'a'.repeat(40),
+      mergedAt: '2026-09-24T12:00:00Z',
+      deploymentUrl: `https://deployments.agentrelay.com/${repository}/${pull}`,
+      deployedAt: '2026-09-24T12:05:00Z',
+    });
+    const ready = {
+      ...babysitter,
+      activation: {
+        state: 'ready' as const,
+        dependencies: babysitter.activation.dependencies.map((dependency, index) => ({
+          ...dependency,
+          evidence: evidence(dependency.repository, index + 1),
+        })),
+      },
+    };
+    expect(ready.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence)).toBe(true);
+    expect(flowPluginIsActivatable(ready)).toBe(true);
+    expect(flowPluginInstallHref(ready)).toContain('/cloud/flows/deploy?');
+
+    const missingDeployment = {
+      ...ready.activation.dependencies[0]!,
+      evidence: { ...ready.activation.dependencies[0]!.evidence!, deploymentUrl: '' },
+    };
+    expect(flowPluginDependencyHasDeploymentEvidence(missingDeployment)).toBe(false);
+    expect(flowPluginIsActivatable({
+      ...ready,
+      activation: { ...ready.activation, dependencies: [missingDeployment, ready.activation.dependencies[1]!] },
+    })).toBe(false);
+
+    expect(flowPluginDependencyHasDeploymentEvidence({
+      ...ready.activation.dependencies[0]!,
+      evidence: {
+        ...ready.activation.dependencies[0]!.evidence!,
+        pullRequestUrl: 'https://github.com/AgentWorkforce/cloud/pull/not-a-number',
+      },
+    })).toBe(false);
   });
 
   it('builds a GitHub tree URL at the pinned sha, not a branch', () => {
@@ -107,14 +171,10 @@ describe('flowPluginBadgeMarkdown', () => {
     ]);
   });
 
-  it('wires the babysitter gallery card to Software Garden plus the pinned plugin tree', () => {
+  it('does not expose the Babysitter install route while its dependencies are blocked', () => {
     const babysitter = getFlowPlugin('babysitter')!;
     const href = flowPluginInstallHref(babysitter);
-    expect(href).toBeTruthy();
-    const url = new URL(href!, 'https://agentrelay.com');
-    expect(url.pathname).toBe('/cloud/flows/deploy');
-    expect(url.searchParams.get('flow')).toBe(SOFTWARE_FACTORY_FLOW_URL);
-    expect(url.searchParams.getAll('plugin')).toEqual([flowPluginSourceUrl(babysitter)]);
+    expect(href).toBeNull();
   });
 });
 

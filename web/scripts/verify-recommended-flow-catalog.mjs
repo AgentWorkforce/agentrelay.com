@@ -9,8 +9,8 @@ const catalogUrl = new URL('../data/recommended-flow-catalog.v1.json', import.me
 const catalog = JSON.parse(await readFile(catalogUrl, 'utf8'));
 const MAX_SOURCE_BYTES = 1024 * 1024;
 
-if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 2 || !Array.isArray(catalog.flows)) {
-  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 2, with a flows array');
+if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 3 || !Array.isArray(catalog.flows)) {
+  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 3, with a flows array');
 }
 
 for (const flow of catalog.flows) {
