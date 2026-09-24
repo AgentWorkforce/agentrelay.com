@@ -91,7 +91,7 @@ Honest answer: for **1 provider × 1 agent × one-shot action**, a dedicated pro
 
 ## Credentials
 
-Two sources, in order: env overrides for CI (`CLOUD_API_URL`, `CLOUD_API_ACCESS_TOKEN`, `CLOUD_WORKSPACE_ID`), then `~/.agentworkforce/relay/cloud-auth.json` written by `agent-relay cloud login`. One login per machine; per-app permissions live in Cloud.
+Two sources, in order: env overrides for CI (`CLOUD_API_URL`, `CLOUD_API_ACCESS_TOKEN`, `CLOUD_WORKSPACE_ID`), then `~/.agentworkforce/relay/cloud-auth.json` written by `npx relayfile@latest` or `agent-relay cloud login`. One shared login per machine; per-app permissions live in Cloud.
 
 <CardGroup cols={2}>
   <Card title="The SDK" href="/docs/file/sdk">
