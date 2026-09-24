@@ -78,26 +78,20 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const [answerError, setAnswerError] = useState('');
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
-  const inputRequestStep = useRef<{ id: string; step: number } | undefined>(undefined);
   const boot = useRef<ReturnType<typeof startSession> | null>(null);
   const steps = signupSteps[product];
   const complete = progress?.state === 'complete';
   const active = progress?.step || 0;
   const inputRequest = product === 'flows' ? progress?.inputRequest : undefined;
-  const observedInput = inputRequestStep.current;
-  const observedInputStep = observedInput && observedInput.id === inputRequest?.id ? observedInput.step : active;
-  // Keep confirmation visible at the step where the question was observed,
-  // including step zero. A stale answer must not override later progress.
-  const answeredInput = inputRequest?.status === 'answered' && progress?.state === 'waiting' && observedInputStep === active;
+  // The API stamps the request's progress step, so reloads can distinguish a
+  // current answer (including step zero) from one left over after advancement.
+  const answeredInput = inputRequest?.status === 'answered' && progress?.state === 'waiting' && inputRequest.step === active;
   const paused = progress?.state === 'waiting' && active > 0;
   const failed = progress?.state === 'failed';
   const endpoint = origin ? new URL(apiPath, origin).href : '';
   const prompt = progress && token ? trackedSignupPrompt(product, origin, endpoint, { id: progress.id, writeToken: token }) : '';
 
-  useEffect(() => {
-    setAnswerValue(''); setAnswerError('');
-    if (inputRequest) inputRequestStep.current = { id: inputRequest.id, step: active };
-  }, [inputRequest?.id]);
+  useEffect(() => { setAnswerValue(''); setAnswerError(''); }, [inputRequest?.id]);
 
   latest.current = { step: active, owner: Boolean(token) };
   useEffect(() => {

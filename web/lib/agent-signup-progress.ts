@@ -6,7 +6,7 @@ export type SignupProgress = {
   revision: number; updatedAt: string; expiresAt: string;
   inputRequest?: {
     id: string; key: string; label: string; type: 'text' | 'select' | 'notice';
-    options?: string[]; actionHref?: string; status: 'pending' | 'answered';
+    options?: string[]; actionHref?: string; status: 'pending' | 'answered'; step: number;
   };
 };
 export type SignupSession = SignupProgress & { writeToken: string };
@@ -24,10 +24,10 @@ export function isSignupProgress(value: unknown): value is SignupProgress {
 function isSignupInputRequest(value: unknown): boolean {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const input = value as NonNullable<SignupProgress['inputRequest']>;
-  return Object.keys(input).every(key => ['id', 'key', 'label', 'type', 'options', 'actionHref', 'status'].includes(key)) &&
+  return Object.keys(input).every(key => ['id', 'key', 'label', 'type', 'options', 'actionHref', 'status', 'step'].includes(key)) &&
     typeof input.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.id) &&
     typeof input.key === 'string' && typeof input.label === 'string' && ['text', 'select', 'notice'].includes(input.type) &&
-    ['pending', 'answered'].includes(input.status) &&
+    ['pending', 'answered'].includes(input.status) && Number.isInteger(input.step) && input.step >= 0 && input.step <= 5 &&
     (input.type === 'notice'
       ? input.status === 'pending' && input.options === undefined && typeof input.actionHref === 'string' && /^\/dashboard\/workflows\/listeners\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.actionHref)
       : input.actionHref === undefined && (input.type === 'text' ? input.options === undefined : Array.isArray(input.options) &&

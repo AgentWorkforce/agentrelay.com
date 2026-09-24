@@ -55,7 +55,7 @@ test('shows an answered flow input at step zero until the agent advances', async
   let progress = {
     id, product: 'flows', step: 0, state: 'waiting', revision: 1,
     updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7200000).toISOString(),
-    inputRequest: { id: `${id.slice(0, -1)}8`, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered' },
+    inputRequest: { id: `${id.slice(0, -1)}8`, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered', step: 0 },
   };
   await page.route('**/cloud/api/v1/signup/agent/sessions**', route => route.fulfill({
     status: route.request().method() === 'POST' ? 201 : 200,
@@ -73,7 +73,7 @@ test('shows an answered flow input at step zero until the agent advances', async
   await expect(page.getByText('2 of 5 · Choose your flow')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Question from your agent' })).not.toBeVisible();
 
-  progress = { ...progress, step: 2, state: 'waiting', revision: 3, inputRequest: { ...progress.inputRequest, id: `${id.slice(0, -1)}7` } };
+  progress = { ...progress, step: 2, state: 'waiting', revision: 3, inputRequest: { ...progress.inputRequest, id: `${id.slice(0, -1)}7`, step: 2 } };
   await expect(page.getByRole('heading', { name: 'Answer received.' })).toBeVisible();
   await expect(page.getByText('2 of 5 · Answer received')).toBeVisible();
 

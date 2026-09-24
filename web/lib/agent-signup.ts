@@ -142,7 +142,7 @@ For a choice list use type: select and options, for example:
 
 Keys are stable lowercase identifiers (up to 40 characters); labels are at
 most 160 characters. Ask one question at a time. The response has
-inputRequest.id and status: pending. Repeating the same key is idempotent;
+inputRequest.id, the current progress step, and status: pending. Repeating the same key is idempotent;
 a different question while one is pending returns 409 input_pending.
 The original browser tab can answer; a read-only watcher link cannot.
 Do not include answers in progress PATCH bodies or in final chat output.
