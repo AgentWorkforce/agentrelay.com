@@ -10,6 +10,14 @@ export const ISSUE_SOURCES = [
     { key: 'labels', label: 'Required labels', placeholder: 'ready-for-agent, bug' },
   ] },
   { id: 'linear', label: 'Linear', fields: [
+    // Assignment is how a ticket is delegated to the agent: Cloud hears it as
+    // AppUserNotification.issueAssignedToYou, not an issue.create record, so
+    // it is a wake choice rather than another field to match on.
+    { key: 'events', label: 'Wake on', options: [
+      { value: 'issues', label: 'New issues' },
+      { value: 'assigned', label: 'Issues assigned to the agent' },
+      { value: 'all', label: 'New or assigned issues' },
+    ] },
     { key: 'team', label: 'Team', placeholder: 'Engineering' },
     { key: 'project', label: 'Project', placeholder: 'Website' },
     { key: 'labels', label: 'Required labels', placeholder: 'ready-for-agent' },
@@ -59,9 +67,14 @@ export function validSourcePreferences(value: unknown): value is SourcePreferenc
   return Object.entries(value).every(([id, settings]) => {
     const source = ISSUE_SOURCES.find(source => source.id === id);
     if (!source || !settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
-    return Object.entries(settings).every(([key, val]) => key === 'mentioned'
-      ? id === 'slack' && typeof val === 'boolean'
-      : source.fields.some(field => field.key === key) && typeof val === 'string' && val.length <= 200);
+    return Object.entries(settings).every(([key, val]) => {
+      if (key === 'mentioned') return id === 'slack' && typeof val === 'boolean';
+      const field = source.fields.find(field => field.key === key);
+      if (!field || typeof val !== 'string' || val.length > 200) return false;
+      // A choice field accepts its options — or blank, which means the default
+      // and is dropped before it ever reaches a deploy request.
+      return !('options' in field) || !val || field.options.some(option => option.value === val);
+    });
   });
 }
 
@@ -69,7 +82,11 @@ export function sourceSummary(id: IssueSourceId, settings: SourceSettings): stri
   if (id === 'markdown') return `${settings.path?.trim() || 'tasks.md'} · Local runs only, nothing to connect`;
   const parts = ISSUE_SOURCES.find(source => source.id === id)!.fields.flatMap(field => {
     const value = settings[field.key]?.trim();
-    return value ? [`${field.label}: ${value}`] : [];
+    if (!value) return [];
+    const shown = 'options' in field
+      ? field.options.find(option => option.value === value)?.label ?? value
+      : value;
+    return [`${field.label}: ${shown}`];
   });
   if (id === 'slack' && settings.mentioned) parts.push('Only when the app is mentioned');
   return parts.join(' · ') || 'All incoming items from this connection';
@@ -81,6 +98,9 @@ function sourceFilterRules(sources: IssueSourceId[], preferences: SourcePreferen
     const settings = preferences[id] ?? {};
     const entries: [string, string | string[] | boolean][] = [];
     for (const field of ISSUE_SOURCES.find(source => source.id === id)!.fields) {
+      // `events` chooses what wakes the Cloud listener; a local run has no
+      // dispatcher and a ticket never carries it, so it is not a filter rule.
+      if (field.key === 'events') continue;
       const value = field.key === 'path' ? settings.path?.trim() || 'tasks.md' : settings[field.key]?.trim();
       if (value) entries.push([field.key, field.key === 'labels'
         ? [...new Set(value.split(',').map(label => label.trim()).filter(Boolean))] : value]);

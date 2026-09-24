@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { issueSourceCode, type IssueSourceId, type SourcePreferences } from '../flow-sources';
+import { ISSUE_SOURCES, issueSourceCode, sourceSummary, validSourcePreferences, type IssueSourceId, type SourcePreferences } from '../flow-sources';
+import { localInput } from '../flow-local';
+import { DEFAULT_FACTORY } from '../flow-onboarding';
 
 /**
  * Filtering now ships only in the local flow: a Cloud deployment is filtered by
@@ -111,6 +113,34 @@ describe('generated issue source filters', () => {
     expect(slack).toContain('channel?: string;');
     expect(slack).toContain('mentioned?: boolean;');
     expect(slack).not.toContain('repository?');
+  });
+
+  it('offers Linear a wake-on choice and never turns it into a local filter', () => {
+    const linear = ISSUE_SOURCES.find(source => source.id === 'linear')!;
+    const events = linear.fields.find(field => field.key === 'events')!;
+    expect('options' in events && events.options.map(option => option.value)).toEqual(['issues', 'assigned', 'all']);
+
+    // Storage validation accepts the choices (and a blank default) but nothing else.
+    for (const value of ['issues', 'assigned', 'all', '']) {
+      expect(validSourcePreferences({ linear: { events: value } })).toBe(true);
+    }
+    expect(validSourcePreferences({ linear: { events: 'mentions' } })).toBe(false);
+    expect(validSourcePreferences({ github: { events: 'assigned' } })).toBe(false);
+
+    // The summary names the choice, not its storage value.
+    expect(sourceSummary('linear', { events: 'assigned', team: 'Engineering' }))
+      .toBe('Wake on: Issues assigned to the agent · Team: Engineering');
+
+    // `events` is what wakes the Cloud listener, not a field a ticket carries:
+    // the local flow must not filter on it or declare it on Issue.
+    const settings: SourcePreferences = { linear: { events: 'assigned' } };
+    const local = issueSourceCode(['linear'], settings, 'local');
+    expect(local).not.toContain('events');
+    expect(matcher(['linear'], settings)({ ...issue, team: 'Engineering' })).toBe(true);
+    expect(issueSourceCode(['linear'], settings, 'cloud')).not.toContain('events?:');
+    // And the prefilled local ticket carries real ticket fields only.
+    expect(localInput({ ...DEFAULT_FACTORY, sources: ['linear'], sourceSettings: settings }).issue)
+      .not.toHaveProperty('events');
   });
 
   it('never reads a field the trimmed Issue type does not declare', () => {
