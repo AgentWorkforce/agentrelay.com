@@ -1,14 +1,15 @@
 {
-  "version": 1,
+  "version": 2,
   "plugins": [
     {
       "name": "babysitter",
-      "description": "Live-state PR babysitter: parallel review lenses, deterministic reconciliation, exact-head merge gate. Fail-closed: GitHub pull_request.ready_for_review, labeled, and unlabeled are not in the surface registry, so a manifest that declares them is refused plugin_event_unroutable until the relayfile adapter catalog grows.",
-      "source": { "owner": "AgentWorkforce", "repo": "flows", "path": "examples/babysitter" },
-      "ref": "05c3dff138883322e80cb793b1f5a097ad510572",
-      "digest": "ae6af3335eb6d4e54559327acc1465419244b47911d8ff356850b61f6228d862",
-      "compat": { "surface": "^2.0.22", "sdk": "^2.0.22", "base": ["software-factory"] },
-      "tier": "community",
+      "description": "Native Babysitter for Software Garden: eleven GitHub wake events request one authorized existing-session turn. Cloud rechecks the live babysit label, pull-request head, and session binding; the extension holds no GitHub write or merge authority. Handler execution remains fail-closed until the Cloud capability adapter and native delivery path ship.",
+      "source": { "owner": "AgentWorkforce", "repo": "flows", "path": "extensions/babysitter" },
+      "ref": "8b33ebab8347514f80d9da5a81206a087f641714",
+      "digest": "bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee",
+      "manifestSha256": "5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226",
+      "compat": { "surface": "^2.0.26", "sdk": "^2.0.26", "base": ["software-factory"] },
+      "tier": "first-party",
       "base": ["software-factory"]
     }
   ]

@@ -8,13 +8,17 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_PUSH_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 
 /**
  * What each deterministic step reports, keyed by the command itself: three
  * commands start `base=<commit>; ...`, so a prefix cannot tell them apart.
  * `check` may be a function, for a sequence of check results.
  */
+// Every push goes through the workflow-file guard (run 065fd98f).
+const PUSH = 'base=; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
+const REVISION_PUSH = 'base=; comment=yes; ' + FLOW_PUSH_COMMAND;
+
 function answer(command: string, { publish = 'publish', clean = 'yes', check = 'pass' as string | (() => string), baseline = 'pass' } = {}) {
   if (command === FLOW_CHECK_RUN_COMMAND) return typeof check === 'function' ? check() : check;
   if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
@@ -93,7 +97,9 @@ describe('local flow starter kit', () => {
     // started can no longer hold the run open until its wall-clock limit.
     expect(LOCAL_INSTALL).toContain(`relayflows@${RELAYFLOWS_VERSION}`);
     expect(LOCAL_INSTALL).toContain(`@relayflows/surface@${RELAYFLOWS_VERSION}`);
-    expect(RELAYFLOWS_VERSION).toBe('2.0.22');
+    // 2.0.26 adds the full Babysitter GitHub trigger vocabulary and keeps the
+    // local starter on the same released Surface/SDK graph as the catalog.
+    expect(RELAYFLOWS_VERSION).toBe('2.0.26');
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const source = factorySource({ ...draft, workflow }, 'local');
       const code = withoutComments(source);
@@ -277,7 +283,7 @@ describe('local flow starter kit', () => {
       }, localRunInput());
     } finally { console.error = original; }
     expect(commands.some(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
-    expect(commands.some(command => command.startsWith('git push'))).toBe(false);
+    expect(commands.some(command => command.includes(FLOW_PUSH_COMMAND))).toBe(false);
     expect(finish).toBe('needs_human');
     expect(messages.join('\n')).toContain('no commits');
   });
@@ -316,7 +322,7 @@ describe('local flow starter kit', () => {
       }, localRunInput(selected));
       const create = commands.find(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND)) ?? '';
       expect(create).toContain('--draft');
-      expect(commands).toContain('git push --set-upstream origin HEAD');
+      expect(commands).toContain(PUSH);
       expect(finish).toBe('step_failed');
     }
   });
@@ -340,9 +346,9 @@ describe('local flow starter kit', () => {
     expect(fixer).toBeGreaterThan(0);
     expect(calls[fixer + 1]).toBe(FLOW_CHECK_RUN_COMMAND);
     // Pushed either way: the revision is work, and work is never thrown away.
-    expect(calls.indexOf('git push')).toBeGreaterThan(fixer);
+    expect(calls.indexOf(REVISION_PUSH)).toBeGreaterThan(fixer);
     if (fail) {
-      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf('git push'));
+      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf(REVISION_PUSH));
       expect(finish).toBe('step_failed');
     } else {
       expect(calls).not.toContain(FLOW_CHECK_BLOCKED_COMMAND);

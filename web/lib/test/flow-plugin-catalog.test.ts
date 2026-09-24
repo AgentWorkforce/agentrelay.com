@@ -21,8 +21,8 @@ const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 describe('flow plugin catalog', () => {
   const catalog = getFlowPluginCatalog();
 
-  it('is version 1 with unique kebab-case plugin names', () => {
-    expect(catalog.version).toBe(1);
+  it('is version 2 with unique kebab-case plugin names', () => {
+    expect(catalog.version).toBe(2);
     expect(Array.isArray(catalog.plugins)).toBe(true);
     expect(catalog.plugins.length).toBeGreaterThan(0);
     const names = catalog.plugins.map((plugin) => plugin.name);
@@ -30,34 +30,41 @@ describe('flow plugin catalog', () => {
     expect(new Set(names).size).toBe(names.length);
   });
 
-  it('records a fail-closed babysitter entry with a pinned sha and digest', () => {
+  it('records the released Babysitter artifact without claiming handler execution', () => {
     const babysitter = getFlowPlugin('babysitter');
     expect(babysitter).toMatchObject({
-      source: { owner: 'AgentWorkforce', repo: 'flows', path: 'examples/babysitter' },
-      tier: 'community',
+      source: { owner: 'AgentWorkforce', repo: 'flows', path: 'extensions/babysitter' },
+      ref: '8b33ebab8347514f80d9da5a81206a087f641714',
+      digest: 'bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee',
+      manifestSha256: '5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226',
+      compat: { surface: '^2.0.26', sdk: '^2.0.26', base: ['software-factory'] },
+      tier: 'first-party',
       base: ['software-factory'],
     });
     expect(babysitter!.ref).toMatch(SHA);
     expect(babysitter!.digest).toMatch(HEX64);
-    expect(babysitter!.description).toContain('plugin_event_unroutable');
+    expect(babysitter!.manifestSha256).toMatch(HEX64);
+    expect(babysitter!.description).not.toContain('plugin_event_unroutable');
+    expect(babysitter!.description).toContain('fail-closed');
+    expect(babysitter!.description).toContain('no GitHub write or merge authority');
     expect(FLOW_PLUGIN_TRUST_TIERS.includes(babysitter!.tier)).toBe(true);
-    expect(pluginHasUnroutableTriggers(babysitter!)).toBe(true);
+    expect(pluginHasUnroutableTriggers(babysitter!)).toBe(false);
   });
 
   it('builds a GitHub tree URL at the pinned sha, not a branch', () => {
     const babysitter = getFlowPlugin('babysitter')!;
     expect(flowPluginSourceUrl(babysitter)).toBe(
-      `https://github.com/AgentWorkforce/flows/tree/${babysitter.ref}/examples/babysitter`,
+      `https://github.com/AgentWorkforce/flows/tree/${babysitter.ref}/extensions/babysitter`,
     );
     expect(flowPluginGithubRef(babysitter)).toBe(
-      `github:AgentWorkforce/flows@${babysitter.ref}#examples/babysitter`,
+      `github:AgentWorkforce/flows@${babysitter.ref}#extensions/babysitter`,
     );
   });
 });
 
 describe('flowPluginBadgeMarkdown', () => {
   const pluginA =
-    'https://github.com/AgentWorkforce/flows/tree/05c3dff138883322e80cb793b1f5a097ad510572/examples/babysitter';
+    'https://github.com/AgentWorkforce/flows/tree/8b33ebab8347514f80d9da5a81206a087f641714/extensions/babysitter';
   const pluginB = 'github:acme/plugins@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa#extra';
 
   it('points the Install plugin badge at /cloud/flows/deploy with flow and plugin', () => {
@@ -74,7 +81,7 @@ describe('flowPluginBadgeMarkdown', () => {
     const url = new URL(href!);
     expect(url.pathname).toBe('/cloud/flows/deploy');
     expect(url.searchParams.get('flow')).toBe(SOFTWARE_FACTORY_FLOW_URL);
-    expect(SOFTWARE_FACTORY_FLOW_URL).toContain('/blob/b4dd665eb433bd7f52d1045543aef5f14fb7891e/');
+    expect(SOFTWARE_FACTORY_FLOW_URL).toContain('/blob/8b33ebab8347514f80d9da5a81206a087f641714/');
     expect(SOFTWARE_FACTORY_FLOW_URL).not.toContain('/blob/main/');
     expect(url.searchParams.getAll('plugin')).toEqual([pluginA]);
   });

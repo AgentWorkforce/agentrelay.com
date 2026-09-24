@@ -1,9 +1,9 @@
-import { isCodingAgent, type CodingAgent } from './flow-agents';
+import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
 import type { WorkflowId, WorkflowStep } from './flow-workflows';
 
 export const AGENT_ROLES = ['planner', 'plan-reviewer', 'prototype-1', 'prototype-2', 'prototype-3', 'comparator', 'implementer', 'adversary', 'fixer', 'check-discovery', 'check-repair'] as const;
 export type AgentRole = typeof AGENT_ROLES[number];
-export type AgentSettings = { agent?: CodingAgent; model?: string; prompt?: string };
+export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string };
 export type FlowAgentSettings = Partial<Record<`${WorkflowId}:${AgentRole}`, AgentSettings>>;
 
 export function rolesForStep(step: WorkflowStep): AgentRole[] {
@@ -36,7 +36,7 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   const defaultAgent = ['plan-reviewer', 'comparator', 'adversary', 'prototype-2'].includes(role) ? reviewer : builder;
   const saved = settings[`${workflow}:${role}`];
   // Changing the selected agents must never leave an unavailable CLI assigned.
-  const agent = saved?.agent && available.includes(saved.agent) ? saved.agent : defaultAgent;
+  const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
   return { agent, model: compatible ? saved?.model?.trim() || '' : '', prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
 }
@@ -48,7 +48,7 @@ export function validFlowAgentSettings(value: unknown): value is FlowAgentSettin
     const [workflow, role, extra] = key.split(':');
     if (extra || !['traditional', 'prototype', 'simple'].includes(workflow) || !(AGENT_ROLES as readonly string[]).includes(role)) return false;
     if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
-    return Object.entries(settings).every(([field, v]) => field === 'agent' ? typeof v === 'string' && isCodingAgent(v)
+    return Object.entries(settings).every(([field, v]) => field === 'agent' ? typeof v === 'string' && CODING_AGENTS.some(agent => agent.id === v)
       : field === 'model' ? typeof v === 'string' && v.length <= 120 && !/[\r\n\0]/.test(v)
       : field === 'prompt' ? typeof v === 'string' && v.trim().length > 0 && v.length <= 6000 : false);
   });

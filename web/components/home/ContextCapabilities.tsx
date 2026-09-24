@@ -1,5 +1,4 @@
-import ClaudeCode from '@lobehub/icons/es/ClaudeCode';
-import Codex from '@lobehub/icons/es/Codex';
+import { ClaudeCode, Codex } from '../brand-icons';
 import { FileText, FolderOpen, HardDrive } from 'lucide-react';
 
 import { FadeIn } from '../FadeIn';
