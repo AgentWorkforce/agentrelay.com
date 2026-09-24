@@ -84,9 +84,9 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const active = progress?.step || 0;
   const inputRequest = product === 'flows' ? progress?.inputRequest : undefined;
   // An answered web-input request can arrive before the agent advances the
-  // numbered progress step. Keep the response card visible at step 0 so the
-  // user sees confirmation instead of the initial copy-prompt state.
-  const answeredInput = product === 'flows' && inputRequest?.status === 'answered';
+  // numbered progress step. Keep that step-zero confirmation visible, but do
+  // not let a stale answered request override a later progress step.
+  const answeredInput = product === 'flows' && active === 0 && inputRequest?.status === 'answered';
   const paused = progress?.state === 'waiting' && active > 0;
   const failed = progress?.state === 'failed';
   const endpoint = origin ? new URL(apiPath, origin).href : '';
@@ -243,7 +243,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
           </section>}
           <div className={s.progress} role="status" aria-live="polite">
             <div className={s.progressDots} aria-hidden="true">{steps.map((step, index) => <i key={step.title} data-done={complete || active > index + 1} data-current={!complete && active === index + 1} />)}</div>
-            <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : notice ? `${active} of 5 · Preview saved; activation pending` : inputRequest?.status === 'pending' ? 'Waiting for your answer' : answeredInput ? `${active} of 5 · Answer received` : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
+            <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : notice ? `${active} of 5 · Preview saved; activation pending` : inputRequest?.status === 'pending' ? 'Waiting for your answer' : answeredInput ? 'Answer received' : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
           </div>
           {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => {
             boot.current = null; setError('');

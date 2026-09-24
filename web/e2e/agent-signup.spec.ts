@@ -52,7 +52,7 @@ test('clipboard failure reveals and selects the entire prompt', async ({ page })
 });
 
 test('shows an answered flow input at step zero until the agent advances', async ({ page }) => {
-  const progress = {
+  let progress = {
     id, product: 'flows', step: 0, state: 'waiting', revision: 1,
     updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7200000).toISOString(),
     inputRequest: { id: `${id.slice(0, -1)}8`, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered' },
@@ -64,7 +64,14 @@ test('shows an answered flow input at step zero until the agent advances', async
   await page.goto('/signup/flows');
   await expect(page.getByRole('heading', { name: 'Answer received.' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Question from your agent' })).toContainText('Answer sent. Your agent will continue setup here.');
+  await expect(page.getByText('Answer received', { exact: true })).toBeVisible();
+  await expect(page.getByText('0 of 5 · Answer received')).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'Copy setup prompt' })).not.toBeVisible();
+
+  progress = { ...progress, step: 2, state: 'working', revision: 2 };
+  await expect(page.getByRole('heading', { name: 'Choose your flow', exact: true })).toBeVisible();
+  await expect(page.getByText('2 of 5 · Choose your flow')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Question from your agent' })).not.toBeVisible();
 });
 
 test('logo ribbons respond to pointer movement and settle into the completed mark', async ({ page }, testInfo) => {
