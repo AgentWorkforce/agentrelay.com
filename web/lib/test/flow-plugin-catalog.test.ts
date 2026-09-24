@@ -113,6 +113,32 @@ describe('flow plugin catalog', () => {
         pullRequestUrl: 'https://github.com/AgentWorkforce/cloud/pull/not-a-number',
       },
     })).toBe(false);
+
+    expect(flowPluginIsActivatable({
+      ...ready,
+      activation: { ...ready.activation, dependencies: [ready.activation.dependencies[0]!] },
+    })).toBe(false);
+
+    expect(flowPluginDependencyHasDeploymentEvidence({
+      ...ready.activation.dependencies[0]!,
+      evidence: {
+        ...ready.activation.dependencies[0]!.evidence!,
+        deployedAt: '2026-09-24T11:59:59Z',
+      },
+    })).toBe(false);
+
+    expect(flowPluginDependencyHasDeploymentEvidence({
+      ...ready.activation.dependencies[0]!,
+      evidence: {
+        ...ready.activation.dependencies[0]!.evidence!,
+        mergedAt: '2026-02-30T12:00:00Z',
+      },
+    })).toBe(false);
+
+    expect(flowPluginIsActivatable({
+      ...ready,
+      activation: { ...ready.activation, state: 'blocked' },
+    })).toBe(false);
   });
 
   it('builds a GitHub tree URL at the pinned sha, not a branch', () => {

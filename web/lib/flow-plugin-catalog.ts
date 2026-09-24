@@ -4,6 +4,13 @@ import { SITE_URL } from './site';
 export const FLOW_PLUGIN_TRUST_TIERS = ['first-party', 'verified', 'community'] as const;
 export type FlowPluginTrustTier = (typeof FLOW_PLUGIN_TRUST_TIERS)[number];
 
+export const FLOW_PLUGIN_REQUIRED_DEPENDENCY_IDS: Readonly<Record<string, readonly string[]>> = {
+  babysitter: [
+    'cloud-babysitter-capability-adapter',
+    'relay-native-existing-session-delivery',
+  ],
+};
+
 export type FlowPluginDeploymentEvidence = {
   pullRequestUrl: string;
   mergedCommit: string;
@@ -114,6 +121,14 @@ export function pluginHasUnroutableTriggers(plugin: FlowPluginCatalogEntry): boo
 const FULL_SHA = /^[0-9a-f]{40}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
+function timestampMillis(value: string): number | null {
+  if (!ISO_TIMESTAMP.test(value)) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
+  const normalized = value.includes('.') ? value : value.replace(/Z$/, '.000Z');
+  return new Date(milliseconds).toISOString() === normalized ? milliseconds : null;
+}
+
 export function flowPluginDependencyHasDeploymentEvidence(
   dependency: FlowPluginActivationDependency,
 ): boolean {
@@ -122,20 +137,27 @@ export function flowPluginDependencyHasDeploymentEvidence(
   try {
     const pullRequestUrl = new URL(evidence.pullRequestUrl);
     const deploymentUrl = new URL(evidence.deploymentUrl);
+    const mergedAt = timestampMillis(evidence.mergedAt);
+    const deployedAt = timestampMillis(evidence.deployedAt);
     return pullRequestUrl.origin === 'https://github.com'
       && new RegExp(`^/${dependency.repository}/pull/[1-9][0-9]*$`).test(pullRequestUrl.pathname)
       && FULL_SHA.test(evidence.mergedCommit)
-      && ISO_TIMESTAMP.test(evidence.mergedAt)
+      && mergedAt !== null
       && deploymentUrl.protocol === 'https:'
-      && ISO_TIMESTAMP.test(evidence.deployedAt);
+      && deployedAt !== null
+      && deployedAt >= mergedAt;
   } catch {
     return false;
   }
 }
 
 export function flowPluginIsActivatable(plugin: FlowPluginCatalogEntry): boolean {
+  const required = FLOW_PLUGIN_REQUIRED_DEPENDENCY_IDS[plugin.name];
+  if (!required) return false;
+  const actual = plugin.activation.dependencies.map(dependency => dependency.id);
   return plugin.activation.state === 'ready'
-    && plugin.activation.dependencies.length > 0
+    && actual.length === required.length
+    && required.every(id => actual.includes(id))
     && plugin.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence);
 }
 

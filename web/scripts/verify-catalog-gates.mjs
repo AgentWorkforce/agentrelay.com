@@ -8,15 +8,25 @@ const [pluginCatalog, recommendedCatalog] = await Promise.all([
   readFile(recommendedCatalogUrl, 'utf8').then(JSON.parse),
 ]);
 
-const REQUIRED_DEPENDENCIES = new Map([
-  ['cloud-babysitter-capability-adapter', 'AgentWorkforce/cloud'],
-  ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
+const REQUIRED_PLUGIN_DEPENDENCIES = new Map([
+  ['babysitter', new Map([
+    ['cloud-babysitter-capability-adapter', 'AgentWorkforce/cloud'],
+    ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
+  ])],
 ]);
 const SHA = /^[0-9a-f]{40}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
 function fail(message) {
   throw new Error(`catalog dependency gate: ${message}`);
+}
+
+function timestampMillis(value) {
+  if (!ISO_TIMESTAMP.test(value)) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
+  const normalized = value.includes('.') ? value : value.replace(/Z$/, '.000Z');
+  return new Date(milliseconds).toISOString() === normalized ? milliseconds : null;
 }
 
 function deploymentEvidenceIsValid(dependency) {
@@ -32,20 +42,23 @@ function deploymentEvidenceIsValid(dependency) {
   } catch {
     return false;
   }
+  const mergedAt = timestampMillis(evidence.mergedAt);
+  const deployedAt = timestampMillis(evidence.deployedAt);
   return pullRequestUrl.origin === 'https://github.com'
     && new RegExp(`^/${dependency.repository}/pull/[1-9][0-9]*$`).test(pullRequestUrl.pathname)
     && SHA.test(evidence.mergedCommit)
-    && ISO_TIMESTAMP.test(evidence.mergedAt)
+    && mergedAt !== null
     && deploymentUrl.protocol === 'https:'
-    && ISO_TIMESTAMP.test(evidence.deployedAt);
+    && deployedAt !== null
+    && deployedAt >= mergedAt;
 }
 
-function validateActivationGate(gate, label) {
+function validateActivationGate(gate, label, requiredDependencies) {
   if (!gate || typeof gate !== 'object' || Array.isArray(gate)) fail(`${label} has no activation gate`);
   if (Object.keys(gate).sort().join(',') !== 'dependencies,state') fail(`${label} activation gate has unknown fields`);
   if (gate.state !== 'blocked' && gate.state !== 'ready') fail(`${label} activation state must be blocked or ready`);
-  if (!Array.isArray(gate.dependencies) || gate.dependencies.length !== REQUIRED_DEPENDENCIES.size) {
-    fail(`${label} must declare both runtime dependencies`);
+  if (!Array.isArray(gate.dependencies) || gate.dependencies.length !== requiredDependencies.size) {
+    fail(`${label} must declare its complete runtime dependency set`);
   }
   const seen = new Set();
   for (const dependency of gate.dependencies) {
@@ -55,7 +68,7 @@ function validateActivationGate(gate, label) {
     }
     if (seen.has(dependency.id)) fail(`${label} repeats dependency ${dependency.id}`);
     seen.add(dependency.id);
-    if (REQUIRED_DEPENDENCIES.get(dependency.id) !== dependency.repository) {
+    if (requiredDependencies.get(dependency.id) !== dependency.repository) {
       fail(`${label} dependency ${dependency.id} has the wrong repository`);
     }
     if (dependency.requiredState !== 'merged-and-deployed') {
@@ -63,8 +76,8 @@ function validateActivationGate(gate, label) {
     }
   }
   const allDependenciesProven = gate.dependencies.every(deploymentEvidenceIsValid);
-  if ((gate.state === 'ready') !== allDependenciesProven) {
-    fail(`${label} may be ready only when both dependencies carry merge and deployment evidence`);
+  if (gate.state === 'ready' && !allDependenciesProven) {
+    fail(`${label} may be ready only when every dependency carries merge and deployment evidence`);
   }
 }
 
@@ -80,8 +93,17 @@ const garden = recommendedCatalog.flows.find(flow => flow.id === 'software-facto
 const extension = garden?.extensions?.find(entry => entry.id === 'babysitter');
 if (!plugin || !garden || !extension) fail('Babysitter must exist in both catalogs');
 
-validateActivationGate(plugin.activation, 'plugin catalog Babysitter');
-validateActivationGate(extension.activation, 'Software Garden Babysitter');
+for (const entry of pluginCatalog.plugins) {
+  const requiredDependencies = REQUIRED_PLUGIN_DEPENDENCIES.get(entry.name);
+  if (!requiredDependencies) fail(`${entry.name} has no independently defined dependency contract`);
+  validateActivationGate(entry.activation, `plugin catalog ${entry.name}`, requiredDependencies);
+}
+
+validateActivationGate(
+  extension.activation,
+  'Software Garden Babysitter',
+  REQUIRED_PLUGIN_DEPENDENCIES.get('babysitter'),
+);
 
 const pluginRef = `github:${plugin.source.owner}/${plugin.source.repo}@${plugin.ref}#${plugin.source.path}`;
 if (extension.artifact.ref !== pluginRef
