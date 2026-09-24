@@ -7,7 +7,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ prod
   if (!isAgentSignupProduct(product)) return new Response('Not found', { status: 404 });
   const url = new URL(request.url);
   const requestHost = request.headers.get('host');
-  const localRequestHost = requestHost && /^(localhost|127\.0\.0\.1)(:\d{1,5})?$/.test(requestHost) ? requestHost : null;
+  const localHostMatch = requestHost?.match(/^(localhost|127\.0\.0\.1)(?::(\d{1,5}))?$/);
+  const localPort = localHostMatch?.[2] ? Number(localHostMatch[2]) : undefined;
+  const localRequestHost = localHostMatch && (localPort === undefined || localPort <= 65_535) ? requestHost : null;
   // The apex router's HTTP fallback rewrites the URL to the marketing origin.
   // Sign-in and /cloud remain on the public apex, never that upstream host.
   // Next dev can normalize request.url to localhost while the browser used

@@ -30,7 +30,9 @@ function isSignupInputRequest(value: unknown): boolean {
     ['pending', 'answered'].includes(input.status) &&
     (input.type === 'notice'
       ? input.status === 'pending' && input.options === undefined && typeof input.actionHref === 'string' && /^\/dashboard\/workflows\/listeners\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.actionHref)
-      : input.actionHref === undefined && (input.type === 'text' ? input.options === undefined : Array.isArray(input.options) && input.options.every(option => typeof option === 'string')));
+      : input.actionHref === undefined && (input.type === 'text' ? input.options === undefined : Array.isArray(input.options) &&
+        input.options.length >= 2 && input.options.length <= 12 && input.options.every(option => typeof option === 'string' && option.trim() === option && option.length > 0 && option.length <= 100) &&
+        new Set(input.options).size === input.options.length));
 }
 
 export function trackedSignupPrompt(product: AgentSignupProduct, origin: string, endpoint: string, session: Pick<SignupSession, 'id' | 'writeToken'>) {

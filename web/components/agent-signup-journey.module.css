@@ -59,7 +59,7 @@
   .main { padding-top: 43svh; padding-bottom: 30px; }.atmosphere { height: 720px; }
   .content h1 { font-size: 34px; }.subtitle { font-size: 14px; margin-bottom: 24px; }
   .progress { margin-top: 26px; }.copyStatus { font-size: 10px; }
-  .inputCard { padding: 20px; }.inputCard form { flex-direction: column; }.inputCard button { min-height: 44px; }
+  .inputCard { padding: 20px; }.inputCard form { flex-direction: column; }.inputCard input, .inputCard select { flex: none; width: 100%; }.inputCard button { min-height: 44px; }
 }
 @media (max-height: 700px) and (min-width: 601px) {
   .main { padding-top: 360px; }.atmosphere { height: 720px; }

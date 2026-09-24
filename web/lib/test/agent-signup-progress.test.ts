@@ -10,7 +10,10 @@ describe('signup progress handoff', () => {
     for (const invalid of [null, {}, {...progress, step: 6}, {...progress, state: 'complete'}, {...progress, id: '../'.repeat(12)}, {...progress, updatedAt: 0}, {...progress, revision: -1}]) expect(isSignupProgress(invalid)).toBe(false);
     expect(isSignupProgress({...progress, step: 5, state: 'complete'})).toBe(true);
     expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'pending' }})).toBe(true);
+    expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered' }})).toBe(true);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'select', status: 'pending' }})).toBe(false);
+    expect(isSignupProgress({...progress, inputRequest: { id, key: 'workflow', label: 'Which workflow?', type: 'select', options: [], status: 'pending' }})).toBe(false);
+    expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'workflow', label: 'Which workflow?', type: 'select', options: ['software-factory', 'code-review'], status: 'pending' }})).toBe(true);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered', answer: 'private/repo' }})).toBe(false);
     expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'draft_saved', label: 'Preview saved.', type: 'notice', status: 'pending', actionHref: `/dashboard/workflows/listeners/${id}` }})).toBe(true);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'draft_saved', label: 'Preview saved.', type: 'notice', status: 'pending', actionHref: 'https://evil.test' }})).toBe(false);

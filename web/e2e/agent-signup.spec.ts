@@ -72,6 +72,15 @@ test('shows an answered flow input at step zero until the agent advances', async
   await expect(page.getByRole('heading', { name: 'Choose your flow', exact: true })).toBeVisible();
   await expect(page.getByText('2 of 5 · Choose your flow')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Question from your agent' })).not.toBeVisible();
+
+  progress = { ...progress, step: 2, state: 'waiting', revision: 3, inputRequest: { ...progress.inputRequest, id: `${id.slice(0, -1)}7` } };
+  await expect(page.getByRole('heading', { name: 'Answer received.' })).toBeVisible();
+  await expect(page.getByText('2 of 5 · Answer received')).toBeVisible();
+
+  progress = { ...progress, step: 3, state: 'waiting', revision: 4 };
+  await expect(page.getByRole('heading', { name: 'A quick approval from you.' })).toBeVisible();
+  await expect(page.getByText('3 of 5 · Waiting for your approval')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Question from your agent' })).not.toBeVisible();
 });
 
 test('logo ribbons respond to pointer movement and settle into the completed mark', async ({ page }, testInfo) => {

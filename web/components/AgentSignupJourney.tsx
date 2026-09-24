@@ -78,21 +78,26 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const [answerError, setAnswerError] = useState('');
   const [answerSubmitting, setAnswerSubmitting] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const inputRequestStep = useRef<{ id: string; step: number } | undefined>(undefined);
   const boot = useRef<ReturnType<typeof startSession> | null>(null);
   const steps = signupSteps[product];
   const complete = progress?.state === 'complete';
   const active = progress?.step || 0;
   const inputRequest = product === 'flows' ? progress?.inputRequest : undefined;
-  // An answered web-input request can arrive before the agent advances the
-  // numbered progress step. Keep that step-zero confirmation visible, but do
-  // not let a stale answered request override a later progress step.
-  const answeredInput = product === 'flows' && active === 0 && inputRequest?.status === 'answered';
+  const observedInput = inputRequestStep.current;
+  const observedInputStep = observedInput && observedInput.id === inputRequest?.id ? observedInput.step : active;
+  // Keep confirmation visible at the step where the question was observed,
+  // including step zero. A stale answer must not override later progress.
+  const answeredInput = inputRequest?.status === 'answered' && progress?.state === 'waiting' && observedInputStep === active;
   const paused = progress?.state === 'waiting' && active > 0;
   const failed = progress?.state === 'failed';
   const endpoint = origin ? new URL(apiPath, origin).href : '';
   const prompt = progress && token ? trackedSignupPrompt(product, origin, endpoint, { id: progress.id, writeToken: token }) : '';
 
-  useEffect(() => { setAnswerValue(''); setAnswerError(''); }, [inputRequest?.id]);
+  useEffect(() => {
+    setAnswerValue(''); setAnswerError('');
+    if (inputRequest) inputRequestStep.current = { id: inputRequest.id, step: active };
+  }, [inputRequest?.id]);
 
   latest.current = { step: active, owner: Boolean(token) };
   useEffect(() => {
@@ -223,7 +228,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
           {complete ? <a onClick={() => { if (token) analytics.track('dashboard_opened', active); }} className={s.primary} href={teamsCloudUrl(product === 'teams' ? '/dashboard/sessions' : '/dashboard')}>Open {product === 'teams' ? 'your workspace' : 'dashboard'} <ArrowUpRight size={17} /></a>
             : !active && !expired && !answeredInput && inputRequest?.status !== 'pending' ? <button type="button" className={s.primary} disabled={!prompt} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
           <p className={s.copyStatus} role="status">{complete ? '' : expired ? '' : notice ? 'No action is required to keep this draft saved.' : inputRequest?.status === 'pending' ? 'Your answer goes straight to your agent.' : answeredInput ? 'Your agent is processing your answer.' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
-          {inputRequest && !expired && !complete && (inputRequest.status === 'pending' || answeredInput || paused) && <section className={s.inputCard} aria-label={notice ? 'Flow preview status' : 'Question from your agent'}>
+          {inputRequest && !expired && !complete && (inputRequest.status === 'pending' || answeredInput) && <section className={s.inputCard} aria-label={notice ? 'Flow preview status' : 'Question from your agent'}>
             {notice ? <>
               <p className={s.inputEyebrow}>INACTIVE PREVIEW</p>
               <h2>{notice.label}</h2>
@@ -243,7 +248,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
           </section>}
           <div className={s.progress} role="status" aria-live="polite">
             <div className={s.progressDots} aria-hidden="true">{steps.map((step, index) => <i key={step.title} data-done={complete || active > index + 1} data-current={!complete && active === index + 1} />)}</div>
-            <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : notice ? `${active} of 5 · Preview saved; activation pending` : inputRequest?.status === 'pending' ? 'Waiting for your answer' : answeredInput ? 'Answer received' : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
+            <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : notice ? `${active} of 5 · Preview saved; activation pending` : inputRequest?.status === 'pending' ? 'Waiting for your answer' : answeredInput ? (active ? `${active} of 5 · Answer received` : 'Answer received') : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
           </div>
           {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => {
             boot.current = null; setError('');

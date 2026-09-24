@@ -55,6 +55,14 @@ describe('agent signup instructions', () => {
     expect(content).toContain('POST the Progress API URL to request a choice');
   });
 
+  it('ignores an invalid local Host port instead of constructing an invalid URL', async () => {
+    vi.stubEnv('NEXT_PUBLIC_CLOUD_URL', '/cloud');
+    const content = await (await GET(new Request('http://localhost:3100/signup/agent/flows', { headers: { host: 'localhost:65536' } }), {
+      params: Promise.resolve({ product: 'flows' }),
+    })).text();
+    expect(content).toContain('Cloud API base: http://localhost:3100/cloud');
+  });
+
   it.each(['unknown', 'Teams', 'flows/extra'])('returns 404 for unsupported product %s', async (product) => {
     const response = await GET(new Request('https://agentrelay.com/signup/agent/unknown'), {
       params: Promise.resolve({ product }),
