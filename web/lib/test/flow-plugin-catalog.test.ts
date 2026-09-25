@@ -80,7 +80,7 @@ describe('flow plugin catalog', () => {
       pullRequestUrl: `https://github.com/${repository}/pull/${pull}`,
       mergedCommit: 'a'.repeat(40),
       mergedAt: '2026-09-24T12:00:00Z',
-      deploymentUrl: `https://deployments.agentrelay.com/${repository}/${pull}`,
+      deploymentUrl: `https://api.github.com/repos/${repository}/deployments/${pull}`,
       deployedAt: '2026-09-24T12:05:00Z',
     });
     const ready = {

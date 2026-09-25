@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { verifyDeploymentReceipt } from './verify-deployment-receipts.mjs';
 
 const pluginCatalogUrl = new URL('../data/flow-plugin-catalog.v1.json', import.meta.url);
 const recommendedCatalogUrl = new URL('../data/recommended-flow-catalog.v1.json', import.meta.url);
@@ -49,7 +50,8 @@ export function deploymentEvidenceIsValid(dependency) {
     && new RegExp(`^/${dependency.repository}/pull/[1-9][0-9]*$`).test(pullRequestUrl.pathname)
     && SHA.test(evidence.mergedCommit)
     && mergedAt !== null
-    && deploymentUrl.protocol === 'https:'
+    && deploymentUrl.href === `https://api.github.com/repos/${dependency.repository}/deployments/${deploymentUrl.pathname.split('/').pop()}`
+    && /^[1-9][0-9]*$/.test(deploymentUrl.pathname.split('/').pop() ?? '')
     && deployedAt !== null
     && deployedAt >= mergedAt;
 }
@@ -122,6 +124,12 @@ if (plugin.runtime.package !== '@relayflows/sdk'
   || plugin.runtime.version !== '2.0.31'
   || plugin.runtime.release !== 'v2.0.31') {
   fail('Babysitter runtime must identify published @relayflows/sdk v2.0.31');
+}
+
+// Shape checks alone are not deployment proof. Only ready entries need live receipts.
+for (const entry of pluginCatalog.plugins) {
+  if (entry.activation.state !== 'ready') continue;
+  for (const dependency of entry.activation.dependencies) await verifyDeploymentReceipt(dependency);
 }
 
 console.log('catalog gates: Babysitter metadata is pinned and activation is fail-closed');

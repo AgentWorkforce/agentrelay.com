@@ -146,7 +146,8 @@ export function flowPluginDependencyHasDeploymentEvidence(
       && new RegExp(`^/${dependency.repository}/pull/[1-9][0-9]*$`).test(pullRequestUrl.pathname)
       && FULL_SHA.test(evidence.mergedCommit)
       && mergedAt !== null
-      && deploymentUrl.protocol === 'https:'
+      && deploymentUrl.href === `https://api.github.com/repos/${dependency.repository}/deployments/${deploymentUrl.pathname.split('/').pop()}`
+      && /^[1-9][0-9]*$/.test(deploymentUrl.pathname.split('/').pop() ?? '')
       && deployedAt !== null
       && deployedAt >= mergedAt;
   } catch {
