@@ -1,3 +1,4 @@
+import { verifyPluginArtifact } from './verify-plugin-artifacts.mjs';
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
@@ -69,3 +70,6 @@ for (const flow of catalog.flows) {
   assertRecommendedFlowSourceContract(flow, Buffer.concat(chunks).toString('utf8'));
   console.log(`${flow.id}: verified ${source.release} (${source.ref}) sha256:${actualHash}`);
 }
+
+const plugins = JSON.parse(await readFile(new URL('../data/flow-plugin-catalog.v1.json', import.meta.url), 'utf8'));
+for (const plugin of plugins.plugins) await verifyPluginArtifact(plugin);

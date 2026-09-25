@@ -134,8 +134,8 @@ export function PluginsGallery() {
                 </div>
                 {plugin.activation.state === 'blocked' ? (
                   <p className={s.note}>
-                    Catalog only: activation remains blocked until the Cloud capability adapter
-                    and Relay native existing-session delivery are both merged and deployed.
+                    Catalog only: activation is blocked. Required merge and deployment evidence:
+                    {' '}{plugin.activation.dependencies.map(dependency => dependency.id).join(', ')}.
                   </p>
                 ) : null}
                 {pluginHasUnroutableTriggers(plugin) ? (

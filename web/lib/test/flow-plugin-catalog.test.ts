@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { deploymentEvidenceIsValid } from '../../scripts/verify-catalog-gates.mjs';
 
 import {
   FLOW_PLUGIN_TRUST_TIERS,
@@ -94,7 +95,39 @@ describe('flow plugin catalog', () => {
     };
     expect(ready.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence)).toBe(true);
     expect(flowPluginIsActivatable(ready)).toBe(true);
-    expect(flowPluginInstallHref(ready)).toContain('/cloud/flows/deploy?');
+    const install = new URL(flowPluginInstallHref(ready)!, 'https://agentrelay.com');
+    expect(install.pathname).toBe('/cloud/flows/deploy');
+    expect(install.searchParams.get('flow')).toBe(SOFTWARE_FACTORY_FLOW_URL);
+    expect(install.searchParams.getAll('plugin')).toEqual([flowPluginSourceUrl(ready)]);
+
+    const dependency = ready.activation.dependencies[0]!;
+    const invalidEvidence: unknown[] = [null, [], {}, { ...dependency.evidence, extra: 'field' }];
+    for (const [key, value] of Object.entries(dependency.evidence)) {
+      for (const malformed of [[value], null, 123, {}, true]) {
+        invalidEvidence.push({ ...dependency.evidence, [key]: malformed });
+      }
+      const missing = { ...dependency.evidence };
+      delete missing[key as keyof typeof missing];
+      invalidEvidence.push(missing);
+    }
+    for (const evidence of invalidEvidence) {
+      const invalid = { ...dependency, evidence } as typeof dependency;
+      expect(flowPluginDependencyHasDeploymentEvidence(invalid)).toBe(false);
+      expect(deploymentEvidenceIsValid(invalid)).toBe(false);
+      expect(flowPluginInstallHref({ ...ready, activation: {
+        ...ready.activation, dependencies: [invalid, ready.activation.dependencies[1]!],
+      } })).toBeNull();
+    }
+    expect(deploymentEvidenceIsValid(dependency)).toBe(true);
+    expect(flowPluginDependencyHasDeploymentEvidence({ ...dependency, evidence: null })).toBe(false);
+
+    // Evidence is internally consistent but belongs to the wrong repository.
+    const wrongRepository = { ...dependency, repository: 'AgentWorkforce/other',
+      evidence: evidence('AgentWorkforce/other', 1) };
+    expect(flowPluginDependencyHasDeploymentEvidence(wrongRepository)).toBe(true);
+    expect(flowPluginInstallHref({ ...ready, activation: {
+      ...ready.activation, dependencies: [wrongRepository, ready.activation.dependencies[1]!],
+    } })).toBeNull();
 
     const missingDeployment = {
       ...ready.activation.dependencies[0]!,

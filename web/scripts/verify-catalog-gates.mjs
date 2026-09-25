@@ -29,11 +29,12 @@ function timestampMillis(value) {
   return new Date(milliseconds).toISOString() === normalized ? milliseconds : null;
 }
 
-function deploymentEvidenceIsValid(dependency) {
+export function deploymentEvidenceIsValid(dependency) {
   const evidence = dependency.evidence;
   if (evidence === null) return false;
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) return false;
   if (Object.keys(evidence).sort().join(',') !== 'deployedAt,deploymentUrl,mergedAt,mergedCommit,pullRequestUrl') return false;
+  if (!Object.values(evidence).every(value => typeof value === 'string')) return false;
   let pullRequestUrl;
   let deploymentUrl;
   try {

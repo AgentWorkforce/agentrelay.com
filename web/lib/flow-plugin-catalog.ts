@@ -4,11 +4,11 @@ import { SITE_URL } from './site';
 export const FLOW_PLUGIN_TRUST_TIERS = ['first-party', 'verified', 'community'] as const;
 export type FlowPluginTrustTier = (typeof FLOW_PLUGIN_TRUST_TIERS)[number];
 
-export const FLOW_PLUGIN_REQUIRED_DEPENDENCY_IDS: Readonly<Record<string, readonly string[]>> = {
-  babysitter: [
-    'cloud-babysitter-capability-adapter',
-    'relay-native-existing-session-delivery',
-  ],
+export const FLOW_PLUGIN_REQUIRED_DEPENDENCIES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  babysitter: {
+    'cloud-babysitter-capability-adapter': 'AgentWorkforce/cloud',
+    'relay-native-existing-session-delivery': 'AgentWorkforce/relay',
+  },
 };
 
 export type FlowPluginDeploymentEvidence = {
@@ -133,7 +133,10 @@ export function flowPluginDependencyHasDeploymentEvidence(
   dependency: FlowPluginActivationDependency,
 ): boolean {
   const evidence = dependency.evidence;
-  if (!evidence || dependency.requiredState !== 'merged-and-deployed') return false;
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)
+    || dependency.requiredState !== 'merged-and-deployed') return false;
+  if (Object.keys(evidence).sort().join(',') !== 'deployedAt,deploymentUrl,mergedAt,mergedCommit,pullRequestUrl'
+    || !Object.values(evidence).every(value => typeof value === 'string')) return false;
   try {
     const pullRequestUrl = new URL(evidence.pullRequestUrl);
     const deploymentUrl = new URL(evidence.deploymentUrl);
@@ -152,12 +155,13 @@ export function flowPluginDependencyHasDeploymentEvidence(
 }
 
 export function flowPluginIsActivatable(plugin: FlowPluginCatalogEntry): boolean {
-  const required = FLOW_PLUGIN_REQUIRED_DEPENDENCY_IDS[plugin.name];
-  if (!required) return false;
+  const required = FLOW_PLUGIN_REQUIRED_DEPENDENCIES[plugin.name];
+  if (!Object.hasOwn(FLOW_PLUGIN_REQUIRED_DEPENDENCIES, plugin.name)) return false;
   const actual = plugin.activation.dependencies.map(dependency => dependency.id);
   return plugin.activation.state === 'ready'
-    && actual.length === required.length
-    && required.every(id => actual.includes(id))
+    && actual.length === Object.keys(required).length
+    && Object.keys(required).every(id => actual.includes(id))
+    && plugin.activation.dependencies.every(dependency => required[dependency.id] === dependency.repository)
     && plugin.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence);
 }
 
