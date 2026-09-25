@@ -13,6 +13,7 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { FLOWS_OG_ALT, FLOWS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
+import { flowsGoogleAuthHref } from '../../lib/flows-cloud';
 import home from '../landing.module.css';
 import s from './flows.module.css';
 import { FlowExamples } from './FlowExamples';
@@ -43,10 +44,6 @@ export const metadata: Metadata = {
   },
 };
 
-function flowsSignInHref(utmContent: string) {
-  return `/flows/onboarding?ref=flows&utm_source=agentrelay.com&utm_medium=flows_landing&utm_campaign=flows&utm_content=${utmContent}`;
-}
-
 function WaveBreak({ tone = 'blue' }: { tone?: 'blue' | 'orange' }) {
   return (
     <div className={`${s.waveBreak} ${tone === 'orange' ? s.waveBreakOrange : s.waveBreakBlue}`} aria-hidden="true">
@@ -62,12 +59,12 @@ function WaveBreak({ tone = 'blue' }: { tone?: 'blue' | 'orange' }) {
 
 export default function FlowsPage() {
   const navGetStartedLink = (
-    <a href={flowsSignInHref('nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
+    <a href={flowsGoogleAuthHref('nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
       Try Free with Cloud
     </a>
   );
   const mobileGetStartedLink = (
-    <a href={flowsSignInHref('mobile_nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
+    <a href={flowsGoogleAuthHref('mobile_nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
       Try Free with Cloud
     </a>
   );
@@ -91,7 +88,7 @@ export default function FlowsPage() {
               Predictable, auditable and dependable.
             </p>
             <div className={s.ctaRow}>
-              <a href={flowsSignInHref('hero')} className={s.ctaPrimary}>
+              <a href={flowsGoogleAuthHref('hero')} className={s.ctaPrimary}>
                 Try Free with Cloud
                 <ArrowRight aria-hidden="true" size={17} strokeWidth={2} />
               </a>
