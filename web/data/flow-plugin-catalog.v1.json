@@ -1,14 +1,32 @@
 {
-  "version": 2,
+  "version": 3,
   "plugins": [
     {
       "name": "babysitter",
-      "description": "Native Babysitter for Software Garden: eleven GitHub wake events request one authorized existing-session turn. Cloud rechecks the live babysit label, pull-request head, and session binding; the extension holds no GitHub write or merge authority. Handler execution remains fail-closed until the Cloud capability adapter and native delivery path ship.",
+      "description": "Native Babysitter for Software Garden: eleven GitHub wake events request one authorized existing-session turn. Cloud rechecks the live babysit label, pull-request head, and session binding; the extension holds no GitHub write or merge authority. This entry is catalog-only until the Cloud capability adapter and Relay native delivery are both merged and deployed.",
       "source": { "owner": "AgentWorkforce", "repo": "flows", "path": "extensions/babysitter" },
       "ref": "8b33ebab8347514f80d9da5a81206a087f641714",
       "digest": "bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee",
       "manifestSha256": "5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226",
       "compat": { "surface": "^2.0.26", "sdk": "^2.0.26", "base": ["software-factory"] },
+      "runtime": { "package": "@relayflows/sdk", "version": "2.0.31", "release": "v2.0.31" },
+      "activation": {
+        "state": "blocked",
+        "dependencies": [
+          {
+            "id": "cloud-babysitter-capability-adapter",
+            "repository": "AgentWorkforce/cloud",
+            "requiredState": "merged-and-deployed",
+            "evidence": null
+          },
+          {
+            "id": "relay-native-existing-session-delivery",
+            "repository": "AgentWorkforce/relay",
+            "requiredState": "merged-and-deployed",
+            "evidence": null
+          }
+        ]
+      },
       "tier": "first-party",
       "base": ["software-factory"]
     }

@@ -1,8 +1,36 @@
 import catalogJson from '../data/flow-plugin-catalog.v1.json';
+import { FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS } from './flow-plugin-implementation-prs.mjs';
 import { SITE_URL } from './site';
 
 export const FLOW_PLUGIN_TRUST_TIERS = ['first-party', 'verified', 'community'] as const;
 export type FlowPluginTrustTier = (typeof FLOW_PLUGIN_TRUST_TIERS)[number];
+
+export const FLOW_PLUGIN_REQUIRED_DEPENDENCIES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  babysitter: {
+    'cloud-babysitter-capability-adapter': 'AgentWorkforce/cloud',
+    'relay-native-existing-session-delivery': 'AgentWorkforce/relay',
+  },
+};
+
+export type FlowPluginDeploymentEvidence = {
+  pullRequestUrl: string;
+  mergedCommit: string;
+  mergedAt: string;
+  deploymentUrl: string;
+  deployedAt: string;
+};
+
+export type FlowPluginActivationDependency = {
+  id: string;
+  repository: string;
+  requiredState: 'merged-and-deployed';
+  evidence: FlowPluginDeploymentEvidence | null;
+};
+
+export type FlowPluginActivationGate = {
+  state: 'blocked' | 'ready';
+  dependencies: FlowPluginActivationDependency[];
+};
 
 export type FlowPluginCatalogEntry = {
   name: string;
@@ -12,12 +40,14 @@ export type FlowPluginCatalogEntry = {
   digest: string;
   manifestSha256: string;
   compat: { surface: string; sdk: string; base: string[] };
+  runtime: { package: '@relayflows/sdk'; version: string; release: string };
+  activation: FlowPluginActivationGate;
   tier: FlowPluginTrustTier;
   base: string[];
 };
 
 export type FlowPluginCatalog = {
-  version: 2;
+  version: 3;
   plugins: FlowPluginCatalogEntry[];
 };
 
@@ -89,6 +119,56 @@ export function pluginHasUnroutableTriggers(plugin: FlowPluginCatalogEntry): boo
   return plugin.description.includes('plugin_event_unroutable');
 }
 
+const FULL_SHA = /^[0-9a-f]{40}$/;
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
+
+function timestampMillis(value: string): number | null {
+  if (!ISO_TIMESTAMP.test(value)) return null;
+  const milliseconds = Date.parse(value);
+  if (!Number.isFinite(milliseconds)) return null;
+  const normalized = value.includes('.') ? value : value.replace(/Z$/, '.000Z');
+  return new Date(milliseconds).toISOString() === normalized ? milliseconds : null;
+}
+
+export function flowPluginDependencyHasDeploymentEvidence(
+  dependency: FlowPluginActivationDependency,
+): boolean {
+  const evidence = dependency.evidence;
+  if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)
+    || dependency.requiredState !== 'merged-and-deployed') return false;
+  if (Object.keys(evidence).sort().join(',') !== 'deployedAt,deploymentUrl,mergedAt,mergedCommit,pullRequestUrl'
+    || !Object.values(evidence).every(value => typeof value === 'string')) return false;
+  if (!Object.hasOwn(FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS, dependency.id)
+    || evidence.pullRequestUrl !== FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS[dependency.id]) return false;
+  try {
+    const pullRequestUrl = new URL(evidence.pullRequestUrl);
+    const deploymentUrl = new URL(evidence.deploymentUrl);
+    const mergedAt = timestampMillis(evidence.mergedAt);
+    const deployedAt = timestampMillis(evidence.deployedAt);
+    return pullRequestUrl.origin === 'https://github.com'
+      && new RegExp(`^/${dependency.repository}/pull/[1-9][0-9]*$`).test(pullRequestUrl.pathname)
+      && FULL_SHA.test(evidence.mergedCommit)
+      && mergedAt !== null
+      && deploymentUrl.href === `https://api.github.com/repos/${dependency.repository}/deployments/${deploymentUrl.pathname.split('/').pop()}`
+      && /^[1-9][0-9]*$/.test(deploymentUrl.pathname.split('/').pop() ?? '')
+      && deployedAt !== null
+      && deployedAt >= mergedAt;
+  } catch {
+    return false;
+  }
+}
+
+export function flowPluginIsActivatable(plugin: FlowPluginCatalogEntry): boolean {
+  const required = FLOW_PLUGIN_REQUIRED_DEPENDENCIES[plugin.name];
+  if (!Object.hasOwn(FLOW_PLUGIN_REQUIRED_DEPENDENCIES, plugin.name)) return false;
+  const actual = plugin.activation.dependencies.map(dependency => dependency.id);
+  return plugin.activation.state === 'ready'
+    && actual.length === Object.keys(required).length
+    && Object.keys(required).every(id => actual.includes(id))
+    && plugin.activation.dependencies.every(dependency => required[dependency.id] === dependency.repository)
+    && plugin.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence);
+}
+
 function originFrom(appOrigin: string): string {
   return appOrigin.replace(/\/+$/, '');
 }
@@ -111,6 +191,7 @@ export function flowPluginInstallPath(input: { flowUrl: string; plugins: string[
 }
 
 export function flowPluginInstallHref(plugin: FlowPluginCatalogEntry): string | null {
+  if (!flowPluginIsActivatable(plugin)) return null;
   const flowUrl = pluginInstallFlowUrl(plugin);
   if (!flowUrl) return null;
   return flowPluginInstallPath({ flowUrl, plugins: [flowPluginSourceUrl(plugin)] });

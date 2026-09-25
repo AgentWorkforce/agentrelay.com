@@ -11,10 +11,10 @@ describe('recommended flow catalog', () => {
     const catalog = getRecommendedFlowCatalog();
     expect(catalog).toEqual({
       schemaVersion: 1,
-      catalogVersion: 2,
+      catalogVersion: 3,
       flows: [{
         id: 'software-factory',
-        version: 2,
+        version: 3,
         name: 'Software Garden',
         summary: expect.any(String),
         description: expect.any(String),
@@ -26,6 +26,33 @@ describe('recommended flow catalog', () => {
           defaults: { agents: ['claude'] },
           allowedAgents: ['claude'],
         },
+        extensions: [{
+          id: 'babysitter',
+          version: '0.2.0',
+          runtime: { package: '@relayflows/sdk', version: '2.0.31', release: 'v2.0.31' },
+          artifact: {
+            ref: 'github:AgentWorkforce/flows@8b33ebab8347514f80d9da5a81206a087f641714#extensions/babysitter',
+            digest: 'bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee',
+            manifestSha256: '5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226',
+          },
+          activation: {
+            state: 'blocked',
+            dependencies: [
+              {
+                id: 'cloud-babysitter-capability-adapter',
+                repository: 'AgentWorkforce/cloud',
+                requiredState: 'merged-and-deployed',
+                evidence: null,
+              },
+              {
+                id: 'relay-native-existing-session-delivery',
+                repository: 'AgentWorkforce/relay',
+                requiredState: 'merged-and-deployed',
+                evidence: null,
+              },
+            ],
+          },
+        }],
         source: {
           kind: 'github',
           owner: 'AgentWorkforce',
@@ -41,6 +68,7 @@ describe('recommended flow catalog', () => {
       }],
     });
     expect(JSON.parse(JSON.stringify(catalog))).toEqual(catalog);
+    expect(catalog.flows[0]?.extensions[0]?.activation.state).toBe('blocked');
   });
 
   it('keeps display branding separate from the canonical activation id', () => {
@@ -76,6 +104,7 @@ describe('recommended flow catalog HTTP surface', () => {
       id: 'software-factory',
       name: 'Software Garden',
       source: { ref: '8b33ebab8347514f80d9da5a81206a087f641714' },
+      extensions: [{ id: 'babysitter', activation: { state: 'blocked' } }],
     });
   });
 

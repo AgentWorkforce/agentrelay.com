@@ -9,7 +9,7 @@ A **flow plugin** is a directory in a public GitHub repository whose `flows-plug
 { "schema": 2, "kind": "flow-extension" }
 ```
 
-The entry default-exports `flow()` and declares handlers, hooks, triggers, permissions, compat, and the same mandatory `preflight`. Browse the vendored catalog on the [plugin gallery](/flows/plugins). Each card's **Install plugin** badge opens Cloud with the base flow and the plugin source:
+The entry default-exports `flow()` and declares handlers, hooks, triggers, permissions, compat, and the same mandatory `preflight`. Browse the vendored catalog on the [plugin gallery](/flows/plugins). An available card's **Install plugin** badge opens Cloud with the base flow and the plugin source:
 
 ```text
 /cloud/flows/deploy?flow=<base url>&plugin=<plugin url>
@@ -18,7 +18,7 @@ The entry default-exports `flow()` and declares handlers, hooks, triggers, permi
 `plugin` may repeat. The badge helper appends each one so a second plugin does not overwrite the first.
 
 <BannerLink href="/flows/plugins" icon="rocket">
-  See the plugin gallery — Babysitter on Software Garden, with the install badge.
+  See the plugin gallery — including Babysitter's pinned artifact and release gate.
 </BannerLink>
 
 ## `flows-plugin.json` schema 2
@@ -67,7 +67,7 @@ Rules that matter at review time:
 - Manifest triggers are validated against the surface registry `providerEventTypes`. An event the registry cannot route is `plugin_event_unroutable`.
 
 <Warning>
-  Relayflows 2.0.26 carries all eleven Babysitter event identities, but the authored executor still refuses a matching handler before either body starts because schema-2 permissions are not isolated there. Cloud may enable Babysitter only through the separately authorized existing-session lineage path; an arbitrary labelled pull request is not execution authority.
+  Relayflows SDK 2.0.31 carries the isolated hosted runtime for the reviewed Babysitter artifact, but no Cloud capability adapter or Relay native existing-session delivery release exists yet. The catalog therefore remains metadata-only and exposes no install control. Cloud may enable Babysitter only after both dependencies are merged and deployed; an arbitrary labelled pull request is not execution authority.
 </Warning>
 
 ## `flows add`
@@ -118,7 +118,7 @@ The gallery and the deploy wizard display a tier. **The label is never used to s
 | **verified** | bundle `identity.json` keyid matches a publisher key registered in Cloud |
 | **community** | anything else |
 
-Babysitter in catalog v2 is **first-party**: its `v2.0.26` commit is reachable from `AgentWorkforce/flows` main. The label does not widen runtime authority.
+Babysitter in catalog v3 is **first-party**: its reviewed `v2.0.26` artifact commit is reachable from `AgentWorkforce/flows` main, and the hosted runtime provenance is the published SDK `v2.0.31` release. The label does not widen runtime authority.
 
 <Note>
   `permissions.writes` stays a reviewed declaration labelled UNENFORCED until gate 8. Displaying a first-party or verified badge does not enforce write scope, skip the digest, or route an event the registry does not carry.
@@ -126,12 +126,26 @@ Babysitter in catalog v2 is **first-party**: its `v2.0.26` commit is reachable f
 
 ## Install badge
 
-`flowPluginBadgeMarkdown()` renders the README form. `plugin` is appended so repeats survive:
+`flowPluginBadgeMarkdown()` renders the README form for an extension whose activation gate is ready. `plugin` is appended so repeats survive.
 
-```markdown
-[![Install plugin](https://agentrelay.com/deploy-flow_small.svg)](https://agentrelay.com/cloud/flows/deploy?flow=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Fblob%2F8b33ebab8347514f80d9da5a81206a087f641714%2Fexamples%2Fsoftware-factory%2Fsoftware-factory.flow.ts&plugin=https%3A%2F%2Fgithub.com%2FAgentWorkforce%2Fflows%2Ftree%2F8b33ebab8347514f80d9da5a81206a087f641714%2Fextensions%2Fbabysitter)
-```
+Babysitter's gate requires both `cloud-babysitter-capability-adapter` and `relay-native-existing-session-delivery` to carry a pull request, merge commit, merge time, deployment receipt, and deployment time. Until both proofs are recorded and the gate state is `ready`, `flowPluginInstallHref()` returns `null` and the gallery shows catalog status plus source only.
 
-The first plugin in the vendored catalog is Babysitter. Its base flow URL is Software Garden (`software-factory`); its plugin URL is the tree at the pinned sha. The [plugin gallery](/flows/plugins) shows the live badge.
+The catalog itself is versioned JSON, `{version:3, plugins:[{name, description, source:{owner,repo,path}, ref, digest, manifestSha256, compat, runtime, activation, tier, base}]}`. Any public repo with a `flows-plugin.json` remains installable by an explicit source URL; the curated catalog does not advertise an activation route until its dependency gate is satisfied.
 
-The catalog itself is versioned JSON, `{version:2, plugins:[{name, description, source:{owner,repo,path}, ref, digest, manifestSha256, compat, tier, base}]}`. Any public repo with a `flows-plugin.json` is installable by URL; the catalog is a curated index, not a gate.
+Ready catalog entries must pass live, read-only GitHub receipt verification in CI.
+The code-owned implementation contract binds `cloud-babysitter-capability-adapter`
+to [Cloud PR #3989](https://github.com/AgentWorkforce/cloud/pull/3989) and
+`relay-native-existing-session-delivery` to
+[Relay PR #1851](https://github.com/AgentWorkforce/relay/pull/1851). Unrelated PRs
+in those repositories cannot satisfy either dependency. A replacement implementation
+requires a reviewed code change to this contract.
+`pullRequestUrl` must identify a merged PR into the dependency repository's `main`,
+with the exact `mergedCommit` and `mergedAt`. `deploymentUrl` must be the canonical
+GitHub API deployment URL (`https://api.github.com/repos/OWNER/REPO/deployments/ID`).
+That deployment must identify the same commit in the non-transient `production`
+environment, and its latest status must be successful with `created_at` matching
+`deployedAt`. Arbitrary HTTPS links, build runs, private/unavailable receipts and
+unsupported deployment systems cannot make an entry ready. Blocked entries do not
+require network receipts and may retain evidence without enabling installation.
+The client checks the published catalog's shape; CI verifies its provenance, and
+Cloud remains responsible for server-side activation authorization.
