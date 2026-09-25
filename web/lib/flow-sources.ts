@@ -82,7 +82,12 @@ export function sourceSummary(id: IssueSourceId, settings: SourceSettings): stri
   if (id === 'markdown') return `${settings.path?.trim() || 'tasks.md'} · Local runs only, nothing to connect`;
   const parts = ISSUE_SOURCES.find(source => source.id === id)!.fields.flatMap(field => {
     const value = settings[field.key]?.trim();
-    if (!value) return [];
+    // A choice field unset still has a visible default in the picker — the
+    // first option — so the summary must name it rather than read as if every
+    // event family were subscribed.
+    if (!value) {
+      return 'options' in field ? [`${field.label}: ${field.options[0].label}`] : [];
+    }
     const shown = 'options' in field
       ? field.options.find(option => option.value === value)?.label ?? value
       : value;

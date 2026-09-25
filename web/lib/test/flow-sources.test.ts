@@ -127,9 +127,13 @@ describe('generated issue source filters', () => {
     expect(validSourcePreferences({ linear: { events: 'mentions' } })).toBe(false);
     expect(validSourcePreferences({ github: { events: 'assigned' } })).toBe(false);
 
-    // The summary names the choice, not its storage value.
+    // The summary names the choice, not its storage value — and an untouched
+    // select still means its displayed default, not "all incoming items".
     expect(sourceSummary('linear', { events: 'assigned', team: 'Engineering' }))
       .toBe('Wake on: Issues assigned to the agent · Team: Engineering');
+    expect(sourceSummary('linear', {})).toBe('Wake on: New issues');
+    expect(sourceSummary('linear', { team: 'Engineering' }))
+      .toBe('Wake on: New issues · Team: Engineering');
 
     // `events` is what wakes the Cloud listener, not a field a ticket carries:
     // the local flow must not filter on it or declare it on Issue.
