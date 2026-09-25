@@ -74,15 +74,24 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const [expired, setExpired] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [answerValue, setAnswerValue] = useState('');
+  const [answerError, setAnswerError] = useState('');
+  const [answerSubmitting, setAnswerSubmitting] = useState(false);
   const textarea = useRef<HTMLTextAreaElement>(null);
   const boot = useRef<ReturnType<typeof startSession> | null>(null);
   const steps = signupSteps[product];
   const complete = progress?.state === 'complete';
   const active = progress?.step || 0;
+  const inputRequest = product === 'flows' ? progress?.inputRequest : undefined;
+  // The API stamps the request's progress step, so reloads can distinguish a
+  // current answer (including step zero) from one left over after advancement.
+  const answeredInput = inputRequest?.status === 'answered' && progress?.state === 'waiting' && inputRequest.step === active;
   const paused = progress?.state === 'waiting' && active > 0;
   const failed = progress?.state === 'failed';
   const endpoint = origin ? new URL(apiPath, origin).href : '';
   const prompt = progress && token ? trackedSignupPrompt(product, origin, endpoint, { id: progress.id, writeToken: token }) : '';
+
+  useEffect(() => { setAnswerValue(''); setAnswerError(''); }, [inputRequest?.id]);
 
   latest.current = { step: active, owner: Boolean(token) };
   useEffect(() => {
@@ -165,16 +174,34 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
     try { await navigator.clipboard.writeText(prompt); setCopyMessage('Copied. Paste it into your agent.'); analytics.track('prompt_copied'); }
     catch { analytics.track('manual_copy_shown'); setShowPrompt(true); setCopyMessage('Select and copy the prompt below.'); requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.select(); }); }
   }
+  async function submitAnswer(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!progress || !token || !inputRequest || inputRequest.status !== 'pending' || !answerValue.trim() || answerSubmitting) return;
+    setAnswerSubmitting(true); setAnswerError('');
+    try {
+      const response = await fetch(`${apiPath}/${encodeURIComponent(progress.id)}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ requestId: inputRequest.id, answer: answerValue.trim() }), signal: AbortSignal.timeout(10_000),
+      });
+      if (!response.ok) throw new Error(response.status === 409 ? 'This question changed. Wait for the latest request.' : 'Could not send your answer. Please try again.');
+      const next: unknown = await response.json();
+      if (!isSignupProgress(next)) throw new Error('Could not confirm your answer. Please refresh the page.');
+      setProgress(previous => !previous || next.revision >= previous.revision ? next : previous);
+      setAnswerValue('');
+    } catch (cause) { setAnswerError(cause instanceof Error ? cause.message : 'Could not send your answer. Please try again.'); }
+    finally { setAnswerSubmitting(false); }
+  }
   function restart() {
     analytics.restart(Boolean(token));
     try { sessionStorage.removeItem(storageKey(product)); } catch { /* Best effort. */ }
     window.location.assign(window.location.pathname);
   }
-  const title = expired ? 'Session expired' : complete ? 'You’re all set.' : failed ? 'Your agent needs a hand.' : paused ? 'A quick approval from you.' : active ? steps[active - 1].title : 'Waiting for your agent';
-  const detail = expired ? 'Start a new session to keep watching setup.' : complete ? 'Your agent has verified setup. You’re ready to go.' : failed ? 'Check your agent’s conversation to resolve the issue. Progress will resume here.' : paused ? 'Follow the approval request in your agent’s conversation. We’ll pick up right here.' : active ? steps[active - 1].detail : 'The show starts when you paste the prompt into your agent.';
-  const mode = expired || error ? 'offline' : complete ? 'complete' : failed ? 'failed' : paused ? 'paused' : active ? 'working' : 'waiting';
+  const notice = product === 'flows' && inputRequest?.type === 'notice' && inputRequest.status === 'pending' ? inputRequest : undefined;
+  const title = expired ? 'Session expired' : complete ? 'You’re all set.' : notice ? 'Your Flow preview is saved.' : failed ? 'Your agent needs a hand.' : answeredInput ? 'Answer received.' : paused ? 'A quick approval from you.' : active ? steps[active - 1].title : 'Waiting for your agent';
+  const detail = expired ? 'Start a new session to keep watching setup.' : complete ? 'Your agent has verified setup. You’re ready to go.' : notice ? 'Review the inactive draft below. Internal model routing must be configured before live activation.' : failed ? (product === 'flows' ? 'Your agent will report what needs attention here.' : 'Check your agent’s conversation to resolve the issue. Progress will resume here.') : inputRequest?.status === 'pending' ? 'Answer on this page and your agent will keep going.' : answeredInput ? 'Your answer is in. Your agent is moving to the next step.' : paused ? (product === 'flows' ? 'Complete the sign-in or connection approval page your agent opened. Setup will resume here.' : 'Follow the approval request in your agent’s conversation. We’ll pick up right here.') : active ? steps[active - 1].detail : 'The show starts when you paste the prompt into your agent.';
+  const mode = expired || error ? 'offline' : complete ? 'complete' : failed ? 'failed' : paused || answeredInput ? 'paused' : active ? 'working' : 'waiting';
 
-  const heading = complete ? 'All yours.' : expired || failed || active ? title : 'Leave it to your agent.';
+  const heading = expired ? 'Session expired' : complete ? 'All yours.' : notice ? 'Preview saved.' : inputRequest?.status === 'pending' ? 'Your input is needed.' : answeredInput || failed || active ? title : 'Leave it to your agent.';
 
   return (
     <div className={`${s.page} ph-sensitive ph-no-capture`} data-mode={mode}>
@@ -183,8 +210,8 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
       <main className={s.main}>
         <div className={s.content}>
           <h1>{heading}</h1>
-          <p className={s.subtitle}>{complete ? 'Your agent has verified setup. You’re ready to go.' : expired || failed || active ? detail : 'Give this prompt to your coding agent and hang out here to watch it sign you up.'}</p>
-          {!complete && !active && !expired && !failed && (
+          <p className={s.subtitle}>{complete ? 'Your agent has verified setup. You’re ready to go.' : expired || failed || inputRequest?.status === 'pending' || answeredInput || active ? detail : 'Give this prompt to your coding agent and hang out here to watch it sign you up.'}</p>
+          {!complete && !active && !expired && !failed && !answeredInput && inputRequest?.status !== 'pending' && (
             <div className={s.agents} role="img" aria-label="Codex, Claude Code, Grok, and OpenCode">
               <span title="Codex"><AgentToolLogo provider="codex" className={s.agentLogo} /></span>
               <span title="Claude Code"><AgentToolLogo provider="claude" className={s.agentLogo} /></span>
@@ -193,11 +220,29 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
             </div>
           )}
           {complete ? <a onClick={() => { if (token) analytics.track('dashboard_opened', active); }} className={s.primary} href={teamsCloudUrl(product === 'teams' ? '/dashboard/sessions' : '/dashboard')}>Open {product === 'teams' ? 'your workspace' : 'dashboard'} <ArrowUpRight size={17} /></a>
-            : !active && !expired ? <button type="button" className={s.primary} disabled={!prompt} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
-          <p className={s.copyStatus} role="status">{complete ? '' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (expired ? '' : progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
+            : !active && !expired && !answeredInput && inputRequest?.status !== 'pending' ? <button type="button" className={s.primary} disabled={!prompt} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
+          <p className={s.copyStatus} role="status">{complete ? '' : expired ? '' : notice ? 'No action is required to keep this draft saved.' : inputRequest?.status === 'pending' ? 'Your answer goes straight to your agent.' : answeredInput ? 'Your agent is processing your answer.' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
+          {inputRequest && !expired && !complete && (inputRequest.status === 'pending' || answeredInput) && <section className={s.inputCard} aria-label={notice ? 'Flow preview status' : 'Question from your agent'}>
+            {notice ? <>
+              <p className={s.inputEyebrow}>INACTIVE PREVIEW</p>
+              <h2>{notice.label}</h2>
+              {notice.actionHref && <a className={s.inputAction} href={teamsCloudUrl(notice.actionHref)}>Open saved preview <ArrowUpRight size={16} /></a>}
+            </> : inputRequest.status === 'pending' ? <>
+              <p className={s.inputEyebrow}>YOUR AGENT IS ASKING</p>
+              <h2>{inputRequest.label}</h2>
+              {token ? <form onSubmit={event => void submitAnswer(event)}>
+                {inputRequest.type === 'select' ? <select aria-label={inputRequest.label} value={answerValue} onChange={event => setAnswerValue(event.target.value)} required>
+                  <option value="">Choose an option</option>
+                  {inputRequest.options?.map(option => <option key={option} value={option}>{option}</option>)}
+                </select> : <input aria-label={inputRequest.label} type="text" maxLength={300} value={answerValue} onChange={event => setAnswerValue(event.target.value)} placeholder={inputRequest.key === 'approver' ? '@username' : inputRequest.key === 'repository' ? 'owner/repository' : 'Type your answer'} required />}
+                <button type="submit" disabled={answerSubmitting || !answerValue.trim()}>{answerSubmitting ? 'Sending…' : 'Continue'}</button>
+              </form> : <p>Open the original signup tab to answer this question.</p>}
+              {answerError && <p className={s.inputError} role="alert">{answerError}</p>}
+            </> : <p className={s.inputSent} role="status">Answer sent. Your agent will continue setup here.</p>}
+          </section>}
           <div className={s.progress} role="status" aria-live="polite">
             <div className={s.progressDots} aria-hidden="true">{steps.map((step, index) => <i key={step.title} data-done={complete || active > index + 1} data-current={!complete && active === index + 1} />)}</div>
-            <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
+            <span>{expired ? 'Session expired' : error ? 'Waiting for a connection' : complete ? 'Setup complete' : notice ? `${active} of 5 · Preview saved; activation pending` : inputRequest?.status === 'pending' ? 'Waiting for your answer' : answeredInput ? (active ? `${active} of 5 · Answer received` : 'Answer received') : active ? `${active} of 5 · ${paused ? 'Waiting for your approval' : failed ? 'Needs your attention' : steps[active - 1].title}` : progress ? 'Ready when your agent is' : 'Preparing your session…'}</span>
           </div>
           {error && <div className={s.error} role="alert"><p>{error}</p>{!progress && <button type="button" onClick={() => {
             boot.current = null; setError('');

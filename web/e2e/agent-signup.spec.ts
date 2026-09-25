@@ -51,6 +51,38 @@ test('clipboard failure reveals and selects the entire prompt', async ({ page })
   expect(await prompt.inputValue()).toContain('/signup/agent/flows');
 });
 
+test('shows an answered flow input at step zero until the agent advances', async ({ page }) => {
+  let progress = {
+    id, product: 'flows', step: 0, state: 'waiting', revision: 1,
+    updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7200000).toISOString(),
+    inputRequest: { id: `${id.slice(0, -1)}8`, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered', step: 0 },
+  };
+  await page.route('**/cloud/api/v1/signup/agent/sessions**', route => route.fulfill({
+    status: route.request().method() === 'POST' ? 201 : 200,
+    json: route.request().method() === 'POST' ? { ...progress, writeToken: token } : progress,
+  }));
+  await page.goto('/signup/flows');
+  await expect(page.getByRole('heading', { name: 'Answer received.' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Question from your agent' })).toContainText('Answer sent. Your agent will continue setup here.');
+  await expect(page.getByText('Answer received', { exact: true })).toBeVisible();
+  await expect(page.getByText('0 of 5 · Answer received')).not.toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy setup prompt' })).not.toBeVisible();
+
+  progress = { ...progress, step: 2, state: 'working', revision: 2 };
+  await expect(page.getByRole('heading', { name: 'Choose your flow', exact: true })).toBeVisible();
+  await expect(page.getByText('2 of 5 · Choose your flow')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Question from your agent' })).not.toBeVisible();
+
+  progress = { ...progress, step: 2, state: 'waiting', revision: 3, inputRequest: { ...progress.inputRequest, id: `${id.slice(0, -1)}7`, step: 2 } };
+  await expect(page.getByRole('heading', { name: 'Answer received.' })).toBeVisible();
+  await expect(page.getByText('2 of 5 · Answer received')).toBeVisible();
+
+  progress = { ...progress, step: 3, state: 'waiting', revision: 4 };
+  await expect(page.getByRole('heading', { name: 'A quick approval from you.' })).toBeVisible();
+  await expect(page.getByText('3 of 5 · Waiting for your approval')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Question from your agent' })).not.toBeVisible();
+});
+
 test('logo ribbons respond to pointer movement and settle into the completed mark', async ({ page }, testInfo) => {
   let progress = { id, product: 'teams', step: 0, state: 'waiting', revision: 0, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7200000).toISOString() };
   await page.route('**/cloud/api/v1/signup/agent/sessions**', route => route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200, json: route.request().method() === 'POST' ? {...progress, writeToken: token} : progress }));

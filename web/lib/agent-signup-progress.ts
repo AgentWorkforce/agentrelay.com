@@ -4,6 +4,10 @@ export type SignupProgress = {
   id: string; product: AgentSignupProduct; step: number;
   state: 'working' | 'waiting' | 'failed' | 'complete';
   revision: number; updatedAt: string; expiresAt: string;
+  inputRequest?: {
+    id: string; key: string; label: string; type: 'text' | 'select' | 'notice';
+    options?: string[]; actionHref?: string; status: 'pending' | 'answered'; step: number;
+  };
 };
 export type SignupSession = SignupProgress & { writeToken: string };
 
@@ -13,11 +17,26 @@ export function isSignupProgress(value: unknown): value is SignupProgress {
   return typeof p.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(p.id) &&
     ['teams', 'flows'].includes(p.product) && Number.isInteger(p.step) && p.step >= 0 && p.step <= 5 &&
     ['working', 'waiting', 'failed', 'complete'].includes(p.state) && (p.state !== 'complete' || p.step === 5) &&
-    Number.isSafeInteger(p.revision) && p.revision >= 0 && typeof p.updatedAt === 'string' && typeof p.expiresAt === 'string' && Number.isFinite(Date.parse(p.updatedAt)) && Number.isFinite(Date.parse(p.expiresAt));
+    Number.isSafeInteger(p.revision) && p.revision >= 0 && typeof p.updatedAt === 'string' && typeof p.expiresAt === 'string' && Number.isFinite(Date.parse(p.updatedAt)) && Number.isFinite(Date.parse(p.expiresAt)) &&
+    (p.inputRequest === undefined || isSignupInputRequest(p.inputRequest));
+}
+
+function isSignupInputRequest(value: unknown): boolean {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const input = value as NonNullable<SignupProgress['inputRequest']>;
+  return Object.keys(input).every(key => ['id', 'key', 'label', 'type', 'options', 'actionHref', 'status', 'step'].includes(key)) &&
+    typeof input.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.id) &&
+    typeof input.key === 'string' && typeof input.label === 'string' && ['text', 'select', 'notice'].includes(input.type) &&
+    ['pending', 'answered'].includes(input.status) && Number.isInteger(input.step) && input.step >= 0 && input.step <= 5 &&
+    (input.type === 'notice'
+      ? input.status === 'pending' && input.options === undefined && typeof input.actionHref === 'string' && /^\/dashboard\/workflows\/listeners\/[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.actionHref)
+      : input.actionHref === undefined && (input.type === 'text' ? input.options === undefined : Array.isArray(input.options) &&
+        input.options.length >= 2 && input.options.length <= 12 && input.options.every(option => typeof option === 'string' && option.trim() === option && option.length > 0 && option.length <= 100) &&
+        new Set(input.options).size === input.options.length));
 }
 
 export function trackedSignupPrompt(product: AgentSignupProduct, origin: string, endpoint: string, session: Pick<SignupSession, 'id' | 'writeToken'>) {
-  return `${agentSignupPrompt(product, origin)}\n\nReport real progress using the guide’s protocol so I can watch the signup page.\n\nProgress session: ${session.id}\nProgress API: ${endpoint}/${session.id}\nProgress token: ${session.writeToken}\n\nKeep this token private; it authorizes progress updates only.`;
+  return `${agentSignupPrompt(product, origin)}\n\nReport real progress using the guide’s protocol so I can watch the signup page.${product === 'flows' ? ' Request any missing non-secret choices through the web-input protocol in the guide; do not ask me to answer in chat.' : ''}\n\nProgress session: ${session.id}\nProgress API: ${endpoint}/${session.id}\nProgress token: ${session.writeToken}\n\nKeep this token private; it authorizes progress and web-input requests only.`;
 }
 
 export const signupSteps = {

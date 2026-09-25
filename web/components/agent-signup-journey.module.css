@@ -13,6 +13,19 @@
 .primary { composes: btn btn-primary from global; }
 .primary:disabled { opacity: .45; cursor: default; transform: none; }
 .copyStatus { min-height: 20px; margin: 14px 0 0; color: #7899af; font-size: 11px; line-height: 1.7; }
+.inputCard { box-sizing: border-box; margin: 30px auto 0; padding: 24px; max-width: 480px; border: 1px solid #8dc7e94d; border-radius: 14px; background: #0b2636e8; text-align: left; box-shadow: 0 16px 48px #030f1899; }
+.inputEyebrow { margin: 0 0 9px; color: #8dc7e9; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+.inputCard h2 { margin: 0 0 18px; font-size: 19px; font-weight: 500; line-height: 1.4; letter-spacing: -.025em; }
+.inputCard form { display: flex; gap: 10px; }
+.inputCard input, .inputCard select { min-width: 0; flex: 1; box-sizing: border-box; height: 44px; padding: 0 12px; border: 1px solid #45667a; border-radius: 8px; background: #071722; color: #e8f2fa; font: inherit; font-size: 13px; }
+.inputCard input:focus-visible, .inputCard select:focus-visible { outline: 2px solid #8dc7e9; outline-offset: 2px; }
+.inputCard button { flex: none; border: 0; border-radius: 8px; padding: 0 16px; background: #8dc7e9; color: #09202e; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.inputCard button:disabled { opacity: .5; cursor: default; }
+.inputCard .inputError { margin: 12px 0 0; color: #efb6a8; font-size: 12px; }
+.inputSent { margin: 0; color: #a9d6c9; font-size: 13px; }
+.inputAction { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; box-sizing: border-box; padding: 0 15px; border-radius: 8px; background: #8dc7e9; color: #09202e; font-size: 13px; font-weight: 700; text-decoration: none; }
+.inputAction:hover { background: #b3ddf4; }
+.inputAction:focus-visible { outline: 2px solid #d4efff; outline-offset: 3px; }
 .progress { margin: 32px 0 0; color: #9eb9cb; font-size: 11px; line-height: 1.7; }
 .progressDots { display: flex; gap: 6px; justify-content: center; margin-bottom: 11px; }
 .progressDots i { width: 23px; height: 2px; border-radius: 3px; background: #294355; transition: background 1s; }
@@ -46,6 +59,7 @@
   .main { padding-top: 43svh; padding-bottom: 30px; }.atmosphere { height: 720px; }
   .content h1 { font-size: 34px; }.subtitle { font-size: 14px; margin-bottom: 24px; }
   .progress { margin-top: 26px; }.copyStatus { font-size: 10px; }
+  .inputCard { padding: 20px; }.inputCard form { flex-direction: column; }.inputCard input, .inputCard select { flex: none; width: 100%; }.inputCard button { min-height: 44px; }
 }
 @media (max-height: 700px) and (min-width: 601px) {
   .main { padding-top: 360px; }.atmosphere { height: 720px; }
