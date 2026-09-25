@@ -99,30 +99,50 @@ const garden = recommendedCatalog.flows.find(flow => flow.id === 'software-facto
 const extension = garden?.extensions?.find(entry => entry.id === 'babysitter');
 if (!plugin || !garden || !extension) fail('Babysitter must exist in both catalogs');
 
-for (const entry of pluginCatalog.plugins) {
-  const requiredDependencies = REQUIRED_PLUGIN_DEPENDENCIES.get(entry.name);
-  if (!requiredDependencies) fail(`${entry.name} has no independently defined dependency contract`);
-  validateActivationGate(entry.activation, `plugin catalog ${entry.name}`, requiredDependencies);
+/** Every published extension must use a supported, validated plugin contract. */
+export function validateRecommendedExtensions(recommendedCatalog, pluginCatalog) {
+  const plugins = new Map();
+  for (const entry of pluginCatalog.plugins) {
+    if (plugins.has(entry.name)) fail(`plugin catalog repeats ${entry.name}`);
+    const requiredDependencies = REQUIRED_PLUGIN_DEPENDENCIES.get(entry.name);
+    if (!requiredDependencies) fail(`${entry.name} has no independently defined dependency contract`);
+    validateActivationGate(entry.activation, `plugin catalog ${entry.name}`, requiredDependencies);
+    plugins.set(entry.name, entry);
+  }
+  const flowIds = new Set();
+  for (const flow of recommendedCatalog.flows) {
+    if (flowIds.has(flow.id)) fail(`recommended catalog repeats flow ${flow.id}`);
+    flowIds.add(flow.id);
+    if (flow.extensions === undefined) continue;
+    if (!Array.isArray(flow.extensions)) fail(`${flow.id} extensions must be an array`);
+    const extensionIds = new Set();
+    for (const extension of flow.extensions) {
+      const label = `${flow.id} extension ${extension?.id ?? '<unknown>'}`;
+      if (!extension || typeof extension !== 'object' || Array.isArray(extension)) fail(`${label} is invalid`);
+      if (extensionIds.has(extension.id)) fail(`${label} is repeated`);
+      extensionIds.add(extension.id);
+      const plugin = plugins.get(extension.id);
+      if (!plugin) fail(`${label} has no supported plugin contract`);
+      if (!plugin.base.includes(flow.id)) fail(`${label} is incompatible with this base flow`);
+      validateActivationGate(extension.activation, label, REQUIRED_PLUGIN_DEPENDENCIES.get(extension.id));
+      const ref = `github:${plugin.source.owner}/${plugin.source.repo}@${plugin.ref}#${plugin.source.path}`;
+      if (!extension.artifact || extension.artifact.ref !== ref
+        || extension.artifact.digest !== plugin.digest
+        || extension.artifact.manifestSha256 !== plugin.manifestSha256) {
+        fail(`${label} artifact coordinates drifted from its plugin contract`);
+      }
+      if (JSON.stringify(extension.runtime) !== JSON.stringify(plugin.runtime)) {
+        fail(`${label} runtime provenance drifted from its plugin contract`);
+      }
+      if (JSON.stringify(extension.activation) !== JSON.stringify(plugin.activation)) {
+        fail(`${label} activation gate drifted from its plugin contract`);
+      }
+    }
+  }
 }
 
-validateActivationGate(
-  extension.activation,
-  'Software Garden Babysitter',
-  REQUIRED_PLUGIN_DEPENDENCIES.get('babysitter'),
-);
+validateRecommendedExtensions(recommendedCatalog, pluginCatalog);
 
-const pluginRef = `github:${plugin.source.owner}/${plugin.source.repo}@${plugin.ref}#${plugin.source.path}`;
-if (extension.artifact.ref !== pluginRef
-  || extension.artifact.digest !== plugin.digest
-  || extension.artifact.manifestSha256 !== plugin.manifestSha256) {
-  fail('Babysitter artifact coordinates drifted between catalogs');
-}
-if (JSON.stringify(extension.runtime) !== JSON.stringify(plugin.runtime)) {
-  fail('Babysitter runtime provenance drifted between catalogs');
-}
-if (JSON.stringify(extension.activation) !== JSON.stringify(plugin.activation)) {
-  fail('Babysitter activation gate drifted between catalogs');
-}
 if (plugin.runtime.package !== '@relayflows/sdk'
   || plugin.runtime.version !== '2.0.31'
   || plugin.runtime.release !== 'v2.0.31') {
