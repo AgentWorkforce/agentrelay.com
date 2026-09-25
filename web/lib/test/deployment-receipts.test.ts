@@ -4,7 +4,7 @@ import { verifyDeploymentReceipt } from '../../scripts/verify-deployment-receipt
 const repository = 'AgentWorkforce/cloud';
 const api = `https://api.github.com/repos/${repository}`;
 const evidence = {
-  pullRequestUrl: `https://github.com/${repository}/pull/42`,
+  pullRequestUrl: `https://github.com/${repository}/pull/3989`,
   mergedCommit: 'a'.repeat(40), mergedAt: '2026-09-24T12:00:00Z',
   deploymentUrl: `${api}/deployments/7`, deployedAt: '2026-09-24T12:05:00Z',
 };
@@ -26,8 +26,27 @@ describe('authoritative dependency receipts', () => {
     const request = requester([pr, deployment, [success]]);
     await expect(verifyDeploymentReceipt(dependency, request)).resolves.toBeUndefined();
     expect(request.mock.calls.map(call => call[0])).toEqual([
-      `${api}/pulls/42`, `${api}/deployments/7`, `${api}/deployments/7/statuses?per_page=1`,
+      `${api}/pulls/3989`, `${api}/deployments/7`, `${api}/deployments/7/statuses?per_page=1`,
     ]);
+  });
+  it('rejects an unrelated merged/deployed PR in either dependency repository', async () => {
+    for (const [id, repo] of [
+      ['cloud-babysitter-capability-adapter', 'AgentWorkforce/cloud'],
+      ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
+    ]) {
+      const pullRequestUrl = `https://github.com/${repo}/pull/42`;
+      const repositoryUrl = `https://api.github.com/repos/${repo}`;
+      const deploymentUrl = `${repositoryUrl}/deployments/7`;
+      const request = requester([
+        { ...pr, html_url: pullRequestUrl, base: { ref: 'main', repo: { full_name: repo } } },
+        { ...deployment, url: deploymentUrl, repository_url: repositoryUrl },
+        [{ ...success, deployment_url: deploymentUrl, repository_url: repositoryUrl }],
+      ]);
+      await expect(verifyDeploymentReceipt({ ...dependency, id, repository: repo,
+        evidence: { ...evidence, pullRequestUrl, deploymentUrl },
+      }, request)).rejects.toThrow('declared capability implementation');
+      expect(request).not.toHaveBeenCalled();
+    }
   });
   it('rejects a nonexistent PR, private receipt, rate limit or failed request', async () => {
     for (const status of [404, 403, 429, 500]) {

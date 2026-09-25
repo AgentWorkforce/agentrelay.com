@@ -1,3 +1,4 @@
+import { FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS } from '../lib/flow-plugin-implementation-prs.mjs';
 import { readFile } from 'node:fs/promises';
 import { verifyDeploymentReceipt } from './verify-deployment-receipts.mjs';
 
@@ -36,6 +37,8 @@ export function deploymentEvidenceIsValid(dependency) {
   if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) return false;
   if (Object.keys(evidence).sort().join(',') !== 'deployedAt,deploymentUrl,mergedAt,mergedCommit,pullRequestUrl') return false;
   if (!Object.values(evidence).every(value => typeof value === 'string')) return false;
+  if (!Object.hasOwn(FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS, dependency.id)
+    || evidence.pullRequestUrl !== FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS[dependency.id]) return false;
   let pullRequestUrl;
   let deploymentUrl;
   try {

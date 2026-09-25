@@ -89,7 +89,7 @@ describe('flow plugin catalog', () => {
         state: 'ready' as const,
         dependencies: babysitter.activation.dependencies.map((dependency, index) => ({
           ...dependency,
-          evidence: evidence(dependency.repository, index + 1),
+          evidence: evidence(dependency.repository, [3989, 1851][index]!),
         })),
       },
     };
@@ -121,10 +121,21 @@ describe('flow plugin catalog', () => {
     expect(deploymentEvidenceIsValid(dependency)).toBe(true);
     expect(flowPluginDependencyHasDeploymentEvidence({ ...dependency, evidence: null })).toBe(false);
 
+    for (const dependency of ready.activation.dependencies) {
+      const unrelated = { ...dependency, evidence: { ...dependency.evidence,
+        pullRequestUrl: `https://github.com/${dependency.repository}/pull/42`,
+      } };
+      expect(flowPluginDependencyHasDeploymentEvidence(unrelated)).toBe(false);
+      expect(deploymentEvidenceIsValid(unrelated)).toBe(false);
+      expect(flowPluginInstallHref({ ...ready, activation: { ...ready.activation,
+        dependencies: ready.activation.dependencies.map(value => value.id === unrelated.id ? unrelated : value),
+      } })).toBeNull();
+    }
+
     // Evidence is internally consistent but belongs to the wrong repository.
     const wrongRepository = { ...dependency, repository: 'AgentWorkforce/other',
       evidence: evidence('AgentWorkforce/other', 1) };
-    expect(flowPluginDependencyHasDeploymentEvidence(wrongRepository)).toBe(true);
+    expect(flowPluginDependencyHasDeploymentEvidence(wrongRepository)).toBe(false);
     expect(flowPluginInstallHref({ ...ready, activation: {
       ...ready.activation, dependencies: [wrongRepository, ready.activation.dependencies[1]!],
     } })).toBeNull();

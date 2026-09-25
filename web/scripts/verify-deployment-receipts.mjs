@@ -1,3 +1,5 @@
+import { FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS } from '../lib/flow-plugin-implementation-prs.mjs';
+
 const REPOSITORIES = new Map([
   ['cloud-babysitter-capability-adapter', 'AgentWorkforce/cloud'],
   ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
@@ -9,6 +11,10 @@ export async function verifyDeploymentReceipt(dependency, request = fetch) {
   const evidence = dependency.evidence;
   if (!repository || dependency.repository !== repository || !evidence) {
     throw new Error('dependency has no supported receipt contract');
+  }
+  if (!Object.hasOwn(FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS, dependency.id)
+    || evidence.pullRequestUrl !== FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS[dependency.id]) {
+    throw new Error('PR receipt does not identify the declared capability implementation');
   }
   const prPrefix = `https://github.com/${repository}/pull/`;
   const deploymentPrefix = `https://api.github.com/repos/${repository}/deployments/`;

@@ -1,4 +1,5 @@
 import catalogJson from '../data/flow-plugin-catalog.v1.json';
+import { FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS } from './flow-plugin-implementation-prs.mjs';
 import { SITE_URL } from './site';
 
 export const FLOW_PLUGIN_TRUST_TIERS = ['first-party', 'verified', 'community'] as const;
@@ -137,6 +138,8 @@ export function flowPluginDependencyHasDeploymentEvidence(
     || dependency.requiredState !== 'merged-and-deployed') return false;
   if (Object.keys(evidence).sort().join(',') !== 'deployedAt,deploymentUrl,mergedAt,mergedCommit,pullRequestUrl'
     || !Object.values(evidence).every(value => typeof value === 'string')) return false;
+  if (!Object.hasOwn(FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS, dependency.id)
+    || evidence.pullRequestUrl !== FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS[dependency.id]) return false;
   try {
     const pullRequestUrl = new URL(evidence.pullRequestUrl);
     const deploymentUrl = new URL(evidence.deploymentUrl);

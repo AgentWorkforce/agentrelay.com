@@ -133,6 +133,12 @@ Babysitter's gate requires both `cloud-babysitter-capability-adapter` and `relay
 The catalog itself is versioned JSON, `{version:3, plugins:[{name, description, source:{owner,repo,path}, ref, digest, manifestSha256, compat, runtime, activation, tier, base}]}`. Any public repo with a `flows-plugin.json` remains installable by an explicit source URL; the curated catalog does not advertise an activation route until its dependency gate is satisfied.
 
 Ready catalog entries must pass live, read-only GitHub receipt verification in CI.
+The code-owned implementation contract binds `cloud-babysitter-capability-adapter`
+to [Cloud PR #3989](https://github.com/AgentWorkforce/cloud/pull/3989) and
+`relay-native-existing-session-delivery` to
+[Relay PR #1851](https://github.com/AgentWorkforce/relay/pull/1851). Unrelated PRs
+in those repositories cannot satisfy either dependency. A replacement implementation
+requires a reviewed code change to this contract.
 `pullRequestUrl` must identify a merged PR into the dependency repository's `main`,
 with the exact `mergedCommit` and `mergedAt`. `deploymentUrl` must be the canonical
 GitHub API deployment URL (`https://api.github.com/repos/OWNER/REPO/deployments/ID`).
