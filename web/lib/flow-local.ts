@@ -79,7 +79,9 @@ export function localInput(draft: FactoryDraft) {
   const source = draft.sources.find(id => id !== 'markdown');
   if (!source) return { approver: 'local' };
   const settings = draft.sourceSettings[source] ?? {};
-  const { labels, contains, ...fields } = settings;
+  // labels/contains are filters, not ticket fields; `events` is the Cloud wake
+  // choice — none of them belong on the prefilled ticket.
+  const { labels, contains, events: _events, ...fields } = settings;
   return { approver: 'local', issue: {
     source, title: contains?.trim() || PLACEHOLDER_TITLE,
     body: PLACEHOLDER_BODY,
