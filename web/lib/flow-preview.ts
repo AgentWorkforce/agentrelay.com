@@ -1,5 +1,5 @@
 import { CODING_AGENTS } from './flow-agents';
-import { resolveAgentSettings, rolesForStep } from './flow-agent-settings';
+import { resolveGeneratedAgentSettings, rolesForStep } from './flow-agent-settings';
 import type { FactoryDraft } from './flow-onboarding';
 import { repositoryHost, sourceLabel, sourceSummary } from './flow-sources';
 import { WORKFLOWS, WORKFLOW_STEP_DETAILS } from './flow-workflows';
@@ -21,12 +21,12 @@ export function flowPreview(draft: FactoryDraft) {
         owner: 'Trigger', detail: draft.sources.length > 1 ? 'Any one source can start the flow.' : '', icons: draft.sources,
       },
       ...workflow.steps.map(step => {
-        const configs = rolesForStep(step).map(role => resolveAgentSettings(workflow.id, role, draft.agents, draft.agentSettings));
+        const configs = rolesForStep(step).map(role => resolveGeneratedAgentSettings(workflow.id, role, draft.agents, draft.agentSettings));
         const human = step === 'Human gate';
         const review = step === '2× adversarial review';
         const agents = (review ? configs.slice(0, 1) : configs).map(config => ({
           id: config.agent, label: CODING_AGENTS.find(agent => agent.id === config.agent)!.label,
-          model: config.model || 'Default model',
+          model: config.model,
         }));
         return {
           kind: human ? 'approval' : configs.length ? 'agent' : 'script',

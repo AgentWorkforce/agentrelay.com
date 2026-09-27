@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, readFactoryDraft, cloudConnectionsHref, type FactoryDraft } from '../flow-onboarding';
-import { DEFAULT_AGENT_MODELS, hasCustomAgentModel, resolveAgentSettings } from '../flow-agent-settings';
+import { DEFAULT_AGENT_MODELS, resolveAgentSettings, resolveGeneratedAgentSettings } from '../flow-agent-settings';
 import { localKitFiles } from '../flow-local';
 import { FLOW_CHECK_RUN_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import type { CodingAgent } from '../flow-agents';
@@ -56,31 +56,36 @@ function expectSupportedCalls(calls: Record<string, AgentOptions>) {
 }
 
 describe('per-step agent settings', () => {
-  it('inherits CLI models and adapts assignments to the selected agents', () => {
-    expect(resolveAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: 'grok-4.6' });
-    expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: 'gpt-5.3-codex' });
-    expect(resolveAgentSettings('prototype', 'prototype-2', ['codex'])).toMatchObject({ agent: 'codex', model: 'gpt-5.5' });
-    expect(resolveAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: 'claude-sonnet-4-6', prompt: 'Custom work' });
+  it('keeps editable overrides blank while generation resolves current model defaults', () => {
+    expect(DEFAULT_AGENT_MODELS).toEqual({ claude: 'claude-sonnet-5', codex: 'gpt-5.6-sol', cursor: 'gpt-5.6-sol-high', grok: 'grok-4.7' });
+    expect(resolveAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: '' });
+    expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: '' });
+    expect(resolveGeneratedAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: 'grok-4.7' });
+    expect(resolveGeneratedAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: 'gpt-5.6-sol-high' });
+    expect(resolveGeneratedAgentSettings('prototype', 'prototype-2', ['codex'])).toMatchObject({ agent: 'codex', model: 'gpt-5.6-sol' });
+    expect(resolveGeneratedAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: 'claude-sonnet-5', prompt: 'Custom work' });
   });
 
   it('keeps old OpenCode settings readable while falling back to a supported agent', () => {
     const saved = { 'simple:implementer': { agent: 'opencode' as const, model: 'opencode-model', prompt: 'Custom work' } };
     expect(readFactoryDraft(JSON.stringify({ ...draft, agentSettings: saved })))?.toMatchObject({ agentSettings: saved });
-    expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-4-6', prompt: 'Custom work' });
+    expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
+    expect(resolveGeneratedAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-5', prompt: 'Custom work' });
   });
 
-  it('distinguishes generated defaults from compatible custom-model telemetry', () => {
-    expect(hasCustomAgentModel('simple', 'implementer', ['claude'])).toBe(false);
-    expect(hasCustomAgentModel('simple', 'implementer', ['claude'], { 'simple:implementer': { model: '  ' } })).toBe(false);
-    expect(hasCustomAgentModel('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'claude', model: 'custom-model' } })).toBe(true);
-    expect(hasCustomAgentModel('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-4.6' } })).toBe(false);
+  it('does not turn a prompt-only editor change into a model override', () => {
+    const current = resolveAgentSettings('simple', 'implementer', ['claude']);
+    expect(current.model).toBe('');
+    const settings = { 'simple:implementer': { ...current, prompt: 'Custom prompt' } };
+    expect(resolveAgentSettings('simple', 'implementer', ['claude'], settings)).toMatchObject({ model: '', prompt: 'Custom prompt' });
+    expect(resolveGeneratedAgentSettings('simple', 'implementer', ['claude'], settings)).toMatchObject({ model: 'claude-sonnet-5', prompt: 'Custom prompt' });
   });
 
   it('pins every Claude step in the simple prebuilt flow to a probeable model', async () => {
     const calls = await execute({ ...draft, agents: ['claude'], workflow: 'simple' });
     expect(Object.keys(calls)).toEqual(['check-discovery', 'implementer', 'check-repair-1', 'check-repair-2']);
     for (const options of Object.values(calls)) {
-      expect(options).toMatchObject({ cli: 'claude', model: 'claude-sonnet-4-6' });
+      expect(options).toMatchObject({ cli: 'claude', model: 'claude-sonnet-5' });
     }
   });
 
@@ -148,7 +153,7 @@ describe('per-step agent settings', () => {
     expect(calls['prototype-1'].task).toContain('Ticket title\nTicket body\nKeep changes focused.');
     expect(calls['prototype-1'].task).toContain('Assigned approach: the smallest change');
     expect(calls['prototype-2'].model).toBe('model-two');
-    expect(calls['prototype-3'].model).toBe('claude-sonnet-4-6');
+    expect(calls['prototype-3'].model).toBe('claude-sonnet-5');
     expect(calls.comparator.task).toContain('/tmp/prototypes/1, /tmp/prototypes/2, /tmp/prototypes/3');
     expect(calls.implementer).toMatchObject({ cli: 'cursor', model: 'build-model' });
   });
@@ -156,7 +161,7 @@ describe('per-step agent settings', () => {
   it('applies the shared reviewer settings to both traditional rounds', async () => {
     const calls = await execute({ ...draft, workflow: 'traditional', agentSettings: { 'traditional:adversary': { agent: 'grok', model: 'review-model', prompt: 'Check the diff. Write review.clean only if clean.' } } });
     for (const role of ['adversary-1', 'adversary-2']) expect(calls[role]).toMatchObject({ cli: 'grok', model: 'review-model' });
-    expect(calls.planner.model).toBe('claude-sonnet-4-6');
+    expect(calls.planner.model).toBe('claude-sonnet-5');
   });
 
   it('persists valid overrides and includes them in both handoff sources', () => {

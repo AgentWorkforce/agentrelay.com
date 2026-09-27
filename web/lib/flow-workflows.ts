@@ -1,4 +1,4 @@
-import { resolveAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
+import { resolveGeneratedAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
 import { isCodingAgent } from './flow-agents';
 
 export const WORKFLOWS = [
@@ -586,7 +586,7 @@ export function workflowAgents(selected: readonly string[]) {
 }
 
 export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof workflowAgents>, instructions: string, _target: 'cloud' | 'local' = 'cloud', settings: FlowAgentSettings = {}, selected: readonly string[] = [agents.builder, agents.reviewer]) {
-  const config = (role: AgentRole) => resolveAgentSettings(workflow, role, selected, settings);
+  const config = (role: AgentRole) => resolveGeneratedAgentSettings(workflow, role, selected, settings);
   const options = (role: AgentRole, fallback: string, context = '') => {
     const value = config(role);
     const cli = value.agent === agents.builder && fallback === 'builder' ? 'builder' : JSON.stringify(value.agent);

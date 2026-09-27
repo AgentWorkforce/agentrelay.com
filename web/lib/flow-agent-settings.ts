@@ -15,10 +15,10 @@ export type FlowAgentSettings = Partial<Record<`${WorkflowId}:${AgentRole}`, Age
  * reintroduce an omitted model and inherit an adapter default.
  */
 export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
-  claude: 'claude-sonnet-4-6',
-  codex: 'gpt-5.5',
-  cursor: 'gpt-5.3-codex',
-  grok: 'grok-4.6',
+  claude: 'claude-sonnet-5',
+  codex: 'gpt-5.6-sol',
+  cursor: 'gpt-5.6-sol-high',
+  grok: 'grok-4.7',
 };
 
 export function rolesForStep(step: WorkflowStep): AgentRole[] {
@@ -53,16 +53,14 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   // Changing the selected agents must never leave an unavailable CLI assigned.
   const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
-  const defaultModel = DEFAULT_AGENT_MODELS[agent];
-  const model = compatible ? saved?.model?.trim() || defaultModel : defaultModel;
+  const model = compatible ? saved?.model?.trim() || '' : '';
   return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
 }
 
-/** Whether this role has an effective user-entered model override. */
-export function hasCustomAgentModel(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}): boolean {
-  const saved = settings[`${workflow}:${role}`];
-  if (!saved?.model?.trim()) return false;
-  return !saved.agent || saved.agent === resolveAgentSettings(workflow, role, selected, settings).agent;
+/** Resolve the explicit pair emitted by a first-party generated flow. */
+export function resolveGeneratedAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
+  const value = resolveAgentSettings(workflow, role, selected, settings);
+  return { ...value, model: value.model || DEFAULT_AGENT_MODELS[value.agent] };
 }
 
 export function validFlowAgentSettings(value: unknown): value is FlowAgentSettings {

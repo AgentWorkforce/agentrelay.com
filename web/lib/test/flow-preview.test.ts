@@ -27,4 +27,10 @@ describe('Cloud visual preview handoff', () => {
     expect(flowPreview(draft)!.nodes.find(node => node.title === 'Adversarial review')).toMatchObject({ badge: '2 rounds' });
     expect(flowPreview({ ...draft, workflow: 'simple' })!.nodes.map(node => node.title)).toEqual(['Work matches your sources', 'Implement', 'Run checks', 'Open PR', 'Your approval']);
   });
+
+  it('shows the current generated model without persisting it as an override', () => {
+    const value = { ...draft, workflow: 'simple' as const, agents: ['claude' as const], agentSettings: undefined };
+    expect(flowPreview(value)!.nodes.find(node => node.title === 'Implement')).toMatchObject({ owner: 'Claude Code', detail: 'claude-sonnet-5' });
+    expect(JSON.parse(decodeURIComponent(cloudConnectionsHref(value, 'default-preview').split('#')[1])).source).toContain('model: "claude-sonnet-5"');
+  });
 });
