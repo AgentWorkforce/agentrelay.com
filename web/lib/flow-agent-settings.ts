@@ -7,13 +7,18 @@ export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string }
 export type FlowAgentSettings = Partial<Record<`${WorkflowId}:${AgentRole}`, AgentSettings>>;
 
 /**
- * Models the generated flow can rely on without inheriting a moving CLI
- * default. Claude is the only supported harness whose Relayflow adapter picks
- * a model on the flow's behalf; pinning it here keeps preflight aligned with
- * the model shown in the editor and sent in every generated agent step.
+ * Stable defaults for first-party generated flows. These identifiers are
+ * verified against the current CLI model catalogs/readiness probes; the
+ * runtime still proves the exact credential/model pair before agent work.
+ *
+ * Keep this exhaustive so enabling another generator agent cannot silently
+ * reintroduce an omitted model and inherit an adapter default.
  */
-const DEFAULT_AGENT_MODELS: Partial<Record<CodingAgent, string>> = {
+export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
   claude: 'claude-sonnet-4-6',
+  codex: 'gpt-5.5',
+  cursor: 'gpt-5.3-codex',
+  grok: 'grok-4.6',
 };
 
 export function rolesForStep(step: WorkflowStep): AgentRole[] {
@@ -48,7 +53,7 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   // Changing the selected agents must never leave an unavailable CLI assigned.
   const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
-  const defaultModel = DEFAULT_AGENT_MODELS[agent] ?? '';
+  const defaultModel = DEFAULT_AGENT_MODELS[agent];
   const model = compatible ? saved?.model?.trim() || defaultModel : defaultModel;
   return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
 }

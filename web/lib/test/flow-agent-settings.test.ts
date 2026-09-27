@@ -1,31 +1,65 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, readFactoryDraft, cloudConnectionsHref, type FactoryDraft } from '../flow-onboarding';
-import { resolveAgentSettings } from '../flow-agent-settings';
+import { DEFAULT_AGENT_MODELS, resolveAgentSettings } from '../flow-agent-settings';
 import { localKitFiles } from '../flow-local';
-import { FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
+import { FLOW_CHECK_RUN_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
+import type { CodingAgent } from '../flow-agents';
 
 const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude', 'codex', 'grok', 'cursor'], workflow: 'prototype', step: 3 };
-async function execute(value: FactoryDraft) {
-  const source = factorySource(value).replace('import { flow } from "@relayflows/surface";', '');
+type AgentOptions = { cli: CodingAgent; model?: string; task: string; cwd?: string };
+
+async function execute(value: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
+  const source = factorySource(value, target).replace('import { flow } from "@relayflows/surface";', '');
   const compiled = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS } });
   const exports: { default?: (ctx: unknown, input: unknown) => Promise<void> } = {};
   new Function('exports', 'flow', compiled.outputText)(exports, (_name: string, _options: unknown, body: unknown) => body);
-  const calls: Record<string, { cli: string; model?: string; task: string; cwd?: string }> = {};
-  await exports.default!({ agent: async (name: string, options: typeof calls[string]) => { calls[name] = options; },
+  const calls: Record<string, AgentOptions> = {};
+  let checkRuns = 0;
+  let reviewChecks = 0;
+  await exports.default!({ agent: async (name: string, options: AgentOptions) => { calls[name] = options; },
     // "base=..." is the publish check; without a verdict it understands, the
     // flow correctly stops before the reviews rather than opening a pull
     // request for work that was never committed.
-    run: async (command: string) => command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND) ? 'valid' : command.startsWith('base=') ? 'publish' : command.startsWith('mktemp') ? '/tmp/prototypes' : command.includes('review.clean &&') ? 'yes' : 'base', done: () => {} },
-  { issue: { source: 'github', title: 'Ticket title', body: 'Ticket body', labels: [], identifier: '#507' } });
+    run: async (command: string) => {
+      if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
+      if (command === FLOW_CHECK_RUN_COMMAND) return ++checkRuns <= 2 ? 'fail' : 'pass';
+      if (command.startsWith('base=')) return 'publish';
+      if (command.startsWith('mktemp')) return '/tmp/prototypes';
+      if (command.includes('review.clean &&')) return ++reviewChecks === 1 ? 'no' : 'yes';
+      return 'base';
+    }, done: () => {} },
+  { issue: { source: value.sources[0] ?? 'github', title: 'Ticket title', body: 'Ticket body', labels: [], identifier: value.sources[0] === 'github' ? '#507' : undefined } });
   return calls;
+}
+
+function agentObjectProperties(source: string): string[][] {
+  const file = ts.createSourceFile('software-factory.flow.ts', source, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+  const calls: string[][] = [];
+  const visit = (node: ts.Node) => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.name.text === 'agent' && ts.isObjectLiteralExpression(node.arguments[1])) {
+      calls.push(node.arguments[1].properties.flatMap(property => ts.isPropertyAssignment(property) ? [property.name.getText(file)] : []));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return calls;
+}
+
+function expectSupportedCalls(calls: Record<string, AgentOptions>) {
+  expect(Object.keys(calls).length).toBeGreaterThan(0);
+  for (const [name, options] of Object.entries(calls)) {
+    expect(options.cli, `${name} CLI`).toBeTruthy();
+    expect(options.model, `${name} model`).toBe(DEFAULT_AGENT_MODELS[options.cli]);
+  }
 }
 
 describe('per-step agent settings', () => {
   it('inherits CLI models and adapts assignments to the selected agents', () => {
-    expect(resolveAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: '' });
-    expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: '' });
-    expect(resolveAgentSettings('prototype', 'prototype-2', ['codex']).agent).toBe('codex');
+    expect(resolveAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: 'grok-4.6' });
+    expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: 'gpt-5.3-codex' });
+    expect(resolveAgentSettings('prototype', 'prototype-2', ['codex'])).toMatchObject({ agent: 'codex', model: 'gpt-5.5' });
     expect(resolveAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: 'claude-sonnet-4-6', prompt: 'Custom work' });
   });
 
@@ -41,6 +75,57 @@ describe('per-step agent settings', () => {
     for (const options of Object.values(calls)) {
       expect(options).toMatchObject({ cli: 'claude', model: 'claude-sonnet-4-6' });
     }
+  });
+
+  it('gives every generated preset agent an explicit supported CLI/model pair', async () => {
+    const workflows = ['simple', 'traditional', 'prototype'] as const;
+    const targets = ['cloud', 'local'] as const;
+    const sources = ['github', 'slack'] as const;
+    const selections: CodingAgent[][] = [['claude'], ['codex'], ['claude', 'codex'], ['cursor'], ['grok']];
+
+    for (const workflow of workflows) {
+      for (const target of targets) {
+        for (const source of sources) {
+          for (const agents of selections) {
+            const value: FactoryDraft = { ...draft, workflow, sources: [source], sourceSettings: {}, agents };
+            const generated = factorySource(value, target);
+            const objects = agentObjectProperties(generated);
+            expect(objects.length, `${workflow}/${target}/${source}/${agents.join('+')}`).toBeGreaterThan(0);
+            for (const properties of objects) {
+              expect(properties).toContain('cli');
+              expect(properties).toContain('model');
+            }
+            expectSupportedCalls(await execute(value, target));
+          }
+        }
+      }
+    }
+  });
+
+  it('keeps Cloud handoff and local-kit source on the same explicit model contract', () => {
+    for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
+      for (const source of ['github', 'slack'] as const) {
+        for (const agents of [['claude'], ['codex'], ['claude', 'codex'], ['cursor'], ['grok']] as CodingAgent[][]) {
+          const value: FactoryDraft = { ...draft, workflow, sources: [source], sourceSettings: {}, agents };
+          const handoff = JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(value, 'model-contract')).hash.slice(1))) as { source: string };
+          expect(handoff.source).toBe(factorySource(value, 'cloud'));
+          expect(localKitFiles(value)['software-factory.flow.mts']).toBe(factorySource(value, 'local'));
+          for (const generated of [handoff.source, localKitFiles(value)['software-factory.flow.mts']]) {
+            for (const properties of agentObjectProperties(generated)) {
+              expect(properties).toContain('cli');
+              expect(properties).toContain('model');
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it('materializes the model on the third Simple agent in the failed agent-3 topology', () => {
+    const source = factorySource({ ...draft, workflow: 'simple', agents: ['claude'], sources: ['slack'], sourceSettings: {} });
+    const objects = agentObjectProperties(source);
+    expect(objects[2]).toEqual(expect.arrayContaining(['cli', 'model']));
+    expect(source).not.toContain('claude-opus-5');
   });
 
   it('runs distinct prototype overrides while preserving ticket and worktree context', async () => {
