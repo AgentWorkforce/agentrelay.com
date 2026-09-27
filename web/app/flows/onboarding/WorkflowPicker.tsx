@@ -1,5 +1,5 @@
 import { AgentStepEditor } from './AgentStepEditor';
-import { resolveAgentSettings, rolesForStep, type AgentRole } from '../../../lib/flow-agent-settings';
+import { resolveGeneratedAgentSettings, rolesForStep, type AgentRole } from '../../../lib/flow-agent-settings';
 import { GitBranch, Layers3, Zap, UserRound, LockKeyhole, Terminal, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { WORKFLOWS, WORKFLOW_STEP_DETAILS, workflowAgents } from '../../../lib/flow-workflows';
@@ -92,7 +92,7 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
               </li>}
               {selectedWorkflow?.steps.map(step => {
                 const roles = rolesForStep(step);
-                const configs = roles.map(role => resolveAgentSettings(selectedWorkflow.id, role, draft.agents, draft.agentSettings));
+                const configs = roles.map(role => resolveGeneratedAgentSettings(selectedWorkflow.id, role, draft.agents, draft.agentSettings));
                 const nodeConfigs = step === '2× adversarial review' ? configs.slice(0, 1) : configs;
                 const agents = nodeConfigs.map(value => value.agent);
                 const Node = agents.length ? 'button' : 'div';
@@ -109,7 +109,7 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
                     <span className={s.processText}>
                       <span className={s.processHeading}><strong>{human ? 'Your approval' : review ? 'Adversarial review' : step}</strong><small className={s.processOwner}>{human ? 'You' : script ? 'Script' : step === '3 implementations' ? 'Parallel' : 'Agent'}</small></span>
                       <span className={s.processDescription}>{WORKFLOW_STEP_DETAILS[step]}</span>
-                      {agents.length > 0 && <small className={s.processModel}><span>{nodeConfigs.length > 1 ? 'Configure 3 agents' : nodeConfigs[0].model || 'Default model'}</span><Settings size={12} aria-hidden="true" /></small>}
+                      {agents.length > 0 && <small className={s.processModel}><span>{nodeConfigs.length > 1 ? 'Configure 3 agents' : nodeConfigs[0].model}</span><Settings size={12} aria-hidden="true" /></small>}
                     </span>
                     {review && <span className={s.processRounds}>2 rounds</span>}
                     {human && <LockKeyhole size={15} className={s.processLock} aria-hidden="true" />}

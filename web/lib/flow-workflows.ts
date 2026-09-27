@@ -1,4 +1,4 @@
-import { resolveAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
+import { resolveGeneratedAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
 import { isCodingAgent } from './flow-agents';
 
 export const WORKFLOWS = [
@@ -586,7 +586,7 @@ export function workflowAgents(selected: readonly string[]) {
 }
 
 export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof workflowAgents>, instructions: string, _target: 'cloud' | 'local' = 'cloud', settings: FlowAgentSettings = {}, selected: readonly string[] = [agents.builder, agents.reviewer]) {
-  const config = (role: AgentRole) => resolveAgentSettings(workflow, role, selected, settings);
+  const config = (role: AgentRole) => resolveGeneratedAgentSettings(workflow, role, selected, settings);
   const options = (role: AgentRole, fallback: string, context = '') => {
     const value = config(role);
     const cli = value.agent === agents.builder && fallback === 'builder' ? 'builder' : JSON.stringify(value.agent);
@@ -640,7 +640,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const prototypeRoot = (await f.run("mktemp -d /tmp/relay-prototypes.XXXXXX")).trim();
   const quote = (value: string) => "'" + value.replace(/'/g, "'\\\\''") + "'";
   const prototypeAgents = ${JSON.stringify(prototypeConfigs.map(value => value.agent))};
-  const prototypeSettings: { model?: string; prompt: string }[] = ${JSON.stringify(prototypeConfigs.map(({ model, prompt }) => ({ ...(model ? { model } : {}), prompt })))};
+  const prototypeSettings: { model: string; prompt: string }[] = ${JSON.stringify(prototypeConfigs.map(({ model, prompt }) => ({ model, prompt })))};
   const approaches = ["the smallest change", "a maintainable design", "a different approach"];
   const paths = approaches.map((_, index) => prototypeRoot + "/" + (index + 1));
   const base = (await f.run("git rev-parse HEAD")).trim();
@@ -650,7 +650,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   await Promise.all(paths.map((cwd, index) => f.agent("prototype-" + (index + 1), {
     cli: prototypeAgents[index],
     cwd,
-    ...(prototypeSettings[index].model ? { model: prototypeSettings[index].model } : {}),
+    model: prototypeSettings[index].model,
     task: task + "\\n" + prototypeSettings[index].prompt + " Assigned approach: " + approaches[index],
   })));
   // All three implementations are finished before comparison begins.

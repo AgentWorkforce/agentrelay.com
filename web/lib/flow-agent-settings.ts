@@ -6,6 +6,21 @@ export type AgentRole = typeof AGENT_ROLES[number];
 export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string };
 export type FlowAgentSettings = Partial<Record<`${WorkflowId}:${AgentRole}`, AgentSettings>>;
 
+/**
+ * Stable defaults for first-party generated flows. These identifiers are
+ * verified against the current CLI model catalogs/readiness probes; the
+ * runtime still proves the exact credential/model pair before agent work.
+ *
+ * Keep this exhaustive so enabling another generator agent cannot silently
+ * reintroduce an omitted model and inherit an adapter default.
+ */
+export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
+  claude: 'claude-sonnet-5',
+  codex: 'gpt-5.6-sol',
+  cursor: 'gpt-5.6-sol-high',
+  grok: 'grok-4.7',
+};
+
 export function rolesForStep(step: WorkflowStep): AgentRole[] {
   if (step === '3 implementations') return ['prototype-1', 'prototype-2', 'prototype-3'];
   if (step === '2× adversarial review') return ['adversary', 'fixer'];
@@ -38,7 +53,14 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   // Changing the selected agents must never leave an unavailable CLI assigned.
   const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
-  return { agent, model: compatible ? saved?.model?.trim() || '' : '', prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
+  const model = compatible ? saved?.model?.trim() || '' : '';
+  return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
+}
+
+/** Resolve the explicit pair emitted by a first-party generated flow. */
+export function resolveGeneratedAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
+  const value = resolveAgentSettings(workflow, role, selected, settings);
+  return { ...value, model: value.model || DEFAULT_AGENT_MODELS[value.agent] };
 }
 
 export function validFlowAgentSettings(value: unknown): value is FlowAgentSettings {

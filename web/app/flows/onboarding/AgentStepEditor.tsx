@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { agentLabel, isCodingAgent, type FactoryDraft } from '../../../lib/flow-onboarding';
-import { defaultAgentPrompt, resolveAgentSettings, type AgentRole, type FlowAgentSettings } from '../../../lib/flow-agent-settings';
+import { DEFAULT_AGENT_MODELS, defaultAgentPrompt, resolveAgentSettings, type AgentRole, type FlowAgentSettings } from '../../../lib/flow-agent-settings';
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
@@ -40,9 +40,9 @@ export function AgentStepEditor({ draft, roles, onChange, onClose, onTrack }: { 
         <label>Agent<select value={current.agent} onChange={event => setSettings({ ...settings, [key]: { ...current, agent: event.target.value as typeof current.agent, model: '' } })}>
           {choices.map(id => <option key={id} value={id}>{agentLabel(id)}</option>)}
         </select></label>
-        <label>Model<input type="text" maxLength={120} value={current.model} placeholder="Agent default" aria-describedby="agent-model-help" onChange={event => setSettings({ ...settings, [key]: { ...current, model: event.target.value } })} /></label>
+        <label>Model<input type="text" maxLength={120} value={current.model} placeholder={DEFAULT_AGENT_MODELS[current.agent]} aria-describedby="agent-model-help" onChange={event => setSettings({ ...settings, [key]: { ...current, model: event.target.value } })} /></label>
       </div>
-      <p id="agent-model-help" className={s.agentEditorHint}>Leave the model blank to use {agentLabel(current.agent)}’s configured model, or enter a model ID available to your account.</p>
+      <p id="agent-model-help" className={s.agentEditorHint}>Leave blank to pin {DEFAULT_AGENT_MODELS[current.agent]} in the generated flow, or enter a different model ID available to your account.</p>
       <div className={s.agentReasoning}><span>Reasoning</span><strong>Agent default</strong></div>
       <p className={s.agentEditorHint}>Uses your agent’s reasoning settings. The flow runner doesn’t support overriding reasoning per step yet.</p>
       <label className={s.agentPrompt}>Step prompt<textarea rows={8} maxLength={6000} required value={current.prompt} onChange={event => setSettings({ ...settings, [key]: { ...current, prompt: event.target.value } })} aria-describedby="agent-prompt-help" /></label>
