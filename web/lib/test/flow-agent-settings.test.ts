@@ -26,13 +26,21 @@ describe('per-step agent settings', () => {
     expect(resolveAgentSettings('traditional', 'planner', ['grok', 'cursor'])).toMatchObject({ agent: 'grok', model: '' });
     expect(resolveAgentSettings('traditional', 'adversary', ['grok', 'cursor'])).toMatchObject({ agent: 'cursor', model: '' });
     expect(resolveAgentSettings('prototype', 'prototype-2', ['codex']).agent).toBe('codex');
-    expect(resolveAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
+    expect(resolveAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: 'claude-sonnet-4-6', prompt: 'Custom work' });
   });
 
   it('keeps old OpenCode settings readable while falling back to a supported agent', () => {
     const saved = { 'simple:implementer': { agent: 'opencode' as const, model: 'opencode-model', prompt: 'Custom work' } };
     expect(readFactoryDraft(JSON.stringify({ ...draft, agentSettings: saved })))?.toMatchObject({ agentSettings: saved });
-    expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
+    expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-4-6', prompt: 'Custom work' });
+  });
+
+  it('pins every Claude step in the simple prebuilt flow to a probeable model', async () => {
+    const calls = await execute({ ...draft, agents: ['claude'], workflow: 'simple' });
+    expect(Object.keys(calls)).toEqual(['check-discovery', 'implementer', 'check-repair-1', 'check-repair-2']);
+    for (const options of Object.values(calls)) {
+      expect(options).toMatchObject({ cli: 'claude', model: 'claude-sonnet-4-6' });
+    }
   });
 
   it('runs distinct prototype overrides while preserving ticket and worktree context', async () => {
@@ -48,7 +56,7 @@ describe('per-step agent settings', () => {
     expect(calls['prototype-1'].task).toContain('Ticket title\nTicket body\nKeep changes focused.');
     expect(calls['prototype-1'].task).toContain('Assigned approach: the smallest change');
     expect(calls['prototype-2'].model).toBe('model-two');
-    expect(calls['prototype-3'].model).toBeUndefined();
+    expect(calls['prototype-3'].model).toBe('claude-sonnet-4-6');
     expect(calls.comparator.task).toContain('/tmp/prototypes/1, /tmp/prototypes/2, /tmp/prototypes/3');
     expect(calls.implementer).toMatchObject({ cli: 'cursor', model: 'build-model' });
   });
@@ -56,7 +64,7 @@ describe('per-step agent settings', () => {
   it('applies the shared reviewer settings to both traditional rounds', async () => {
     const calls = await execute({ ...draft, workflow: 'traditional', agentSettings: { 'traditional:adversary': { agent: 'grok', model: 'review-model', prompt: 'Check the diff. Write review.clean only if clean.' } } });
     for (const role of ['adversary-1', 'adversary-2']) expect(calls[role]).toMatchObject({ cli: 'grok', model: 'review-model' });
-    expect(calls.planner.model).toBeUndefined();
+    expect(calls.planner.model).toBe('claude-sonnet-4-6');
   });
 
   it('persists valid overrides and includes them in both handoff sources', () => {
