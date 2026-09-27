@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, readFactoryDraft, cloudConnectionsHref, type FactoryDraft } from '../flow-onboarding';
-import { DEFAULT_AGENT_MODELS, resolveAgentSettings } from '../flow-agent-settings';
+import { DEFAULT_AGENT_MODELS, hasCustomAgentModel, resolveAgentSettings } from '../flow-agent-settings';
 import { localKitFiles } from '../flow-local';
 import { FLOW_CHECK_RUN_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import type { CodingAgent } from '../flow-agents';
@@ -67,6 +67,13 @@ describe('per-step agent settings', () => {
     const saved = { 'simple:implementer': { agent: 'opencode' as const, model: 'opencode-model', prompt: 'Custom work' } };
     expect(readFactoryDraft(JSON.stringify({ ...draft, agentSettings: saved })))?.toMatchObject({ agentSettings: saved });
     expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-4-6', prompt: 'Custom work' });
+  });
+
+  it('distinguishes generated defaults from compatible custom-model telemetry', () => {
+    expect(hasCustomAgentModel('simple', 'implementer', ['claude'])).toBe(false);
+    expect(hasCustomAgentModel('simple', 'implementer', ['claude'], { 'simple:implementer': { model: '  ' } })).toBe(false);
+    expect(hasCustomAgentModel('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'claude', model: 'custom-model' } })).toBe(true);
+    expect(hasCustomAgentModel('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-4.6' } })).toBe(false);
   });
 
   it('pins every Claude step in the simple prebuilt flow to a probeable model', async () => {

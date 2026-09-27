@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { agentLabel, isCodingAgent, type FactoryDraft } from '../../../lib/flow-onboarding';
-import { defaultAgentPrompt, resolveAgentSettings, type AgentRole, type FlowAgentSettings } from '../../../lib/flow-agent-settings';
+import { defaultAgentPrompt, hasCustomAgentModel, resolveAgentSettings, type AgentRole, type FlowAgentSettings } from '../../../lib/flow-agent-settings';
 import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
@@ -22,7 +22,7 @@ export function AgentStepEditor({ draft, roles, onChange, onClose, onTrack }: { 
     onChange({ ...draft, agentSettings: settings });
     for (const id of roles) {
       const value = resolveAgentSettings(workflow, id, draft.agents, settings);
-      onTrack('agent_settings_saved', { role: id, agent: value.agent, custom_model: Boolean(value.model), custom_prompt: value.prompt !== defaultAgentPrompt(workflow, id) });
+      onTrack('agent_settings_saved', { role: id, agent: value.agent, custom_model: hasCustomAgentModel(workflow, id, draft.agents, settings), custom_prompt: value.prompt !== defaultAgentPrompt(workflow, id) });
     }
     dialog.current?.close();
   }

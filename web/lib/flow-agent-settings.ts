@@ -58,6 +58,13 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
 }
 
+/** Whether this role has an effective user-entered model override. */
+export function hasCustomAgentModel(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}): boolean {
+  const saved = settings[`${workflow}:${role}`];
+  if (!saved?.model?.trim()) return false;
+  return !saved.agent || saved.agent === resolveAgentSettings(workflow, role, selected, settings).agent;
+}
+
 export function validFlowAgentSettings(value: unknown): value is FlowAgentSettings {
   if (value === undefined) return true;
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
