@@ -35,6 +35,68 @@ function timestampMillis(value) {
   return new Date(milliseconds).toISOString() === normalized ? milliseconds : null;
 }
 
+export function integratedLiveProofIsValid(proof) {
+  if (!proof || typeof proof !== 'object' || Array.isArray(proof)) return false;
+  if (Object.keys(proof).sort().join(',') !== 'evidenceSha256,evidenceUrl,headSha,label,observedAt,pullRequestUrl,receiptId') return false;
+  if (!Object.values(proof).every(value => typeof value === 'string')
+    || proof.label !== 'babysit'
+    || !SHA.test(proof.headSha)
+    || !/^[0-9a-f]{64}$/.test(proof.evidenceSha256)
+    || timestampMillis(proof.observedAt) === null
+    || !/^[A-Za-z0-9_.:-]{1,200}$/.test(proof.receiptId)) return false;
+  try {
+    const evidenceUrl = new URL(proof.evidenceUrl);
+    const pullRequestUrl = new URL(proof.pullRequestUrl);
+    return evidenceUrl.origin === 'https://raw.githubusercontent.com'
+      && /^\/AgentWorkforce\/cloud\/[0-9a-f]{40}\/.+\.json$/.test(evidenceUrl.pathname)
+      && pullRequestUrl.origin === 'https://github.com'
+      && /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/.test(pullRequestUrl.pathname);
+  } catch {
+    return false;
+  }
+}
+
+const MAX_LIVE_PROOF_BYTES = 64 * 1024;
+
+/** Read-only verification of the immutable integrated-run proof. */
+export async function verifyIntegratedLiveProof(proof, request = fetch) {
+  if (!integratedLiveProofIsValid(proof)) {
+    throw new Error('live proof does not satisfy the integrated-run contract');
+  }
+  const response = await request(proof.evidenceUrl, {
+    redirect: 'error',
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) throw new Error(`live proof unavailable: HTTP ${response.status}`);
+  const declaredLength = Number(response.headers.get('content-length'));
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_LIVE_PROOF_BYTES) {
+    throw new Error(`live proof exceeds ${MAX_LIVE_PROOF_BYTES} bytes`);
+  }
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (bytes.length > MAX_LIVE_PROOF_BYTES) {
+    throw new Error(`live proof exceeds ${MAX_LIVE_PROOF_BYTES} bytes`);
+  }
+  if (createHash('sha256').update(bytes).digest('hex') !== proof.evidenceSha256) {
+    throw new Error('live proof digest does not match the catalog');
+  }
+  let document;
+  try {
+    document = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    throw new Error('live proof is not valid JSON');
+  }
+  const expected = {
+    headSha: proof.headSha,
+    label: proof.label,
+    observedAt: proof.observedAt,
+    pullRequestUrl: proof.pullRequestUrl,
+    receiptId: proof.receiptId,
+  };
+  if (JSON.stringify(document) !== JSON.stringify(expected)) {
+    throw new Error('live proof payload does not match the catalog');
+  }
+}
+
 export function deploymentEvidenceIsValid(dependency) {
   const evidence = dependency.evidence;
   if (evidence === null) return false;
@@ -65,7 +127,7 @@ export function deploymentEvidenceIsValid(dependency) {
 
 function validateActivationGate(gate, label, requiredDependencies) {
   if (!gate || typeof gate !== 'object' || Array.isArray(gate)) fail(`${label} has no activation gate`);
-  if (Object.keys(gate).sort().join(',') !== 'dependencies,state') fail(`${label} activation gate has unknown fields`);
+  if (Object.keys(gate).sort().join(',') !== 'dependencies,liveProof,state') fail(`${label} activation gate has unknown fields`);
   if (gate.state !== 'blocked' && gate.state !== 'ready') fail(`${label} activation state must be blocked or ready`);
   if (!Array.isArray(gate.dependencies) || gate.dependencies.length !== requiredDependencies.size) {
     fail(`${label} must declare its complete runtime dependency set`);
@@ -88,6 +150,9 @@ function validateActivationGate(gate, label, requiredDependencies) {
   const allDependenciesProven = gate.dependencies.every(deploymentEvidenceIsValid);
   if (gate.state === 'ready' && !allDependenciesProven) {
     fail(`${label} may be ready only when every dependency carries merge and deployment evidence`);
+  }
+  if (gate.state === 'ready' && !integratedLiveProofIsValid(gate.liveProof)) {
+    fail(`${label} may be ready only with immutable live label-to-turn-to-receipt proof`);
   }
 }
 
@@ -197,6 +262,7 @@ if (plugin.runtime.package !== '@relayflows/sdk'
 for (const entry of pluginCatalog.plugins) {
   if (entry.activation.state !== 'ready') continue;
   for (const dependency of entry.activation.dependencies) await verifyDeploymentReceipt(dependency);
+  await verifyIntegratedLiveProof(entry.activation.liveProof);
 }
 
 console.log('catalog gates: Babysitter metadata is pinned and activation is fail-closed');

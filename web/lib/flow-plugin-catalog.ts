@@ -27,8 +27,19 @@ export type FlowPluginActivationDependency = {
   evidence: FlowPluginDeploymentEvidence | null;
 };
 
+export type FlowPluginLiveProof = {
+  evidenceUrl: string;
+  evidenceSha256: string;
+  observedAt: string;
+  pullRequestUrl: string;
+  headSha: string;
+  label: 'babysit';
+  receiptId: string;
+};
+
 export type FlowPluginActivationGate = {
   state: 'blocked' | 'ready';
+  liveProof: FlowPluginLiveProof | null;
   dependencies: FlowPluginActivationDependency[];
 };
 
@@ -158,11 +169,31 @@ export function flowPluginDependencyHasDeploymentEvidence(
   }
 }
 
+export function flowPluginHasLiveProof(proof: FlowPluginLiveProof | null): boolean {
+  if (!proof || typeof proof !== 'object' || Array.isArray(proof)) return false;
+  if (Object.keys(proof).sort().join(',') !== 'evidenceSha256,evidenceUrl,headSha,label,observedAt,pullRequestUrl,receiptId') return false;
+  if (proof.label !== 'babysit' || !FULL_SHA.test(proof.headSha)
+    || !/^[0-9a-f]{64}$/.test(proof.evidenceSha256)
+    || timestampMillis(proof.observedAt) === null
+    || !/^[A-Za-z0-9_.:-]{1,200}$/.test(proof.receiptId)) return false;
+  try {
+    const evidenceUrl = new URL(proof.evidenceUrl);
+    const pullRequestUrl = new URL(proof.pullRequestUrl);
+    return evidenceUrl.origin === 'https://raw.githubusercontent.com'
+      && /^\/AgentWorkforce\/cloud\/[0-9a-f]{40}\/.+\.json$/.test(evidenceUrl.pathname)
+      && pullRequestUrl.origin === 'https://github.com'
+      && /^\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/pull\/[1-9][0-9]*$/.test(pullRequestUrl.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export function flowPluginIsActivatable(plugin: FlowPluginCatalogEntry): boolean {
   const required = FLOW_PLUGIN_REQUIRED_DEPENDENCIES[plugin.name];
   if (!Object.hasOwn(FLOW_PLUGIN_REQUIRED_DEPENDENCIES, plugin.name)) return false;
   const actual = plugin.activation.dependencies.map(dependency => dependency.id);
   return plugin.activation.state === 'ready'
+    && flowPluginHasLiveProof(plugin.activation.liveProof)
     && actual.length === Object.keys(required).length
     && Object.keys(required).every(id => actual.includes(id))
     && plugin.activation.dependencies.every(dependency => required[dependency.id] === dependency.repository)

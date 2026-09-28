@@ -38,6 +38,7 @@ describe('recommended flow catalog', () => {
           },
           activation: {
             state: 'blocked',
+            liveProof: null,
             dependencies: [
               {
                 id: 'cloud-babysitter-capability-adapter',

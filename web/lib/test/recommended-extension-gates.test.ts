@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import pluginsJson from '../../data/flow-plugin-catalog.v1.json';
 import recommendedJson from '../../data/recommended-flow-catalog.v1.json';
-import { validateRecommendedExtensions } from '../../scripts/verify-catalog-gates.mjs';
+import { createHash } from 'node:crypto';
+import {
+  validateRecommendedExtensions,
+  verifyIntegratedLiveProof,
+} from '../../scripts/verify-catalog-gates.mjs';
 
 function fixture() {
   const plugins = structuredClone(pluginsJson);
@@ -77,5 +81,57 @@ describe('every recommended extension gate', () => {
     const babysitter = catalog.flows.find(flow => flow.id === 'babysitter') as any;
     babysitter.extension.activation.state = 'ready';
     expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('may be ready only');
+  });
+  it('requires integrated live proof after every deployment dependency is evidenced', () => {
+    const { plugins, catalog } = fixture();
+    const activation = structuredClone(plugins.plugins[0].activation) as any;
+    activation.state = 'ready';
+    activation.dependencies.forEach((dependency: any, index: number) => {
+      const pull = [3989, 1851][index]!;
+      dependency.evidence = {
+        pullRequestUrl: `https://github.com/${dependency.repository}/pull/${pull}`,
+        mergedCommit: `${index + 1}`.repeat(40),
+        mergedAt: '2026-09-24T12:00:00Z',
+        deploymentUrl: `https://api.github.com/repos/${dependency.repository}/deployments/${pull}`,
+        deployedAt: '2026-09-24T12:05:00Z',
+      };
+    });
+    plugins.plugins[0].activation = activation;
+    for (const flow of catalog.flows as any[]) {
+      if (flow.extension?.id === 'babysitter') flow.extension.activation = structuredClone(activation);
+      for (const extension of flow.extensions ?? []) {
+        if (extension.id === 'babysitter') extension.activation = structuredClone(activation);
+      }
+    }
+    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('live label-to-turn-to-receipt proof');
+  });
+  it('verifies the immutable live proof bytes and declared payload', async () => {
+    const document = {
+      headSha: 'a'.repeat(40),
+      label: 'babysit' as const,
+      observedAt: '2026-09-24T12:10:00Z',
+      pullRequestUrl: 'https://github.com/AgentWorkforce/cloud/pull/4000',
+      receiptId: 'receipt:babysitter:e2e',
+    };
+    const bytes = Buffer.from(JSON.stringify(document));
+    const proof = {
+      evidenceUrl: `https://raw.githubusercontent.com/AgentWorkforce/cloud/${'b'.repeat(40)}/evidence/babysitter-live-proof.json`,
+      evidenceSha256: createHash('sha256').update(bytes).digest('hex'),
+      ...document,
+    };
+    const response = () => Promise.resolve(new Response(bytes, {
+      status: 200,
+      headers: { 'content-length': String(bytes.length) },
+    }));
+    await expect(verifyIntegratedLiveProof(proof, response)).resolves.toBeUndefined();
+    await expect(verifyIntegratedLiveProof(
+      { ...proof, evidenceSha256: 'c'.repeat(64) },
+      response,
+    )).rejects.toThrow('digest does not match');
+    const drifted = Buffer.from(JSON.stringify({ ...document, receiptId: 'different' }));
+    await expect(verifyIntegratedLiveProof(
+      { ...proof, evidenceSha256: createHash('sha256').update(drifted).digest('hex') },
+      () => Promise.resolve(new Response(drifted, { status: 200 })),
+    )).rejects.toThrow('payload does not match');
   });
 });

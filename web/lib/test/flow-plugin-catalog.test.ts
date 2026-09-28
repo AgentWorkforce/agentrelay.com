@@ -7,6 +7,7 @@ import {
   flowPluginBadgeMarkdown,
   flowPluginDependencyHasDeploymentEvidence,
   flowPluginGithubRef,
+  flowPluginHasLiveProof,
   flowPluginInstallHref,
   flowPluginInstallPath,
   flowPluginIsActivatable,
@@ -44,6 +45,7 @@ describe('flow plugin catalog', () => {
       runtime: { package: '@relayflows/sdk', version: '2.0.31', release: 'v2.0.31' },
       activation: {
         state: 'blocked',
+        liveProof: null,
         dependencies: [
           {
             id: 'cloud-babysitter-capability-adapter',
@@ -87,12 +89,22 @@ describe('flow plugin catalog', () => {
       ...babysitter,
       activation: {
         state: 'ready' as const,
+        liveProof: {
+          evidenceUrl: `https://raw.githubusercontent.com/AgentWorkforce/cloud/${'c'.repeat(40)}/evidence/babysitter-live-proof.json`,
+          evidenceSha256: 'd'.repeat(64),
+          observedAt: '2026-09-24T12:10:00Z',
+          pullRequestUrl: 'https://github.com/AgentWorkforce/cloud/pull/4000',
+          headSha: 'e'.repeat(40),
+          label: 'babysit' as const,
+          receiptId: 'receipt:babysitter:e2e',
+        },
         dependencies: babysitter.activation.dependencies.map((dependency, index) => ({
           ...dependency,
           evidence: evidence(dependency.repository, [3989, 1851][index]!),
         })),
       },
     };
+    expect(flowPluginHasLiveProof(ready.activation.liveProof)).toBe(true);
     expect(ready.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence)).toBe(true);
     expect(flowPluginIsActivatable(ready)).toBe(true);
     const install = new URL(flowPluginInstallHref(ready)!, 'https://agentrelay.com');
@@ -182,6 +194,14 @@ describe('flow plugin catalog', () => {
     expect(flowPluginIsActivatable({
       ...ready,
       activation: { ...ready.activation, state: 'blocked' },
+    })).toBe(false);
+    expect(flowPluginIsActivatable({
+      ...ready,
+      activation: { ...ready.activation, liveProof: null },
+    })).toBe(false);
+    expect(flowPluginHasLiveProof({
+      ...ready.activation.liveProof,
+      evidenceUrl: 'https://example.com/proof.json',
     })).toBe(false);
   });
 
