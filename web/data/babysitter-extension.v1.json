@@ -1,0 +1,116 @@
+{
+  "name": "babysitter",
+  "version": "0.2.0",
+  "ref": "github:AgentWorkforce/flows@8b33ebab8347514f80d9da5a81206a087f641714#extensions/babysitter",
+  "digest": "bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee",
+  "manifestSha256": "5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226",
+  "manifest": {
+    "schema": 2,
+    "kind": "flow-extension",
+    "name": "babysitter",
+    "version": "0.2.0",
+    "description": "Native Babysitter for Software Factory: turns a verified PR delivery into one cloud:babysitter-turn request. Cloud rechecks the live babysit label, head, and bound session; this extension holds no GitHub write authority.",
+    "compat": {
+      "surface": "^2.0.26",
+      "sdk": "^2.0.26",
+      "base": [
+        {
+          "name": "software-factory",
+          "version": "*"
+        }
+      ]
+    },
+    "entry": "babysitter.flow.ts",
+    "extends": {
+      "handlers": true,
+      "hooks": []
+    },
+    "triggers": [
+      {
+        "provider": "github",
+        "event": "pull_request",
+        "actions": [
+          "opened",
+          "synchronize",
+          "reopened",
+          "ready_for_review",
+          "closed",
+          "labeled",
+          "unlabeled"
+        ]
+      },
+      {
+        "provider": "github",
+        "event": "pull_request_review",
+        "actions": [
+          "submitted",
+          "dismissed"
+        ]
+      },
+      {
+        "provider": "github",
+        "event": "check_run",
+        "actions": [
+          "completed"
+        ]
+      },
+      {
+        "provider": "github",
+        "event": "issue_comment",
+        "actions": [
+          "created"
+        ]
+      }
+    ],
+    "permissions": {
+      "integrations": [
+        "github"
+      ],
+      "harnesses": [
+        "codex"
+      ],
+      "mcp": [],
+      "writes": [
+        "cloud:babysitter-turn"
+      ],
+      "budget": {
+        "dollars": 1,
+        "wallclock": "5m"
+      }
+    },
+    "preflight": {
+      "credentials": [],
+      "servers": []
+    }
+  },
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "70b2b79c8f2d9837b3bf373bae3588a4809c7376c6c66fda3587ef6eaa8f1467",
+      "bytes": 2369,
+      "encoding": "utf8",
+      "content": "# Native Babysitter (flow extension)\n\nA schema-2 extension on `software-factory`. Each of its eleven GitHub\nsubscriptions takes Cloud's normalized delivery descriptor and makes one\n`cloud:babysitter-turn` queue request:\n\n```jsonc\n// in: Cloud's normalized descriptor, never a raw webhook\n{ \"event\": { \"provider\": \"github\", \"eventType\": \"pull_request.labeled\", \"deliveryId\": \"…\" },\n  \"pullRequest\": { \"host\": \"github\", \"owner\": \"…\", \"repo\": \"…\", \"number\": 1, \"headSha\": \"<40 hex, optional>\" } }\n// out: f.capabilities.cloud.babysitterTurn.queue(request)\n{ \"delivery\": { \"deliveryId\": \"…\", \"provider\": \"github\", \"eventType\": \"pull_request.labeled\",\n                \"pullRequest\": { \"owner\": \"…\", \"repository\": \"…\", \"number\": 1 } } }\n```\n\nThe delivery is an envelope, not authority. The handler never sends findings,\nprose, a head, label, session, lineage, relay agent, config, merge flag, or\nroute; Cloud builds the prompt from the live head and the trusted binding. Cloud's\ncapability adapter checks the envelope against the host-verified dispatch,\nloads the persisted activation, rereads the live PR (open, exact `babysit`\nlabel, head), and resolves the one bound Codex session. It answers\n`{ receiptId, status: queued | duplicate }` and the run completes `success`;\nCloud dedupes by lineage and live head, so `deliveryId` is provenance, not the\nidempotency key. Every policy refusal and in-doubt transport failure rejects,\nand the run fails once with no retry or fallback. Any other input or receipt,\nor a runtime without the capability, fails the run.\n\n## What this does not do\n\n- Hosted execution is still refused. The SDK rejects every matched extension\n  handler with `plugin_unsupported` until manifest permissions are enforced\n  (#549, gate 8 / #442). This package does not change that.\n- The SDK context has no `capabilities.cloud.babysitterTurn`, and Cloud's\n  adapter is not merged. Both must land before a turn can happen.\n- It is not the legacy `examples/babysitter` (Claude review lenses, GitHub\n  comments, merge-gate hook). It holds no GitHub write authority.\n- `compat` needs a surface release after 2.0.25: the published 2.0.25 event\n  registry cannot route `labeled`, `unlabeled`, or `ready_for_review`.\n\nCatalog export follows `docs/BABYSITTER-CATALOG-HANDOFF.md`, with\n`#extensions/babysitter` as the path, after human review and merge.\n"
+    },
+    {
+      "path": "babysitter.flow.ts",
+      "sha256": "e1e8e9690334360612a6f6e749746e6a322eefea922f61342479c3bac18490b6",
+      "bytes": 3070,
+      "encoding": "utf8",
+      "content": "// Native Babysitter: an extension on Software Factory whose only effect is a\n// `cloud:babysitter-turn` request for the PR a verified delivery names. The\n// review itself happens in the original Codex session Cloud has bound to that\n// PR; this entry holds no GitHub credentials, runs no agent, and writes nothing\n// to GitHub. Hosted execution stays refused by the SDK (#549, gate 8 / #442).\nimport { flow, github, type Ctx, type TriggerSource } from '@relayflows/surface';\nimport { turnDelivery, turnReceipt, type BabysitterTurnDelivery, type Subscription } from './turn.ts';\n\ninterface TurnQueue {\n  queue(request: { readonly delivery: BabysitterTurnDelivery }): PromiseLike<unknown>;\n}\n\n/**\n * The declared write, as Cloud's capability adapter spells it. The SDK `Ctx`\n * has no `capabilities` field yet; a runtime without it must fail the run,\n * never skip the turn silently. The adapter, not this entry, holds workspace,\n * activation, and the verified delivery authority.\n */\nfunction turnQueue(f: Ctx): TurnQueue {\n  const capabilities = (f as unknown as { readonly capabilities?: { readonly cloud?: { readonly babysitterTurn?: unknown } } }).capabilities;\n  const port = capabilities?.cloud?.babysitterTurn;\n  if (typeof port !== 'object' || port === null || typeof (port as Partial<TurnQueue>).queue !== 'function') {\n    throw new Error('babysitter: this runtime does not provide the cloud:babysitter-turn write.');\n  }\n  return port as TurnQueue;\n}\n\nfunction handler(subscription: Subscription) {\n  return async (f: Ctx, input: unknown): Promise<void> => {\n    const delivery = turnDelivery(subscription, input);\n    // A delivery-only wake: Cloud builds the prompt from the live head and the\n    // trusted binding, so this entry sends no findings or prose. Refusals reject.\n    turnReceipt(await turnQueue(f).queue({ delivery }));\n    f.done('success');\n  };\n}\n\nconst handlers: readonly (readonly [TriggerSource, Subscription])[] = [\n  [github.pull_request('opened'), 'pull_request.opened'],\n  [github.pull_request('synchronize'), 'pull_request.synchronize'],\n  [github.pull_request('reopened'), 'pull_request.reopened'],\n  [github.pull_request('ready_for_review'), 'pull_request.ready_for_review'],\n  [github.pull_request('closed'), 'pull_request.closed'],\n  [github.pull_request('labeled'), 'pull_request.labeled'],\n  [github.pull_request('unlabeled'), 'pull_request.unlabeled'],\n  [github.pull_request_review({ action: 'submitted' }), 'pull_request_review.submitted'],\n  [github.pull_request_review({ action: 'dismissed' }), 'pull_request_review.dismissed'],\n  [github.check_run('completed'), 'check_run.completed'],\n  [github.issue_comment('created'), 'issue_comment.created'],\n];\n\n// The default body is reachable only by a direct run, whose input is\n// caller-controlled JSON. It never requests a turn.\nexport default handlers.reduce<ReturnType<typeof flow>>(\n  (handle, [trigger, subscription]) => handle.on(trigger, handler(subscription)),\n  flow('babysitter', { budget: { dollars: 1, wallclock: '5m' } }, async f => { f.done('declined'); }),\n);\n"
+    },
+    {
+      "path": "flows-plugin.json",
+      "sha256": "5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226",
+      "bytes": 1223,
+      "encoding": "utf8",
+      "content": "{\n  \"schema\": 2,\n  \"kind\": \"flow-extension\",\n  \"name\": \"babysitter\",\n  \"version\": \"0.2.0\",\n  \"description\": \"Native Babysitter for Software Factory: turns a verified PR delivery into one cloud:babysitter-turn request. Cloud rechecks the live babysit label, head, and bound session; this extension holds no GitHub write authority.\",\n  \"compat\": {\n    \"surface\": \"^2.0.26\",\n    \"sdk\": \"^2.0.26\",\n    \"base\": [{ \"name\": \"software-factory\", \"version\": \"*\" }]\n  },\n  \"entry\": \"babysitter.flow.ts\",\n  \"extends\": { \"handlers\": true, \"hooks\": [] },\n  \"triggers\": [\n    { \"provider\": \"github\", \"event\": \"pull_request\", \"actions\": [\"opened\", \"synchronize\", \"reopened\", \"ready_for_review\", \"closed\", \"labeled\", \"unlabeled\"] },\n    { \"provider\": \"github\", \"event\": \"pull_request_review\", \"actions\": [\"submitted\", \"dismissed\"] },\n    { \"provider\": \"github\", \"event\": \"check_run\", \"actions\": [\"completed\"] },\n    { \"provider\": \"github\", \"event\": \"issue_comment\", \"actions\": [\"created\"] }\n  ],\n  \"permissions\": {\n    \"integrations\": [\"github\"],\n    \"harnesses\": [\"codex\"],\n    \"mcp\": [],\n    \"writes\": [\"cloud:babysitter-turn\"],\n    \"budget\": { \"dollars\": 1, \"wallclock\": \"5m\" }\n  },\n  \"preflight\": { \"credentials\": [], \"servers\": [] }\n}\n"
+    },
+    {
+      "path": "turn.ts",
+      "sha256": "a5189b3b4db9cb7f4812e480f29dc33dfb5b392ff284952cefac9b5f8a18f781",
+      "bytes": 5033,
+      "encoding": "utf8",
+      "content": "/**\n * The native Babysitter turn contract: Cloud's normalized delivery descriptor\n * in, one `cloud:babysitter-turn` queue request out.\n *\n * Nothing here is authority. The delivery is an envelope: Cloud's capability\n * adapter checks it against the host-verified dispatch, loads the persisted\n * activation, rereads the live PR (open, exact `babysit` label, head), and\n * resolves the bound session and lineage. The handler never names a session,\n * lineage, head, label, route, or config, so a forged or stale descriptor can\n * at most ask Cloud to look again.\n */\n\n/** The subscriptions flows-plugin.json declares, as `event.action` event types. */\nexport const SUBSCRIPTIONS = [\n  'pull_request.opened', 'pull_request.synchronize', 'pull_request.reopened',\n  'pull_request.ready_for_review', 'pull_request.closed', 'pull_request.labeled',\n  'pull_request.unlabeled', 'pull_request_review.submitted', 'pull_request_review.dismissed',\n  'check_run.completed', 'issue_comment.created',\n] as const;\nexport type Subscription = (typeof SUBSCRIPTIONS)[number];\n\nexport interface BabysitterTurnDelivery {\n  readonly deliveryId: string;\n  readonly provider: 'github';\n  readonly eventType: Subscription;\n  readonly pullRequest: { readonly owner: string; readonly repository: string; readonly number: number };\n}\n\n/**\n * `queued`: Cloud wrote its head-bound receipt and Relay accepted the turn.\n * `duplicate`: that lineage and live head were already queued. Every refusal\n * and every in-doubt transport failure rejects instead of resolving.\n */\nexport interface BabysitterTurnReceipt {\n  readonly receiptId: string;\n  readonly status: 'queued' | 'duplicate';\n}\n\nconst DELIVERY = /^[A-Za-z0-9_.:-]{1,200}$/;\nconst OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;\nconst REPO = /^[A-Za-z0-9._-]{1,100}$/;\nconst SHA = /^[0-9a-f]{40}$/;\nconst RECEIPT = /^[A-Za-z0-9_.:-]{1,200}$/;\n\nfunction refuse(message: string): never {\n  throw new Error(`babysitter: ${message}`);\n}\n\nfunction record(value: unknown, what: string, keys: readonly string[], required: readonly string[]): Record<string, unknown> {\n  if (typeof value !== 'object' || value === null || Array.isArray(value)) refuse(`${what} must be an object.`);\n  const object = value as Record<string, unknown>;\n  const extra = Object.keys(object).filter(key => !keys.includes(key));\n  if (extra.length > 0) refuse(`${what} has unexpected fields ${extra.join(', ')}.`);\n  const missing = required.filter(key => !Object.hasOwn(object, key));\n  if (missing.length > 0) refuse(`${what} is missing ${missing.join(', ')}.`);\n  return object;\n}\n\nfunction matches(value: unknown, pattern: RegExp, what: string): string {\n  if (typeof value !== 'string' || !pattern.test(value)) refuse(`${what} is malformed.`);\n  return value;\n}\n\n/**\n * Validate the descriptor a handler received against the subscription that\n * handler was registered for. Any drift, unknown field, or raw webhook shape\n * is refused rather than guessed at. Cloud's `headSha` enrichment is checked\n * but not forwarded: Cloud binds to the head it rereads, never to a hint.\n */\nexport function turnDelivery(subscription: Subscription, input: unknown): BabysitterTurnDelivery {\n  const top = record(input, 'input', ['event', 'pullRequest'], ['event', 'pullRequest']);\n  const event = record(top.event, 'event', ['provider', 'eventType', 'deliveryId'], ['provider', 'eventType', 'deliveryId']);\n  const pr = record(top.pullRequest, 'pullRequest', ['host', 'owner', 'repo', 'number', 'headSha'], ['owner', 'repo', 'number']);\n  if (event.provider !== 'github') refuse('event.provider must be github.');\n  if (event.eventType !== subscription) refuse(`event ${JSON.stringify(event.eventType)} was delivered to the ${subscription} handler.`);\n  if (pr.host !== undefined && pr.host !== 'github') refuse('pullRequest.host must be github.');\n  const owner = matches(pr.owner, OWNER, 'pullRequest.owner');\n  const repository = matches(pr.repo, REPO, 'pullRequest.repo');\n  if (repository === '.' || repository === '..') refuse('pullRequest.repo is malformed.');\n  if (typeof pr.number !== 'number' || !Number.isSafeInteger(pr.number) || pr.number <= 0) refuse('pullRequest.number must be a positive integer.');\n  if (pr.headSha !== undefined) matches(pr.headSha, SHA, 'pullRequest.headSha');\n  return Object.freeze({\n    deliveryId: matches(event.deliveryId, DELIVERY, 'event.deliveryId'),\n    provider: 'github',\n    eventType: subscription,\n    pullRequest: Object.freeze({ owner, repository, number: pr.number }),\n  });\n}\n\n/** Cloud's answer is data from across a boundary; an unknown shape fails the run. */\nexport function turnReceipt(value: unknown): BabysitterTurnReceipt {\n  const receipt = record(value, 'turn receipt', ['receiptId', 'status'], ['receiptId', 'status']);\n  const receiptId = matches(receipt.receiptId, RECEIPT, 'turn receipt receiptId');\n  if (receipt.status !== 'queued' && receipt.status !== 'duplicate') refuse('turn receipt status is unknown.');\n  return Object.freeze({ receiptId, status: receipt.status });\n}\n"
+    }
+  ]
+}

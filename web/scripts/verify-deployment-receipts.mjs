@@ -2,6 +2,7 @@ import { FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS } from '../lib/flow-plugin-imp
 
 const REPOSITORIES = new Map([
   ['cloud-babysitter-capability-adapter', 'AgentWorkforce/cloud'],
+  ['relay-hosted-flow-extension-execution', 'AgentWorkforce/relay'],
   ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
 ]);
 
