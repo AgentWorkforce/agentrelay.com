@@ -8,6 +8,7 @@ export type FlowPluginTrustTier = (typeof FLOW_PLUGIN_TRUST_TIERS)[number];
 export const FLOW_PLUGIN_REQUIRED_DEPENDENCIES: Readonly<Record<string, Readonly<Record<string, string>>>> = {
   babysitter: {
     'cloud-babysitter-capability-adapter': 'AgentWorkforce/cloud',
+    'relay-hosted-flow-extension-execution': 'AgentWorkforce/relay',
     'relay-native-existing-session-delivery': 'AgentWorkforce/relay',
   },
 };

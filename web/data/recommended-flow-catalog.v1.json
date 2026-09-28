@@ -43,6 +43,12 @@
                 "evidence": null
               },
               {
+                "id": "relay-hosted-flow-extension-execution",
+                "repository": "AgentWorkforce/relay",
+                "requiredState": "merged-and-deployed",
+                "evidence": null
+              },
+              {
                 "id": "relay-native-existing-session-delivery",
                 "repository": "AgentWorkforce/relay",
                 "requiredState": "merged-and-deployed",
@@ -100,6 +106,12 @@
             {
               "id": "cloud-babysitter-capability-adapter",
               "repository": "AgentWorkforce/cloud",
+              "requiredState": "merged-and-deployed",
+              "evidence": null
+            },
+            {
+              "id": "relay-hosted-flow-extension-execution",
+              "repository": "AgentWorkforce/relay",
               "requiredState": "merged-and-deployed",
               "evidence": null
             },

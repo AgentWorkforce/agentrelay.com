@@ -3,6 +3,7 @@ import pluginsJson from '../../data/flow-plugin-catalog.v1.json';
 import recommendedJson from '../../data/recommended-flow-catalog.v1.json';
 import { createHash } from 'node:crypto';
 import {
+  integratedLiveProofTimingIsValid,
   validateRecommendedExtensions,
   verifyIntegratedLiveProof,
 } from '../../scripts/verify-catalog-gates.mjs';
@@ -100,12 +101,12 @@ describe('every recommended extension gate', () => {
     expect(() => validateRecommendedExtensions(emptyDeployableFlow.catalog, emptyDeployableFlow.plugins))
       .toThrow('deployable flow agent sets must not be empty');
   });
-  it('requires integrated live proof after every deployment dependency is evidenced', () => {
+  it('keeps ready blocked while the hosted executor has no accepted implementation PR', () => {
     const { plugins, catalog } = fixture();
     const activation = structuredClone(plugins.plugins[0].activation) as any;
     activation.state = 'ready';
     activation.dependencies.forEach((dependency: any, index: number) => {
-      const pull = [3989, 1851][index]!;
+      const pull = [3989, 1900, 1851][index]!;
       dependency.evidence = {
         pullRequestUrl: `https://github.com/${dependency.repository}/pull/${pull}`,
         mergedCommit: `${index + 1}`.repeat(40),
@@ -121,42 +122,41 @@ describe('every recommended extension gate', () => {
         if (extension.id === 'babysitter') extension.activation = structuredClone(activation);
       }
     }
-    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('live label-to-turn-to-receipt proof');
+    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('merge and deployment evidence');
   });
   it('requires live proof to follow deployments and not be future-dated', () => {
-    const { plugins, catalog } = fixture();
-    const activation = structuredClone(plugins.plugins[0].activation) as any;
-    activation.state = 'ready';
-    activation.liveProof = {
+    const proof = {
       evidenceUrl: `https://raw.githubusercontent.com/AgentWorkforce/cloud/${'a'.repeat(40)}/evidence/babysitter-live-proof.json`,
       evidenceSha256: 'b'.repeat(64),
       observedAt: '2026-09-24T12:04:59Z',
       pullRequestUrl: 'https://github.com/AgentWorkforce/cloud/pull/4000',
       headSha: 'c'.repeat(40),
-      label: 'babysit',
+      label: 'babysit' as const,
       receiptId: 'receipt:babysitter:e2e',
     };
-    activation.dependencies.forEach((dependency: any, index: number) => {
-      const pull = [3989, 1851][index]!;
-      dependency.evidence = {
-        pullRequestUrl: `https://github.com/${dependency.repository}/pull/${pull}`,
-        mergedCommit: `${index + 1}`.repeat(40),
+    const dependencies = [{
+      id: 'dependency',
+      repository: 'AgentWorkforce/example',
+      requiredState: 'merged-and-deployed' as const,
+      evidence: {
+        pullRequestUrl: 'https://github.com/AgentWorkforce/example/pull/1',
+        mergedCommit: 'd'.repeat(40),
         mergedAt: '2026-09-24T12:00:00Z',
-        deploymentUrl: `https://api.github.com/repos/${dependency.repository}/deployments/${pull}`,
+        deploymentUrl: 'https://api.github.com/repos/AgentWorkforce/example/deployments/1',
         deployedAt: '2026-09-24T12:05:00Z',
-      };
-    });
-    plugins.plugins[0].activation = activation;
-    for (const flow of catalog.flows as any[]) {
-      if (flow.extension?.id === 'babysitter') flow.extension.activation = structuredClone(activation);
-      for (const extension of flow.extensions ?? []) {
-        if (extension.id === 'babysitter') extension.activation = structuredClone(activation);
-      }
-    }
-    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('must postdate every dependency deployment');
-    activation.liveProof.observedAt = '2099-09-24T12:10:00Z';
-    plugins.plugins[0].activation = activation;
-    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('may not be in the future');
+      },
+    }];
+    expect(integratedLiveProofTimingIsValid(proof, dependencies, Date.parse('2026-09-24T12:10:00Z'))).toBe(false);
+    expect(integratedLiveProofTimingIsValid(
+      { ...proof, observedAt: '2026-09-24T12:06:00Z' },
+      dependencies,
+      Date.parse('2026-09-24T12:10:00Z'),
+    )).toBe(true);
+    expect(integratedLiveProofTimingIsValid(
+      { ...proof, observedAt: '2026-09-24T12:11:00Z' },
+      dependencies,
+      Date.parse('2026-09-24T12:10:00Z'),
+    )).toBe(false);
   });
   it('verifies the immutable live proof bytes and declared payload', async () => {
     const document = {

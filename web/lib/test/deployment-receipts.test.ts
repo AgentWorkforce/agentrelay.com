@@ -48,6 +48,20 @@ describe('authoritative dependency receipts', () => {
       expect(request).not.toHaveBeenCalled();
     }
   });
+  it('rejects the unassigned hosted executor before making a request', async () => {
+    const request = requester([]);
+    await expect(verifyDeploymentReceipt({
+      ...dependency,
+      id: 'relay-hosted-flow-extension-execution',
+      repository: 'AgentWorkforce/relay',
+      evidence: {
+        ...evidence,
+        pullRequestUrl: 'https://github.com/AgentWorkforce/relay/pull/1900',
+        deploymentUrl: 'https://api.github.com/repos/AgentWorkforce/relay/deployments/7',
+      },
+    }, request)).rejects.toThrow('declared capability implementation');
+    expect(request).not.toHaveBeenCalled();
+  });
   it('rejects a nonexistent PR, private receipt, rate limit or failed request', async () => {
     for (const status of [404, 403, 429, 500]) {
       const request = vi.fn<typeof fetch>().mockResolvedValue(new Response('', { status }));

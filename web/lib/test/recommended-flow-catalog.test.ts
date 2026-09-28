@@ -47,6 +47,12 @@ describe('recommended flow catalog', () => {
                 evidence: null,
               },
               {
+                id: 'relay-hosted-flow-extension-execution',
+                repository: 'AgentWorkforce/relay',
+                requiredState: 'merged-and-deployed',
+                evidence: null,
+              },
+              {
                 id: 'relay-native-existing-session-delivery',
                 repository: 'AgentWorkforce/relay',
                 requiredState: 'merged-and-deployed',

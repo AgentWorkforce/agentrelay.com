@@ -128,7 +128,7 @@ Babysitter in plugin catalog v3 and Recommended catalog v4 is **first-party**: i
 
 `flowPluginBadgeMarkdown()` renders the README form for an extension whose activation gate is ready. `plugin` is appended so repeats survive.
 
-Babysitter's gate requires both `cloud-babysitter-capability-adapter` and `relay-native-existing-session-delivery` to carry a pull request, merge commit, merge time, deployment receipt, and deployment time. It also requires `liveProof`: an immutable, digest-addressed JSON record from a full `babysit` label-to-existing-session-turn-to-receipt run. The proof pins the pull request, live head, exact label, observation time, and receipt ID. Until both deployment proofs and that integrated proof are recorded and the gate state is `ready`, `flowPluginInstallHref()` returns `null` and the gallery shows catalog status plus source only.
+Babysitter's gate requires `cloud-babysitter-capability-adapter`, `relay-hosted-flow-extension-execution`, and `relay-native-existing-session-delivery` to carry a pull request, merge commit, merge time, deployment receipt, and deployment time. It also requires `liveProof`: an immutable, digest-addressed JSON record from a full `babysit` label-to-existing-session-turn-to-receipt run. The proof pins the pull request, live head, exact label, observation time, and receipt ID, and must postdate every dependency deployment without being future-dated. Until all deployment proofs and that integrated proof are recorded and the gate state is `ready`, `flowPluginInstallHref()` returns `null` and the gallery shows catalog status plus source only.
 
 The catalog itself is versioned JSON, `{version:3, plugins:[{name, description, source:{owner,repo,path}, ref, digest, manifestSha256, compat, runtime, activation, tier, base}]}`. Any public repo with a `flows-plugin.json` remains installable by an explicit source URL; the curated catalog does not advertise an activation route until its dependency gate is satisfied.
 
@@ -137,8 +137,13 @@ The code-owned implementation contract binds `cloud-babysitter-capability-adapte
 to [Cloud PR #3989](https://github.com/AgentWorkforce/cloud/pull/3989) and
 `relay-native-existing-session-delivery` to
 [Relay PR #1851](https://github.com/AgentWorkforce/relay/pull/1851). Unrelated PRs
-in those repositories cannot satisfy either dependency. A replacement implementation
+in those repositories cannot satisfy either registered dependency. A replacement implementation
 requires a reviewed code change to this contract.
+`relay-hosted-flow-extension-execution` deliberately has no accepted implementation
+PR yet. Cloud PR #4002 is a consumer contract, not execution authority, and cannot
+satisfy this dependency. Activation therefore remains impossible until the assigned
+Relay/Flows owner opens a focused implementation PR and a reviewed catalog change
+registers that exact PR before deployment evidence can be admitted.
 `pullRequestUrl` must identify a merged PR into the dependency repository's `main`,
 with the exact `mergedCommit` and `mergedAt`. `deploymentUrl` must be the canonical
 GitHub API deployment URL (`https://api.github.com/repos/OWNER/REPO/deployments/ID`).

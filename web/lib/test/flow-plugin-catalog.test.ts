@@ -55,6 +55,12 @@ describe('flow plugin catalog', () => {
             evidence: null,
           },
           {
+            id: 'relay-hosted-flow-extension-execution',
+            repository: 'AgentWorkforce/relay',
+            requiredState: 'merged-and-deployed',
+            evidence: null,
+          },
+          {
             id: 'relay-native-existing-session-delivery',
             repository: 'AgentWorkforce/relay',
             requiredState: 'merged-and-deployed',
@@ -101,7 +107,7 @@ describe('flow plugin catalog', () => {
         },
         dependencies: babysitter.activation.dependencies.map((dependency, index) => ({
           ...dependency,
-          evidence: evidence(dependency.repository, [3989, 1851][index]!),
+          evidence: evidence(dependency.repository, [3989, 1900, 1851][index]!),
         })),
       },
     };
@@ -110,12 +116,11 @@ describe('flow plugin catalog', () => {
       ready.activation.liveProof,
       ready.activation.dependencies,
     )).toBe(true);
-    expect(ready.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence)).toBe(true);
-    expect(flowPluginIsActivatable(ready)).toBe(true);
-    const install = new URL(flowPluginInstallHref(ready)!, 'https://agentrelay.com');
-    expect(install.pathname).toBe('/cloud/flows/deploy');
-    expect(install.searchParams.get('flow')).toBe(SOFTWARE_FACTORY_FLOW_URL);
-    expect(install.searchParams.getAll('plugin')).toEqual([flowPluginSourceUrl(ready)]);
+    expect(ready.activation.dependencies.map(flowPluginDependencyHasDeploymentEvidence)).toEqual([
+      true, false, true,
+    ]);
+    expect(flowPluginIsActivatable(ready)).toBe(false);
+    expect(flowPluginInstallHref(ready)).toBeNull();
 
     const dependency = ready.activation.dependencies[0]!;
     const invalidEvidence: unknown[] = [null, [], {}, { ...dependency.evidence, extra: 'field' }];

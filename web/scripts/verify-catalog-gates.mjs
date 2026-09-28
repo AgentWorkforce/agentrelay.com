@@ -17,6 +17,7 @@ const [pluginCatalog, recommendedCatalog, babysitterBundle] = await Promise.all(
 const REQUIRED_PLUGIN_DEPENDENCIES = new Map([
   ['babysitter', new Map([
     ['cloud-babysitter-capability-adapter', 'AgentWorkforce/cloud'],
+    ['relay-hosted-flow-extension-execution', 'AgentWorkforce/relay'],
     ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
   ])],
 ]);
@@ -54,6 +55,17 @@ export function integratedLiveProofIsValid(proof) {
   } catch {
     return false;
   }
+}
+
+export function integratedLiveProofTimingIsValid(proof, dependencies, now = Date.now()) {
+  if (!integratedLiveProofIsValid(proof) || !Array.isArray(dependencies)) return false;
+  const observedAt = timestampMillis(proof.observedAt);
+  return observedAt <= now && dependencies.every((dependency) => {
+    const deployedAt = typeof dependency?.evidence?.deployedAt === 'string'
+      ? timestampMillis(dependency.evidence.deployedAt)
+      : null;
+    return deployedAt !== null && observedAt >= deployedAt;
+  });
 }
 
 const MAX_LIVE_PROOF_BYTES = 64 * 1024;
@@ -159,7 +171,7 @@ function validateActivationGate(gate, label, requiredDependencies) {
     if (observedAt > Date.now()) {
       fail(`${label} live proof observation may not be in the future`);
     }
-    if (gate.dependencies.some(dependency => observedAt < timestampMillis(dependency.evidence.deployedAt))) {
+    if (!integratedLiveProofTimingIsValid(gate.liveProof, gate.dependencies)) {
       fail(`${label} live proof must postdate every dependency deployment`);
     }
   }
