@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": 3,
+  "catalogVersion": 4,
   "flows": [
     {
       "id": "software-factory",
+      "kind": "flow",
       "version": 3,
       "name": "Software Garden",
       "summary": "Turn GitHub issues into reviewed, tested pull requests.",
@@ -61,6 +62,64 @@
         "rawUrl": "https://raw.githubusercontent.com/AgentWorkforce/flows/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts",
         "mediaType": "text/typescript",
         "sha256": "49c993220b9c34fab2d4b0e51911656f62b8b657f534d988691960d45bb9d9b6"
+      }
+    },
+    {
+      "id": "babysitter",
+      "kind": "extension",
+      "baseFlowId": "software-factory",
+      "version": 1,
+      "name": "Babysitter",
+      "summary": "Keep a Software Garden session moving when GitHub activity needs another turn.",
+      "description": "A first-party Software Garden extension that turns eleven verified GitHub wake events into one authorized existing-session turn. It is discoverable now, but activation remains unavailable until Cloud hosting and Relay delivery carry exact deployment evidence and a live label-to-turn-to-receipt proof.",
+      "supportedRepositoryHosts": ["github"],
+      "defaultTrigger": {
+        "provider": "github",
+        "settings": {}
+      },
+      "inputs": {
+        "required": [],
+        "defaults": {},
+        "allowedAgents": []
+      },
+      "extension": {
+        "id": "babysitter",
+        "version": "0.2.0",
+        "runtime": { "package": "@relayflows/sdk", "version": "2.0.31", "release": "v2.0.31" },
+        "artifact": {
+          "ref": "github:AgentWorkforce/flows@8b33ebab8347514f80d9da5a81206a087f641714#extensions/babysitter",
+          "digest": "bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee",
+          "manifestSha256": "5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226"
+        },
+        "activation": {
+          "state": "blocked",
+          "dependencies": [
+            {
+              "id": "cloud-babysitter-capability-adapter",
+              "repository": "AgentWorkforce/cloud",
+              "requiredState": "merged-and-deployed",
+              "evidence": null
+            },
+            {
+              "id": "relay-native-existing-session-delivery",
+              "repository": "AgentWorkforce/relay",
+              "requiredState": "merged-and-deployed",
+              "evidence": null
+            }
+          ]
+        }
+      },
+      "source": {
+        "kind": "github",
+        "owner": "AgentWorkforce",
+        "repo": "flows",
+        "path": "extensions/babysitter/babysitter.flow.ts",
+        "release": "v2.0.26",
+        "ref": "8b33ebab8347514f80d9da5a81206a087f641714",
+        "url": "https://github.com/AgentWorkforce/flows/blob/8b33ebab8347514f80d9da5a81206a087f641714/extensions/babysitter/babysitter.flow.ts",
+        "rawUrl": "https://raw.githubusercontent.com/AgentWorkforce/flows/8b33ebab8347514f80d9da5a81206a087f641714/extensions/babysitter/babysitter.flow.ts",
+        "mediaType": "text/typescript",
+        "sha256": "e1e8e9690334360612a6f6e749746e6a322eefea922f61342479c3bac18490b6"
       }
     }
   ]

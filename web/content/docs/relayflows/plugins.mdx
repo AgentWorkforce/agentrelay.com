@@ -118,7 +118,7 @@ The gallery and the deploy wizard display a tier. **The label is never used to s
 | **verified** | bundle `identity.json` keyid matches a publisher key registered in Cloud |
 | **community** | anything else |
 
-Babysitter in catalog v3 is **first-party**: its reviewed `v2.0.26` artifact commit is reachable from `AgentWorkforce/flows` main, and the hosted runtime provenance is the published SDK `v2.0.31` release. The label does not widen runtime authority.
+Babysitter in plugin catalog v3 and Recommended catalog v4 is **first-party**: its reviewed `v2.0.26` artifact commit is reachable from `AgentWorkforce/flows` main, and the hosted runtime provenance is the published SDK `v2.0.31` release. The Recommended entry makes the blocked extension discoverable alongside Software Garden; the label does not widen runtime authority.
 
 <Note>
   `permissions.writes` stays a reviewed declaration labelled UNENFORCED until gate 8. Displaying a first-party or verified badge does not enforce write scope, skip the digest, or route an event the registry does not carry.

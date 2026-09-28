@@ -9,9 +9,15 @@ Recommended flows are maintained starting points. The catalog is public, version
 
 Software Garden is the display name of the first recommended flow. Its stable catalog and authored flow ID is `software-factory`: a GitHub issue starts implementation, deterministic repository checks, adversarial review, and a pull request for a human decision.
 
-The released source uses Claude Code for implementation and review, so catalog version 3 allows and defaults only that harness. A future catalog version can point at a new released source with a different requirement; clients do not rewrite the authored flow.
+The released source uses Claude Code for implementation and review, so the Software Garden entry allows and defaults only that harness. A future catalog version can point at a new released source with a different requirement; clients do not rewrite the authored flow.
 
-Software Garden currently supports GitHub repositories. Deploy one listener per repository using the direct-source API below. Babysitter remains a [flow plugin](/docs/relayflows/plugins), not a recommended flow of its own. The catalog carries its immutable artifact and Relayflows SDK 2.0.31 runtime provenance as inert extension metadata; activation stays blocked until the Cloud capability adapter and Relay native delivery both carry merge and deployment evidence.
+Software Garden currently supports GitHub repositories. Deploy one listener per repository using the direct-source API below.
+
+## Babysitter
+
+Babysitter is a first-class Recommended entry so its purpose and readiness are visible. It is a [flow plugin](/docs/relayflows/plugins) that extends Software Garden, not a standalone listener: its `kind` is `extension` and its `baseFlowId` is `software-factory`.
+
+The Babysitter detail response carries the exact reviewed extension bundle, immutable artifact digest, manifest digest, and Relayflows SDK 2.0.31 runtime provenance. Discovery does not imply availability. Activation remains blocked, and no activation link is advertised, until the Cloud production host and Relay native existing-session delivery carry exact merge and deployment evidence and the integrated label-to-turn-to-receipt path has been proven live.
 
 ## Catalog API
 
@@ -20,9 +26,10 @@ The stable endpoints are:
 ```text
 GET https://agentrelay.com/api/v1/flows/catalog
 GET https://agentrelay.com/api/v1/flows/catalog/software-factory
+GET https://agentrelay.com/api/v1/flows/catalog/babysitter
 ```
 
-The list response starts with `schemaVersion: 1` and `catalogVersion: 3`. Every flow has a stable `id`, its own numeric `version`, display copy, repository-host support, trigger defaults, required/default activation inputs, and an immutable source reference. Optional extension entries are metadata only unless their activation gate is `ready` and every declared dependency has merge and deployment evidence.
+The list response starts with `schemaVersion: 1` and `catalogVersion: 4`. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
 
 The catalog does not copy or generate the flow body. `source` names the canonical `AgentWorkforce/flows` owner, repository, path, release tag, full commit SHA, GitHub blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch:
 

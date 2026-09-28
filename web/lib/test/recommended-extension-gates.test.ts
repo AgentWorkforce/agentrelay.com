@@ -6,10 +6,18 @@ import { validateRecommendedExtensions } from '../../scripts/verify-catalog-gate
 function fixture() {
   const plugins = structuredClone(pluginsJson);
   const catalog = structuredClone(recommendedJson);
+  const garden = catalog.flows.find(flow => flow.id === 'software-factory') as any;
   // A second compatible base demonstrates traversal beyond Software Garden.
   plugins.plugins[0].base.push('second-flow');
-  catalog.flows.push({ ...structuredClone(catalog.flows[0]), id: 'second-flow' });
+  catalog.flows.push({ ...structuredClone(garden), id: 'second-flow' });
   return { plugins, catalog };
+}
+
+function baseFlows(catalog: ReturnType<typeof fixture>['catalog']) {
+  return [
+    catalog.flows.find(flow => flow.id === 'software-factory')!,
+    catalog.flows.find(flow => flow.id === 'second-flow')!,
+  ] as any[];
 }
 
 describe('every recommended extension gate', () => {
@@ -20,8 +28,9 @@ describe('every recommended extension gate', () => {
   it('rejects an unsupported second extension on either flow', () => {
     for (const index of [0, 1]) {
       const { plugins, catalog } = fixture();
-      catalog.flows[index].extensions.push({
-        ...structuredClone(catalog.flows[index].extensions[0]), id: 'unsupported',
+      const flow = baseFlows(catalog)[index];
+      flow.extensions.push({
+        ...structuredClone(flow.extensions[0]), id: 'unsupported',
         activation: { state: 'ready', dependencies: [] },
       });
       expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('no supported plugin contract');
@@ -29,22 +38,23 @@ describe('every recommended extension gate', () => {
   });
   it('validates evidence for a supported extension on the second flow', () => {
     const { plugins, catalog } = fixture();
-    catalog.flows[1].extensions[0].activation.state = 'ready';
+    baseFlows(catalog)[1].extensions[0].activation.state = 'ready';
     expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('may be ready only');
   });
   it('rejects every artifact or runtime mismatch on the second flow', () => {
     for (const field of ['ref', 'digest', 'manifestSha256'] as const) {
       const { plugins, catalog } = fixture();
-      catalog.flows[1].extensions[0].artifact[field] = 'unverified';
+      baseFlows(catalog)[1].extensions[0].artifact[field] = 'unverified';
       expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('artifact coordinates');
     }
     const { plugins, catalog } = fixture();
-    catalog.flows[1].extensions[0].runtime.version = '99.0.0';
+    baseFlows(catalog)[1].extensions[0].runtime.version = '99.0.0';
     expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('runtime provenance');
   });
   it('rejects duplicate extensions, duplicate plugin contracts and incompatible bases', () => {
     const duplicate = fixture();
-    duplicate.catalog.flows[1].extensions.push(duplicate.catalog.flows[1].extensions[0]);
+    const duplicateSecond = baseFlows(duplicate.catalog)[1];
+    duplicateSecond.extensions.push(duplicateSecond.extensions[0]);
     expect(() => validateRecommendedExtensions(duplicate.catalog, duplicate.plugins)).toThrow('is repeated');
     const ambiguous = fixture();
     ambiguous.plugins.plugins.push(ambiguous.plugins.plugins[0]);
@@ -56,8 +66,16 @@ describe('every recommended extension gate', () => {
   it('rejects malformed extension lists instead of skipping them', () => {
     for (const extensions of [null, {}, 'babysitter']) {
       const { plugins, catalog } = fixture();
-      const malformed = { ...catalog, flows: [catalog.flows[0], { ...catalog.flows[1], extensions }] };
+      const [garden, second] = baseFlows(catalog);
+      const babysitter = catalog.flows.find(flow => flow.id === 'babysitter') as any;
+      const malformed = { ...catalog, flows: [garden, babysitter, { ...second, extensions }] };
       expect(() => validateRecommendedExtensions(malformed, plugins)).toThrow('extensions must be an array');
     }
+  });
+  it('validates the first-class Babysitter card against the same plugin gate', () => {
+    const { plugins, catalog } = fixture();
+    const babysitter = catalog.flows.find(flow => flow.id === 'babysitter') as any;
+    babysitter.extension.activation.state = 'ready';
+    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('may be ready only');
   });
 });

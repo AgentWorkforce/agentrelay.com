@@ -9,11 +9,12 @@ import { GET as getCatalogItem } from '../../app/api/v1/flows/catalog/[flowId]/r
 describe('recommended flow catalog', () => {
   it('publishes Software Garden metadata under its canonical flow id', () => {
     const catalog = getRecommendedFlowCatalog();
-    expect(catalog).toEqual({
+    expect(catalog).toMatchObject({
       schemaVersion: 1,
-      catalogVersion: 3,
+      catalogVersion: 4,
       flows: [{
         id: 'software-factory',
+        kind: 'flow',
         version: 3,
         name: 'Software Garden',
         summary: expect.any(String),
@@ -65,20 +66,52 @@ describe('recommended flow catalog', () => {
           mediaType: 'text/typescript',
           sha256: '49c993220b9c34fab2d4b0e51911656f62b8b657f534d988691960d45bb9d9b6',
         },
+      }, {
+        id: 'babysitter',
+        kind: 'extension',
+        baseFlowId: 'software-factory',
+        name: 'Babysitter',
+        extension: {
+          id: 'babysitter',
+          version: '0.2.0',
+          artifact: {
+            ref: 'github:AgentWorkforce/flows@8b33ebab8347514f80d9da5a81206a087f641714#extensions/babysitter',
+            digest: 'bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee',
+            manifestSha256: '5631a06bbdc8186f4ee0ff955610ead24d001c5197b59fb1fe81fe422c44f226',
+          },
+          activation: { state: 'blocked' },
+        },
+        source: {
+          path: 'extensions/babysitter/babysitter.flow.ts',
+          ref: '8b33ebab8347514f80d9da5a81206a087f641714',
+          sha256: 'e1e8e9690334360612a6f6e749746e6a322eefea922f61342479c3bac18490b6',
+        },
       }],
     });
     expect(JSON.parse(JSON.stringify(catalog))).toEqual(catalog);
-    expect(catalog.flows[0]?.extensions[0]?.activation.state).toBe('blocked');
+    expect(catalog.flows[0]?.extensions?.[0]?.activation.state).toBe('blocked');
   });
 
-  it('keeps display branding separate from the canonical activation id', () => {
+  it('publishes Babysitter as a first-class, blocked Software Garden extension', () => {
     expect(getRecommendedFlow('software-factory')?.name).toBe('Software Garden');
     expect(getRecommendedFlow('software-garden')).toBeNull();
-    expect(getRecommendedFlow('babysitter')).toBeNull();
+    const babysitter = getRecommendedFlow('babysitter');
+    expect(babysitter).toMatchObject({
+      kind: 'extension',
+      baseFlowId: 'software-factory',
+      extension: {
+        activation: { state: 'blocked' },
+        bundle: {
+          name: 'babysitter',
+          digest: 'bdf2187b9a242667d34bbc63e7a744753e146dc8cd6f4047047f2aed28f406ee',
+          manifest: { permissions: { writes: ['cloud:babysitter-turn'] } },
+        },
+      },
+    });
   });
 
   it('references an immutable released source instead of carrying authored source', () => {
-    const flow = getRecommendedFlow('software-factory')!;
+    const flow = getRecommendedFlow('babysitter')!;
     expect(flow.source.ref).toMatch(/^[0-9a-f]{40}$/);
     expect(flow.source.sha256).toMatch(/^[0-9a-f]{64}$/);
     expect(flow.source.url).toContain(`/blob/${flow.source.ref}/${flow.source.path}`);
@@ -94,7 +127,11 @@ describe('recommended flow catalog HTTP surface', () => {
     const list = getCatalog();
     expect(list.status).toBe(200);
     expect(list.headers.get('access-control-allow-origin')).toBe('*');
-    await expect(list.json()).resolves.toMatchObject({ schemaVersion: 1, flows: [{ id: 'software-factory' }] });
+    await expect(list.json()).resolves.toMatchObject({
+      schemaVersion: 1,
+      catalogVersion: 4,
+      flows: [{ id: 'software-factory' }, { id: 'babysitter', kind: 'extension' }],
+    });
 
     const detail = await getCatalogItem(new Request('https://agentrelay.com/api/v1/flows/catalog/software-factory'), {
       params: Promise.resolve({ flowId: 'software-factory' }),
@@ -106,10 +143,24 @@ describe('recommended flow catalog HTTP surface', () => {
       source: { ref: '8b33ebab8347514f80d9da5a81206a087f641714' },
       extensions: [{ id: 'babysitter', activation: { state: 'blocked' } }],
     });
+
+    const babysitter = await getCatalogItem(new Request('https://agentrelay.com/api/v1/flows/catalog/babysitter'), {
+      params: Promise.resolve({ flowId: 'babysitter' }),
+    });
+    expect(babysitter.status).toBe(200);
+    await expect(babysitter.json()).resolves.toMatchObject({
+      id: 'babysitter',
+      kind: 'extension',
+      baseFlowId: 'software-factory',
+      extension: {
+        activation: { state: 'blocked' },
+        bundle: { name: 'babysitter', files: expect.any(Array) },
+      },
+    });
   });
 
   it('does not treat display names or future concepts as catalog ids', async () => {
-    for (const flowId of ['software-garden', 'babysitter', 'unknown']) {
+    for (const flowId of ['software-garden', 'unknown']) {
       const response = await getCatalogItem(new Request(`https://agentrelay.com/api/v1/flows/catalog/${flowId}`), {
         params: Promise.resolve({ flowId }),
       });
