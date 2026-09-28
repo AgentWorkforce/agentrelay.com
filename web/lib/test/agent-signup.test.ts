@@ -97,6 +97,9 @@ describe('agent signup instructions', () => {
     expect(deploy).not.toHaveProperty('flowId');
     expect(deploy).not.toHaveProperty('repositories');
     expect(content).toContain('one deployment per');
+    expect(content).toContain('only an entry with kind: flow');
+    expect(content).toContain('An entry with kind: extension is discoverable metadata, not a standalone');
+    expect(content).toContain('never substitute a standalone flow deployment');
     expect(content).toContain('Ask for the approver\'s');
     expect(content).toContain('GitHub username in plain language');
     expect(content).toContain('Normalize the');

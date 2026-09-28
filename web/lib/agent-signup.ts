@@ -370,6 +370,16 @@ Do not invent a repository or enable automation on an unrelated project.
 
 GET ${site}/api/v1/flows/catalog and select a matching entry from flows.
 GET ${site}/api/v1/flows/catalog/<id> for its full contract. Use the catalog's
+kind before doing anything executable: only an entry with kind: flow (or a
+legacy entry with kind omitted) is deployable through the direct-source API
+below. An entry with kind: extension is discoverable metadata, not a standalone
+listener. Do not download or deploy its source, even when it declares trigger
+and input fields. Inspect baseFlowId and extension.activation instead. If the
+extension is blocked, report the unmet dependencies and that it can only be
+added to its base flow after a supported extension activation path is available;
+never substitute a standalone flow deployment.
+
+For a deployable flow, use the catalog's
 supportedRepositoryHosts, defaultTrigger, inputs.required, inputs.defaults, and
 inputs.allowedAgents. Name a model per harness in inputs.models when the house
 default is wrong (for example {"claude": "claude-sonnet-4"}); omit it to fund
@@ -459,7 +469,7 @@ workspace, verified source, repository, GitHub approver and a new UUID:
 }
 ~~~
 
-For another catalog entry use its id as workflow, allowed agents, and
+For another deployable kind: flow catalog entry use its id as workflow, allowed agents, and
 defaultTrigger for sources, then apply the user's trigger settings. Scope a
 GitHub issue trigger with settings.repository set to the chosen owner/name;
 for GitLab use settings.project. Cloud does not derive this filter from the
