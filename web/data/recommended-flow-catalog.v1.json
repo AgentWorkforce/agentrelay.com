@@ -73,6 +73,7 @@
       "name": "Babysitter",
       "summary": "Keep a Software Garden session moving when GitHub activity needs another turn.",
       "description": "A first-party Software Garden extension that turns eleven verified GitHub wake events into one authorized existing-session turn. It is discoverable now, but activation remains unavailable until Cloud hosting and Relay delivery carry exact deployment evidence and a live label-to-turn-to-receipt proof.",
+      "defaultLabel": "Babysitter",
       "supportedRepositoryHosts": ["github"],
       "defaultTrigger": {
         "provider": "github",
@@ -80,7 +81,7 @@
       },
       "inputs": {
         "required": [],
-        "defaults": {},
+        "defaults": { "agents": [] },
         "allowedAgents": []
       },
       "extension": {

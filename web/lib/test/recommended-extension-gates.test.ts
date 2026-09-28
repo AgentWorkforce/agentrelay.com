@@ -82,6 +82,24 @@ describe('every recommended extension gate', () => {
     babysitter.extension.activation.state = 'ready';
     expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('may be ready only');
   });
+  it('enforces the paired Cloud list-consumer envelope', () => {
+    const missingLabel = fixture();
+    const babysitter = missingLabel.catalog.flows.find(flow => flow.id === 'babysitter') as any;
+    delete babysitter.defaultLabel;
+    expect(() => validateRecommendedExtensions(missingLabel.catalog, missingLabel.plugins))
+      .toThrow('Cloud recommended catalog consumer contract');
+
+    const missingAgentArray = fixture();
+    const secondBabysitter = missingAgentArray.catalog.flows.find(flow => flow.id === 'babysitter') as any;
+    secondBabysitter.inputs.defaults = {};
+    expect(() => validateRecommendedExtensions(missingAgentArray.catalog, missingAgentArray.plugins))
+      .toThrow('Cloud recommended catalog consumer contract');
+
+    const emptyDeployableFlow = fixture();
+    baseFlows(emptyDeployableFlow.catalog)[0].inputs.defaults.agents = [];
+    expect(() => validateRecommendedExtensions(emptyDeployableFlow.catalog, emptyDeployableFlow.plugins))
+      .toThrow('deployable flow agent sets must not be empty');
+  });
   it('requires integrated live proof after every deployment dependency is evidenced', () => {
     const { plugins, catalog } = fixture();
     const activation = structuredClone(plugins.plugins[0].activation) as any;
@@ -104,6 +122,41 @@ describe('every recommended extension gate', () => {
       }
     }
     expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('live label-to-turn-to-receipt proof');
+  });
+  it('requires live proof to follow deployments and not be future-dated', () => {
+    const { plugins, catalog } = fixture();
+    const activation = structuredClone(plugins.plugins[0].activation) as any;
+    activation.state = 'ready';
+    activation.liveProof = {
+      evidenceUrl: `https://raw.githubusercontent.com/AgentWorkforce/cloud/${'a'.repeat(40)}/evidence/babysitter-live-proof.json`,
+      evidenceSha256: 'b'.repeat(64),
+      observedAt: '2026-09-24T12:04:59Z',
+      pullRequestUrl: 'https://github.com/AgentWorkforce/cloud/pull/4000',
+      headSha: 'c'.repeat(40),
+      label: 'babysit',
+      receiptId: 'receipt:babysitter:e2e',
+    };
+    activation.dependencies.forEach((dependency: any, index: number) => {
+      const pull = [3989, 1851][index]!;
+      dependency.evidence = {
+        pullRequestUrl: `https://github.com/${dependency.repository}/pull/${pull}`,
+        mergedCommit: `${index + 1}`.repeat(40),
+        mergedAt: '2026-09-24T12:00:00Z',
+        deploymentUrl: `https://api.github.com/repos/${dependency.repository}/deployments/${pull}`,
+        deployedAt: '2026-09-24T12:05:00Z',
+      };
+    });
+    plugins.plugins[0].activation = activation;
+    for (const flow of catalog.flows as any[]) {
+      if (flow.extension?.id === 'babysitter') flow.extension.activation = structuredClone(activation);
+      for (const extension of flow.extensions ?? []) {
+        if (extension.id === 'babysitter') extension.activation = structuredClone(activation);
+      }
+    }
+    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('must postdate every dependency deployment');
+    activation.liveProof.observedAt = '2099-09-24T12:10:00Z';
+    plugins.plugins[0].activation = activation;
+    expect(() => validateRecommendedExtensions(catalog, plugins)).toThrow('may not be in the future');
   });
   it('verifies the immutable live proof bytes and declared payload', async () => {
     const document = {

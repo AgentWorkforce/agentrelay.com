@@ -188,16 +188,30 @@ export function flowPluginHasLiveProof(proof: FlowPluginLiveProof | null): boole
   }
 }
 
+export function flowPluginLiveProofFollowsDeployments(
+  proof: FlowPluginLiveProof | null,
+  dependencies: FlowPluginActivationDependency[],
+  now = Date.now(),
+): boolean {
+  if (!proof || !flowPluginHasLiveProof(proof)) return false;
+  const observedAt = timestampMillis(proof.observedAt)!;
+  return observedAt <= now && dependencies.every((dependency) => {
+    if (!dependency.evidence || typeof dependency.evidence.deployedAt !== 'string') return false;
+    const deployedAt = timestampMillis(dependency.evidence.deployedAt);
+    return deployedAt !== null && observedAt >= deployedAt;
+  });
+}
+
 export function flowPluginIsActivatable(plugin: FlowPluginCatalogEntry): boolean {
   const required = FLOW_PLUGIN_REQUIRED_DEPENDENCIES[plugin.name];
   if (!Object.hasOwn(FLOW_PLUGIN_REQUIRED_DEPENDENCIES, plugin.name)) return false;
   const actual = plugin.activation.dependencies.map(dependency => dependency.id);
   return plugin.activation.state === 'ready'
-    && flowPluginHasLiveProof(plugin.activation.liveProof)
     && actual.length === Object.keys(required).length
     && Object.keys(required).every(id => actual.includes(id))
     && plugin.activation.dependencies.every(dependency => required[dependency.id] === dependency.repository)
-    && plugin.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence);
+    && plugin.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence)
+    && flowPluginLiveProofFollowsDeployments(plugin.activation.liveProof, plugin.activation.dependencies);
 }
 
 function originFrom(appOrigin: string): string {

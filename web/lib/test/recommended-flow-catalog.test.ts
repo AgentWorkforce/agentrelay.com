@@ -72,6 +72,12 @@ describe('recommended flow catalog', () => {
         kind: 'extension',
         baseFlowId: 'software-factory',
         name: 'Babysitter',
+        defaultLabel: 'Babysitter',
+        inputs: {
+          required: [],
+          defaults: { agents: [] },
+          allowedAgents: [],
+        },
         extension: {
           id: 'babysitter',
           version: '0.2.0',
@@ -131,7 +137,12 @@ describe('recommended flow catalog HTTP surface', () => {
     await expect(list.json()).resolves.toMatchObject({
       schemaVersion: 1,
       catalogVersion: 4,
-      flows: [{ id: 'software-factory' }, { id: 'babysitter', kind: 'extension' }],
+      flows: [{ id: 'software-factory' }, {
+        id: 'babysitter',
+        kind: 'extension',
+        defaultLabel: 'Babysitter',
+        inputs: { defaults: { agents: [] }, allowedAgents: [] },
+      }],
     });
 
     const detail = await getCatalogItem(new Request('https://agentrelay.com/api/v1/flows/catalog/software-factory'), {

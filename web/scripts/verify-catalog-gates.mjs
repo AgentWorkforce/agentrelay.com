@@ -154,6 +154,15 @@ function validateActivationGate(gate, label, requiredDependencies) {
   if (gate.state === 'ready' && !integratedLiveProofIsValid(gate.liveProof)) {
     fail(`${label} may be ready only with immutable live label-to-turn-to-receipt proof`);
   }
+  if (gate.state === 'ready') {
+    const observedAt = timestampMillis(gate.liveProof.observedAt);
+    if (observedAt > Date.now()) {
+      fail(`${label} live proof observation may not be in the future`);
+    }
+    if (gate.dependencies.some(dependency => observedAt < timestampMillis(dependency.evidence.deployedAt))) {
+      fail(`${label} live proof must postdate every dependency deployment`);
+    }
+  }
 }
 
 if (pluginCatalog.version !== 3 || !Array.isArray(pluginCatalog.plugins)) {
@@ -203,6 +212,16 @@ export function validateRecommendedExtensions(recommendedCatalog, pluginCatalog)
   for (const flow of recommendedCatalog.flows) {
     if (flowIds.has(flow.id)) fail(`recommended catalog repeats flow ${flow.id}`);
     flowIds.add(flow.id);
+    if (typeof flow.defaultLabel !== 'string' || !flow.defaultLabel
+      || !flow.inputs || typeof flow.inputs !== 'object' || Array.isArray(flow.inputs)
+      || !flow.inputs.defaults || typeof flow.inputs.defaults !== 'object' || Array.isArray(flow.inputs.defaults)
+      || !Array.isArray(flow.inputs.defaults.agents) || !Array.isArray(flow.inputs.allowedAgents)) {
+      fail(`${flow.id} does not satisfy the Cloud recommended catalog consumer contract`);
+    }
+    if (flow.kind !== 'extension'
+      && (flow.inputs.defaults.agents.length === 0 || flow.inputs.allowedAgents.length === 0)) {
+      fail(`${flow.id} deployable flow agent sets must not be empty`);
+    }
     if (flow.kind === 'extension') {
       if (typeof flow.baseFlowId !== 'string' || !flow.baseFlowId || flow.extension?.id !== flow.id) {
         fail(`${flow.id} must name its base flow and matching extension contract`);

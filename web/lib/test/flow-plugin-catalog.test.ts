@@ -8,6 +8,7 @@ import {
   flowPluginDependencyHasDeploymentEvidence,
   flowPluginGithubRef,
   flowPluginHasLiveProof,
+  flowPluginLiveProofFollowsDeployments,
   flowPluginInstallHref,
   flowPluginInstallPath,
   flowPluginIsActivatable,
@@ -105,6 +106,10 @@ describe('flow plugin catalog', () => {
       },
     };
     expect(flowPluginHasLiveProof(ready.activation.liveProof)).toBe(true);
+    expect(flowPluginLiveProofFollowsDeployments(
+      ready.activation.liveProof,
+      ready.activation.dependencies,
+    )).toBe(true);
     expect(ready.activation.dependencies.every(flowPluginDependencyHasDeploymentEvidence)).toBe(true);
     expect(flowPluginIsActivatable(ready)).toBe(true);
     const install = new URL(flowPluginInstallHref(ready)!, 'https://agentrelay.com');
@@ -202,6 +207,20 @@ describe('flow plugin catalog', () => {
     expect(flowPluginHasLiveProof({
       ...ready.activation.liveProof,
       evidenceUrl: 'https://example.com/proof.json',
+    })).toBe(false);
+    expect(flowPluginIsActivatable({
+      ...ready,
+      activation: {
+        ...ready.activation,
+        liveProof: { ...ready.activation.liveProof, observedAt: '2026-09-24T12:04:59Z' },
+      },
+    })).toBe(false);
+    expect(flowPluginIsActivatable({
+      ...ready,
+      activation: {
+        ...ready.activation,
+        liveProof: { ...ready.activation.liveProof, observedAt: '2099-09-24T12:10:00Z' },
+      },
     })).toBe(false);
   });
 
