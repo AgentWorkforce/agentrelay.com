@@ -1,10 +1,6 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('@lobehub/icons/es/Grok', () => ({
-  default: ({ className }: { className?: string }) => <svg className={className} />,
-}));
+import { describe, expect, it } from 'vitest';
 
 import { HeroTerminalMarquee } from '../../components/home/HeroTerminalMarquee';
 

@@ -1,8 +1,8 @@
 import { ContextCapabilities } from '../../components/home/ContextCapabilities';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import dashboardConcept from '../../public/teams/teams-dashboard-concept.png';
-import sessionConcept from '../../public/teams/teams-session-overview-concept.png';
+import dashboardConcept from '../../public/teams/teams-dashboard-concept.webp';
+import sessionConcept from '../../public/teams/teams-session-overview-concept.webp';
 import { HeroTerminalMarquee } from '../../components/home/HeroTerminalMarquee';
 import { DeploymentCall } from '../../components/home/DeploymentCall';
 import { MessagingFeature } from '../../components/home/MessagingFeature';
@@ -14,6 +14,7 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { TEAMS_OG_ALT, TEAMS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
+import { AgentSignup } from '../../components/AgentSignup';
 import home from '../landing.module.css';
 import flows from '../flows/flows.module.css';
 import { IntegrationMarquee } from '../flows/IntegrationMarquee';
@@ -66,6 +67,7 @@ export default function TeamsPage() {
                 <a className={home.ctaPrimary} href={signupHref}>
                   {signupLabel}
                 </a>
+                <AgentSignup product="teams" />
                 <p className={s.signupNote}>No credit card required</p>
               </div>
             </div>
@@ -91,6 +93,7 @@ export default function TeamsPage() {
                   width={1585}
                   height={992}
                   sizes="(max-width: 960px) 100vw, 950px"
+                  unoptimized
                   alt="Dashboard concept: eight coding sessions grouped under Will, Maya, and Alex, with coding tools, Working, Idle, and Finished statuses, and pull request links on finished sessions."
                 />
               </a>
@@ -109,6 +112,7 @@ export default function TeamsPage() {
                 <Image
                   src={sessionConcept}
                   sizes="(max-width: 960px) 100vw, 950px"
+                  unoptimized
                   alt="Session detail concept for Add Google sign-in: an intent and constraints overview, Working status, running time of 18 minutes 42 seconds, a Replay conversation button, and the rendered conversation between Will Washburn and Claude Code."
                 />
               </a>
@@ -180,7 +184,7 @@ export default function TeamsPage() {
               'Review hosted, private cloud, or self-managed options',
               'Leave with a clear path from discovery to production',
             ]}
-            contact={{ name: 'Will Washburn', role: 'Co-founder, CEO', image: '/authors/will.png', href: '/will' }} />
+            contact={{ name: 'Will Washburn', role: 'Co-founder, CEO', image: '/authors/will-128.webp', href: '/will' }} />
         </div>
       </main>
 

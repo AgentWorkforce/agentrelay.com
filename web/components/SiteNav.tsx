@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 import s from './site-nav.module.css';
+import { RELAY_MARK_PATHS } from '../lib/relay-mark';
 
 export function LogoIcon() {
   return (
@@ -20,11 +21,11 @@ export function LogoIcon() {
       <path
         fillRule="evenodd"
         clipRule="evenodd"
-        d="M71.3682 21.7098L54.042 39.036C50.6567 42.4213 50.6568 47.9099 54.042 51.2952L71.3727 68.6259L52.8321 87.1665C48.6005 91.3981 41.7397 91.3981 37.5081 87.1665L3.17369 52.8321C-1.05789 48.6005 -1.0579 41.7397 3.17369 37.5081L37.5081 3.17369C41.7397 -1.0579 48.6005 -1.05789 52.8321 3.17369L71.3682 21.7098Z"
+        d={RELAY_MARK_PATHS[0]}
         fill="currentColor"
       />
       <path
-        d="M75.5711 72.8243C78.9563 76.2096 84.445 76.2096 87.8302 72.8243L109.359 51.2952C112.745 47.9099 112.745 42.4213 109.359 39.036L87.8302 17.507C84.445 14.1218 78.9563 14.1218 75.5711 17.507L71.3682 21.7098L88.6989 39.0405C92.0842 42.4258 92.0842 47.9144 88.6989 51.2997L71.3727 68.6259L75.5711 72.8243Z"
+        d={RELAY_MARK_PATHS[1]}
         fill="currentColor"
         opacity="0.5"
       />

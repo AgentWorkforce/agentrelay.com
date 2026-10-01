@@ -1,13 +1,13 @@
 import { AgentStepEditor } from './AgentStepEditor';
-import { resolveAgentSettings, rolesForStep, type AgentRole } from '../../../lib/flow-agent-settings';
+import { resolveGeneratedAgentSettings, rolesForStep, type AgentRole } from '../../../lib/flow-agent-settings';
 import { GitBranch, Layers3, Zap, UserRound, LockKeyhole, Terminal, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { WORKFLOWS, WORKFLOW_STEP_DETAILS, workflowAgents } from '../../../lib/flow-workflows';
 import { SiGithub, SiGitlab } from 'react-icons/si';
 import Claude from '@lobehub/icons/es/Claude';
 import Codex from '@lobehub/icons/es/Codex';
+import Grok from '@lobehub/icons/es/Grok';
 import Cursor from '@lobehub/icons/es/Cursor';
-import OpenCode from '@lobehub/icons/es/OpenCode';
 import { agentLabel, canContinue, isCodingAgent, type CodingAgent, type FactoryDraft } from '../../../lib/flow-onboarding';
 import { repositoryHost, sourceLabel, sourceSummary } from '../../../lib/flow-sources';
 import { SourceIcon } from './SourcePicker';
@@ -15,7 +15,7 @@ import type { FlowTrack } from '../../../lib/flow-analytics';
 import s from './onboarding.module.css';
 
 function ProcessAgent({ id }: { id: CodingAgent }) {
-  const Icon = { claude: Claude.Color, codex: Codex.Color, cursor: Cursor, opencode: OpenCode }[id];
+  const Icon = { claude: Claude.Color, codex: Codex.Color, cursor: Cursor, grok: Grok }[id];
   return <span className={s.processAgent} role="img" aria-label={agentLabel(id)} title={agentLabel(id)}><Icon size={21} aria-hidden="true" /></span>;
 }
 
@@ -92,7 +92,7 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
               </li>}
               {selectedWorkflow?.steps.map(step => {
                 const roles = rolesForStep(step);
-                const configs = roles.map(role => resolveAgentSettings(selectedWorkflow.id, role, draft.agents, draft.agentSettings));
+                const configs = roles.map(role => resolveGeneratedAgentSettings(selectedWorkflow.id, role, draft.agents, draft.agentSettings));
                 const nodeConfigs = step === '2× adversarial review' ? configs.slice(0, 1) : configs;
                 const agents = nodeConfigs.map(value => value.agent);
                 const Node = agents.length ? 'button' : 'div';
@@ -109,7 +109,7 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
                     <span className={s.processText}>
                       <span className={s.processHeading}><strong>{human ? 'Your approval' : review ? 'Adversarial review' : step}</strong><small className={s.processOwner}>{human ? 'You' : script ? 'Script' : step === '3 implementations' ? 'Parallel' : 'Agent'}</small></span>
                       <span className={s.processDescription}>{WORKFLOW_STEP_DETAILS[step]}</span>
-                      {agents.length > 0 && <small className={s.processModel}><span>{nodeConfigs.length > 1 ? 'Configure 3 agents' : nodeConfigs[0].model || 'Default model'}</span><Settings size={12} aria-hidden="true" /></small>}
+                      {agents.length > 0 && <small className={s.processModel}><span>{nodeConfigs.length > 1 ? 'Configure 3 agents' : nodeConfigs[0].model}</span><Settings size={12} aria-hidden="true" /></small>}
                     </span>
                     {review && <span className={s.processRounds}>2 rounds</span>}
                     {human && <LockKeyhole size={15} className={s.processLock} aria-hidden="true" />}

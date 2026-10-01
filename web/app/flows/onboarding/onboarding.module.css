@@ -146,10 +146,10 @@
 .filterFields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 20px; }
 .filterFields > div:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .filterFields label { display: block; font-size: 12px; color: #c2cedb; margin-bottom: 8px; }
-.filterFields input { width: 100%; min-height: 44px; border: 1px solid var(--setup-control-border); border-radius: var(--r-xs); background: var(--setup-control); padding: 10px 12px; color: #edf4fb; font-size: 13px; }
+.filterFields input, .filterFields select { width: 100%; min-height: 44px; border: 1px solid var(--setup-control-border); border-radius: var(--r-xs); background: var(--setup-control); padding: 10px 12px; color: #edf4fb; font-size: 13px; }
 .filterFields input::placeholder { color: #8b9aaa; }
 .filterFields small { display: block; font-size: 11px; color: #a8b8c8; margin-top: 7px; }
-.filterFields input:focus-visible, .sourceTabs button:focus-visible { outline: 2px solid #8bc4ef; outline-offset: 3px; }
+.filterFields input:focus-visible, .filterFields select:focus-visible, .sourceTabs button:focus-visible { outline: 2px solid #8bc4ef; outline-offset: 3px; }
 .mentionFilter { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #c2cedb; margin-top: 16px; min-height: 36px; cursor: pointer; }
 .mentionFilter input { width: 17px; height: 17px; accent-color: #8bc4ef; }
 .sourceSettings .sourceNote { font-size: 11px; margin-top: 20px; }

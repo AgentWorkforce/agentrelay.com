@@ -1,13 +1,6 @@
 import type { ReactNode } from 'react';
 
-import ClaudeCode from '@lobehub/icons/es/ClaudeCode';
-import Codex from '@lobehub/icons/es/Codex';
-import Cursor from '@lobehub/icons/es/Cursor';
-import Github from '@lobehub/icons/es/Github';
-import Grok from '@lobehub/icons/es/Grok';
-import HermesAgent from '@lobehub/icons/es/HermesAgent';
-import OpenClaw from '@lobehub/icons/es/OpenClaw';
-import OpenCode from '@lobehub/icons/es/OpenCode';
+import { ClaudeCodeColor, Codex, Cursor, Github, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
 
 import { FadeIn } from '../FadeIn';
 import s from '../../app/landing.module.css';
@@ -23,7 +16,7 @@ interface LogoItem {
 
 /** CLI coding agents that Relay drives over a PTY. */
 const CLI_LOGOS: readonly LogoItem[] = [
-  { key: 'claude-code', label: 'Claude Code', node: <ClaudeCode.Color size={ICON_SIZE} /> },
+  { key: 'claude-code', label: 'Claude Code', node: <ClaudeCodeColor size={ICON_SIZE} /> },
   // Mono, not .Color: the coloured Codex mark is near-black and disappears
   // against the chip on this dark band.
   { key: 'codex', label: 'Codex', node: <Codex size={ICON_SIZE} /> },
@@ -35,7 +28,7 @@ const CLI_LOGOS: readonly LogoItem[] = [
 /** Custom agents you build against the SDK and language bindings. */
 const CUSTOM_LOGOS: readonly LogoItem[] = [
   { key: 'hermes', label: 'Hermes', node: <HermesAgent size={ICON_SIZE} /> },
-  { key: 'openclaw', label: 'OpenClaw', node: <OpenClaw.Color size={ICON_SIZE} /> },
+  { key: 'openclaw', label: 'OpenClaw', node: <OpenClawColor size={ICON_SIZE} /> },
   { key: 'typescript', label: 'TypeScript', node: <TypeScriptLogo className={s.howChipSvg} /> },
   { key: 'python', label: 'Python', node: <PythonLogo className={s.howChipSvg} /> },
   { key: 'github', label: 'GitHub', node: <Github size={ICON_SIZE} /> },

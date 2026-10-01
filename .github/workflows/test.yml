@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify recommended-flow release pins
+        run: npm run verify:recommended-flows
+
       # Root script fans out to every workspace (web + router), so a new
       # workspace is covered automatically.
       - name: Run tests

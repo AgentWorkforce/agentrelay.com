@@ -39,20 +39,6 @@
   text-align: center;
 }
 
-.eyebrow {
-  width: fit-content;
-  margin: 0 0 22px;
-  padding: 8px 13px;
-  border: 1px solid var(--enterprise-line-strong);
-  border-radius: 8px;
-  color: var(--enterprise-accent);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
-}
-
 .hero h1 {
   margin: 0 auto;
   max-width: 16ch;

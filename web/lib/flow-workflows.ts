@@ -1,4 +1,4 @@
-import { resolveAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
+import { resolveGeneratedAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
 import { isCodingAgent } from './flow-agents';
 
 export const WORKFLOWS = [
@@ -326,6 +326,152 @@ export const FLOW_OPEN_CHANGE_COMMAND =
   'open_change() { if command -v relayflow-open-change >/dev/null 2>&1; then relayflow-open-change "$@"; else gh pr create "$@"; fi; }; open_change';
 
 /**
+ * Told to every agent. The run's token may not be allowed to push changes
+ * under `.github/workflows/`; FLOW_PUSH_COMMAND withholds them if so.
+ */
+export const WORKFLOW_FILES_HINT = 'Changes under .github/workflows/ may not be pushable by this run\'s token, so do not edit workflow files unless the task requires it; if you do, keep those edits in separate commits.';
+
+/**
+ * GitHub's refusal of a push that edits `.github/workflows/` from a token
+ * without the `workflows` permission. Nothing else triggers the fallback in
+ * FLOW_PUSH_COMMAND.
+ */
+const WORKFLOW_PUSH_REFUSAL = 'refusing to allow a GitHub App to create or update workflow|without .workflows. permission';
+
+/** Removes credentials from any URL git prints (`https://user:token@host`). */
+const SCRUB_URL_CREDENTIALS = "sed -e 's#://[^/@[:space:]]*@#://#g'";
+
+/**
+ * Pushes the branch, and if GitHub refuses it only because it edits
+ * `.github/workflows/`, pushes the work without those edits instead of losing
+ * it. The caller prefixes `base=<commit>` and appends the `git push` arguments.
+ *
+ * The run's GitHub token is minted with `contents` and `pull_requests` write
+ * only, so any pushed commit that touches a workflow file is refused.
+ * AgentWorkforce/cloud-e2e-sandbox run 065fd98f lost an agent's finished work
+ * ($6.80, 3 commits) that way: it had edited ci.yml only to add a path filter,
+ * and the one push attempt failed with `refusing to allow a GitHub App to
+ * create or update workflow .github/workflows/ci.yml without workflows
+ * permission`.
+ *
+ * A push that succeeds is unchanged, so a run whose token has the permission
+ * pushes workflow edits as before. Any other failure is returned as it was.
+ * On that one refusal, every unpushed commit since the base is rebuilt with
+ * the same message, author and dates, with `.github/workflows/` held at its
+ * parent's state (a commit left empty is dropped). The edits are removed from
+ * each commit rather than reverted by a commit on top, because GitHub checks
+ * every pushed commit, not only the branch tip. The edits are saved to
+ * `.relayflow/workflow-changes.patch`, the original commits stay at
+ * `refs/relayflow/withheld-workflows`, and the patch (bounded, so the pull
+ * request body stays under GitHub's limit) is appended to
+ * `.relayflow/pr-body.md`; with `comment=yes`, for a pull request already
+ * open, it is posted as a comment instead. If the second push fails, HEAD is
+ * restored and the step fails with both errors. Git's output is printed with
+ * credentials removed from any URL.
+ */
+export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
+  'wf=.github/workflows',
+  // Without the temp file git's output cannot be scrubbed of a credentialed
+  // remote URL, so refuse rather than push unscrubbed.
+  'err=$(mktemp "${TMPDIR:-/tmp}/relayflow-push.XXXXXX") || { echo "relayflow push-guard: could not create a temporary file, so the push was not attempted (its output could not be scrubbed of credentials)." >&2; return 1; }',
+  'git push "$@" 2>"$err"; status=$?',
+  `${SCRUB_URL_CREDENTIALS} "$err" >&2`,
+  'if [ "$status" -eq 0 ]; then rm -f "$err"; return 0; fi',
+  `if ! grep -Eq ${shq(WORKFLOW_PUSH_REFUSAL)} "$err"; then rm -f "$err"; return "$status"; fi`,
+  'mb=; if [ -n "${base:-}" ] && git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1; then mb=$(git merge-base "$base" HEAD 2>/dev/null); fi',
+  'if [ -z "$mb" ]; then echo "relayflow push-guard: GitHub refused the workflow edits, and the base commit is unknown, so nothing was withheld." >&2; rm -f "$err"; return "$status"; fi',
+  'orig=$(git rev-parse HEAD)',
+  'if [ -z "$(git rev-list --full-history "$orig" "^$mb" --not --remotes -- "$wf")" ]; then echo "relayflow push-guard: no unpushed commit edits $wf, so there is nothing to withhold." >&2; rm -f "$err"; return "$status"; fi',
+  'tmp=$(mktemp -d "${TMPDIR:-/tmp}/relayflow-withhold.XXXXXX") || { rm -f "$err"; return "$status"; }',
+  ': > "$tmp/map"; ok=yes',
+  'relayflow_new() { n=$(grep "^$1 " "$tmp/map" | cut -d" " -f2); if [ -n "$n" ]; then echo "$n"; else echo "$1"; fi; }',
+  'for c in $(git rev-list --reverse --topo-order "$orig" "^$mb" --not --remotes); do '
+    + 'parents=$(git rev-list --parents -n 1 "$c" | cut -s -d" " -f2-); p1=; np=; for p in $parents; do q=$(relayflow_new "$p"); if [ -z "$p1" ]; then p1=$q; fi; np="$np -p $q"; done; '
+    + 'if GIT_INDEX_FILE="$tmp/index" git read-tree "$c" && { GIT_INDEX_FILE="$tmp/index" git ls-files -z -- "$wf" | GIT_INDEX_FILE="$tmp/index" git update-index -z --force-remove --stdin; } && { [ -z "$p1" ] || git ls-tree -r --full-tree "$p1" -- "$wf" | GIT_INDEX_FILE="$tmp/index" git update-index --index-info; } && tree=$(GIT_INDEX_FILE="$tmp/index" git write-tree); then :; else ok=no; break; fi; '
+    + 'case "$parents" in (*" "*) single=no ;; (*) single=yes ;; esac; '
+    + 'if [ "$single" = yes ] && [ -n "$p1" ] && [ "$tree" = "$(git rev-parse "$p1^{tree}")" ]; then echo "$c $p1" >> "$tmp/map"; continue; fi; '
+    + 'git cat-file commit "$c" | sed "1,/^\\$/d" > "$tmp/msg"; '
+    + 'new=$(GIT_AUTHOR_NAME="$(git show -s --format=%an "$c")" GIT_AUTHOR_EMAIL="$(git show -s --format=%ae "$c")" GIT_AUTHOR_DATE="$(git show -s --date=raw --format=%ad "$c")" GIT_COMMITTER_NAME="$(git show -s --format=%cn "$c")" GIT_COMMITTER_EMAIL="$(git show -s --format=%ce "$c")" GIT_COMMITTER_DATE="$(git show -s --date=raw --format=%cd "$c")" git commit-tree "$tree" $np -F "$tmp/msg") || { ok=no; break; }; '
+    + 'echo "$c $new" >> "$tmp/map"; done',
+  'new=$(relayflow_new "$orig")',
+  'if [ "$ok" != yes ] || [ "$new" = "$orig" ]; then echo "relayflow push-guard: could not withhold the workflow edits." >&2; rm -rf "$tmp" "$err"; return "$status"; fi',
+  'mkdir -p .relayflow; patch=.relayflow/workflow-changes.patch; section=.relayflow/workflow-changes.md',
+  'git diff --full-index "$mb" "$orig" -- "$wf" > "$patch"',
+  'n=$(git diff --name-only "$mb" "$orig" -- "$wf" | wc -l | tr -d " ")',
+  // Builds the reviewer-facing section. The heading, explanation and a file
+  // list capped at 50 entries are written and measured first; only the room
+  // left under GitHub's 65,536-character body/comment limit (kept at 65,000,
+  // minus what the body already holds and ~400 bytes of fences and notes)
+  // goes to the patch.
+  'relayflow_section() { '
+    + 'used=0; if [ "${comment:-}" != yes ] && [ -f .relayflow/pr-body.md ]; then used=$(wc -c < .relayflow/pr-body.md | tr -d " "); fi; '
+    + `{ printf '\\n## Workflow changes not applied\\n\\n%s\\n\\n' "The GitHub App token this run pushes with lacks the \\\`workflows\\\` permission, so GitHub refused the commits that change \\\`.github/workflows/\\\`. The rest of the work is pushed; these edits were taken out of its commits. Apply them manually:"; `
+    + `git diff --name-status "$mb" "$orig" -- "$wf" | awk -F '\\t' '{ printf "- %s \\140%s\\140\\n", substr($1, 1, 1), $NF }' | head -n 50; `
+    + `if [ "$n" -gt 50 ]; then printf -- '- …and %s more\\n' "$((n - 50))"; fi; } > "$tmp/head"; `
+    + 'overhead=$(( $(wc -c < "$tmp/head" | tr -d " ") + 400 )); '
+    + 'limit=${RELAYFLOW_WITHHELD_PATCH_LIMIT:-61440}; room=$((65000 - used - overhead)); if [ "$room" -lt "$limit" ]; then limit=$room; fi; size=$(wc -c < "$patch" | tr -d " "); '
+    + `{ cat "$tmp/head"; if [ "$limit" -le 0 ]; then printf '\\n%s\\n' "_The patch ($size bytes) does not fit in the pull request body. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; `
+    + `elif [ "$size" -le "$limit" ]; then printf '\\n\`\`\`\`diff\\n'; cat "$patch"; printf '\`\`\`\`\\n'; `
+    + `else printf '\\n\`\`\`\`diff\\n'; head -c "$limit" "$patch" | sed '$d'; printf '\`\`\`\`\\n\\n%s\\n' "_Truncated to $limit of $size bytes. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; fi; } > "$section"; }`,
+  // Workflow paths with uncommitted (staged, unstaged or untracked) edits
+  // relative to the original tip are never reset below: only committed edits
+  // are withheld, and an agent's in-progress work stays exactly as it was.
+  'dirty=$( { git diff --name-only "$orig" -- "$wf"; git diff --cached --name-only "$orig" -- "$wf"; git ls-files --others --exclude-standard -- "$wf"; } 2>/dev/null | sort -u)',
+  // Every new change was a workflow edit: pushing would publish a branch with
+  // no change, and GitHub cannot open a pull request for it. For a revision
+  // (pull request already open) the patch goes to it as a comment; otherwise
+  // the step fails with the patch in its output rather than losing it silently.
+  'if [ -z "$(git rev-list "$new" --not --remotes 2>/dev/null)" ]; then relayflow_section; cat "$patch" >&2; '
+    + 'if [ "${comment:-}" = yes ] && gh pr comment --body-file "$section" >/dev/null 2>&1; then echo "relayflow push-guard: every new change edits $wf, which this token cannot push, so nothing else was pushed; posted the withheld workflow changes to the pull request." >&2; rm -rf "$tmp" "$err"; return 0; fi; '
+    + 'echo "relayflow push-guard: every change in this run edits $wf, which this token cannot push, so there is nothing else to publish. The edits are in $patch and printed above." >&2; rm -rf "$tmp" "$err"; return "$status"; fi',
+  'git update-ref -m "relayflow: withhold workflow edits" HEAD "$new" "$orig"',
+  'git push "$@" 2>"$tmp/push"; again=$?',
+  `${SCRUB_URL_CREDENTIALS} "$tmp/push" >&2`,
+  `if [ "$again" -ne 0 ]; then git update-ref -m "relayflow: restore after a failed push" HEAD "$orig" "$new"; echo "relayflow push-guard: the push failed again after withholding the workflow edits. The original error was:" >&2; ${SCRUB_URL_CREDENTIALS} "$err" >&2; rm -rf "$tmp" "$err"; return "$again"; fi`,
+  'previous=$(git rev-parse --verify --quiet refs/relayflow/withheld-workflows 2>/dev/null || :)',
+  'if [ -n "$previous" ] && [ "$previous" != "$orig" ]; then git update-ref "refs/relayflow/withheld-workflows-history/$previous" "$previous"; fi',
+  'git update-ref refs/relayflow/withheld-workflows "$orig"',
+  'git diff --name-only --no-renames "$new" "$orig" -- "$wf" | while IFS= read -r p; do if printf "%s\\n" "$dirty" | grep -qxF -- "$p"; then echo "relayflow push-guard: $p has uncommitted edits, so it was left as it is." >&2; continue; fi; if git cat-file -e "$new:$p" 2>/dev/null; then git checkout -q "$new" -- "$p"; else git rm -q -f --ignore-unmatch -- "$p" >/dev/null 2>&1; rm -f -- "$p"; fi; done',
+  'if [ -s "$patch" ]; then relayflow_section; '
+    + 'if [ "$size" -gt "$limit" ]; then cat "$patch" >&2; fi; '
+    + 'if [ "${comment:-}" = yes ]; then if gh pr comment --body-file "$section" >/dev/null 2>&1; then echo "relayflow push-guard: posted the withheld workflow changes to the pull request." >&2; else echo "relayflow push-guard: could not comment on the pull request; $section holds the withheld workflow changes." >&2; fi; '
+    + 'elif [ -f .relayflow/pr-body.md ]; then cat "$section" >> .relayflow/pr-body.md; fi; fi',
+  'echo "relayflow push-guard: workflow edits withheld ($n files)"',
+  'echo "relayflow push-guard: GitHub refused the edits to $wf, so the branch was pushed without them. The patch is $patch; the original commits are refs/relayflow/withheld-workflows." >&2',
+  'rm -rf "$tmp" "$err"',
+].join('; ') + '; }; relayflow_push';
+
+/**
+ * Adds the deterministic provider reference after the generated check report.
+ * The reference is supplied through a shell-quoted variable by the generated
+ * flow; grep matches a complete, fixed line so an agent-written matching line
+ * is retained rather than duplicated.
+ */
+export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
+  'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body; exit 0; fi',
+  'if [ -n "$reference" ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi',
+  'echo prepared',
+].join('; ');
+
+/**
+ * Final fail-closed contract immediately before a branch is pushed or a
+ * change request is opened. It deliberately exits zero with one verdict: an
+ * invalid verdict is handled by the flow instead of being retried as a flaky
+ * command. GitHub inputs must have exactly one normalized closing line.
+ */
+export const FLOW_VALIDATE_CHANGE_METADATA_COMMAND = [
+  'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body',
+  'elif [ -z "$title" ]; then echo empty-title',
+  'elif ! printf "%s\\n" "$title_length" | grep -Eq "^[0-9]+$"; then echo malformed-title-length',
+  'elif [ "$title_length" -gt 240 ]; then echo title-too-long',
+  'elif [ "$(printf %s "$title" | tr "[:upper:]" "[:lower:]")" = "software factory change" ] || [ "$(printf %s "$title" | tr "[:upper:]" "[:lower:]")" = "replace with your ticket title" ]; then echo placeholder-title',
+  'elif [ "$source" = github ] && ! printf "%s\\n" "$identifier" | grep -Eq "^#[1-9][0-9]*$"; then echo malformed-github-identifier',
+  'elif [ "$source" = github ]; then expected="Fixes $identifier"; count=$(grep -xcF "$expected" .relayflow/pr-body.md || true); if [ "$count" -eq 0 ]; then echo missing-github-closing-reference; elif [ "$count" -ne 1 ]; then echo duplicate-github-closing-reference; else echo valid; fi',
+  'else echo valid',
+  'fi',
+].join('; ');
+
+/**
  * Decides whether there is anything to publish, before the branch is pushed and
  * before `gh pr create` runs.
  *
@@ -397,6 +543,42 @@ export const FLOW_REVIEW_BLOCKED_COMMAND = [
   'if gh pr comment --body-file review-blocked.md >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi',
 ].join('; ');
 
+/** Upper bound, in bytes, on everything FLOW_REPORT_REVIEW_FINDINGS_COMMAND prints. */
+export const FLOW_REVIEW_FINDINGS_LIMIT = 2000;
+const REVIEW_FINDINGS_BODY_LIMIT = 1700;
+
+/**
+ * Says why a run that ends in `done("step_failed")` on a failed review failed.
+ *
+ * The runtime records that ending as "its own checks did not pass. No step
+ * failed, so there is no step-level evidence to inspect": every step succeeded,
+ * so nothing in the run outcome says what the reviewer found. Cloud run
+ * f92bf832 (AgentWorkforce/cloud#3919) did all 20 steps and ended on exactly
+ * that, while its second reviewer had written "One P2 remains: ...".
+ *
+ * `done()` takes only a reason today. AgentWorkforce/flows#542 proposes
+ * `done("step_failed", { detail })`; once that ships, pass this text as the
+ * detail and drop this step. Until then the findings go to this step's stdout,
+ * which the journal keeps and `flows status` shows for the step.
+ *
+ * review.md is agent-authored, so this prints a bounded excerpt, never the
+ * file: blank lines and control characters removed, cut at
+ * REVIEW_FINDINGS_BODY_LIMIT bytes, and the whole output stays within
+ * FLOW_REVIEW_FINDINGS_LIMIT. Like the commands above it always exits 0.
+ */
+export const FLOW_REPORT_REVIEW_FINDINGS_COMMAND = [
+  'export LC_ALL=C',
+  `findings() { tr -d '\\000-\\010\\013-\\037\\177' < review.md | sed '/^[[:space:]]*$/d'; }`,
+  'size=0',
+  'if [ -s review.md ]; then size=$(findings | wc -c | tr -d " "); fi',
+  'if [ "$size" -eq 0 ]; then echo "relayflow report-review-findings: review.clean absent and review.md missing or empty" && exit 0; fi',
+  'echo "relayflow report-review-findings: review.clean absent; remaining findings from review.md:"',
+  `findings | head -c ${REVIEW_FINDINGS_BODY_LIMIT}`,
+  'echo',
+  `if [ "$size" -gt ${REVIEW_FINDINGS_BODY_LIMIT} ]; then echo "relayflow report-review-findings: cut at ${REVIEW_FINDINGS_BODY_LIMIT} of $size bytes; the full review is in review-blocked.md."; fi`,
+  'exit 0',
+].join('; ');
+
 export function workflowAgents(selected: readonly string[]) {
   const builder = selected.filter(isCodingAgent)[0] ?? 'claude';
   const reviewer = selected.filter(isCodingAgent).find(id => id !== builder) ?? builder;
@@ -404,15 +586,45 @@ export function workflowAgents(selected: readonly string[]) {
 }
 
 export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof workflowAgents>, instructions: string, _target: 'cloud' | 'local' = 'cloud', settings: FlowAgentSettings = {}, selected: readonly string[] = [agents.builder, agents.reviewer]) {
-  const config = (role: AgentRole) => resolveAgentSettings(workflow, role, selected, settings);
+  const config = (role: AgentRole) => resolveGeneratedAgentSettings(workflow, role, selected, settings);
   const options = (role: AgentRole, fallback: string, context = '') => {
     const value = config(role);
     const cli = value.agent === agents.builder && fallback === 'builder' ? 'builder' : JSON.stringify(value.agent);
     return `cli: ${cli},${value.model ? `\n    model: ${JSON.stringify(value.model)},` : ''}\n    task: task + "\\n" + ${JSON.stringify(value.prompt)}${context},`;
   };
   const prototypeConfigs = (['prototype-1', 'prototype-2', 'prototype-3'] as const).map(config);
-  const sections = [{ id: 'task', code: `  const task = issue.title + "\\n" + issue.body + "\\n" +
-    ${JSON.stringify(instructions.trim() || 'Follow existing patterns. Keep changes focused and add regression tests.')};
+  const sections = [{ id: 'task', code: `  const normalizedTitle = issue.title.trim().replace(/\\s+/g, " ");
+  // Bound and measure by Unicode code points so neither truncation nor the
+  // final shell validation can split or byte-count a multibyte character.
+  const changeTitle = Array.from(normalizedTitle).slice(0, 240).join("").trim();
+  const changeTitleLength = Array.from(changeTitle).length;
+  const placeholderTitle = ["software factory change", "replace with your ticket title"]
+    .includes(changeTitle.toLowerCase());
+  const issueSource = issue.source.trim().toLowerCase();
+  const issueIdentifier = issue.identifier?.trim() ?? "";
+  const issueUrl = issue.url?.trim() ?? "";
+  if (!changeTitle || placeholderTitle) {
+    console.error("Stopped: the pull-request title is empty or still a placeholder. No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
+  if (issueSource === "github" && !/^#[1-9]\\d*$/.test(issueIdentifier)) {
+    console.error("Stopped: a GitHub ticket must carry its normalized identifier in #<number> form. No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
+  // GitHub receives its exact closing keyword. Other providers get a stable
+  // native reference when one is available; Markdown invents no identifier.
+  const changeReference = issueSource === "github"
+    ? "Fixes " + issueIdentifier
+    : issueSource === "gitlab" && /^#[1-9]\\d*$/.test(issueIdentifier)
+      ? "Closes " + issueIdentifier
+      : issueUrl
+        ? "Ticket: " + issueUrl
+        : issueIdentifier
+          ? "Ticket: " + issueIdentifier
+          : "";
+  const task = issue.title + "\\n" + issue.body + "\\n" +
+    ${JSON.stringify(instructions.trim() || 'Follow existing patterns. Keep changes focused and add regression tests.')} + "\\n" +
+    ${JSON.stringify(WORKFLOW_FILES_HINT)};
   // Files the agents write for each other (summary.md, plans, reviews, and
   // .relayflow/) are never part of the change; keep them out of every commit.
   await f.run(${JSON.stringify(FLOW_EXCLUDE_WORKING_FILES_COMMAND)});` }];
@@ -428,7 +640,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const prototypeRoot = (await f.run("mktemp -d /tmp/relay-prototypes.XXXXXX")).trim();
   const quote = (value: string) => "'" + value.replace(/'/g, "'\\\\''") + "'";
   const prototypeAgents = ${JSON.stringify(prototypeConfigs.map(value => value.agent))};
-  const prototypeSettings: { model?: string; prompt: string }[] = ${JSON.stringify(prototypeConfigs.map(({ model, prompt }) => ({ ...(model ? { model } : {}), prompt })))};
+  const prototypeSettings: { model: string; prompt: string }[] = ${JSON.stringify(prototypeConfigs.map(({ model, prompt }) => ({ model, prompt })))};
   const approaches = ["the smallest change", "a maintainable design", "a different approach"];
   const paths = approaches.map((_, index) => prototypeRoot + "/" + (index + 1));
   const base = (await f.run("git rev-parse HEAD")).trim();
@@ -438,7 +650,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   await Promise.all(paths.map((cwd, index) => f.agent("prototype-" + (index + 1), {
     cli: prototypeAgents[index],
     cwd,
-    ...(prototypeSettings[index].model ? { model: prototypeSettings[index].model } : {}),
+    model: prototypeSettings[index].model,
     task: task + "\\n" + prototypeSettings[index].prompt + " Assigned approach: " + approaches[index],
   })));
   // All three implementations are finished before comparison begins.
@@ -516,6 +728,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // treated as nothing to publish. Working files an agent committed are taken
   // out of the branch first, so they are neither published nor counted.
   const dropWorkingFiles = ${JSON.stringify(FLOW_DROP_WORKING_FILES_COMMAND)};
+  // Every push goes through this: if GitHub refuses the branch only because
+  // it edits .github/workflows/ (the run's token may lack that permission),
+  // the work is pushed without those edits and the patch goes on the PR.
+  const pushBranch = ${JSON.stringify(FLOW_PUSH_COMMAND)};
   await f.run("base=" + baseCommit + "; " + dropWorkingFiles);
   const publishCheck = ${JSON.stringify(FLOW_PUBLISH_CHECK_COMMAND)};
   const publish = (await f.run("base=" + baseCommit + "; " + publishCheck)).trim();
@@ -523,8 +739,8 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     console.error("Stopped: the agents made no commits on this branch, so there is nothing to publish. No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
   }
-  await f.run("git push --set-upstream origin HEAD");
   if (publish !== "publish") {
+    await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD");
     console.error("Stopped: the branch was pushed, but no summary.md was written, so there is no pull-request body. Open the pull request by hand, or run again.");
     return f.done("needs_human");
   }
@@ -532,10 +748,19 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // draft, with the verdict, the script and the output in its body.
   const checkReport = ${JSON.stringify(FLOW_CHECK_REPORT_COMMAND)};
   await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; " + checkReport);
+  const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
+  await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
+  const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};
+  const metadataVerdict = (await f.run("title=" + shellQuote(changeTitle) + "; title_length=" + changeTitleLength + "; source=" + shellQuote(issueSource) + "; identifier=" + shellQuote(issueIdentifier) + "; " + validateChangeMetadata)).trim();
+  if (metadataVerdict !== "valid") {
+    console.error("Stopped: invalid pull-request metadata (" + metadataVerdict + "). No branch was pushed and no pull request was opened.");
+    return f.done("needs_human");
+  }
+  await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD");
   // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
-  await f.run(openChange + ' --title "Software factory change" --body-file .relayflow/pr-body.md' + (broken(check) ? " --draft" : ""));
+  await f.run(openChange + " --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md" + (broken(check) ? " --draft" : ""));
   if (broken(check) && (baseline === "pass" || baseline === "new")) {
     // The base commit passes and this branch does not, or the checks are the
     // change's own and fail: the change broke them and repair could not fix
@@ -559,6 +784,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // found, so the step below still drafts the pull request and posts the
   // findings to it.
   const reviewBlockedCommand = ${JSON.stringify(FLOW_REVIEW_BLOCKED_COMMAND)};
+  const reportReviewFindingsCommand = ${JSON.stringify(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)};
   let clean = false;
   for (let round = 0; round < ${workflow === 'traditional' ? 2 : 1}; round++) {
     await f.run("rm -f review.clean");
@@ -576,7 +802,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       // report and the flow stops.
       const revised = await checkAndRepair();
       await f.run("base=" + baseCommit + "; " + dropWorkingFiles);
-      await f.run("git push");
+      await f.run("base=" + baseCommit + "; comment=yes; " + pushBranch);
       if (broken(revised) && !broken(check)) {
         await f.run("check=" + revised + "; baseline=revision; " + checkReport);
         await f.run(${JSON.stringify(FLOW_CHECK_BLOCKED_COMMAND)});
@@ -588,9 +814,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Unresolved feedback stops the flow short of approval.
   if (!clean) {
     await f.run(reviewBlockedCommand);
+    // report-review-findings: the run outcome says only that "its own checks
+    // did not pass", so this step prints why (a bounded excerpt of review.md)
+    // where the journal and flows status show it. Move this text into
+    // done("step_failed", { detail }) once AgentWorkforce/flows#542 ships.
+    const reviewFindings = (await f.run(reportReviewFindingsCommand)).trim();
     // Says only what is certain: the step above reports per branch whether it
     // could draft the pull request or comment on it.
-    console.error("The adversarial review did not pass. The findings are in review-blocked.md, and on the pull request if it could be reached. This branch is not approved.");
+    console.error("The adversarial review did not pass. The findings are in review-blocked.md, and on the pull request if it could be reached. This branch is not approved.\\n" + reviewFindings);
     return f.done("step_failed");
   }` });
   sections.push({ id: 'gate', code: `  // Require approving reviews and passing CI checks in GitHub branch rules.

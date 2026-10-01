@@ -237,6 +237,8 @@ export const relayflowsSection: ProductDocSection = {
       items: [
         { title: 'Multi-agent flows', slug: 'multi-agent' },
         { title: 'Cloud', slug: 'cloud' },
+        { title: 'Recommended flows', slug: 'recommended' },
+        { title: 'Plugins', slug: 'plugins' },
         { title: 'Memory & integrations', slug: 'memory-and-integrations' },
         { title: 'Reliability', slug: 'reliability' },
       ],

@@ -12,8 +12,8 @@ function fixture() {
 }
 
 describe('onboarding funnel accounting', () => {
-  it('counts Cursor and OpenCode as supported agents', () => {
-    expect(flowMetrics({ ...DEFAULT_FACTORY, agents: ['cursor', 'opencode', 'pi'] })).toMatchObject({
+  it('counts Grok and Cursor as supported agents', () => {
+    expect(flowMetrics({ ...DEFAULT_FACTORY, agents: ['grok', 'cursor', 'opencode'] })).toMatchObject({
       supported_agent_count: 2, requested_agent_count: 1,
     });
   });

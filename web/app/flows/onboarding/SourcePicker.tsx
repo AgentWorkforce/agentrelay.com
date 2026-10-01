@@ -63,10 +63,17 @@ export function SourcePicker({ draft, onChange, onTrack }: { draft: FactoryDraft
       <div className={s.filterFields}>
         {source.fields.map(field => <div key={`${source.id}-${field.key}`}>
           <label htmlFor={`source-${source.id}-${field.key}`}>{field.label}</label>
-          <input id={`source-${source.id}-${field.key}`} type="text" maxLength={200} placeholder={field.placeholder} value={settings[field.key] ?? ''}
-            onChange={event => update({ [field.key]: event.target.value })}
-            aria-describedby={field.key === 'labels' ? 'source-labels-help' : undefined} />
-          {field.key === 'labels' && <small id="source-labels-help">Separate with commas. Every label must match.</small>}
+          {'options' in field
+            ? <select id={`source-${source.id}-${field.key}`} value={settings[field.key] ?? field.options[0].value}
+              onChange={event => update({ [field.key]: event.target.value })}>
+              {field.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+            </select>
+            : <>
+              <input id={`source-${source.id}-${field.key}`} type="text" maxLength={200} placeholder={field.placeholder} value={settings[field.key] ?? ''}
+                onChange={event => update({ [field.key]: event.target.value })}
+                aria-describedby={field.key === 'labels' ? 'source-labels-help' : undefined} />
+              {field.key === 'labels' && <small id="source-labels-help">Separate with commas. Every label must match.</small>}
+            </>}
         </div>)}
       </div>
       {source.id === 'slack' && <label className={s.mentionFilter}>

@@ -1,10 +1,25 @@
-import { isCodingAgent, type CodingAgent } from './flow-agents';
+import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
 import type { WorkflowId, WorkflowStep } from './flow-workflows';
 
 export const AGENT_ROLES = ['planner', 'plan-reviewer', 'prototype-1', 'prototype-2', 'prototype-3', 'comparator', 'implementer', 'adversary', 'fixer', 'check-discovery', 'check-repair'] as const;
 export type AgentRole = typeof AGENT_ROLES[number];
-export type AgentSettings = { agent?: CodingAgent; model?: string; prompt?: string };
+export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string };
 export type FlowAgentSettings = Partial<Record<`${WorkflowId}:${AgentRole}`, AgentSettings>>;
+
+/**
+ * Stable defaults for first-party generated flows. These identifiers are
+ * verified against the current CLI model catalogs/readiness probes; the
+ * runtime still proves the exact credential/model pair before agent work.
+ *
+ * Keep this exhaustive so enabling another generator agent cannot silently
+ * reintroduce an omitted model and inherit an adapter default.
+ */
+export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
+  claude: 'claude-sonnet-5',
+  codex: 'gpt-5.6-sol',
+  cursor: 'gpt-5.6-sol-high',
+  grok: 'grok-4.7',
+};
 
 export function rolesForStep(step: WorkflowStep): AgentRole[] {
   if (step === '3 implementations') return ['prototype-1', 'prototype-2', 'prototype-3'];
@@ -36,9 +51,16 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   const defaultAgent = ['plan-reviewer', 'comparator', 'adversary', 'prototype-2'].includes(role) ? reviewer : builder;
   const saved = settings[`${workflow}:${role}`];
   // Changing the selected agents must never leave an unavailable CLI assigned.
-  const agent = saved?.agent && available.includes(saved.agent) ? saved.agent : defaultAgent;
+  const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
-  return { agent, model: compatible ? saved?.model?.trim() || '' : '', prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
+  const model = compatible ? saved?.model?.trim() || '' : '';
+  return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
+}
+
+/** Resolve the explicit pair emitted by a first-party generated flow. */
+export function resolveGeneratedAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
+  const value = resolveAgentSettings(workflow, role, selected, settings);
+  return { ...value, model: value.model || DEFAULT_AGENT_MODELS[value.agent] };
 }
 
 export function validFlowAgentSettings(value: unknown): value is FlowAgentSettings {
@@ -48,7 +70,7 @@ export function validFlowAgentSettings(value: unknown): value is FlowAgentSettin
     const [workflow, role, extra] = key.split(':');
     if (extra || !['traditional', 'prototype', 'simple'].includes(workflow) || !(AGENT_ROLES as readonly string[]).includes(role)) return false;
     if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
-    return Object.entries(settings).every(([field, v]) => field === 'agent' ? typeof v === 'string' && isCodingAgent(v)
+    return Object.entries(settings).every(([field, v]) => field === 'agent' ? typeof v === 'string' && CODING_AGENTS.some(agent => agent.id === v)
       : field === 'model' ? typeof v === 'string' && v.length <= 120 && !/[\r\n\0]/.test(v)
       : field === 'prompt' ? typeof v === 'string' && v.trim().length > 0 && v.length <= 6000 : false);
   });
