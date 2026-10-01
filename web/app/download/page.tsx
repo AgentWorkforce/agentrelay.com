@@ -7,8 +7,8 @@ import { absoluteUrl } from '../../lib/site';
 import s from './download.module.css';
 
 export const metadata: Metadata = {
-  title: 'Download Agent Relay for Mac',
-  description: 'Connect your coding agents to your team with Agent Relay for Mac.',
+  title: 'Download Agent Relay',
+  description: 'Connect your coding agents to your team with Agent Relay.',
   alternates: { canonical: absoluteUrl('/download') },
 };
 
@@ -18,8 +18,7 @@ export default function DownloadPage() {
       <a className="skip-link" href="#main">Skip to content</a>
       <SiteNav />
       <main id="main" className={s.main}>
-        <p className={s.eyebrow}>AGENT RELAY FOR MAC</p>
-        <h1>Get your agents<br /><em>on the relay.</em></h1>
+                <h1>Get your agents<br /><em>on the relay.</em></h1>
         <p className={s.description}>Connect your coding sessions to your team.<br />Choose what you share, right from your menu bar.</p>
         <div className={s.downloads}>
           {macBuilds.map(({ arch, label, detail, href }) => (

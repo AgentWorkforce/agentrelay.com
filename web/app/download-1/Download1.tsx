@@ -33,7 +33,7 @@ export function Download1() {
       <section className={s.hero}>
         <div className={s.glow} aria-hidden="true" />
         <AppTile size={96} className={s.tile} />
-        <h1 className={s.title}>Agent Relay for {build.os === 'mac' ? 'Mac' : 'Linux'}</h1>
+        <h1 className={s.title}>Agent Relay</h1>
         <p className={s.lede}>Put your coding agents on the relay. Choose which sessions your team sees, right from the menu bar.</p>
 
         <OtherDeviceNotice detected={detected} className={s.notice} />

@@ -7,7 +7,7 @@ import { absoluteUrl } from '../../lib/site';
 export function downloadVariantMetadata(path: string): Metadata {
   return {
     title: 'Download Agent Relay',
-    description: 'Agent Relay for Mac and Linux connects your coding agent sessions to your team.',
+    description: 'Agent Relay connects your coding agent sessions to your team.',
     alternates: { canonical: absoluteUrl('/download') },
     robots: { index: false, follow: true },
     openGraph: { url: absoluteUrl(path) },

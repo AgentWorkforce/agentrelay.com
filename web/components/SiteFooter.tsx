@@ -20,7 +20,7 @@ const footerColumns: FooterColumn[] = [
   {
     title: 'Products',
     links: [
-      { label: 'Download for Mac', href: '/download' },
+      { label: 'Download', href: '/download' },
       { label: 'Relay Cloud', href: 'https://agentrelay.com/cloud' },
       { label: 'Flows', href: '/flows' },
       { label: 'Skip', href: 'https://heyskip.dev' },

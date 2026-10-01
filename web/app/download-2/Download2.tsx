@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { Pause, Play } from 'lucide-react';
+import { ArrowDownToLine, Pause, Play } from 'lucide-react';
+import { AgentSignup } from '../../components/AgentSignup';
 import { AgentToolLogo, type AgentTool } from '../../components/AgentToolLogos';
 import { OtherDeviceNotice } from '../../components/download/OtherDeviceNotice';
 import { useDownloadChoice, useLatestRelease } from '../../components/download/hooks';
 import { AppleIcon, LinuxIcon, RelayMark } from '../../components/download/shared';
-import { DESKTOP_RELEASES_URL, MAC_REQUIREMENT, formatSize, linuxBuilds, type DesktopBuildId } from '../../lib/desktop-downloads';
+import { DESKTOP_RELEASES_URL, MAC_REQUIREMENT, desktopBuilds, formatSize, recommendedBuild } from '../../lib/desktop-downloads';
 import s from './download-2.module.css';
 
 type Session = { id: string; tool: AgentTool; title: string; folder: string; age: string };
@@ -86,49 +87,56 @@ function MenuBarPanel() {
 }
 
 export function Download2() {
-  const { detected, build, choose } = useDownloadChoice();
+  const { detected, build } = useDownloadChoice();
   const release = useLatestRelease();
   const size = formatSize(release?.sizes[build.id]);
-  const alternatives = [
-    { id: 'mac-arm64', label: 'Apple silicon' },
-    { id: 'mac-x64', label: 'Intel Macs' },
-    { id: linuxBuilds[0].id, label: 'Linux' },
-  ].filter((alt) => alt.id !== build.id && !(alt.label === 'Linux' && build.os === 'linux')) as { id: DesktopBuildId; label: string }[];
+  const onThisComputer = detected?.confident === true && recommendedBuild(detected).id === build.id;
+  const others = desktopBuilds.filter((b) => b.id !== build.id && b.format !== 'tar.gz');
 
   return (
     <>
       <section className={s.hero}>
         <div className={s.copy}>
-          <p className={s.eyebrow}>Agent Relay for {build.os === 'mac' ? 'Mac' : 'Linux'}</p>
           <h1 className={s.title}>Your agents, on your team’s radar.</h1>
           <p className={s.lede}>
-            A small menu-bar app that puts the coding sessions you pick — Claude Code, Codex, OpenCode and more — in your team’s
-            shared workspace.
+            Install to share your agents on the relay, where they can search each other’s history, send messages and collaborate in
+            real time.
           </p>
 
           <OtherDeviceNotice detected={detected} className={s.notice} />
 
           <div className={s.ctaRow}>
-            <a href={build.href} className={`btn btn-primary ${s.cta}`}>
-              {build.os === 'mac' ? <AppleIcon size={18} /> : <LinuxIcon size={18} />}
-              Download for {build.label}
+            <a href={build.href} className={s.download}>
+              {onThisComputer && <span className={s.badge}>This computer</span>}
+              <span className={s.downloadIcon}>{build.os === 'mac' ? <AppleIcon size={20} /> : <LinuxIcon size={20} />}</span>
+              <span className={s.downloadText}>
+                <strong>Download for {build.os === 'mac' ? 'Mac' : 'Linux'}</strong>
+                <span>
+                  {build.os === 'mac' ? build.label : `${build.arch} · .${build.format}`}
+                  {size && ` · ${size}`}
+                </span>
+              </span>
+              <ArrowDownToLine size={18} className={s.downloadArrow} aria-hidden="true" />
             </a>
-            <span className={s.ctaMeta}>
-              {build.os === 'mac' ? MAC_REQUIREMENT : `.${build.format} · ${build.detail}`}
-              {size && <> · {size}</>}
-            </span>
+            <AgentSignup product="teams" />
           </div>
 
-          <p className={s.alts}>
-            Also for{' '}
-            {alternatives.map((alt, i) => (
-              <span key={alt.id}>
-                {i > 0 && ' and '}
-                <button type="button" onClick={() => choose(alt.id)}>{alt.label}</button>
-              </span>
+          <p className={s.requirement}>{MAC_REQUIREMENT} · Debian and Ubuntu on Linux</p>
+
+          <ul className={s.others} aria-label="Other downloads">
+            {others.map((b) => (
+              <li key={b.id}>
+                <a href={b.href}>
+                  <ArrowDownToLine size={13} aria-hidden="true" />
+                  {b.os === 'mac' ? `${b.label} Mac` : `${b.label} .${b.format}`}
+                  {formatSize(release?.sizes[b.id]) && <span>{formatSize(release?.sizes[b.id])}</span>}
+                </a>
+              </li>
             ))}
-            . <a href={release?.url ?? DESKTOP_RELEASES_URL}>All releases ↗</a>
-          </p>
+            <li>
+              <a href={release?.url ?? DESKTOP_RELEASES_URL}>All releases ↗</a>
+            </li>
+          </ul>
         </div>
 
         <MenuBarPanel />
