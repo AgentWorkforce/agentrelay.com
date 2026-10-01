@@ -30,6 +30,10 @@ const PRIMARY_HOST = "agentrelay.com";
 const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
+// Relay Connect invite links are advertised as agentrelay.com/connect/<id>, but
+// the invite route lives in the cloud app (basePath /cloud). Only the single
+// opaque-ID segment is claimed; /connect itself stays with the marketing site.
+const CONNECT_INVITE_PATH = /^\/connect\/[^/]+$/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
 export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
@@ -85,6 +89,20 @@ function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean 
 
 function isCloudPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
+}
+
+// Returns the cloud-app path serving a Relay Connect invite link, or undefined
+// when the request is not an apex invite read.
+export function getConnectInviteCloudPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+): string | undefined {
+  if (hostname !== PRIMARY_HOST || (method !== "GET" && method !== "HEAD")) {
+    return undefined;
+  }
+
+  return CONNECT_INVITE_PATH.test(pathname) ? `${CLOUD_PATH_PREFIX}${pathname}` : undefined;
 }
 
 export function getVanityRedirect(hostname: string, pathname: string): string | undefined {
@@ -359,6 +377,16 @@ export default {
     const recorderRequestClone = recorderEnv
       ? (request.clone() as unknown as Request)
       : null;
+
+    const connectInviteCloudPath = getConnectInviteCloudPath(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    if (connectInviteCloudPath) {
+      url.pathname = connectInviteCloudPath;
+      request = new Request(url.toString(), request);
+    }
 
     if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
