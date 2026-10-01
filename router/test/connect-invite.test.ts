@@ -32,6 +32,9 @@ describe("router Relay Connect invite links", () => {
     expect(getConnectInviteCloudPath("agentrelay.com", "/connect/abc123.json", "HEAD")).toBe(
       "/cloud/connect/abc123.json",
     );
+    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/abc123/", "GET")).toBe(
+      "/cloud/connect/abc123",
+    );
   });
 
   it("leaves everything that is not a single-segment apex invite read alone", () => {
@@ -43,11 +46,12 @@ describe("router Relay Connect invite links", () => {
     expect(getConnectInviteCloudPath("example.com", "/connect/abc", "GET")).toBeUndefined();
   });
 
-  it("serves the invite from the cloud-web worker, keeping the query and headers", async () => {
+  it.each(["GET", "HEAD"])("serves a %s invite from the cloud-web worker, keeping the query and headers", async (method) => {
     const cloudWebWorker = makeBinding();
 
     const response = await worker.fetch(
       new Request("https://agentrelay.com/connect/abc123?format=md", {
+        method,
         headers: { accept: "application/json" },
       }),
       buildEnv(cloudWebWorker),
@@ -58,7 +62,7 @@ describe("router Relay Connect invite links", () => {
     expect(cloudWebWorker.fetch).toHaveBeenCalledTimes(1);
     const forwarded = cloudWebWorker.fetch.mock.calls[0]?.[0] as Request;
     expect(forwarded.url).toBe("https://agentrelay.com/cloud/connect/abc123?format=md");
-    expect(forwarded.method).toBe("GET");
+    expect(forwarded.method).toBe(method);
     expect(forwarded.headers.get("accept")).toBe("application/json");
   });
 

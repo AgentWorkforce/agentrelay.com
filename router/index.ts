@@ -32,8 +32,9 @@ const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
 // Relay Connect invite links are advertised as agentrelay.com/connect/<id>, but
 // the invite route lives in the cloud app (basePath /cloud). Only the single
-// opaque-ID segment is claimed; /connect itself stays with the marketing site.
-const CONNECT_INVITE_PATH = /^\/connect\/[^/]+$/;
+// opaque-ID segment (with an optional trailing slash) is claimed; /connect
+// itself stays with the marketing site.
+const CONNECT_INVITE_PATH = /^(\/connect\/[^/]+)\/?$/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
 export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
@@ -102,7 +103,8 @@ export function getConnectInviteCloudPath(
     return undefined;
   }
 
-  return CONNECT_INVITE_PATH.test(pathname) ? `${CLOUD_PATH_PREFIX}${pathname}` : undefined;
+  const invitePath = CONNECT_INVITE_PATH.exec(pathname)?.[1];
+  return invitePath ? `${CLOUD_PATH_PREFIX}${invitePath}` : undefined;
 }
 
 export function getVanityRedirect(hostname: string, pathname: string): string | undefined {
