@@ -2,6 +2,7 @@ Route precedence:
 
 - `/meet-with-will` (alias `/will`), `/meet-with-khaliq` (alias `/khaliq`), and `/virtual-office` redirect to their external meeting destinations at the edge.
 - `/cloud*` routes to the Agent Relay Cloud Next.js app.
+- `GET`/`HEAD /connect/<id>` (Relay Connect invite links) is served by the Cloud app's `/cloud/connect/<id>` route.
 - `/observer/file*` routes to the RelayFile observer app, expected to be built with `basePath: "/observer/file"`.
 - `/observer*` routes to the Relaycast observer app.
 - everything else falls back to the legacy proxy target.
