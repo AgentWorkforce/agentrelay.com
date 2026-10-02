@@ -36,10 +36,11 @@ export function FlowLandingAnalytics() {
     });
     observer.observe(document.body, { childList: true, subtree: true });
     const capture = (event: string, properties = {}) => {
-      if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || !ph || ph.has_opted_out_capturing()) return;
+      if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || !ph || ph.has_opted_out_capturing()) return false;
       try { ph.capture(event, { ...properties, journey_id: id, funnel_version: 2 }); } catch { /* Optional. */ }
+      return true;
     };
-    if (!viewed.current) { capture('flows_landing_viewed'); viewed.current = true; }
+    if (!viewed.current && capture('flows_landing_viewed')) viewed.current = true;
     const click = (event: MouseEvent) => {
       const link = (event.target as Element).closest?.('a[href]');
       if (!(link instanceof HTMLAnchorElement)) return;
