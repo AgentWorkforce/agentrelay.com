@@ -41,4 +41,22 @@ describe('flowsGoogleAuthHref', () => {
     expect(url.searchParams.get('next')).toBe('/flows/deploy?journey_id=537e4857-5590-42e8-8731-66441b466542');
     expect(withFlowsJourney(href, 'not-a-uuid')).toBe(href);
   });
+
+  it('decorates the absolute Cloud href used by mounted anchors', () => {
+    process.env.NEXT_PUBLIC_CLOUD_URL = 'https://cloud.example.test/cloud';
+    const href = flowsGoogleAuthHref('hero');
+    const decorated = withFlowsJourney(href, '537e4857-5590-42e8-8731-66441b466542');
+    const url = new URL(decorated);
+    expect(url.origin).toBe('https://cloud.example.test');
+    expect(url.searchParams.get('source')).toBe('flows');
+    expect(url.searchParams.get('next')).toBe('/flows/deploy?journey_id=537e4857-5590-42e8-8731-66441b466542');
+  });
+
+  it('does not decorate non-Flows or off-origin auth targets', () => {
+    const id = '537e4857-5590-42e8-8731-66441b466542';
+    const teams = '/cloud/api/auth/google/start?source=teams&next=%2Fflows%2Fdeploy';
+    const offOrigin = 'https://other.example.test/api/auth/google/start?source=flows&next=%2Fflows%2Fdeploy';
+    expect(withFlowsJourney(teams, id)).toBe(teams);
+    expect(withFlowsJourney(offOrigin, id)).toBe(offOrigin);
+  });
 });

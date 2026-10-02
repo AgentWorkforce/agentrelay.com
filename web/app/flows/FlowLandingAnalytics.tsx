@@ -24,6 +24,9 @@ export function FlowLandingAnalytics() {
   const ph = usePostHog();
   const viewed = useRef(false);
   useEffect(() => {
+    // Keep an explicit PostHog opt-out meaningful while still allowing the
+    // no-key path to carry attribution for the Cloud OAuth handoff.
+    if (ph?.has_opted_out_capturing?.()) return;
     let id: string;
     try { id = journeyId(sessionStorage, () => crypto.randomUUID()); } catch { id = crypto.randomUUID(); }
     decorateFlowsAuthLinks(document, id);
