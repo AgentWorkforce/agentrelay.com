@@ -255,6 +255,49 @@ export const FLOW_CHECK_BLOCKED_COMMAND = [
 ].join('; ');
 
 /**
+ * The generated flow's time plan (AgentWorkforce/cloud#4108). The header's
+ * wallclock is charged per step and checked before each one, so once it is
+ * spent no step can run, not even the push that keeps the work. Agent steps
+ * take no time limit of their own, so the flow reads the clock (a journaled
+ * `date +%s`) before each optional, expensive step and starts it only when
+ * that step's allowance and publishing still fit. The allowances cover the
+ * longest steps measured on 2026-10-01: a 14m check run (its lease is 15m)
+ * and repair agents of 37m and 44m.
+ */
+export const FLOW_TIME = (() => {
+  const headerMinutes = 180; // Cloud's maximum run budget (RELAYFLOW_V2_RUN_BUDGET_MAX_MINUTES).
+  const setupMinutes = 5; // Cloud's run budget also counts the setup before the body.
+  const checkMinutes = 15;
+  const repairMinutes = 45;
+  const reviewMinutes = 20;
+  const fixerMinutes = 45;
+  const publishMinutes = 10;
+  return Object.freeze({
+    headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes, publishMinutes,
+    bodyMinutes: headerMinutes - setupMinutes,
+    // A repair, its re-check, the base-commit check a still-failing check
+    // triggers, and publishing.
+    repairStartMinutes: repairMinutes + checkMinutes + checkMinutes + publishMinutes,
+    // A review, then publishing a time stop.
+    reviewStartMinutes: reviewMinutes + publishMinutes,
+    // The fixer, its check, the next review, and publishing.
+    fixRoundStartMinutes: fixerMinutes + checkMinutes + reviewMinutes + publishMinutes,
+  });
+})();
+
+/**
+ * Marks the pull request as not ready when the run stops for time before its
+ * reviews are done, and says so on it. Every branch exits 0, like
+ * FLOW_CHECK_BLOCKED_COMMAND.
+ */
+export const FLOW_TIME_STOP_COMMAND = [
+  'mkdir -p .relayflow',
+  `printf '%s\\n' "**This run ran out of time before its reviews were done** (the flow's ${FLOW_TIME.headerMinutes / 60}h budget). The work is pushed and this pull request is a draft so it is not lost; review it by hand or run the flow again." > .relayflow/time-stop.md`,
+  'if gh pr ready --undo >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft." >&2; fi',
+  'if gh pr comment --body-file .relayflow/time-stop.md >/dev/null 2>&1; then echo "relayflow: posted the time stop to the pull request."; else echo "relayflow: could not comment on the pull request." >&2; fi',
+].join('; ');
+
+/**
  * Files the flow and its agents write for each other, which are never part of
  * the change. Paths are relative to the repository root.
  */
@@ -627,7 +670,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     ${JSON.stringify(WORKFLOW_FILES_HINT)};
   // Files the agents write for each other (summary.md, plans, reviews, and
   // .relayflow/) are never part of the change; keep them out of every commit.
-  await f.run(${JSON.stringify(FLOW_EXCLUDE_WORKING_FILES_COMMAND)});` }];
+  await f.run(${JSON.stringify(FLOW_EXCLUDE_WORKING_FILES_COMMAND)});
+  // The budget in the header is spent step by step, and once it is gone no
+  // step runs, not even the push that keeps the work. So the optional, long
+  // steps below (repairs, fixes, reviews) start only when they and publishing
+  // still fit. The clock is read through a step so a resumed run replays it.
+  const clock = async () => Number((await f.run("date +%s")).trim());
+  const startedAt = await clock();
+  const minutesLeft = async () => ${FLOW_TIME.bodyMinutes} - (await clock() - startedAt) / 60;` }];
   if (workflow === 'traditional') sections.push({ id: 'plan', code: `  // Read the ticket and agree on a plan before changing code.
   await f.agent("planner", {
     ${options('planner', 'builder')}
@@ -703,6 +753,11 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const checkAndRepair = async () => {
     let result = verdict(await f.run(runChecks, { timeout: "15m" }));
     for (let attempt = 0; attempt < 2 && broken(result); attempt++) {
+      // A repair, its re-check and publishing must fit in what is left.
+      if (await minutesLeft() < ${FLOW_TIME.repairStartMinutes}) {
+        console.error("Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are.");
+        break;
+      }
       await f.agent("check-repair-" + (++repairs), {
         ${options('check-repair', 'builder')}
       });
@@ -787,12 +842,24 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const reportReviewFindingsCommand = ${JSON.stringify(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)};
   let clean = false;
   for (let round = 0; round < ${workflow === 'traditional' ? 2 : 1}; round++) {
+    // The pull request is open by now. A review that cannot finish in time
+    // would leave it looking ready; stop with it as a draft instead.
+    if (await minutesLeft() < ${FLOW_TIME.reviewStartMinutes}) {
+      await f.run(${JSON.stringify(FLOW_TIME_STOP_COMMAND)});
+      console.error("Stopped: out of time before the reviews were done. The work is pushed and the pull request is a draft.");
+      return f.done("needs_human");
+    }
     await f.run("rm -f review.clean");
     await f.agent("adversary-" + (round + 1), {
       ${options('adversary', 'reviewer')}
     });
     clean = (await f.run("test -f review.clean && echo yes || echo no")).trim() === "yes";
     ${workflow === 'traditional' ? `if (!clean && round === 0) {
+      if (await minutesLeft() < ${FLOW_TIME.fixRoundStartMinutes}) {
+        await f.run(${JSON.stringify(FLOW_TIME_STOP_COMMAND)});
+        console.error("Stopped: out of time for a fix round after the first review. The work is pushed and the pull request is a draft; review.md has the findings.");
+        return f.done("needs_human");
+      }
       await f.agent("fixer", {
         ${options('fixer', 'builder')}
       });
