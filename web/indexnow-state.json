@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 78,
+  "count": 77,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -32,7 +32,6 @@
     "https://agentrelay.com/blog/trusting-an-agent-you-didnt-spawn",
     "https://agentrelay.com/brand",
     "https://agentrelay.com/brand/theme",
-    "https://agentrelay.com/chief",
     "https://agentrelay.com/company",
     "https://agentrelay.com/docs/actions",
     "https://agentrelay.com/docs/agent-relay-mcp",
