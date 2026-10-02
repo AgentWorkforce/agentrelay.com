@@ -1,6 +1,6 @@
 import { validFlowAgentSettings, type FlowAgentSettings } from './flow-agent-settings';
 import { flowPreview } from './flow-preview';
-import { WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
+import { FLOW_TIME, WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
 import { ISSUE_SOURCES, issueSourceCode, validSourcePreferences, type IssueSourceId, type SourcePreferences } from './flow-sources';
 
 import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
@@ -107,8 +107,10 @@ export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'loca
   // budget no longer refuses a model-less Codex step (AgentWorkforce/flows#421);
   // such a step runs unmetered, so a dollar cap cannot bound it. Wall-clock is
   // enforced on every step regardless of pricing, which is why it stays the
-  // default here; `{ dollars, wallclock }` together is also valid.
-  const budget = '{ wallclock: "2h" }';
+  // default here; `{ dollars, wallclock }` together is also valid. Its length
+  // is the flow's time plan (FLOW_TIME, AgentWorkforce/cloud#4108): 2h could
+  // not hold a run whose checks needed repair on a ~12 minute test suite.
+  const budget = `{ wallclock: "${FLOW_TIME.headerMinutes / 60}h" }`;
   if (!draft.sources.length) return [{ id: 'empty', code: `import { flow } from "@relayflows/surface";
 
 export default flow("software-factory",
