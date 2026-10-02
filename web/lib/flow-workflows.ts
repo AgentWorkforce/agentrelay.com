@@ -677,7 +677,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // still fit. The clock is read through a step so a resumed run replays it.
   const clock = async () => Number((await f.run("date +%s")).trim());
   const startedAt = await clock();
-  const minutesLeft = async () => ${FLOW_TIME.bodyMinutes} - (await clock() - startedAt) / 60;` }];
+  // Parallel steps are charged once each, so they count more than the clock.
+  let parallelMinutes = 0;
+  const minutesLeft = async () => ${FLOW_TIME.bodyMinutes} - (await clock() - startedAt) / 60 - parallelMinutes;` }];
   if (workflow === 'traditional') sections.push({ id: 'plan', code: `  // Read the ticket and agree on a plan before changing code.
   await f.agent("planner", {
     ${options('planner', 'builder')}
@@ -697,12 +699,16 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   for (const path of paths) {
     await f.run("git worktree add --detach " + quote(path) + " " + quote(base));
   }
+  // The budget charges each step's own time, so three prototypes in parallel
+  // cost up to three times the wall clock they take: count the extra two.
+  const prototypesStartedAt = await clock();
   await Promise.all(paths.map((cwd, index) => f.agent("prototype-" + (index + 1), {
     cli: prototypeAgents[index],
     cwd,
     model: prototypeSettings[index].model,
     task: task + "\\n" + prototypeSettings[index].prompt + " Assigned approach: " + approaches[index],
   })));
+  parallelMinutes += 2 * (await clock() - prototypesStartedAt) / 60;
   // All three implementations are finished before comparison begins.
   await f.agent("comparator", {
     ${options('comparator', 'reviewer', ' + " Prototype worktrees: " + paths.join(", ")')}
@@ -774,7 +780,11 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     ? ""
     : checkPlan === "none"
       ? "new"
-      : (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, { timeout: "15m" })).trim();` });
+      : await minutesLeft() < ${FLOW_TIME.checkMinutes + FLOW_TIME.publishMinutes}
+        // Too little time to check the base commit and still publish: the
+        // report says the base could not be checked, and the draft opens.
+        ? "unknown"
+        : (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, { timeout: "15m" })).trim();` });
   sections.push({ id: 'pull-request', code: `  // Publish the branch and open the pull request without an agent.
   // Doing no work is a legitimate outcome: a repository with nothing to act on
   // leaves no commits and no summary.md. Pushing a branch at the base commit
@@ -856,9 +866,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     clean = (await f.run("test -f review.clean && echo yes || echo no")).trim() === "yes";
     ${workflow === 'traditional' ? `if (!clean && round === 0) {
       if (await minutesLeft() < ${FLOW_TIME.fixRoundStartMinutes}) {
-        await f.run(${JSON.stringify(FLOW_TIME_STOP_COMMAND)});
-        console.error("Stopped: out of time for a fix round after the first review. The work is pushed and the pull request is a draft; review.md has the findings.");
-        return f.done("needs_human");
+        // No time to fix and re-review: stop as an unresolved review, so the
+        // findings go on the pull request and it goes back to draft.
+        console.error("Out of time for a fix round after the first review; reporting its findings instead.");
+        break;
       }
       await f.agent("fixer", {
         ${options('fixer', 'builder')}
