@@ -58,12 +58,12 @@ function WaveBreak({ tone = 'blue' }: { tone?: 'blue' | 'orange' }) {
 
 export default function FlowsPage() {
   const navGetStartedLink = (
-    <a href={flowsGoogleAuthHref('nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
+    <a href={flowsGoogleAuthHref('nav')} data-flows-auth className={`${home.ctaPrimary} ${home.homeNavAction}`}>
       Try Free with Cloud
     </a>
   );
   const mobileGetStartedLink = (
-    <a href={flowsGoogleAuthHref('mobile_nav')} className={`${home.ctaPrimary} ${home.homeNavAction}`}>
+    <a href={flowsGoogleAuthHref('mobile_nav')} data-flows-auth className={`${home.ctaPrimary} ${home.homeNavAction}`}>
       Try Free with Cloud
     </a>
   );
@@ -87,7 +87,7 @@ export default function FlowsPage() {
               Predictable, auditable and dependable.
             </p>
             <div className={s.ctaRow}>
-              <a href={flowsGoogleAuthHref('hero')} className={s.ctaPrimary}>
+              <a href={flowsGoogleAuthHref('hero')} data-flows-auth className={s.ctaPrimary}>
                 Try Free with Cloud
                 <ArrowRight aria-hidden="true" size={17} strokeWidth={2} />
               </a>

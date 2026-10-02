@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { flowsGoogleAuthHref } from '../flows-cloud';
+import { flowsGoogleAuthHref, isFlowsGoogleAuthHref, withFlowsJourney } from '../flows-cloud';
 
 describe('flowsGoogleAuthHref', () => {
   const originalCloudUrl = process.env.NEXT_PUBLIC_CLOUD_URL;
@@ -21,5 +21,24 @@ describe('flowsGoogleAuthHref', () => {
     expect(flowsGoogleAuthHref()).toBe(
       'https://cloud.example.test/cloud/api/auth/google/start?source=flows&next=%2Fflows%2Fdeploy',
     );
+  });
+
+  it('recognizes only the Flows auth handoff that returns to deploy', () => {
+    expect(isFlowsGoogleAuthHref('/cloud/api/auth/google/start?source=flows&next=%2Fflows%2Fdeploy')).toBe(true);
+    expect(isFlowsGoogleAuthHref('/cloud/api/auth/google/start?source=flows&next=%2Fdashboard')).toBe(false);
+    expect(isFlowsGoogleAuthHref('/cloud/api/auth/google/start?source=teams&next=%2Fflows%2Fdeploy')).toBe(false);
+    expect(isFlowsGoogleAuthHref('/cloud/api/auth/google/start?source=flows&next=https%3A%2F%2Fevil.test%2Fflows%2Fdeploy')).toBe(false);
+  });
+
+  it('carries the landing journey through the opaque OAuth next path', () => {
+    const href = withFlowsJourney(
+      '/cloud/api/auth/google/start?source=flows&next=%2Fflows%2Fdeploy&utm_content=hero',
+      '537e4857-5590-42e8-8731-66441b466542',
+    );
+    const url = new URL(href, 'https://agentrelay.invalid');
+    expect(url.searchParams.get('source')).toBe('flows');
+    expect(url.searchParams.get('utm_content')).toBe('hero');
+    expect(url.searchParams.get('next')).toBe('/flows/deploy?journey_id=537e4857-5590-42e8-8731-66441b466542');
+    expect(withFlowsJourney(href, 'not-a-uuid')).toBe(href);
   });
 });
