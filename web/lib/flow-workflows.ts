@@ -783,7 +783,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       : await minutesLeft() < ${FLOW_TIME.checkMinutes + FLOW_TIME.publishMinutes}
         // Too little time to check the base commit and still publish: the
         // report says the base could not be checked, and the draft opens.
-        ? "unknown"
+        ? "skipped"
         : (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, { timeout: "15m" })).trim();` });
   sections.push({ id: 'pull-request', code: `  // Publish the branch and open the pull request without an agent.
   // Doing no work is a legitimate outcome: a repository with nothing to act on
@@ -839,7 +839,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   if (broken(check)) {
     // The base commit fails too, or could not be checked: nothing here says the
     // change is at fault, so the reviews still run and a person decides.
-    console.error("The checks fail, but not because of this change as far as the base commit shows. The pull request is a draft with the output of both.");
+    console.error(baseline === "skipped"
+      ? "The checks fail, and there was no time left to check the base commit, so it is not known whether this change caused them. The pull request is a draft with the output."
+      : "The checks fail, but not because of this change as far as the base commit shows. The pull request is a draft with the output of both.");
   }` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'Always run two independent adversarial reviews, even if the first passes.' : 'Review the final implementation against the ticket and comparison findings.'}
   // A review that found problems is this flow's verdict on its own work, so it

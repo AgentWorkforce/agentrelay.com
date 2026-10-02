@@ -200,14 +200,17 @@ describe('Garden flow time budget (cloud#4108)', () => {
   });
 
   it('counts parallel prototypes as the budget does, three charges for one stretch of clock', async () => {
-    // The kernel charges each prototype's own time; three 30m prototypes in
-    // parallel cost 90m of budget in 30m of wall clock.
-    const timing: Timing = {
-      agents: { 'prototype': 30, 'comparator': 10, 'implementer': 30, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes },
+    // Three 20m prototypes in parallel take 20m of wall clock but 60m of
+    // budget. By the first failed check the clock shows about 80m used, which
+    // would leave room for a repair; the budget has spent about 120m, which
+    // does not. Counting only the clock starts the repair and is refused
+    // before publishing.
+    const run = await runTimed({
+      agents: { 'prototype': 20, 'comparator': 10, 'implementer': 30, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes },
       checks: [{ minutes: FLOW_TIME.checkMinutes, verdict: 'fail' }],
       baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
-    };
-    const run = await runTimed(timing, 'prototype', { parallel: ['prototype'] });
+    }, 'prototype', { parallel: ['prototype'] });
+    expect(run.calls.filter(call => call.name.startsWith('check-repair'))).toHaveLength(0);
     expect(run.refused).toBeNull();
     expect(run.opened).toBeDefined();
   });
@@ -232,5 +235,8 @@ describe('Garden flow time budget (cloud#4108)', () => {
     expect(run.refused).toBeNull();
     expect(run.calls.map(call => call.name)).not.toContain('base-check');
     expect(run.opened).toBeDefined();
+    // Nothing was checked, so the run must not claim the base commit fails too.
+    expect(run.errors.join('\n')).toMatch(/no time left to check the base commit/);
+    expect(run.errors.join('\n')).not.toMatch(/as far as the base commit shows/);
   });
 });
