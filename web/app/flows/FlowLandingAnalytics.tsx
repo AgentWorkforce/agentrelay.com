@@ -11,15 +11,30 @@ export function decorateFlowsAuthLink(link: HTMLAnchorElement, id: string) {
   return link;
 }
 
+function decorateFlowsAuthLinks(root: ParentNode, id: string) {
+  if (root instanceof HTMLAnchorElement && root.matches('a[data-flows-auth]')) {
+    decorateFlowsAuthLink(root, id);
+  }
+  for (const link of root.querySelectorAll<HTMLAnchorElement>('a[data-flows-auth]')) {
+    decorateFlowsAuthLink(link, id);
+  }
+}
+
 export function FlowLandingAnalytics() {
   const ph = usePostHog();
   const viewed = useRef(false);
   useEffect(() => {
     let id: string;
     try { id = journeyId(sessionStorage, () => crypto.randomUUID()); } catch { id = crypto.randomUUID(); }
-    for (const link of document.querySelectorAll<HTMLAnchorElement>('a[data-flows-auth]')) {
-      decorateFlowsAuthLink(link, id);
-    }
+    decorateFlowsAuthLinks(document, id);
+    const observer = new MutationObserver((records) => {
+      for (const record of records) {
+        for (const node of record.addedNodes) {
+          if (node instanceof Element) decorateFlowsAuthLinks(node, id);
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
     const capture = (event: string, properties = {}) => {
       if (!process.env.NEXT_PUBLIC_POSTHOG_KEY || !ph || ph.has_opted_out_capturing()) return;
       try { ph.capture(event, { ...properties, journey_id: id, funnel_version: 2 }); } catch { /* Optional. */ }
@@ -38,7 +53,10 @@ export function FlowLandingAnalytics() {
       capture('flows_onboarding_entry_clicked', { placement: ['hero', 'nav', 'mobile_nav'].includes(placement ?? '') ? placement : 'other' });
     };
     document.addEventListener('click', click);
-    return () => document.removeEventListener('click', click);
+    return () => {
+      observer.disconnect();
+      document.removeEventListener('click', click);
+    };
   }, [ph]);
   return null;
 }
