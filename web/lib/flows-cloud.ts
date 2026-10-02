@@ -1,7 +1,8 @@
+import { JOURNEY_ID_REGEX } from './flow-journey';
+
 const DEFAULT_CLOUD_URL = '/cloud';
 const GOOGLE_AUTH_PATH = '/api/auth/google/start';
 const FLOWS_DEPLOY_PATH = '/flows/deploy';
-const JOURNEY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parseFlowsAuthHref(href: string): { url: URL; next: URL } | null {
   try {
@@ -26,7 +27,7 @@ export function isFlowsGoogleAuthHref(href: string): boolean {
  * the auth state or a server log outside the bounded journey UUID.
  */
 export function withFlowsJourney(href: string, id: string): string {
-  if (!JOURNEY_ID.test(id)) return href;
+  if (!JOURNEY_ID_REGEX.test(id)) return href;
   const parsed = parseFlowsAuthHref(href);
   if (!parsed) return href;
   parsed.next.searchParams.set('journey_id', id);

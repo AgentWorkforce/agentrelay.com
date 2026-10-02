@@ -1,4 +1,6 @@
 import { CODING_AGENTS, isCodingAgent, otherAgentIsSelected, type FactoryDraft } from './flow-onboarding';
+export { JOURNEY_ID_REGEX } from './flow-journey';
+import { JOURNEY_ID_REGEX } from './flow-journey';
 
 export const FLOW_ANALYTICS_VERSION = 2;
 export const FLOW_STAGES = ['intro', 'sources', 'agents', 'task', 'connections'] as const;
@@ -6,7 +8,6 @@ export type FlowStage = typeof FLOW_STAGES[number];
 export type FlowTrack = (event: string, properties?: Record<string, string | number | boolean | string[] | null>) => void;
 export const JOURNEY_TIMEOUT_MS = 30 * 60_000;
 export const JOURNEY_STORAGE_KEY = 'agentrelay:flows:analytics:v2';
-
 export function flowMetrics(draft: FactoryDraft) {
   return {
     sources: [...draft.sources], source_count: draft.sources.length,
@@ -26,7 +27,7 @@ export function lengthBucket(length: number): string {
 export function journeyId(storage: Pick<Storage, 'getItem' | 'setItem'>, createId: () => string, now = Date.now()) {
   try {
     const saved = JSON.parse(storage.getItem(JOURNEY_STORAGE_KEY) ?? 'null');
-    if (/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(saved?.id) && Number.isFinite(saved.updatedAt) && now >= saved.updatedAt && now - saved.updatedAt < JOURNEY_TIMEOUT_MS) {
+    if (JOURNEY_ID_REGEX.test(saved?.id) && Number.isFinite(saved.updatedAt) && now >= saved.updatedAt && now - saved.updatedAt < JOURNEY_TIMEOUT_MS) {
       storage.setItem(JOURNEY_STORAGE_KEY, JSON.stringify({ id: saved.id, updatedAt: now }));
       return saved.id as string;
     }
