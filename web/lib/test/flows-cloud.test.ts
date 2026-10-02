@@ -52,6 +52,13 @@ describe('flowsGoogleAuthHref', () => {
     expect(url.searchParams.get('next')).toBe('/flows/deploy?journey_id=537e4857-5590-42e8-8731-66441b466542');
   });
 
+  it('keeps relative Cloud hrefs working when Cloud is configured as a relative path', () => {
+    process.env.NEXT_PUBLIC_CLOUD_URL = '/cloud';
+    const href = '/cloud/api/auth/google/start?source=flows&next=%2Fflows%2Fdeploy';
+    const url = new URL(withFlowsJourney(href, '537e4857-5590-42e8-8731-66441b466542'), 'https://agentrelay.invalid');
+    expect(url.searchParams.get('next')).toBe('/flows/deploy?journey_id=537e4857-5590-42e8-8731-66441b466542');
+  });
+
   it('does not decorate non-Flows or off-origin auth targets', () => {
     process.env.NEXT_PUBLIC_CLOUD_URL = 'https://cloud.example.test/cloud';
     const id = '537e4857-5590-42e8-8731-66441b466542';
