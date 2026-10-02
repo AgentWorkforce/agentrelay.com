@@ -1,7 +1,7 @@
 const DEFAULT_CLOUD_URL = '/cloud';
 const GOOGLE_AUTH_PATH = '/api/auth/google/start';
 const FLOWS_DEPLOY_PATH = '/flows/deploy';
-const JOURNEY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const JOURNEY_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parseFlowsAuthHref(href: string): { url: URL; next: URL } | null {
   try {
