@@ -53,6 +53,7 @@ describe('flowsGoogleAuthHref', () => {
   });
 
   it('does not decorate non-Flows or off-origin auth targets', () => {
+    process.env.NEXT_PUBLIC_CLOUD_URL = 'https://cloud.example.test/cloud';
     const id = '537e4857-5590-42e8-8731-66441b466542';
     const teams = '/cloud/api/auth/google/start?source=teams&next=%2Fflows%2Fdeploy';
     const offOrigin = 'https://other.example.test/api/auth/google/start?source=flows&next=%2Fflows%2Fdeploy';

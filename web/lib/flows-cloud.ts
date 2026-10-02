@@ -8,6 +8,15 @@ function parseFlowsAuthHref(href: string): { url: URL; next: URL } | null {
   try {
     const url = new URL(href, 'https://agentrelay.invalid');
     if (!url.pathname.endsWith(GOOGLE_AUTH_PATH) || url.searchParams.get('source') !== 'flows') return null;
+    const configuredCloudUrl = process.env.NEXT_PUBLIC_CLOUD_URL;
+    const expectedOrigin = configuredCloudUrl
+      ? new URL(configuredCloudUrl, 'https://agentrelay.invalid').origin
+      : href.startsWith('/') && !href.startsWith('//')
+        ? 'https://agentrelay.invalid'
+        : typeof window !== 'undefined'
+          ? window.location.origin
+          : null;
+    if (!expectedOrigin || url.origin !== expectedOrigin) return null;
     const next = new URL(url.searchParams.get('next') ?? '', url.origin);
     if (next.origin !== url.origin || next.pathname !== FLOWS_DEPLOY_PATH) return null;
     return { url, next };
