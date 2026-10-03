@@ -1,9 +1,15 @@
 ---
 title: 'Quickstart'
-description: 'Get a proactive agent running.'
+description: 'Get a proactive agent running in one click.'
 ---
 
-Start with someone else's agent. Pick one from the [gallery](/agents), then deploy it from the terminal:
+Start with someone else's agent. Pick one from the [gallery](/agents) and hit **Launch agent**.
+
+Agent Relay Cloud opens its deploy page with that agent's persona already loaded. Pick a workspace, connect the providers it asks for, choose how it gets model access, fill in its inputs — Slack channel, repo, whatever it declared — and deploy.
+
+That's it. Its triggers and schedules are registered and it's live. Sandboxes spin up on the first trigger fire, so an idle agent costs nothing.
+
+## Prefer the terminal?
 
 ```bash
 gh repo clone AgentWorkforce/agents && cd agents
@@ -11,9 +17,7 @@ npx agentworkforce login
 npx agentworkforce deploy ./hn-monitor/persona.json --mode cloud
 ```
 
-Its triggers and schedules are registered and it's live. Sandboxes spin up on the first trigger fire, so an idle agent costs nothing.
-
-Fire it without waiting for its schedule:
+Then fire it without waiting for its schedule:
 
 ```bash
 npx agentworkforce trigger hn-monitor

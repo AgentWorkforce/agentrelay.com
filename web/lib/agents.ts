@@ -31,6 +31,8 @@ export interface Agent {
   dir: string;
   /** GitHub repo that hosts the agent (defaults to the agents monorepo). */
   repo?: string;
+  /** Persona definition filename inside dir (defaults to persona.ts). */
+  personaFile?: string;
   name: string;
   /** One punchy line for cards and hero. */
   tagline: string;
@@ -260,6 +262,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'cloudflare-monitor',
     personaId: 'cloudflare-monitor',
+    personaFile: 'persona.json',
     dir: 'cloudflare-monitor',
     name: 'Cloudflare Monitor',
     tagline: 'Watches Cloudflare usage and spend before infrastructure costs surprise your team.',
@@ -291,6 +294,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'daytona-monitor',
     personaId: 'daytona-monitor',
+    personaFile: 'persona.json',
     dir: 'daytona-monitor',
     name: 'Daytona Monitor',
     tagline: 'Flags quota pressure, broken sandboxes, and costly stale environments.',
@@ -316,6 +320,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'gcp-watcher',
     personaId: 'gcp-watcher',
+    personaFile: 'persona.json',
     dir: 'gcp-watcher',
     name: 'GCP Watcher',
     tagline: 'Keeps watch over Cloud Run health, monitoring incidents, and cloud spend.',
@@ -341,6 +346,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'neon-monitor',
     personaId: 'neon-monitor',
+    personaFile: 'persona.json',
     dir: 'neon-monitor',
     name: 'Neon Monitor',
     tagline: 'Catches database failures, compute thrash, and runaway Neon spend early.',
@@ -366,6 +372,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'inbox-buddy',
     personaId: 'inbox-buddy',
+    personaFile: 'persona.json',
     dir: 'inbox-buddy',
     name: 'Inbox Buddy',
     tagline: 'A conversational Gmail assistant that remembers what you were discussing.',
@@ -391,6 +398,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'joke-bot',
     personaId: 'joke-bot',
+    personaFile: 'persona.json',
     dir: 'joke-bot',
     name: 'Joke Bot',
     tagline: 'Delivers quick jokes, callback humor, and a daily laugh wherever you chat.',
@@ -416,6 +424,7 @@ export const AGENTS: Agent[] = [
   {
     slug: 'linear-slack',
     personaId: 'linear-slack',
+    personaFile: 'persona.json',
     dir: 'linear-slack',
     name: 'Linear Slack',
     tagline: 'Lets your team inspect and organize the Linear board from Slack.',
@@ -645,3 +654,18 @@ export function forkUrl(agent: Agent): string {
   return `https://github.com/${agentRepo(agent)}/fork`;
 }
 
+/** GitHub blob URL to the agent's persona definition file. */
+function personaUrl(agent: Agent): string {
+  const file = agent.personaFile ?? 'persona.ts';
+  return `https://github.com/${agentRepo(agent)}/blob/main/${agent.dir}/${file}`;
+}
+
+/**
+ * One-click deploy in the Agent Relay Cloud dashboard. The deploy page takes a
+ * `persona` pointing at the persona definition on GitHub, e.g.
+ * /cloud/dashboard/agents/deploy?persona=https://github.com/AgentWorkforce/agents/blob/main/review/persona.ts
+ */
+export function launchUrl(agent: Agent): string {
+  const cloudUrl = (process.env.NEXT_PUBLIC_CLOUD_URL || '/cloud').replace(/\/$/, '');
+  return `${cloudUrl}/dashboard/agents/deploy?${new URLSearchParams({ persona: personaUrl(agent) })}`;
+}

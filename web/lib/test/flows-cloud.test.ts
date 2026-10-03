@@ -1,24 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { flowsDeployUrl, flowsGoogleAuthHref, isFlowsGoogleAuthHref, withFlowsJourney } from '../flows-cloud';
-
-describe('flowsDeployUrl', () => {
-  const originalCloudUrl = process.env.NEXT_PUBLIC_CLOUD_URL;
-
-  afterEach(() => {
-    if (originalCloudUrl === undefined) delete process.env.NEXT_PUBLIC_CLOUD_URL;
-    else process.env.NEXT_PUBLIC_CLOUD_URL = originalCloudUrl;
-  });
-
-  it('defaults to the mounted Cloud path', () => {
-    delete process.env.NEXT_PUBLIC_CLOUD_URL;
-    expect(flowsDeployUrl()).toBe('/cloud/flows/deploy');
-  });
-
-  it('uses the configured Cloud origin without a duplicate slash', () => {
-    process.env.NEXT_PUBLIC_CLOUD_URL = 'https://cloud.example.test/cloud/';
-    expect(flowsDeployUrl()).toBe('https://cloud.example.test/cloud/flows/deploy');
-  });
-});
+import { flowsGoogleAuthHref, isFlowsGoogleAuthHref, withFlowsJourney } from '../flows-cloud';
 
 describe('flowsGoogleAuthHref', () => {
   const originalCloudUrl = process.env.NEXT_PUBLIC_CLOUD_URL;

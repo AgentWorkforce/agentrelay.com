@@ -1,5 +1,4 @@
-import { forkUrl, type Agent } from '../../lib/agents';
-import { flowsDeployUrl } from '../../lib/flows-cloud';
+import { forkUrl, launchUrl, type Agent } from '../../lib/agents';
 
 const GitHubMark = () => (
   <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -8,8 +7,8 @@ const GitHubMark = () => (
 );
 
 /**
- * CTA row for an agent: primary "Launch agent" (Agent Relay Cloud's Flows
- * deploy page) and a secondary
+ * CTA row for an agent: primary "Launch agent" (one-click deploy on Agent Relay
+ * Cloud's dashboard via /cloud/dashboard/agents/deploy?persona=…) and a secondary
  * "Fork on GitHub" link (https://github.com/<repo>/fork). Uses the global .btn
  * classes via the className props the caller passes.
  */
@@ -27,7 +26,7 @@ export function ForkAgentButton({
   return (
     <>
       <a
-        href={flowsDeployUrl()}
+        href={launchUrl(agent)}
         target="_blank"
         rel="noopener noreferrer"
         className={primaryClassName}
