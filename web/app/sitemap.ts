@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 
 import { allAgentSlugs } from '../lib/agents';
 import { getAllPosts } from '../lib/blog';
+import { getAllCaseStudies } from '../lib/case-studies';
 import { getAllDocSlugs } from '../lib/docs-nav';
 import { absoluteUrl } from '../lib/site';
 
@@ -58,6 +59,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: absoluteUrl('/blog'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: absoluteUrl('/case-studies'),
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.8,
@@ -149,5 +156,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...blogRoutes];
+  const caseStudyRoutes: MetadataRoute.Sitemap = getAllCaseStudies().map((study) => ({
+    url: absoluteUrl(`/case-studies/${study.slug}`),
+    lastModified: study.frontmatter.updatedAt
+      ? new Date(study.frontmatter.updatedAt)
+      : study.frontmatter.date
+        ? new Date(study.frontmatter.date)
+        : now,
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
+  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...blogRoutes, ...caseStudyRoutes];
 }
