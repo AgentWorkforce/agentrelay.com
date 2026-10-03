@@ -245,13 +245,33 @@ export const FLOW_CHECK_REPORT_COMMAND = [
 ].join('; ');
 
 /**
+ * Marks the run's change request as a draft, whichever host the repository
+ * lives on. Cloud puts `relayflow-change` on PATH for every repository run
+ * (AgentWorkforce/cloud#4164): on GitHub `relayflow-change draft` is
+ * `gh pr ready --undo` with the same exit status, on GitLab it makes the
+ * branch's open merge request a draft. A local run has no such helper and
+ * keeps `gh pr ready --undo`. A brace group, so it can be an `if` condition.
+ */
+export const FLOW_DRAFT_CHANGE_COMMAND =
+  '{ if command -v relayflow-change >/dev/null 2>&1; then relayflow-change draft; else gh pr ready --undo; fi; }';
+
+/**
+ * Posts `file` on the run's change request, like FLOW_DRAFT_CHANGE_COMMAND:
+ * `relayflow-change comment` when Cloud provides it (`gh pr comment` on
+ * GitHub, a merge request note on GitLab), `gh pr comment` otherwise.
+ */
+export function flowCommentChangeCommand(file: string): string {
+  return `{ if command -v relayflow-change >/dev/null 2>&1; then relayflow-change comment --body-file ${file}; else gh pr comment --body-file ${file}; fi; }`;
+}
+
+/**
  * Marks the pull request as not ready when a revision breaks the checks, and
  * posts the check report to it. Every branch exits 0, like
  * FLOW_REVIEW_BLOCKED_COMMAND, and for the same reason.
  */
 export const FLOW_CHECK_BLOCKED_COMMAND = [
-  'if gh pr ready --undo >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft." >&2; fi',
-  'if gh pr comment --body-file .relayflow/check-report.md >/dev/null 2>&1; then echo "relayflow: posted the check report to the pull request."; else echo "relayflow: could not comment on the pull request; .relayflow/check-report.md still holds the report." >&2; fi',
+  `if ${FLOW_DRAFT_CHANGE_COMMAND} >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft." >&2; fi`,
+  `if ${flowCommentChangeCommand('.relayflow/check-report.md')} >/dev/null 2>&1; then echo "relayflow: posted the check report to the pull request."; else echo "relayflow: could not comment on the pull request; .relayflow/check-report.md still holds the report." >&2; fi`,
 ].join('; ');
 
 /**
@@ -293,8 +313,8 @@ export const FLOW_TIME = (() => {
 export const FLOW_TIME_STOP_COMMAND = [
   'mkdir -p .relayflow',
   `printf '%s\\n' "**This run ran out of time before its reviews were done** (the flow's ${FLOW_TIME.headerMinutes / 60}h budget). The work is pushed and this pull request is a draft so it is not lost; review it by hand or run the flow again." > .relayflow/time-stop.md`,
-  'if gh pr ready --undo >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft." >&2; fi',
-  'if gh pr comment --body-file .relayflow/time-stop.md >/dev/null 2>&1; then echo "relayflow: posted the time stop to the pull request."; else echo "relayflow: could not comment on the pull request." >&2; fi',
+  `if ${FLOW_DRAFT_CHANGE_COMMAND} >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft." >&2; fi`,
+  `if ${flowCommentChangeCommand('.relayflow/time-stop.md')} >/dev/null 2>&1; then echo "relayflow: posted the time stop to the pull request."; else echo "relayflow: could not comment on the pull request." >&2; fi`,
 ].join('; ');
 
 /**
@@ -465,7 +485,7 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
   // (pull request already open) the patch goes to it as a comment; otherwise
   // the step fails with the patch in its output rather than losing it silently.
   'if [ -z "$(git rev-list "$new" --not --remotes 2>/dev/null)" ]; then relayflow_section; cat "$patch" >&2; '
-    + 'if [ "${comment:-}" = yes ] && gh pr comment --body-file "$section" >/dev/null 2>&1; then echo "relayflow push-guard: every new change edits $wf, which this token cannot push, so nothing else was pushed; posted the withheld workflow changes to the pull request." >&2; rm -rf "$tmp" "$err"; return 0; fi; '
+    + 'if [ "${comment:-}" = yes ] && ' + flowCommentChangeCommand('"$section"') + ' >/dev/null 2>&1; then echo "relayflow push-guard: every new change edits $wf, which this token cannot push, so nothing else was pushed; posted the withheld workflow changes to the pull request." >&2; rm -rf "$tmp" "$err"; return 0; fi; '
     + 'echo "relayflow push-guard: every change in this run edits $wf, which this token cannot push, so there is nothing else to publish. The edits are in $patch and printed above." >&2; rm -rf "$tmp" "$err"; return "$status"; fi',
   'git update-ref -m "relayflow: withhold workflow edits" HEAD "$new" "$orig"',
   'git push "$@" 2>"$tmp/push"; again=$?',
@@ -477,7 +497,7 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
   'git diff --name-only --no-renames "$new" "$orig" -- "$wf" | while IFS= read -r p; do if printf "%s\\n" "$dirty" | grep -qxF -- "$p"; then echo "relayflow push-guard: $p has uncommitted edits, so it was left as it is." >&2; continue; fi; if git cat-file -e "$new:$p" 2>/dev/null; then git checkout -q "$new" -- "$p"; else git rm -q -f --ignore-unmatch -- "$p" >/dev/null 2>&1; rm -f -- "$p"; fi; done',
   'if [ -s "$patch" ]; then relayflow_section; '
     + 'if [ "$size" -gt "$limit" ]; then cat "$patch" >&2; fi; '
-    + 'if [ "${comment:-}" = yes ]; then if gh pr comment --body-file "$section" >/dev/null 2>&1; then echo "relayflow push-guard: posted the withheld workflow changes to the pull request." >&2; else echo "relayflow push-guard: could not comment on the pull request; $section holds the withheld workflow changes." >&2; fi; '
+    + 'if [ "${comment:-}" = yes ]; then if ' + flowCommentChangeCommand('"$section"') + ' >/dev/null 2>&1; then echo "relayflow push-guard: posted the withheld workflow changes to the pull request." >&2; else echo "relayflow push-guard: could not comment on the pull request; $section holds the withheld workflow changes." >&2; fi; '
     + 'elif [ -f .relayflow/pr-body.md ]; then cat "$section" >> .relayflow/pr-body.md; fi; fi',
   'echo "relayflow push-guard: workflow edits withheld ($n files)"',
   'echo "relayflow push-guard: GitHub refused the edits to $wf, so the branch was pushed without them. The patch is $patch; the original commits are refs/relayflow/withheld-workflows." >&2',
@@ -582,8 +602,8 @@ export const FLOW_REVIEW_BLOCKED_COMMAND = [
   'set -e',
   `{ printf '%s\\n\\n' "${REVIEW_BLOCKED_HEADING}"; if [ -s review.md ]; then cat review.md; else printf '%s\\n' "_The reviewer left no review.md; see the review step in the run journal._"; fi; } > review-blocked.md || true`,
   'echo "relayflow: the adversarial review did not pass; wrote review-blocked.md."',
-  'if gh pr ready --undo >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft; review-blocked.md still holds the findings." >&2; fi',
-  'if gh pr comment --body-file review-blocked.md >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi',
+  `if ${FLOW_DRAFT_CHANGE_COMMAND} >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft; review-blocked.md still holds the findings." >&2; fi`,
+  `if ${flowCommentChangeCommand('review-blocked.md')} >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi`,
 ].join('; ');
 
 /** Upper bound, in bytes, on everything FLOW_REPORT_REVIEW_FINDINGS_COMMAND prints. */
