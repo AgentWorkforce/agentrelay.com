@@ -645,5 +645,3 @@ export function forkUrl(agent: Agent): string {
   return `https://github.com/${agentRepo(agent)}/fork`;
 }
 
-/** Agent Relay Cloud's deploy page for launching a flow. */
-export const LAUNCH_URL = 'https://agentrelay.com/cloud/flows/deploy';

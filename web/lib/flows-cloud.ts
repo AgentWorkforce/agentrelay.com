@@ -48,6 +48,12 @@ export function withFlowsJourney(href: string, id: string): string {
     : result;
 }
 
+/** Agent Relay Cloud's Flows deploy page. */
+export function flowsDeployUrl(): string {
+  const cloudUrl = (process.env.NEXT_PUBLIC_CLOUD_URL || DEFAULT_CLOUD_URL).replace(/\/$/, '');
+  return `${cloudUrl}${FLOWS_DEPLOY_PATH}`;
+}
+
 export function flowsGoogleAuthHref(placement?: string) {
   const cloudUrl = (process.env.NEXT_PUBLIC_CLOUD_URL || DEFAULT_CLOUD_URL).replace(/\/$/, '');
   const params = new URLSearchParams({
