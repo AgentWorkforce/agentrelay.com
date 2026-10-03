@@ -6,7 +6,8 @@ import path from 'node:path';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
-  FLOW_VALIDATE_CHANGE_METADATA_COMMAND,
+  FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
+  flowCommentChangeCommand,
 } from '../flow-workflows';
 
 /**
@@ -684,6 +685,71 @@ describe('FLOW_OPEN_CHANGE_COMMAND', () => {
   it('keeps the exit status, so a failed create still fails the step', () => {
     const { root, env } = fakes(['relayflow-open-change'], 3);
     expect(sh(FLOW_OPEN_CHANGE_COMMAND + args, root, env).code).toBe(3);
+  });
+});
+
+describe('change request follow-ups (draft and comment)', () => {
+  /** A bin dir whose fakes append `name|arg|arg|` per call to calls.txt (argument boundaries kept) and exit with `code`. */
+  function fakes(names: string[], code = 0) {
+    const root = fixture({ '.relayflow/check-report.md': 'report\n', 'review.md': '## Findings\n' });
+    const bin = path.join(root, 'bin');
+    mkdirSync(bin);
+    for (const name of names) {
+      writeFileSync(path.join(bin, name), `#!/bin/sh\n{ printf '%s|' "${name}" "$@"; echo; } >> "${root}/calls.txt"\nexit ${code}\n`, { mode: 0o755 });
+    }
+    return { root, env: { PATH: `${bin}:/usr/bin:/bin` } };
+  }
+  const followUps = [
+    ['FLOW_CHECK_BLOCKED_COMMAND', FLOW_CHECK_BLOCKED_COMMAND, '.relayflow/check-report.md'],
+    ['FLOW_TIME_STOP_COMMAND', FLOW_TIME_STOP_COMMAND, '.relayflow/time-stop.md'],
+    ['FLOW_REVIEW_BLOCKED_COMMAND', FLOW_REVIEW_BLOCKED_COMMAND, 'review-blocked.md'],
+  ] as const;
+
+  it.each(followUps)('%s drafts and comments through the hosted helper when Cloud put it on PATH', (_name, command, file) => {
+    const { root, env } = fakes(['relayflow-change', 'gh']);
+    const result = sh(command, root, env);
+    expect(result.code).toBe(0);
+    expect(read(root, 'calls.txt').trim().split('\n')).toEqual([
+      'relayflow-change|draft|',
+      `relayflow-change|comment|--body-file|${file}|`,
+    ]);
+    expect(result.stdout).toContain('converted the pull request to a draft.');
+  });
+
+  it.each(followUps)('%s falls back to gh for a local run, with the same arguments as before', (_name, command, file) => {
+    const { root, env } = fakes(['gh']);
+    expect(sh(command, root, env).code).toBe(0);
+    expect(read(root, 'calls.txt').trim().split('\n')).toEqual([
+      'gh|pr|ready|--undo|',
+      `gh|pr|comment|--body-file|${file}|`,
+    ]);
+  });
+
+  it.each(followUps)('%s still exits 0 when the helper cannot draft or comment', (_name, command) => {
+    const { root, env } = fakes(['relayflow-change'], 1);
+    const result = sh(command, root, env);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain('could not convert the pull request to a draft');
+    expect(result.stderr).toContain('could not comment on the pull request');
+  });
+
+  it('comments a quoted file path through the helper or gh, keeping the exit status', () => {
+    const helper = fakes(['relayflow-change', 'gh'], 4);
+    expect(sh(`section='withheld changes.md'; ${flowCommentChangeCommand('"$section"')}`, helper.root, helper.env).code).toBe(4);
+    expect(read(helper.root, 'calls.txt').trim()).toBe('relayflow-change|comment|--body-file|withheld changes.md|');
+    const local = fakes(['gh']);
+    expect(sh(`section=withheld.md; ${flowCommentChangeCommand('"$section"')}`, local.root, local.env).code).toBe(0);
+    expect(read(local.root, 'calls.txt').trim()).toBe('gh|pr|comment|--body-file|withheld.md|');
+    expect(FLOW_DRAFT_CHANGE_COMMAND).toContain('relayflow-change draft');
+  });
+
+  it('never calls gh pr ready or gh pr comment except as the local fallback', () => {
+    for (const command of [FLOW_CHECK_BLOCKED_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_PUSH_COMMAND]) {
+      const bare = command.match(/gh pr (ready|comment)/g) ?? [];
+      const fallback = command.match(/else gh pr (ready|comment)/g) ?? [];
+      expect(bare.length).toBe(fallback.length);
+    }
+    expect(FLOW_PUSH_COMMAND).toContain('relayflow-change comment');
   });
 });
 
