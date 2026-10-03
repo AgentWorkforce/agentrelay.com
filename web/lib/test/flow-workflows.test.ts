@@ -689,13 +689,13 @@ describe('FLOW_OPEN_CHANGE_COMMAND', () => {
 });
 
 describe('change request follow-ups (draft and comment)', () => {
-  /** A bin dir whose fakes append `name args...` per call to calls.txt and exit with `code`. */
+  /** A bin dir whose fakes append `name|arg|arg|` per call to calls.txt (argument boundaries kept) and exit with `code`. */
   function fakes(names: string[], code = 0) {
     const root = fixture({ '.relayflow/check-report.md': 'report\n', 'review.md': '## Findings\n' });
     const bin = path.join(root, 'bin');
     mkdirSync(bin);
     for (const name of names) {
-      writeFileSync(path.join(bin, name), `#!/bin/sh\necho "${name} $*" >> "${root}/calls.txt"\nexit ${code}\n`, { mode: 0o755 });
+      writeFileSync(path.join(bin, name), `#!/bin/sh\n{ printf '%s|' "${name}" "$@"; echo; } >> "${root}/calls.txt"\nexit ${code}\n`, { mode: 0o755 });
     }
     return { root, env: { PATH: `${bin}:/usr/bin:/bin` } };
   }
@@ -710,8 +710,8 @@ describe('change request follow-ups (draft and comment)', () => {
     const result = sh(command, root, env);
     expect(result.code).toBe(0);
     expect(read(root, 'calls.txt').trim().split('\n')).toEqual([
-      'relayflow-change draft',
-      `relayflow-change comment --body-file ${file}`,
+      'relayflow-change|draft|',
+      `relayflow-change|comment|--body-file|${file}|`,
     ]);
     expect(result.stdout).toContain('converted the pull request to a draft.');
   });
@@ -720,8 +720,8 @@ describe('change request follow-ups (draft and comment)', () => {
     const { root, env } = fakes(['gh']);
     expect(sh(command, root, env).code).toBe(0);
     expect(read(root, 'calls.txt').trim().split('\n')).toEqual([
-      'gh pr ready --undo',
-      `gh pr comment --body-file ${file}`,
+      'gh|pr|ready|--undo|',
+      `gh|pr|comment|--body-file|${file}|`,
     ]);
   });
 
@@ -736,10 +736,10 @@ describe('change request follow-ups (draft and comment)', () => {
   it('comments a quoted file path through the helper or gh, keeping the exit status', () => {
     const helper = fakes(['relayflow-change', 'gh'], 4);
     expect(sh(`section='withheld changes.md'; ${flowCommentChangeCommand('"$section"')}`, helper.root, helper.env).code).toBe(4);
-    expect(read(helper.root, 'calls.txt').trim()).toBe('relayflow-change comment --body-file withheld changes.md');
+    expect(read(helper.root, 'calls.txt').trim()).toBe('relayflow-change|comment|--body-file|withheld changes.md|');
     const local = fakes(['gh']);
     expect(sh(`section=withheld.md; ${flowCommentChangeCommand('"$section"')}`, local.root, local.env).code).toBe(0);
-    expect(read(local.root, 'calls.txt').trim()).toBe('gh pr comment --body-file withheld.md');
+    expect(read(local.root, 'calls.txt').trim()).toBe('gh|pr|comment|--body-file|withheld.md|');
     expect(FLOW_DRAFT_CHANGE_COMMAND).toContain('relayflow-change draft');
   });
 
