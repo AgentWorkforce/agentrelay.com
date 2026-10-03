@@ -8,7 +8,7 @@ const GitHubMark = () => (
 
 /**
  * CTA row for an agent: primary "Launch agent" (one-click deploy on Agent Relay
- * Cloud via https://agentrelay.com/cloud/deploy?persona=…) and a secondary
+ * Cloud's dashboard via /cloud/dashboard/agents/deploy?persona=…) and a secondary
  * "Fork on GitHub" link (https://github.com/<repo>/fork). Uses the global .btn
  * classes via the className props the caller passes.
  */
