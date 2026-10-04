@@ -5,6 +5,7 @@ import {
   FLOW_CHECK_RUN_COMMAND,
   FLOW_OPEN_CHANGE_COMMAND,
   FLOW_PUBLISH_CHECK_COMMAND,
+  FLOW_PUSH_COMMAND,
   FLOW_REVIEW_BLOCKED_COMMAND,
   FLOW_TIME,
   FLOW_TIME_STOP_COMMAND,
@@ -36,7 +37,10 @@ type Timing = {
   /** Minutes and verdict of each check run, in order; later runs repeat the last. */
   checks: { minutes: number; verdict: string }[];
   baseline?: { minutes: number; verdict: string };
-  /** Charge every command that states a timeout its full timeout (agentrelay.com#135). */
+  /**
+   * Charge every command its full limit (agentrelay.com#135): the timeout it
+   * states, or the kernel's 30s default.
+   */
   fullTimeouts?: boolean;
 };
 
@@ -44,7 +48,7 @@ type Timing = {
  * Runs the generated flow against a simulated clock and the kernel's budget
  * rule (flows `AuthoredBudget`): every step's wallclock is charged, and a step
  * is refused once the charged total exceeds the header's wallclock. Every
- * other command takes 5 seconds, or its whole timeout with `fullTimeouts`.
+ * other command takes 5 seconds, or its whole limit with `fullTimeouts`.
  */
 async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'traditional', options: { parallel?: string[] } = {}) {
   const source = factorySource({ ...draft, workflow });
@@ -107,8 +111,9 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
           step('base-check', base.minutes * MINUTE);
           return base.verdict;
         }
-        const limit = timing.fullTimeouts && runOptions?.timeout ? /^(\d+)(ms|s|m|h)$/.exec(runOptions.timeout) : null;
-        step(command.startsWith(FLOW_OPEN_CHANGE_COMMAND) ? 'open-change' : command === FLOW_TIME_STOP_COMMAND ? 'time-stop' : command === FLOW_REVIEW_BLOCKED_COMMAND ? 'review-blocked' : 'run', limit ? Number(limit[1]) * UNITS[limit[2]!]! : 5000);
+        const limit = /^(\d+)(ms|s|m|h)$/.exec(runOptions?.timeout ?? '');
+        const ms = !timing.fullTimeouts ? 5000 : limit ? Number(limit[1]) * UNITS[limit[2]!]! : FLOW_TIME.defaultStepMinutes * MINUTE;
+        step(command.startsWith(FLOW_OPEN_CHANGE_COMMAND) ? 'open-change' : command.includes(FLOW_PUSH_COMMAND) ? 'push' : command === FLOW_TIME_STOP_COMMAND ? 'time-stop' : command === FLOW_REVIEW_BLOCKED_COMMAND ? 'review-blocked' : 'run', ms);
         // The flow reads the clock through a journaled step.
         if (command === 'date +%s') return String(epoch + Math.floor(wallMs / 1000));
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return 'publish';
@@ -142,17 +147,19 @@ describe('Garden flow time budget (cloud#4108)', () => {
     // A repair starts only when it, the re-check, the base-commit check that a
     // still-failing check triggers, and publishing all fit.
     expect(t.repairStartMinutes).toBe(t.repairMinutes + t.checkMinutes + t.checkMinutes + t.publishMinutes);
-    // A review round starts only when the review and a time-stop publish fit.
-    expect(t.reviewStartMinutes).toBe(t.reviewMinutes + t.publishMinutes);
+    // A review round starts only when the review, its local steps and closing
+    // fit; the pull request is already open.
+    expect(t.reviewStartMinutes).toBe(t.reviewMinutes + 4 * t.defaultStepMinutes + t.closeMinutes);
     // A fix round is the fixer, its check, the next review, and publishing.
     expect(t.fixRoundStartMinutes).toBe(t.fixerMinutes + t.checkMinutes + t.reviewMinutes + t.publishMinutes);
     // Publishing at every step's limit (agentrelay.com#135): drop working
     // files and open the change request at forgeMinutes, the push at
-    // pushMinutes (its workflow-edit fallback pushes twice), four local steps
-    // at the kernel's default, one draft-and-comment follow-up and the
-    // review-findings report.
-    expect(t.pushMinutes).toBeGreaterThanOrEqual(2 * t.forgeMinutes);
-    expect(t.publishMinutes).toBeGreaterThanOrEqual(t.forgeMinutes + t.pushMinutes + t.forgeMinutes + 4 * t.defaultStepMinutes + t.followUpMinutes + t.defaultStepMinutes);
+    // pushMinutes (its workflow-edit fallback pushes twice and may comment),
+    // four local steps at the kernel's default, then closing: one
+    // draft-and-comment follow-up and the review-findings report.
+    expect(t.pushMinutes).toBeGreaterThanOrEqual(2 * t.forgeMinutes + t.followUpMinutes);
+    expect(t.closeMinutes).toBeGreaterThanOrEqual(t.followUpMinutes + t.defaultStepMinutes);
+    expect(t.publishMinutes).toBeGreaterThanOrEqual(t.forgeMinutes + t.pushMinutes + t.forgeMinutes + 4 * t.defaultStepMinutes + t.closeMinutes);
     // The allowances cover the longest steps measured on 2026-10-01: a check
     // run of 14m00s (15m lease), repair agents of 37m18s and 44m09s.
     expect(t.checkMinutes).toBeGreaterThanOrEqual(15);
@@ -176,10 +183,11 @@ describe('Garden flow time budget (cloud#4108)', () => {
   });
 
   it('still publishes when every check times out and every repair and review takes its full allowance', async () => {
-    // The implementer leaves just enough time for one repair (repairStartMinutes),
-    // so the run reaches the reviews late and must stop for time.
+    // The implementer leaves no time to repair or check the base commit, and
+    // less than a review round (reviewStartMinutes) once the pull request is
+    // open, so the run must stop for time.
     const run = await runTimed({
-      agents: { 'planner': 10, 'plan-reviewer': 10, 'check-discovery': 10, 'implementer': 25, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
+      agents: { 'planner': 10, 'plan-reviewer': 10, 'check-discovery': 10, 'implementer': 105, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
       checks: [{ minutes: FLOW_TIME.checkMinutes, verdict: 'timeout' }],
       baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
     });
@@ -192,18 +200,47 @@ describe('Garden flow time budget (cloud#4108)', () => {
     expect(run.errors.join('\n')).toMatch(/out of time/i);
   });
 
-  it('still publishes when the publish steps also take their full timeouts (agentrelay.com#135)', async () => {
-    for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
-      const run = await runTimed({
-        agents: { 'planner': 10, 'plan-reviewer': 10, 'check-discovery': 10, 'prototype': 20, 'comparator': 10, 'implementer': 30, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
-        checks: [{ minutes: FLOW_TIME.checkMinutes, verdict: 'timeout' }],
-        baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
-        fullTimeouts: true,
-      }, workflow);
-      expect(run.refused).toBeNull();
-      expect(run.opened).toBeDefined();
-      expect(run.chargedMinutes).toBeLessThanOrEqual(FLOW_TIME.bodyMinutes);
+  it('never runs out of budget when every step takes its full limit, wherever the guards' edges fall (agentrelay.com#135)', async () => {
+    // Every step is charged its whole timeout or the 30s default, and every
+    // agent its whole allowance. Sweeping the implementer moves the run
+    // across each guard's edge: wherever a repair, review or fix round only
+    // just starts, what follows it must still fit. Failing checks spend the
+    // time on repairs; passing ones after short planning reach a fix round.
+    let fixRounds = 0;
+    let checked = 0;
+    for (const workflow of ['traditional', 'prototype', 'simple'] as const) for (const [verdict, early] of [['timeout', 10], ['pass', 1]] as const) {
+      for (let implementer = 0; implementer <= 150; implementer += 0.5) {
+        const run = await runTimed({
+          agents: { 'planner': early, 'plan-reviewer': early, 'check-discovery': early, 'prototype': 2 * early, 'comparator': early, 'implementer': implementer, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
+          checks: [{ minutes: FLOW_TIME.checkMinutes, verdict }],
+          baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
+          fullTimeouts: true,
+        }, workflow);
+        // The guards protect publishing from the optional steps; they cannot
+        // make room when the mandatory path alone (everything up to the
+        // implementer, the implementer, one check, publishing) does not fit.
+        const implementerStart = run.calls.find(call => call.name === 'implementer')!.atMinute;
+        if (implementerStart + implementer + FLOW_TIME.checkMinutes + FLOW_TIME.publishMinutes + 2 * FLOW_TIME.defaultStepMinutes > FLOW_TIME.bodyMinutes) break;
+        checked++;
+        expect(run.refused, `${workflow}, ${verdict}, implementer ${implementer}m`).toBeNull();
+        expect(run.opened, `${workflow}, ${verdict}, implementer ${implementer}m`).toBeDefined();
+        // The kernel refuses only a step that would start past the budget, so
+        // the last step may end past it. The guards keep that to the two
+        // steps before the flow first reads its clock (the working-file
+        // exclude and that read), charged here at 30s each.
+        expect(run.chargedMinutes).toBeLessThanOrEqual(FLOW_TIME.bodyMinutes + 2 * FLOW_TIME.defaultStepMinutes);
+        const names = run.calls.map(call => call.name);
+        if (names.includes('fixer')) {
+          fixRounds++;
+          // The fix round's re-publish runs after the fixer, and the run still closes.
+          expect(names.slice(names.indexOf('fixer')).filter(name => name === 'push')).toHaveLength(1);
+          expect(names.some(name => name === 'review-blocked' || name === 'time-stop')).toBe(true);
+        }
+      }
     }
+    // Not vacuous: the sweep covers many runs, some of which reach a fix round.
+    expect(checked).toBeGreaterThan(100);
+    expect(fixRounds).toBeGreaterThan(0);
   });
 
   it('skips a repair it cannot afford and publishes the draft with time to spare', async () => {

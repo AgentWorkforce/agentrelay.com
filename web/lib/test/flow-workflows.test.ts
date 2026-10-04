@@ -9,7 +9,7 @@ import {
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
   FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
   flowCommentChangeCommand,
-  WORKFLOWS,
+  WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
 
@@ -860,10 +860,13 @@ describe('publish-path step timeouts (agentrelay.com#135)', () => {
       expect(publishing.some(step => step.command.includes(FLOW_OPEN_CHANGE_COMMAND))).toBe(true);
       expect(publishing.some(step => step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND))).toBe(true);
       expect(publishing.filter(step => step.timeout === undefined).map(step => step.source)).toEqual([]);
-      for (const step of publishing) expect(step.timeout).toMatch(/^[1-9]\d*m$/);
-      // A push can be two pushes and a commit rebuild (the workflow-edit
-      // fallback), so it gets twice what one forge call does.
-      for (const step of publishing.filter(step => step.command.includes(FLOW_PUSH_COMMAND))) expect(step.timeout).toBe('10m');
+      // The limits are the ones FLOW_TIME's publish arithmetic is built on.
+      for (const step of publishing) {
+        const minutes = step.command.includes(FLOW_PUSH_COMMAND) ? FLOW_TIME.pushMinutes
+          : step.command.includes(FLOW_OPEN_CHANGE_COMMAND) || step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND) ? FLOW_TIME.forgeMinutes
+            : FLOW_TIME.followUpMinutes;
+        expect(step.timeout, step.source).toBe(`${minutes}m`);
+      }
     });
   }
 });

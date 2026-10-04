@@ -296,31 +296,35 @@ export const FLOW_TIME = (() => {
   // push to a large repository took longer (agentrelay.com#135). So each step
   // that talks to the forge or rewrites the branch before a push states its
   // limit: opening the change request and dropping working files get
-  // forgeMinutes; a push gets pushMinutes, two of them, because when GitHub
-  // refuses workflow edits FLOW_PUSH_COMMAND rebuilds the commits and pushes
-  // again in the same step; the draft-and-comment follow-ups get
-  // followUpMinutes.
+  // forgeMinutes; the draft-and-comment follow-ups get followUpMinutes; a push
+  // gets pushMinutes, because when GitHub refuses workflow edits
+  // FLOW_PUSH_COMMAND rebuilds the commits, pushes a second time and, for a
+  // revision (comment=yes), posts the withheld patch, all in the same step.
   const forgeMinutes = 5;
-  const pushMinutes = 2 * forgeMinutes;
   const followUpMinutes = 2;
+  const pushMinutes = 2 * forgeMinutes + followUpMinutes;
   const defaultStepMinutes = 0.5;
+  // What can follow the last review: one draft-and-comment follow-up (time
+  // stop, check blocked or review blocked: 2m) and the review-findings report
+  // (0.5m).
+  const closeMinutes = followUpMinutes + defaultStepMinutes;
   // Publishing at the longest each step may take: dropping working files (5m),
-  // the push (10m) and opening the change request (5m), the four local steps
+  // the push (12m) and opening the change request (5m), the four local steps
   // between them at the default (publish check, check report, metadata,
-  // validation: 4 x 0.5m), then one draft-and-comment follow-up (time stop,
-  // check blocked or review blocked: 2m) and the review-findings report
-  // (0.5m). 24.5m, rounded up to 25m. A fix round's re-publish
-  // (5 + 10 + 0.5 + 2 = 17.5m) fits.
-  const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + followUpMinutes + defaultStepMinutes);
+  // validation: 4 x 0.5m), then closing (2.5m). 26.5m, rounded up to 27m. A
+  // fix round's re-publish (5 + 12 + 0.5 + 2 = 19.5m) fits.
+  const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + closeMinutes);
   return Object.freeze({
     headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes,
-    forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, publishMinutes,
+    forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, closeMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
     // A repair, its re-check, the base-commit check a still-failing check
     // triggers, and publishing.
     repairStartMinutes: repairMinutes + checkMinutes + checkMinutes + publishMinutes,
-    // A review, then publishing a time stop.
-    reviewStartMinutes: reviewMinutes + publishMinutes,
+    // The pull request is open by then, so a review round needs only the
+    // review, its four local steps (this guard's clock read, clearing and
+    // reading review.clean, and the fix-round clock read) and closing.
+    reviewStartMinutes: reviewMinutes + 4 * defaultStepMinutes + closeMinutes,
     // The fixer, its check, the next review, and publishing.
     fixRoundStartMinutes: fixerMinutes + checkMinutes + reviewMinutes + publishMinutes,
   });
