@@ -47,7 +47,7 @@ Add `-g` for a user-level install, or `--agent claude-code` to choose a tool.
 
 Codex loads global skills from `~/.codex/skills`. Do not install these with `prpm --as codex`: the
 conversion drops explanatory paragraphs from the workflows and writes under `~/.agents/skills`.
-Install for Claude Code as above, then mirror the files:
+Install for Claude Code first, **globally** (the prpm command above already uses `--global`; with `skills add`, pass `-g`), because the mirror reads `~/.claude/skills`. Then mirror the files:
 
 ```bash
 (
