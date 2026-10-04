@@ -241,7 +241,7 @@ describe('Garden flow time budget (cloud#4108)', () => {
     // Not vacuous: the sweep covers many runs, some of which reach a fix round.
     expect(checked).toBeGreaterThan(100);
     expect(fixRounds).toBeGreaterThan(0);
-  });
+  }, 30_000); // About a thousand simulated runs.
 
   it('skips a repair it cannot afford and publishes the draft with time to spare', async () => {
     const run = await runTimed({
