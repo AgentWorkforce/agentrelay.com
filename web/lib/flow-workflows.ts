@@ -954,7 +954,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       console.error("Stopped: out of time before the reviews were done. The work is pushed and the pull request is a draft.");
       return f.done("needs_human");
     }
-    await f.run("rm -f review.clean");
+    // Each reviewer starts from nothing: a review.md left by the previous round
+    // would read as this reviewer's findings if it is stopped before writing.
+    await f.run("rm -f review.clean review.md");
     const review = await f.agent("adversary-" + (round + 1), {
       ${options('adversary', 'reviewer', '', FLOW_TIME.reviewMinutes)}
     });

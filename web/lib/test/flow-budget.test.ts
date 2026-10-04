@@ -379,6 +379,9 @@ describe('timed-out agent steps (agentrelay.com#138)', () => {
     const review = run.calls.find(call => call.name === 'adversary-1')!;
     expect(review).toMatchObject({ minutes: FLOW_TIME.reviewMinutes, timedOut: true });
     expect(after(run, 'adversary-1').some(call => call.command?.startsWith('test -f review.clean'))).toBe(false);
+    // The reviewer starts without a previous round's review.md, so a stopped
+    // one can never pass off older findings as its own.
+    expect(run.calls[run.calls.indexOf(review) - 1]?.command).toBe('rm -f review.clean review.md');
     const blocked = run.calls.find(call => call.name === 'review-blocked');
     expect(blocked?.command).toMatch(/^review_timeout=yes; /);
     expect(errorsOf(run)).toContain(`adversary-1 was stopped at its ${FLOW_TIME.reviewMinutes}m limit`);

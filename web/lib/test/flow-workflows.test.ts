@@ -898,7 +898,11 @@ describe('agent step time limits (agentrelay.com#138)', () => {
         const prefix = name && ts.isBinaryExpression(name) ? name.left : name;
         steps.push({
           name: prefix && ts.isStringLiteralLike(prefix) ? prefix.text.replace(/-$/, '') : prefix?.getText(file) ?? '',
-          timeout: timeout && ts.isPropertyAssignment(timeout) && ts.isStringLiteralLike(timeout.initializer) ? timeout.initializer.text : undefined,
+          // A timeout that is not a string literal is still a timeout: record it
+          // so the no-limit checks cannot pass over it.
+          timeout: timeout === undefined ? undefined
+            : ts.isPropertyAssignment(timeout) && ts.isStringLiteralLike(timeout.initializer) ? timeout.initializer.text
+              : `<not a string literal: ${timeout.getText(file)}>`,
           source: node.getText(file),
         });
       }
