@@ -295,21 +295,26 @@ export const FLOW_TIME = (() => {
   // timed-out step throws: run ccbc27c8 lost 1h46m of finished work when its
   // push to a large repository took longer (agentrelay.com#135). So each step
   // that talks to the forge or rewrites the branch before a push states its
-  // limit: the pushes, opening the change request, and dropping working files
-  // get forgeMinutes; the draft-and-comment follow-ups get followUpMinutes.
+  // limit: opening the change request and dropping working files get
+  // forgeMinutes; a push gets pushMinutes, two of them, because when GitHub
+  // refuses workflow edits FLOW_PUSH_COMMAND rebuilds the commits and pushes
+  // again in the same step; the draft-and-comment follow-ups get
+  // followUpMinutes.
   const forgeMinutes = 5;
+  const pushMinutes = 2 * forgeMinutes;
   const followUpMinutes = 2;
   const defaultStepMinutes = 0.5;
-  // Publishing at the longest each step may take: dropping working files, the
-  // push and opening the change request (3 x 5m), the four local steps between
-  // them at the default (publish check, check report, metadata, validation:
-  // 4 x 0.5m), then one draft-and-comment follow-up (time stop, check blocked
-  // or review blocked: 2m) and the review-findings report (0.5m). 19.5m,
-  // rounded up to 20m. A fix round's re-publish (5 + 5 + 0.5 + 2 = 12.5m) fits.
-  const publishMinutes = Math.ceil(3 * forgeMinutes + 4 * defaultStepMinutes + followUpMinutes + defaultStepMinutes);
+  // Publishing at the longest each step may take: dropping working files (5m),
+  // the push (10m) and opening the change request (5m), the four local steps
+  // between them at the default (publish check, check report, metadata,
+  // validation: 4 x 0.5m), then one draft-and-comment follow-up (time stop,
+  // check blocked or review blocked: 2m) and the review-findings report
+  // (0.5m). 24.5m, rounded up to 25m. A fix round's re-publish
+  // (5 + 10 + 0.5 + 2 = 17.5m) fits.
+  const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + followUpMinutes + defaultStepMinutes);
   return Object.freeze({
     headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes,
-    forgeMinutes, followUpMinutes, defaultStepMinutes, publishMinutes,
+    forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
     // A repair, its re-check, the base-commit check a still-failing check
     // triggers, and publishing.
@@ -841,7 +846,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     return f.done("needs_human");
   }
   if (publish !== "publish") {
-    await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD", { timeout: "${FLOW_TIME.forgeMinutes}m" });
+    await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD", { timeout: "${FLOW_TIME.pushMinutes}m" });
     console.error("Stopped: the branch was pushed, but no summary.md was written, so there is no pull-request body. Open the pull request by hand, or run again.");
     return f.done("needs_human");
   }
@@ -857,7 +862,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     console.error("Stopped: invalid pull-request metadata (" + metadataVerdict + "). No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
   }
-  await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD", { timeout: "${FLOW_TIME.forgeMinutes}m" });
+  await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD", { timeout: "${FLOW_TIME.pushMinutes}m" });
   // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
@@ -918,7 +923,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       // report and the flow stops.
       const revised = await checkAndRepair();
       await f.run("base=" + baseCommit + "; " + dropWorkingFiles, { timeout: "${FLOW_TIME.forgeMinutes}m" });
-      await f.run("base=" + baseCommit + "; comment=yes; " + pushBranch, { timeout: "${FLOW_TIME.forgeMinutes}m" });
+      await f.run("base=" + baseCommit + "; comment=yes; " + pushBranch, { timeout: "${FLOW_TIME.pushMinutes}m" });
       if (broken(revised) && !broken(check)) {
         await f.run("check=" + revised + "; baseline=revision; " + checkReport);
         await f.run(${JSON.stringify(FLOW_CHECK_BLOCKED_COMMAND)}, { timeout: "${FLOW_TIME.followUpMinutes}m" });

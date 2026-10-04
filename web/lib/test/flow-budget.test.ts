@@ -147,10 +147,12 @@ describe('Garden flow time budget (cloud#4108)', () => {
     // A fix round is the fixer, its check, the next review, and publishing.
     expect(t.fixRoundStartMinutes).toBe(t.fixerMinutes + t.checkMinutes + t.reviewMinutes + t.publishMinutes);
     // Publishing at every step's limit (agentrelay.com#135): drop working
-    // files, push and open the change request at forgeMinutes, four local
-    // steps at the kernel's default, one draft-and-comment follow-up and the
+    // files and open the change request at forgeMinutes, the push at
+    // pushMinutes (its workflow-edit fallback pushes twice), four local steps
+    // at the kernel's default, one draft-and-comment follow-up and the
     // review-findings report.
-    expect(t.publishMinutes).toBeGreaterThanOrEqual(3 * t.forgeMinutes + 4 * t.defaultStepMinutes + t.followUpMinutes + t.defaultStepMinutes);
+    expect(t.pushMinutes).toBeGreaterThanOrEqual(2 * t.forgeMinutes);
+    expect(t.publishMinutes).toBeGreaterThanOrEqual(t.forgeMinutes + t.pushMinutes + t.forgeMinutes + 4 * t.defaultStepMinutes + t.followUpMinutes + t.defaultStepMinutes);
     // The allowances cover the longest steps measured on 2026-10-01: a check
     // run of 14m00s (15m lease), repair agents of 37m18s and 44m09s.
     expect(t.checkMinutes).toBeGreaterThanOrEqual(15);
@@ -174,8 +176,10 @@ describe('Garden flow time budget (cloud#4108)', () => {
   });
 
   it('still publishes when every check times out and every repair and review takes its full allowance', async () => {
+    // The implementer leaves just enough time for one repair (repairStartMinutes),
+    // so the run reaches the reviews late and must stop for time.
     const run = await runTimed({
-      agents: { 'planner': 10, 'plan-reviewer': 10, 'check-discovery': 10, 'implementer': 30, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
+      agents: { 'planner': 10, 'plan-reviewer': 10, 'check-discovery': 10, 'implementer': 25, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
       checks: [{ minutes: FLOW_TIME.checkMinutes, verdict: 'timeout' }],
       baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
     });

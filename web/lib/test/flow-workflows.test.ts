@@ -861,6 +861,9 @@ describe('publish-path step timeouts (agentrelay.com#135)', () => {
       expect(publishing.some(step => step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND))).toBe(true);
       expect(publishing.filter(step => step.timeout === undefined).map(step => step.source)).toEqual([]);
       for (const step of publishing) expect(step.timeout).toMatch(/^[1-9]\d*m$/);
+      // A push can be two pushes and a commit rebuild (the workflow-edit
+      // fallback), so it gets twice what one forge call does.
+      for (const step of publishing.filter(step => step.command.includes(FLOW_PUSH_COMMAND))) expect(step.timeout).toBe('10m');
     });
   }
 });
