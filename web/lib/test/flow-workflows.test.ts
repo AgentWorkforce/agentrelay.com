@@ -12,6 +12,7 @@ import {
   WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
+import { RELAYFLOWS_VERSION } from '../flow-local';
 
 /**
  * Every generated check step runs under `sh`, and its exit code is the only
@@ -869,4 +870,132 @@ describe('publish-path step timeouts (agentrelay.com#135)', () => {
       }
     });
   }
+});
+
+/**
+ * FLOW_TIME starts a long agent step only when its allowance still fits, but
+ * until relayflows 2.0.40 nothing stopped an agent at that allowance: a
+ * check-repair agent ran 38m / 592 turns / $54, another 44m / $26.57
+ * (agentrelay.com#138, cloud#4108). Each long agent step now states its
+ * allowance as a hard `timeout`, which resolves the step with
+ * `completionReason: "timeout"` instead of throwing (AgentWorkforce/flows#606).
+ */
+describe('agent step time limits (agentrelay.com#138)', () => {
+  const draft = (workflow: FactoryDraft['workflow']): FactoryDraft => ({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow, step: 3 });
+
+  /** Every `f.agent` call in the generated source: its name expression and its `timeout`, if any. */
+  function agentSteps(source: string) {
+    const file = ts.createSourceFile('flow.ts', source, ts.ScriptTarget.ES2022, true);
+    const steps: { name: string; timeout?: string; source: string }[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.name.text === 'agent' && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'f') {
+        const [name, options] = node.arguments;
+        const timeout = options && ts.isObjectLiteralExpression(options)
+          ? options.properties.find(property => ts.isPropertyAssignment(property) && property.name.getText(file) === 'timeout')
+          : undefined;
+        // "check-repair-" + (++repairs) and "adversary-" + (round + 1) name a family by their prefix.
+        const prefix = name && ts.isBinaryExpression(name) ? name.left : name;
+        steps.push({
+          name: prefix && ts.isStringLiteralLike(prefix) ? prefix.text.replace(/-$/, '') : prefix?.getText(file) ?? '',
+          timeout: timeout && ts.isPropertyAssignment(timeout) && ts.isStringLiteralLike(timeout.initializer) ? timeout.initializer.text : undefined,
+          source: node.getText(file),
+        });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    return steps;
+  }
+
+  // The allowance each agent step is stopped at; undefined stays unbounded.
+  const LIMITS: Record<string, number | undefined> = {
+    'check-repair': FLOW_TIME.repairMinutes,
+    'adversary': FLOW_TIME.reviewMinutes,
+    'fixer': FLOW_TIME.fixerMinutes,
+    'check-discovery': FLOW_TIME.discoveryMinutes,
+    'planner': undefined,
+    'plan-reviewer': undefined,
+    'implementer': undefined,
+    'prototype': undefined,
+    'comparator': undefined,
+  };
+
+  it('keeps every allowance within the runtime\'s 60m ceiling', () => {
+    for (const minutes of Object.values(LIMITS)) if (minutes !== undefined) {
+      expect(minutes).toBeGreaterThan(0);
+      expect(minutes).toBeLessThanOrEqual(FLOW_TIME.agentLimitMaxMinutes);
+    }
+    expect(FLOW_TIME.agentLimitMaxMinutes).toBe(60);
+  });
+
+  for (const { id } of WORKFLOWS) {
+    it(`stops each long agent step in the ${id} cloud flow at its FLOW_TIME allowance`, () => {
+      const steps = agentSteps(factorySource(draft(id)));
+      expect(steps.length).toBeGreaterThan(0);
+      for (const step of steps) {
+        expect(Object.keys(LIMITS), step.source).toContain(step.name);
+        const minutes = LIMITS[step.name];
+        expect(step.timeout, step.source).toBe(minutes === undefined ? undefined : `${minutes}m`);
+      }
+      // Never vacuous: the repair agent is in every workflow, the reviewer and
+      // fixer where the workflow has them.
+      const names = steps.map(step => step.name);
+      expect(names).toContain('check-repair');
+      expect(names).toContain('check-discovery');
+      if (id !== 'simple') expect(names).toContain('adversary');
+      if (id === 'traditional') expect(names).toContain('fixer');
+    });
+
+    it(`handles every timed-out agent in the ${id} flow, and never as success`, () => {
+      const source = factorySource(draft(id));
+      // The results are read, not dropped, and each branch says what happened.
+      expect(source).toMatch(/const repair = await f\.agent\("check-repair-"/);
+      expect(source).toMatch(/if \(timedOut\(repair\)\)/);
+      expect(source).toMatch(/const discovery = await f\.agent\("check-discovery"/);
+      expect(source).toMatch(/if \(timedOut\(discovery\)\)/);
+      if (id !== 'simple') {
+        expect(source).toMatch(/const review = await f\.agent\("adversary-"/);
+        expect(source).toMatch(/reviewTimedOut = timedOut\(review\)/);
+        expect(source).toContain('clean = !reviewTimedOut && ');
+      }
+      if (id === 'traditional') {
+        expect(source).toMatch(/const fix = await f\.agent\("fixer"/);
+        expect(source).toMatch(/if \(timedOut\(fix\)\)/);
+      }
+    });
+
+    it(`states no agent time limit in the ${id} local flow, whose pinned runtime predates them`, () => {
+      // The local kit installs RELAYFLOWS_VERSION, older than 2.0.40, and an
+      // older runtime refuses an agent `timeout`. Once the pin reaches 2.0.40,
+      // emit the limits for the local target too and change this test.
+      const [major, minor, patch] = RELAYFLOWS_VERSION.split('.').map(Number);
+      expect(major! * 1e6 + minor! * 1e3 + patch!).toBeLessThan(2_000_040);
+      const source = factorySource(draft(id), 'local');
+      expect(agentSteps(source).filter(step => step.timeout !== undefined).map(step => step.source)).toEqual([]);
+      // The branches are still there, and still typecheck against 2.0.26's
+      // AgentResult (which has no completionReason): they never fire.
+      expect(source).toContain('const timedOut = (result: unknown) =>');
+    });
+  }
+});
+
+describe('FLOW_REVIEW_BLOCKED_COMMAND after a timed-out review (agentrelay.com#138)', () => {
+  it('says the review was stopped at its limit, and still posts what it wrote', () => {
+    const root = fixture(review);
+    const bin = path.join(root, 'bin');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(path.join(bin, 'gh'), '#!/bin/sh\necho "$@" >> gh-calls.txt\nexit 0\n', { mode: 0o755 });
+    const run = (timedOut: string) => {
+      const result = spawnSync('/bin/sh', ['-c', `review_timeout=${timedOut}; ${FLOW_REVIEW_BLOCKED_COMMAND}`], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+      return { code: result.status, blocked: read(root, 'review-blocked.md') };
+    };
+    const stopped = run('yes');
+    expect(stopped.code).toBe(0);
+    expect(stopped.blocked).toContain(`stopped at its ${FLOW_TIME.reviewMinutes}-minute limit`);
+    expect(stopped.blocked).toContain('The retry loop still drops the last error.');
+    const finished = run('no');
+    expect(finished.blocked).not.toContain('stopped at its');
+    expect(finished.blocked).toContain('The retry loop still drops the last error.');
+  });
 });

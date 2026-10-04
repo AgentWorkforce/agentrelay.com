@@ -384,13 +384,16 @@ describe('software factory onboarding', () => {
     // outcome that tells an operator nothing. The reason is back, and the pull
     // request still carries the findings, which no exit code can.
     expect(finish).toBe('step_failed');
-    expect(calls).toContain(FLOW_REVIEW_BLOCKED_COMMAND);
-    expect(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND)).toBeGreaterThan(calls.lastIndexOf('adversary-2:codex'));
+    // Both reviewers finished, so the report does not say one was stopped
+    // at its time limit (agentrelay.com#138).
+    const blocked = 'review_timeout=no; ' + FLOW_REVIEW_BLOCKED_COMMAND;
+    expect(calls).toContain(blocked);
+    expect(calls.indexOf(blocked)).toBeGreaterThan(calls.lastIndexOf('adversary-2:codex'));
     // The run outcome says only "its own checks did not pass", so the findings
     // are printed by a step of their own just before done("step_failed"), and
     // repeated in the stop message (AgentWorkforce/flows#542 would carry them
     // on done() itself).
-    expect(calls.indexOf(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)).toBeGreaterThan(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND));
+    expect(calls.indexOf(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)).toBeGreaterThan(calls.indexOf(blocked));
     expect(calls.at(-1)).toBe(FLOW_REPORT_REVIEW_FINDINGS_COMMAND);
     expect(errors.join('\n')).toContain('One P2 remains.');
     expect(factorySource(completed)).toContain('AgentWorkforce/flows#542');
@@ -407,7 +410,7 @@ describe('software factory onboarding', () => {
       // The paired negative for the failed-review case above: a clean run parks
       // with the same reason, so the difference has to be visible somewhere. It
       // is — a clean run never marks the pull request as unapproved.
-      expect(calls).not.toContain(FLOW_REVIEW_BLOCKED_COMMAND);
+      expect(calls.some(call => call.endsWith(FLOW_REVIEW_BLOCKED_COMMAND))).toBe(false);
       expect(calls).not.toContain(FLOW_REPORT_REVIEW_FINDINGS_COMMAND);
       expect(calls.some(call => call.includes('pr merge'))).toBe(false);
       expect(factorySource({ ...completed, workflow })).not.toContain('f.human(');

@@ -277,12 +277,18 @@ export const FLOW_CHECK_BLOCKED_COMMAND = [
 /**
  * The generated flow's time plan (AgentWorkforce/cloud#4108). The header's
  * wallclock is charged per step and checked before each one, so once it is
- * spent no step can run, not even the push that keeps the work. Agent steps
- * take no time limit of their own, so the flow reads the clock (a journaled
- * `date +%s`) before each optional, expensive step and starts it only when
- * that step's allowance and publishing still fit. The allowances cover the
- * longest steps measured on 2026-10-01: a 14m check run (its lease is 15m)
- * and repair agents of 37m and 44m.
+ * spent no step can run, not even the push that keeps the work. So the flow
+ * reads the clock (a journaled `date +%s`) before each optional, expensive
+ * step and starts it only when that step's allowance and publishing still
+ * fit. The allowances cover the longest steps measured on 2026-10-01: a 14m
+ * check run (its lease is 15m) and repair agents of 37m and 44m.
+ *
+ * Starting a step only when its allowance fits did not stop it there: a
+ * check-repair agent ran 38m / 592 turns / $54 (agentrelay.com#138). Since
+ * relayflows 2.0.40 (AgentWorkforce/flows#606) an agent step takes a hard
+ * `timeout`, at most agentLimitMaxMinutes, and the cloud flow states each
+ * long agent's allowance as its limit; see workflowCode for which agents
+ * have one, and for the local target.
  */
 export const FLOW_TIME = (() => {
   const headerMinutes = 180; // Cloud's maximum run budget (RELAYFLOW_V2_RUN_BUDGET_MAX_MINUTES).
@@ -291,6 +297,12 @@ export const FLOW_TIME = (() => {
   const repairMinutes = 45;
   const reviewMinutes = 20;
   const fixerMinutes = 45;
+  // Check discovery reads CI configuration and writes one script; it took
+  // 6m and 9m24s in bda21b91. A discovery stopped at its limit falls back to
+  // the ecosystem default, so a hard stop costs little.
+  const discoveryMinutes = 15;
+  // relayflows refuses an agent timeout above 60m (AgentWorkforce/flows#606).
+  const agentLimitMaxMinutes = 60;
   // A step with no timeout of its own gets the kernel's 30s default, and a
   // timed-out step throws: run ccbc27c8 lost 1h46m of finished work when its
   // push to a large repository took longer (agentrelay.com#135). So each step
@@ -315,7 +327,7 @@ export const FLOW_TIME = (() => {
   // fix round's re-publish (5 + 12 + 0.5 + 2 = 19.5m) fits.
   const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + closeMinutes);
   return Object.freeze({
-    headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes,
+    headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes, discoveryMinutes, agentLimitMaxMinutes,
     forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, closeMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
     // A repair, its re-check, the base-commit check a still-failing check
@@ -599,6 +611,7 @@ export const FLOW_PUBLISH_CHECK_COMMAND = [
 ].join('; ');
 
 const REVIEW_BLOCKED_HEADING ='**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
+const REVIEW_TIMEOUT_NOTE = `The last review was stopped at its ${FLOW_TIME.reviewMinutes}-minute limit before it finished, so it is not a clean review. What it wrote before then is below.`;
 
 /**
  * Puts the failed review where an operator acts on it: on the pull request.
@@ -622,10 +635,14 @@ const REVIEW_BLOCKED_HEADING ='**Relayflow: the adversarial review did not pass.
  * review.md, an older `gh` without `pr ready --undo`, or a repository that
  * refuses drafts must not cost the run the report it is trying to leave behind.
  * Each branch prints which way it went, so the journal records the outcome.
+ *
+ * The caller may prefix `review_timeout=yes` when the last reviewer was
+ * stopped at its time limit (agentrelay.com#138); the report then says so,
+ * because whatever review.md holds is unfinished.
  */
 export const FLOW_REVIEW_BLOCKED_COMMAND = [
   'set -e',
-  `{ printf '%s\\n\\n' "${REVIEW_BLOCKED_HEADING}"; if [ -s review.md ]; then cat review.md; else printf '%s\\n' "_The reviewer left no review.md; see the review step in the run journal._"; fi; } > review-blocked.md || true`,
+  `{ printf '%s\\n\\n' "${REVIEW_BLOCKED_HEADING}"; if [ "\${review_timeout:-}" = yes ]; then printf '%s\\n\\n' "${REVIEW_TIMEOUT_NOTE}"; fi; if [ -s review.md ]; then cat review.md; else printf '%s\\n' "_The reviewer left no review.md; see the review step in the run journal._"; fi; } > review-blocked.md || true`,
   'echo "relayflow: the adversarial review did not pass; wrote review-blocked.md."',
   `if ${FLOW_DRAFT_CHANGE_COMMAND} >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft; review-blocked.md still holds the findings." >&2; fi`,
   `if ${flowCommentChangeCommand('review-blocked.md')} >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi`,
@@ -673,12 +690,25 @@ export function workflowAgents(selected: readonly string[]) {
   return { builder, reviewer, prototypes: [builder, reviewer, builder] };
 }
 
-export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof workflowAgents>, instructions: string, _target: 'cloud' | 'local' = 'cloud', settings: FlowAgentSettings = {}, selected: readonly string[] = [agents.builder, agents.reviewer]) {
+export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof workflowAgents>, instructions: string, target: 'cloud' | 'local' = 'cloud', settings: FlowAgentSettings = {}, selected: readonly string[] = [agents.builder, agents.reviewer]) {
   const config = (role: AgentRole) => resolveGeneratedAgentSettings(workflow, role, selected, settings);
-  const options = (role: AgentRole, fallback: string, context = '') => {
+  // Agent time limits (agentrelay.com#138). The optional agents the time plan
+  // guards are stopped at their FLOW_TIME allowance: check-repair, the
+  // adversary reviews and the fixer, plus check-discovery, whose fallback is
+  // cheap. The planner, plan reviewer, implementer, prototypes and comparator
+  // stay unbounded: they are the mandatory path that produces the change, a
+  // hard stop there leaves nothing worth publishing, and no measured run
+  // overran on them. The header's wallclock still bounds them.
+  //
+  // Only the cloud target states limits. Cloud runs relayflows 2.0.40 or
+  // later; the local kit pins RELAYFLOWS_VERSION (2.0.26), whose runtime and
+  // types refuse an agent `timeout`. A local flow keeps the same branches,
+  // which never fire there. Emit limits locally once that pin reaches 2.0.40.
+  const limit = (minutes: number) => target === 'cloud' ? `\n    timeout: "${minutes}m",` : '';
+  const options = (role: AgentRole, fallback: string, context = '', minutes?: number) => {
     const value = config(role);
     const cli = value.agent === agents.builder && fallback === 'builder' ? 'builder' : JSON.stringify(value.agent);
-    return `cli: ${cli},${value.model ? `\n    model: ${JSON.stringify(value.model)},` : ''}\n    task: task + "\\n" + ${JSON.stringify(value.prompt)}${context},`;
+    return `cli: ${cli},${value.model ? `\n    model: ${JSON.stringify(value.model)},` : ''}\n    task: task + "\\n" + ${JSON.stringify(value.prompt)}${context},${minutes === undefined ? '' : limit(minutes)}`;
   };
   const prototypeConfigs = (['prototype-1', 'prototype-2', 'prototype-3'] as const).map(config);
   const sections = [{ id: 'task', code: `  const normalizedTitle = issue.title.trim().replace(/\\s+/g, " ");
@@ -724,7 +754,11 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const startedAt = await clock();
   // Parallel steps are charged once each, so they count more than the clock.
   let parallelMinutes = 0;
-  const minutesLeft = async () => ${FLOW_TIME.bodyMinutes} - (await clock() - startedAt) / 60 - parallelMinutes;` }];
+  const minutesLeft = async () => ${FLOW_TIME.bodyMinutes} - (await clock() - startedAt) / 60 - parallelMinutes;
+  // A long agent step may be stopped at its time limit. Its step then resolves
+  // with completionReason "timeout" instead of throwing, and what the agent
+  // committed stays. That is never success: each caller says what it means.
+  const timedOut = (result: unknown) => (result as { completionReason?: string } | undefined)?.completionReason === "timeout";` }];
   if (workflow === 'traditional') sections.push({ id: 'plan', code: `  // Read the ticket and agree on a plan before changing code.
   await f.agent("planner", {
     ${options('planner', 'builder')}
@@ -772,9 +806,15 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   } else if ((await f.run("test -s " + checkScript + " && echo yes || echo no")).trim() !== "yes") {
     // No command of yours and none committed to the repository: read how its
     // CI tests it. Anything this cannot settle falls back to a default below.
-    await f.agent("check-discovery", {
-      ${options('check-discovery', 'builder')}
+    const discovery = await f.agent("check-discovery", {
+      ${options('check-discovery', 'builder', '', FLOW_TIME.discoveryMinutes)}
     });
+    if (timedOut(discovery)) {
+      // A script it was stopped while writing is not a recipe: discard it,
+      // so the ecosystem default below is used instead.
+      console.error("check-discovery was stopped at its ${FLOW_TIME.discoveryMinutes}m limit. Any check script it left is discarded, and the ecosystem default is used.");
+      await f.run("rm -f " + checkScript);
+    }
   }
   const resolveChecks = ${JSON.stringify(FLOW_CHECK_RESOLVE_COMMAND)};
   const checkPlan = (await f.run(resolveChecks)).trim();
@@ -809,10 +849,17 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
         console.error("Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are.");
         break;
       }
-      await f.agent("check-repair-" + (++repairs), {
-        ${options('check-repair', 'builder')}
+      const repair = await f.agent("check-repair-" + (++repairs), {
+        ${options('check-repair', 'builder', '', FLOW_TIME.repairMinutes)}
       });
       result = verdict(await f.run(runChecks, { timeout: "15m" }));
+      if (timedOut(repair)) {
+        // A failed attempt: what it committed is checked again above, and
+        // another repair of the same failures would most likely run out too,
+        // so whatever still fails takes the draft-and-report path below.
+        console.error("check-repair-" + repairs + " was stopped at its ${FLOW_TIME.repairMinutes}m limit, so it counts as a failed repair attempt. Its committed work is kept and was checked again (" + result + "); no further repair is tried.");
+        break;
+      }
     }
     return result;
   };
@@ -898,6 +945,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const reviewBlockedCommand = ${JSON.stringify(FLOW_REVIEW_BLOCKED_COMMAND)};
   const reportReviewFindingsCommand = ${JSON.stringify(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)};
   let clean = false;
+  let reviewTimedOut = false;
   for (let round = 0; round < ${workflow === 'traditional' ? 2 : 1}; round++) {
     // The pull request is open by now. A review that cannot finish in time
     // would leave it looking ready; stop with it as a draft instead.
@@ -907,10 +955,14 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       return f.done("needs_human");
     }
     await f.run("rm -f review.clean");
-    await f.agent("adversary-" + (round + 1), {
-      ${options('adversary', 'reviewer')}
+    const review = await f.agent("adversary-" + (round + 1), {
+      ${options('adversary', 'reviewer', '', FLOW_TIME.reviewMinutes)}
     });
-    clean = (await f.run("test -f review.clean && echo yes || echo no")).trim() === "yes";
+    // A reviewer stopped at its limit did not finish, whatever it left
+    // behind: its review is unresolved, never clean.
+    reviewTimedOut = timedOut(review);
+    if (reviewTimedOut) console.error("adversary-" + (round + 1) + " was stopped at its ${FLOW_TIME.reviewMinutes}m limit before it finished, so its review is not clean and is treated as unresolved.");
+    clean = !reviewTimedOut && (await f.run("test -f review.clean && echo yes || echo no")).trim() === "yes";
     ${workflow === 'traditional' ? `if (!clean && round === 0) {
       if (await minutesLeft() < ${FLOW_TIME.fixRoundStartMinutes}) {
         // No time to fix and re-review: stop as an unresolved review, so the
@@ -918,9 +970,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
         console.error("Out of time for a fix round after the first review; reporting its findings instead.");
         break;
       }
-      await f.agent("fixer", {
-        ${options('fixer', 'builder')}
+      const fix = await f.agent("fixer", {
+        ${options('fixer', 'builder', '', FLOW_TIME.fixerMinutes)}
       });
+      if (timedOut(fix)) console.error("The fixer was stopped at its ${FLOW_TIME.fixerMinutes}m limit. Its committed work is kept, and is checked and pushed as usual.");
       // The revision is checked and repaired like the first version, and it
       // is pushed either way: work is never thrown away. If it breaks checks
       // that passed before it, the pull request goes back to draft with the
@@ -938,7 +991,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   }
   // Unresolved feedback stops the flow short of approval.
   if (!clean) {
-    await f.run(reviewBlockedCommand, { timeout: "${FLOW_TIME.followUpMinutes}m" });
+    await f.run("review_timeout=" + (reviewTimedOut ? "yes" : "no") + "; " + reviewBlockedCommand, { timeout: "${FLOW_TIME.followUpMinutes}m" });
     // report-review-findings: the run outcome says only that "its own checks
     // did not pass", so this step prints why (a bounded excerpt of review.md)
     // where the journal and flows status show it. Move this text into
