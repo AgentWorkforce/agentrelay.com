@@ -206,7 +206,8 @@ describe('Garden flow time budget (cloud#4108)', () => {
     // across each guard's edge: wherever a repair, review or fix round only
     // just starts, what follows it must still fit. Failing checks spend the
     // time on repairs; passing ones after short planning reach a fix round.
-    let fixRounds = 0;
+    const fixRounds: Record<string, number> = { traditional: 0, prototype: 0, simple: 0 };
+    const guarded: Record<string, number> = { traditional: 0, prototype: 0, simple: 0 };
     let checked = 0;
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) for (const [verdict, early] of [['timeout', 10], ['pass', 1]] as const) {
       for (let implementer = 0; implementer <= 150; implementer += 0.5) {
@@ -215,7 +216,7 @@ describe('Garden flow time budget (cloud#4108)', () => {
           checks: [{ minutes: FLOW_TIME.checkMinutes, verdict }],
           baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
           fullTimeouts: true,
-        }, workflow);
+        }, workflow, { parallel: ['prototype'] });
         // The guards protect publishing from the optional steps; they cannot
         // make room when the mandatory path alone (everything up to the
         // implementer, the implementer, one check, publishing) does not fit.
@@ -230,17 +231,22 @@ describe('Garden flow time budget (cloud#4108)', () => {
         // exclude and that read), charged here at 30s each.
         expect(run.chargedMinutes).toBeLessThanOrEqual(FLOW_TIME.bodyMinutes + 2 * FLOW_TIME.defaultStepMinutes);
         const names = run.calls.map(call => call.name);
+        // The run reached a guard that chose to run its optional step.
+        if (names.some(name => name.startsWith('check-repair') || name === 'base-check' || name.startsWith('adversary'))) guarded[workflow]!++;
         if (names.includes('fixer')) {
-          fixRounds++;
+          fixRounds[workflow]!++;
           // The fix round's re-publish runs after the fixer, and the run still closes.
           expect(names.slice(names.indexOf('fixer')).filter(name => name === 'push')).toHaveLength(1);
           expect(names.some(name => name === 'review-blocked' || name === 'time-stop')).toBe(true);
         }
       }
     }
-    // Not vacuous: the sweep covers many runs, some of which reach a fix round.
+    // Not vacuous: every workflow runs guarded optional steps (prototypes run
+    // in parallel, as the budget charges them), and traditional, the only one
+    // with a fixer, reaches a fix round.
     expect(checked).toBeGreaterThan(100);
-    expect(fixRounds).toBeGreaterThan(0);
+    for (const workflow of ['traditional', 'prototype', 'simple']) expect(guarded[workflow], workflow).toBeGreaterThan(0);
+    expect(fixRounds.traditional).toBeGreaterThan(0);
   }, 30_000); // About a thousand simulated runs.
 
   it('skips a repair it cannot afford and publishes the draft with time to spare', async () => {
