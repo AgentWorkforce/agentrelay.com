@@ -3,12 +3,15 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import ts from 'typescript';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
   FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
   flowCommentChangeCommand,
+  WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
+import { factorySource, type FactoryDraft } from '../flow-onboarding';
 
 /**
  * Every generated check step runs under `sh`, and its exit code is the only
@@ -798,4 +801,72 @@ describe('change metadata contract', () => {
     expect(read(markdown, '.relayflow/pr-body.md')).toBe('## Summary\n');
     expect(validate(markdown, 'tasks.md', 'markdown', '').token).toBe('valid');
   });
+});
+
+/**
+ * A step without a `timeout` gets the kernel's 30s default, and a timed-out
+ * `f.run` throws: Garden run ccbc27c8 worked for 1h46m and then lost all of it
+ * when the push of its branch to AgentWorkforce/flows took longer than 30s
+ * (agentrelay.com#135). So every generated step that talks to the forge, or
+ * rewrites the branch before a push, must say how long it may take.
+ */
+describe('publish-path step timeouts (agentrelay.com#135)', () => {
+  const NETWORK = /git push|relayflow-open-change|relayflow-change|gh pr\b/;
+  const draft = (workflow: FactoryDraft['workflow']): FactoryDraft => ({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow, step: 3 });
+
+  /** Every `f.run` call in the generated source, with the text its command can expand to. */
+  function runSteps(source: string) {
+    const file = ts.createSourceFile('flow.ts', source, ts.ScriptTarget.ES2022, true);
+    const constants = new Map<string, string>();
+    const calls: ts.CallExpression[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isStringLiteralLike(node.initializer)) {
+        constants.set(node.name.text, node.initializer.text);
+      }
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.name.text === 'run' && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'f') {
+        calls.push(node);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    const expand = (node: ts.Node): string => {
+      if (ts.isStringLiteralLike(node)) return node.text;
+      if (ts.isIdentifier(node)) return constants.get(node.text) ?? '';
+      let text = '';
+      ts.forEachChild(node, child => { text += expand(child); });
+      return text;
+    };
+    return calls.map(call => {
+      const options = call.arguments[1];
+      const timeout = options && ts.isObjectLiteralExpression(options)
+        ? options.properties.find(property => ts.isPropertyAssignment(property) && property.name.getText(file) === 'timeout')
+        : undefined;
+      return {
+        source: call.getText(file),
+        command: expand(call.arguments[0]!),
+        timeout: timeout && ts.isPropertyAssignment(timeout) && ts.isStringLiteralLike(timeout.initializer) ? timeout.initializer.text : undefined,
+      };
+    });
+  }
+
+  for (const { id } of WORKFLOWS) {
+    it(`gives every forge or branch-rewriting step in the ${id} flow an explicit timeout`, () => {
+      const steps = runSteps(factorySource(draft(id)));
+      const publishing = steps.filter(step => NETWORK.test(step.command) || step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND));
+      // Pushes (with and without comment=yes), the change request, and the
+      // working-file rewrite are always generated; never pass vacuously.
+      expect(publishing.filter(step => step.command.includes(FLOW_PUSH_COMMAND)).length).toBeGreaterThanOrEqual(2);
+      expect(publishing.some(step => step.command.includes(FLOW_OPEN_CHANGE_COMMAND))).toBe(true);
+      expect(publishing.some(step => step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND))).toBe(true);
+      expect(publishing.filter(step => step.timeout === undefined).map(step => step.source)).toEqual([]);
+      // The limits are the ones FLOW_TIME's publish arithmetic is built on.
+      for (const step of publishing) {
+        const minutes = step.command.includes(FLOW_PUSH_COMMAND) ? FLOW_TIME.pushMinutes
+          : step.command.includes(FLOW_OPEN_CHANGE_COMMAND) || step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND) ? FLOW_TIME.forgeMinutes
+            : FLOW_TIME.followUpMinutes;
+        expect(step.timeout, step.source).toBe(`${minutes}m`);
+      }
+    });
+  }
 });

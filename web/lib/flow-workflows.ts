@@ -291,15 +291,40 @@ export const FLOW_TIME = (() => {
   const repairMinutes = 45;
   const reviewMinutes = 20;
   const fixerMinutes = 45;
-  const publishMinutes = 10;
+  // A step with no timeout of its own gets the kernel's 30s default, and a
+  // timed-out step throws: run ccbc27c8 lost 1h46m of finished work when its
+  // push to a large repository took longer (agentrelay.com#135). So each step
+  // that talks to the forge or rewrites the branch before a push states its
+  // limit: opening the change request and dropping working files get
+  // forgeMinutes; the draft-and-comment follow-ups get followUpMinutes; a push
+  // gets pushMinutes, because when GitHub refuses workflow edits
+  // FLOW_PUSH_COMMAND rebuilds the commits, pushes a second time and, for a
+  // revision (comment=yes), posts the withheld patch, all in the same step.
+  const forgeMinutes = 5;
+  const followUpMinutes = 2;
+  const pushMinutes = 2 * forgeMinutes + followUpMinutes;
+  const defaultStepMinutes = 0.5;
+  // What can follow the last review: one draft-and-comment follow-up (time
+  // stop, check blocked or review blocked: 2m) and the review-findings report
+  // (0.5m).
+  const closeMinutes = followUpMinutes + defaultStepMinutes;
+  // Publishing at the longest each step may take: dropping working files (5m),
+  // the push (12m) and opening the change request (5m), the four local steps
+  // between them at the default (publish check, check report, metadata,
+  // validation: 4 x 0.5m), then closing (2.5m). 26.5m, rounded up to 27m. A
+  // fix round's re-publish (5 + 12 + 0.5 + 2 = 19.5m) fits.
+  const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + closeMinutes);
   return Object.freeze({
-    headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes, publishMinutes,
+    headerMinutes, setupMinutes, checkMinutes, repairMinutes, reviewMinutes, fixerMinutes,
+    forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, closeMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
     // A repair, its re-check, the base-commit check a still-failing check
     // triggers, and publishing.
     repairStartMinutes: repairMinutes + checkMinutes + checkMinutes + publishMinutes,
-    // A review, then publishing a time stop.
-    reviewStartMinutes: reviewMinutes + publishMinutes,
+    // The pull request is open by then, so a review round needs only the
+    // review, its four local steps (this guard's clock read, clearing and
+    // reading review.clean, and the fix-round clock read) and closing.
+    reviewStartMinutes: reviewMinutes + 4 * defaultStepMinutes + closeMinutes,
     // The fixer, its check, the next review, and publishing.
     fixRoundStartMinutes: fixerMinutes + checkMinutes + reviewMinutes + publishMinutes,
   });
@@ -817,7 +842,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // it edits .github/workflows/ (the run's token may lack that permission),
   // the work is pushed without those edits and the patch goes on the PR.
   const pushBranch = ${JSON.stringify(FLOW_PUSH_COMMAND)};
-  await f.run("base=" + baseCommit + "; " + dropWorkingFiles);
+  await f.run("base=" + baseCommit + "; " + dropWorkingFiles, { timeout: "${FLOW_TIME.forgeMinutes}m" });
   const publishCheck = ${JSON.stringify(FLOW_PUBLISH_CHECK_COMMAND)};
   const publish = (await f.run("base=" + baseCommit + "; " + publishCheck)).trim();
   if (publish !== "publish" && publish !== "no-summary") {
@@ -825,7 +850,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     return f.done("needs_human");
   }
   if (publish !== "publish") {
-    await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD");
+    await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD", { timeout: "${FLOW_TIME.pushMinutes}m" });
     console.error("Stopped: the branch was pushed, but no summary.md was written, so there is no pull-request body. Open the pull request by hand, or run again.");
     return f.done("needs_human");
   }
@@ -841,11 +866,11 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     console.error("Stopped: invalid pull-request metadata (" + metadataVerdict + "). No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
   }
-  await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD");
+  await f.run("base=" + baseCommit + "; " + pushBranch + " --set-upstream origin HEAD", { timeout: "${FLOW_TIME.pushMinutes}m" });
   // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
-  await f.run(openChange + " --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md" + (broken(check) ? " --draft" : ""));
+  await f.run(openChange + " --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md" + (broken(check) ? " --draft" : ""), { timeout: "${FLOW_TIME.forgeMinutes}m" });
   if (broken(check) && (baseline === "pass" || baseline === "new")) {
     // The base commit passes and this branch does not, or the checks are the
     // change's own and fail: the change broke them and repair could not fix
@@ -877,7 +902,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     // The pull request is open by now. A review that cannot finish in time
     // would leave it looking ready; stop with it as a draft instead.
     if (await minutesLeft() < ${FLOW_TIME.reviewStartMinutes}) {
-      await f.run(${JSON.stringify(FLOW_TIME_STOP_COMMAND)});
+      await f.run(${JSON.stringify(FLOW_TIME_STOP_COMMAND)}, { timeout: "${FLOW_TIME.followUpMinutes}m" });
       console.error("Stopped: out of time before the reviews were done. The work is pushed and the pull request is a draft.");
       return f.done("needs_human");
     }
@@ -901,11 +926,11 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       // that passed before it, the pull request goes back to draft with the
       // report and the flow stops.
       const revised = await checkAndRepair();
-      await f.run("base=" + baseCommit + "; " + dropWorkingFiles);
-      await f.run("base=" + baseCommit + "; comment=yes; " + pushBranch);
+      await f.run("base=" + baseCommit + "; " + dropWorkingFiles, { timeout: "${FLOW_TIME.forgeMinutes}m" });
+      await f.run("base=" + baseCommit + "; comment=yes; " + pushBranch, { timeout: "${FLOW_TIME.pushMinutes}m" });
       if (broken(revised) && !broken(check)) {
         await f.run("check=" + revised + "; baseline=revision; " + checkReport);
-        await f.run(${JSON.stringify(FLOW_CHECK_BLOCKED_COMMAND)});
+        await f.run(${JSON.stringify(FLOW_CHECK_BLOCKED_COMMAND)}, { timeout: "${FLOW_TIME.followUpMinutes}m" });
         console.error("Stopped: the review fixes broke checks that passed before them. The revision is pushed, the pull request is a draft, and the report is on it.");
         return f.done("step_failed");
       }
@@ -913,7 +938,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   }
   // Unresolved feedback stops the flow short of approval.
   if (!clean) {
-    await f.run(reviewBlockedCommand);
+    await f.run(reviewBlockedCommand, { timeout: "${FLOW_TIME.followUpMinutes}m" });
     // report-review-findings: the run outcome says only that "its own checks
     // did not pass", so this step prints why (a bounded excerpt of review.md)
     // where the journal and flows status show it. Move this text into
