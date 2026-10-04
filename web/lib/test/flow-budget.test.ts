@@ -36,13 +36,15 @@ type Timing = {
   /** Minutes and verdict of each check run, in order; later runs repeat the last. */
   checks: { minutes: number; verdict: string }[];
   baseline?: { minutes: number; verdict: string };
+  /** Charge every command that states a timeout its full timeout (agentrelay.com#135). */
+  fullTimeouts?: boolean;
 };
 
 /**
  * Runs the generated flow against a simulated clock and the kernel's budget
  * rule (flows `AuthoredBudget`): every step's wallclock is charged, and a step
  * is refused once the charged total exceeds the header's wallclock. Every
- * other command takes 5 seconds.
+ * other command takes 5 seconds, or its whole timeout with `fullTimeouts`.
  */
 async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'traditional', options: { parallel?: string[] } = {}) {
   const source = factorySource({ ...draft, workflow });
@@ -94,7 +96,7 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
         // in full, but the wall clock moves once for the whole group.
         step(name, agentMinutes(name) * MINUTE, options.parallel?.some(prefix => name.startsWith(prefix)) ?? false);
       },
-      run: async (command: string) => {
+      run: async (command: string, runOptions?: { timeout?: string }) => {
         if (command === FLOW_CHECK_RUN_COMMAND) {
           const check = timing.checks[Math.min(checkIndex++, timing.checks.length - 1)]!;
           step('check', check.minutes * MINUTE);
@@ -105,7 +107,8 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
           step('base-check', base.minutes * MINUTE);
           return base.verdict;
         }
-        step(command.startsWith(FLOW_OPEN_CHANGE_COMMAND) ? 'open-change' : command === FLOW_TIME_STOP_COMMAND ? 'time-stop' : command === FLOW_REVIEW_BLOCKED_COMMAND ? 'review-blocked' : 'run', 5000);
+        const limit = timing.fullTimeouts && runOptions?.timeout ? /^(\d+)(ms|s|m|h)$/.exec(runOptions.timeout) : null;
+        step(command.startsWith(FLOW_OPEN_CHANGE_COMMAND) ? 'open-change' : command === FLOW_TIME_STOP_COMMAND ? 'time-stop' : command === FLOW_REVIEW_BLOCKED_COMMAND ? 'review-blocked' : 'run', limit ? Number(limit[1]) * UNITS[limit[2]!]! : 5000);
         // The flow reads the clock through a journaled step.
         if (command === 'date +%s') return String(epoch + Math.floor(wallMs / 1000));
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return 'publish';
@@ -143,6 +146,11 @@ describe('Garden flow time budget (cloud#4108)', () => {
     expect(t.reviewStartMinutes).toBe(t.reviewMinutes + t.publishMinutes);
     // A fix round is the fixer, its check, the next review, and publishing.
     expect(t.fixRoundStartMinutes).toBe(t.fixerMinutes + t.checkMinutes + t.reviewMinutes + t.publishMinutes);
+    // Publishing at every step's limit (agentrelay.com#135): drop working
+    // files, push and open the change request at forgeMinutes, four local
+    // steps at the kernel's default, one draft-and-comment follow-up and the
+    // review-findings report.
+    expect(t.publishMinutes).toBeGreaterThanOrEqual(3 * t.forgeMinutes + 4 * t.defaultStepMinutes + t.followUpMinutes + t.defaultStepMinutes);
     // The allowances cover the longest steps measured on 2026-10-01: a check
     // run of 14m00s (15m lease), repair agents of 37m18s and 44m09s.
     expect(t.checkMinutes).toBeGreaterThanOrEqual(15);
@@ -178,6 +186,20 @@ describe('Garden flow time budget (cloud#4108)', () => {
     expect(run.calls.map(call => call.name)).toContain('time-stop');
     expect(run.finish).toBe('needs_human');
     expect(run.errors.join('\n')).toMatch(/out of time/i);
+  });
+
+  it('still publishes when the publish steps also take their full timeouts (agentrelay.com#135)', async () => {
+    for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
+      const run = await runTimed({
+        agents: { 'planner': 10, 'plan-reviewer': 10, 'check-discovery': 10, 'prototype': 20, 'comparator': 10, 'implementer': 30, 'check-repair': FLOW_TIME.repairMinutes, 'adversary': FLOW_TIME.reviewMinutes, 'fixer': FLOW_TIME.fixerMinutes },
+        checks: [{ minutes: FLOW_TIME.checkMinutes, verdict: 'timeout' }],
+        baseline: { minutes: FLOW_TIME.checkMinutes, verdict: 'fail' },
+        fullTimeouts: true,
+      }, workflow);
+      expect(run.refused).toBeNull();
+      expect(run.opened).toBeDefined();
+      expect(run.chargedMinutes).toBeLessThanOrEqual(FLOW_TIME.bodyMinutes);
+    }
   });
 
   it('skips a repair it cannot afford and publishes the draft with time to spare', async () => {
