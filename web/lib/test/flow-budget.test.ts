@@ -200,7 +200,7 @@ describe('Garden flow time budget (cloud#4108)', () => {
     expect(run.errors.join('\n')).toMatch(/out of time/i);
   });
 
-  it('never runs out of budget when every step takes its full limit, wherever the guards' edges fall (agentrelay.com#135)', async () => {
+  it('never runs out of budget when every step takes its full limit, at the edge of every guard (agentrelay.com#135)', async () => {
     // Every step is charged its whole timeout or the 30s default, and every
     // agent its whole allowance. Sweeping the implementer moves the run
     // across each guard's edge: wherever a repair, review or fix round only
