@@ -38,6 +38,8 @@ describe("router Relay Connect invite links", () => {
   });
 
   it("leaves everything that is not a single-segment apex invite read alone", () => {
+    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/install.sh", "GET")).toBeUndefined();
+    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/install.sh/", "HEAD")).toBeUndefined();
     expect(getConnectInviteCloudPath("agentrelay.com", "/connect", "GET")).toBeUndefined();
     expect(getConnectInviteCloudPath("agentrelay.com", "/connect/", "GET")).toBeUndefined();
     expect(getConnectInviteCloudPath("agentrelay.com", "/connect/abc/extra", "GET")).toBeUndefined();

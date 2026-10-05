@@ -111,6 +111,8 @@ export function getConnectInviteCloudPath(
     return undefined;
   }
 
+  // The installer belongs to the marketing origin, not the invite service.
+  if (pathname === "/connect/install.sh" || pathname === "/connect/install.sh/") return undefined;
   const invitePath = CONNECT_INVITE_PATH.exec(pathname)?.[1];
   return invitePath ? `${CLOUD_PATH_PREFIX}${invitePath}` : undefined;
 }
