@@ -8,7 +8,7 @@ case "${1:-}" in
   '') ;;
   *) fail 'Usage: sh install.sh' ;;
 esac
-for tool in curl uname mktemp tar mkdir chmod mv ln awk cat rm readlink; do
+for tool in curl uname mktemp tar mkdir chmod mv awk cat rm; do
   command -v "$tool" >/dev/null 2>&1 || fail "Missing prerequisite: $tool"
 done
 case "$(uname -s)" in Darwin) platform=macOS;; Linux) platform=Linux;; *) fail 'Relay Connect supports macOS and Linux.';; esac
@@ -45,20 +45,16 @@ fi
 "$tmp/probe" connect create --help >/dev/null 2>&1 &&
   "$tmp/probe" connect join --help >/dev/null 2>&1 &&
   "$tmp/probe" connect end --help >/dev/null 2>&1 || fail 'This release does not yet support native Connect. Retry after a compatible probe is published.'
-bin="$HOME/.local/bin"
+# Keep Connect private: relay/agent-relay belong to the orchestration CLI,
+# and ~/.local/bin/agent-relay-probe belongs to the desktop-managed copy.
 root="$HOME/.local/lib/agent-relay/connect"
-mkdir -p "$bin" "$root"
-# Preserve unrelated relay commands. This installer owns only its own symlink.
-if [ -e "$bin/relay" ] || [ -L "$bin/relay" ]; then
-  [ -L "$bin/relay" ] && [ "$(readlink "$bin/relay")" = "$root/relay" ] || fail '~/.local/bin/relay already exists and is not managed by this installer.'
-fi
+mkdir -p "$root"
 # Stage on the destination filesystem; rename never alters a running executable.
-staged=$(mktemp "$root/.relay.XXXXXX")
+staged=$(mktemp "$root/.agent-relay-probe.XXXXXX")
 if ! cat "$tmp/probe" > "$staged" || ! chmod 755 "$staged"; then
   rm -f "$staged"; fail 'Could not stage the probe.'
 fi
-mv -f "$staged" "$root/relay"
-if [ ! -L "$bin/relay" ]; then ln -s "$root/relay" "$bin/relay"; fi
+mv -f "$staged" "$root/agent-relay-probe"
 printf '%s\n' 'Relay Connect installed. No relay process has been started.' \
-  'Create: ~/.local/bin/relay connect create --task "Work with another agent"' \
-  'Join:   ~/.local/bin/relay connect join https://agentrelay.com/connect/INVITE'
+  'Create: ~/.local/lib/agent-relay/connect/agent-relay-probe connect create --task "Work with another agent"' \
+  'Join:   ~/.local/lib/agent-relay/connect/agent-relay-probe connect join https://agentrelay.com/connect/INVITE'

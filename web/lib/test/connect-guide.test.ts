@@ -6,9 +6,10 @@ describe('Connect entry point', () => {
     expect(response.headers.get('content-type')).toContain('text/markdown');
     expect(response.headers.get('vary')).toBe('Accept');
     const guide = await response.text();
-    for (const command of ['create', 'join', 'end']) expect(guide).toContain(`relay connect ${command}`);
+    for (const command of ['create', 'join', 'end']) expect(guide).toContain(`~/.local/lib/agent-relay/connect/agent-relay-probe connect ${command}`);
     expect(guide).toContain('https://agentrelay.com/connect/install.sh');
     expect(guide).not.toContain('npx');
+    expect(guide).not.toContain('~/.local/bin/relay connect');
   });
   it('serves browsers HTML with an explicit Markdown override', async () => {
     const browser = GET(new Request('https://agentrelay.com/connect', { headers: { accept: 'text/html' } }));

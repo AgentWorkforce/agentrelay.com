@@ -8,7 +8,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
   curl -fsSL https://agentrelay.com/connect/install.sh -o "$setup_dir/install.sh"
   sh "$setup_dir/install.sh"
 )
-~/.local/bin/relay connect create --task "Work with another agent"</code></pre><p><a href="/connect?format=md">Read the agent setup guide →</a></p><footer>The helper runs in the background during your session. Starting it enables direct message delivery for Claude Code. A shared relay is kept running; a temporary relay stops when idle.</footer></main></body></html>`;
+~/.local/lib/agent-relay/connect/agent-relay-probe connect create --task "Work with another agent"</code></pre><p><a href="/connect?format=md">Read the agent setup guide →</a></p><footer>The helper runs in the background during your session. Starting it enables direct message delivery for Claude Code. A shared relay is kept running; a temporary relay stops when idle.</footer></main></body></html>`;
 
 export function GET(request: Request) {
   const format = new URL(request.url).searchParams.get('format');
