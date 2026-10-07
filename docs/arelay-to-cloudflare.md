@@ -8,8 +8,7 @@ and the chat endpoint:
 - `https://arelay.to/agent-relay`: the page with the visitor's snippet
 - `https://arelay.to/agent-relay/bridge.sh`: the file-bridge fallback
 - `https://arelay.to/agent-relay/<32 hex id>`: the conversation, forwarded to
-  cloud's `/cloud/api/v1/agent-chat/agent-relay/<id>` while the relay-agent
-  cut-over flag is off
+  the dedicated `relay-agent` Worker through its service binding
 - `https://arelay.to/` and `/cloud/*` redirect to agentrelay.com;
   `www.arelay.to` redirects to `arelay.to`, except chat POSTs, which it serves
 
@@ -26,9 +25,12 @@ a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
    `arelay.to` and `www.arelay.to`, and delete any redirect rule for them.
    Workers custom domains create their own records and refuse to attach over
    existing ones.
-3. Merge the PR that adds `arelay.to` and `www.arelay.to` as `custom_domain`
-   routes in `router/wrangler.jsonc`. The router deploy workflow attaches both.
-4. Verify:
+3. Deploy the reviewed `relay-agent` Worker first. Its service must exist under
+   the exact name `relay-agent` before the router deploy resolves the binding.
+4. Merge the PR that adds `arelay.to` and `www.arelay.to` as `custom_domain`
+   routes and the `RELAY_AGENT_WORKER` binding in `router/wrangler.jsonc`. The
+   router deploy workflow attaches the domains and activates the binding.
+5. Verify:
    ```sh
    dig +short NS arelay.to
    curl -sI https://arelay.to/ | grep -i '^location'             # https://agentrelay.com/
@@ -37,28 +39,28 @@ a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
    # Each load mints its own conversation and is never cached:
    for i in 1 2; do curl -s https://arelay.to/agent-relay | grep -o 'arelay.to/agent-relay/[0-9a-f]\{32\}' | head -1; done  # two different ids
    curl -sI https://arelay.to/agent-relay | grep -i -e '^cache-control' -e '^cf-cache-status'  # no-store/private; not HIT
-   # A real conversation reaches cloud and gets the agent's reply:
-   printf 'runbook check' | curl -sS --data-binary @- "https://arelay.to/agent-relay/$(openssl rand -hex 16)"  # agent-relay: ...
+   # A fresh conversation reaches relay-agent and gets its exact Phase 0 stub:
+   printf 'runbook check' | curl -sS --data-binary @- "https://arelay.to/agent-relay/$(openssl rand -hex 16)" | grep -F 'agent-relay: Hi! The Agent Relay agent is not live yet'
+   # The bridge asset is still served by the router:
+   curl -fsS https://arelay.to/agent-relay/bridge.sh | grep -F 'Agent Relay chat file bridge'
    ```
 
 Rollback: remove the two routes and redeploy the router, or detach the custom
 domains under Workers → agentrelay-router → Settings → Domains.
 
-## relay-agent cut-over (human only)
+## relay-agent routing (human only)
 
-The router supports the dedicated `relay-agent` Worker without changing the
-current default. Valid conversation POSTs continue to Cloud unless one of these
-is configured:
+Production routes valid conversation POSTs to the dedicated `relay-agent`
+Worker through the checked-in `RELAY_AGENT_WORKER` service binding. The Worker
+must be deployed before this router configuration. No additional public custom
+domain is required for the binding.
 
-- a `RELAY_AGENT_WORKER` service binding to the deployed Worker (preferred), or
-- a `RELAY_AGENT_ORIGIN` Worker variable containing its HTTPS origin.
+`RELAY_AGENT_ORIGIN`, when configured, remains an alternative for environments
+that cannot use the binding. The service binding wins when both are present.
+The origin option requires a human to add an HTTPS Worker custom domain or route
+and set the variable to that origin.
 
-Presence of either is the flag. The service binding wins when both exist. Add
-the binding or variable only after the relay-agent PR is reviewed and its
-manual deploy workflow has completed. No additional public custom domain is
-required for a service binding. For the origin option, a human must add an HTTPS
-Worker custom domain or route and set `RELAY_AGENT_ORIGIN` to that origin.
-
-To roll back the chat cut-over, remove both settings and redeploy the router;
-the existing Cloud path resumes automatically. This repository's agents must
-not perform the deployment, route, custom-domain, or DNS steps.
+To roll back chat routing, remove the `RELAY_AGENT_WORKER` binding (and
+`RELAY_AGENT_ORIGIN` if set) and redeploy the router. Valid POSTs then resume
+the existing Cloud path automatically. This repository's agents must not
+perform the deployment, route, custom-domain, or DNS steps.

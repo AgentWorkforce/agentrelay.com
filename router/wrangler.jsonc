@@ -15,13 +15,14 @@
   // binding — SST names the webhook Worker with a random hash suffix, so it
   // isn't bindable by a stable script name.)
   "services": [
-    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
+    { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" },
+    { "binding": "RELAY_AGENT_WORKER", "service": "relay-agent" }
   ],
 
-  // relay-agent cut-over is intentionally OFF by default. After that Worker is
-  // reviewed and deployed, a human may add a RELAY_AGENT_WORKER service binding
-  // here, or set RELAY_AGENT_ORIGIN below. Presence of either enables direct
-  // routing for valid agent-chat POSTs; absence preserves today's Cloud path.
+  // The relay-agent Worker MUST be deployed before this router configuration.
+  // The binding routes valid agent-chat POSTs directly to it. If a binding is
+  // unavailable in another environment, RELAY_AGENT_ORIGIN is the alternative.
+  // Remove both to roll back to the existing Cloud path.
 
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
   // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
