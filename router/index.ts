@@ -10,6 +10,10 @@ interface Env {
   TRAFFIC_RECORDER?: RecorderEnv["TRAFFIC_RECORDER"];
   ROUTER_CONFIG?: RecorderEnv["ROUTER_CONFIG"];
   RATE_LIMIT_COUNTERS?: RateLimitEnv["RATE_LIMIT_COUNTERS"];
+  RELAY_AGENT_WORKER?: {
+    fetch(request: Request): Promise<Response>;
+  };
+  RELAY_AGENT_ORIGIN?: string;
   WEBHOOK_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -391,6 +395,30 @@ function buildWebhookWorkerRequest(
   return new Request(targetUrl.toString(), init);
 }
 
+function relayAgentOrigin(env: Env): string | undefined {
+  const origin = env.RELAY_AGENT_ORIGIN?.trim();
+  return origin || undefined;
+}
+
+function relayAgentEnabled(env: Env): boolean {
+  return Boolean(env.RELAY_AGENT_WORKER || relayAgentOrigin(env));
+}
+
+function buildRelayAgentRequest(request: Request, requestUrl: URL, origin: string): Request {
+  const target = new URL(requestUrl.pathname + requestUrl.search, origin);
+  return new Request(target.toString(), request);
+}
+
+async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Response> {
+  if (env.RELAY_AGENT_WORKER) {
+    return env.RELAY_AGENT_WORKER.fetch(request);
+  }
+
+  const origin = relayAgentOrigin(env);
+  if (!origin) throw new Error("relay agent upstream is not configured");
+  return globalThis.fetch(buildRelayAgentRequest(request, url, origin));
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -432,6 +460,34 @@ export default {
       ? (request.clone() as unknown as Request)
       : null;
 
+    // The optional binding/origin is the cut-over flag. Neither is configured
+    // by default, so the existing Cloud route remains unchanged until a human
+    // adds one after the relay-agent Worker is reviewed and deployed.
+    const agentChatCloudPath = getAgentChatCloudPath(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    if (agentChatCloudPath && relayAgentEnabled(env)) {
+      try {
+        const workerResponse = await fetchRelayAgent(request, url, env);
+        if (recorderRequestClone && recorderEnv) {
+          ctx.waitUntil(
+            maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
+          );
+        }
+        return workerResponse;
+      } catch {
+        return new Response("The agent chat is unavailable. Retry the same command shortly.\n", {
+          status: 503,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        });
+      }
+    }
+
     const connectInviteCloudPath = getConnectInviteCloudPath(
       url.hostname,
       url.pathname,
@@ -442,7 +498,6 @@ export default {
       request = new Request(url.toString(), request);
     }
 
-    const agentChatCloudPath = getAgentChatCloudPath(url.hostname, url.pathname, request.method);
     if (agentChatCloudPath) {
       url.pathname = agentChatCloudPath;
       request = new Request(url.toString(), request);

@@ -18,6 +18,11 @@
     { "binding": "CLOUD_WEB_WORKER", "service": "cloud-web-worker" }
   ],
 
+  // relay-agent cut-over is intentionally OFF by default. After that Worker is
+  // reviewed and deployed, a human may add a RELAY_AGENT_WORKER service binding
+  // here, or set RELAY_AGENT_ORIGIN below. Presence of either enables direct
+  // routing for valid agent-chat POSTs; absence preserves today's Cloud path.
+
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
   // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
   // namespace id so both gateways increment the same per-workspace counters.

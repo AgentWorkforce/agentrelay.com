@@ -8,7 +8,8 @@ and the chat endpoint:
 - `https://arelay.to/agent-relay`: the page with the visitor's snippet
 - `https://arelay.to/agent-relay/bridge.sh`: the file-bridge fallback
 - `https://arelay.to/agent-relay/<32 hex id>`: the conversation, forwarded to
-  cloud's `/cloud/api/v1/agent-chat/agent-relay/<id>`
+  cloud's `/cloud/api/v1/agent-chat/agent-relay/<id>` while the relay-agent
+  cut-over flag is off
 - `https://arelay.to/` and `/cloud/*` redirect to agentrelay.com;
   `www.arelay.to` redirects to `arelay.to`, except chat POSTs, which it serves
 
@@ -42,3 +43,22 @@ a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
 
 Rollback: remove the two routes and redeploy the router, or detach the custom
 domains under Workers → agentrelay-router → Settings → Domains.
+
+## relay-agent cut-over (human only)
+
+The router supports the dedicated `relay-agent` Worker without changing the
+current default. Valid conversation POSTs continue to Cloud unless one of these
+is configured:
+
+- a `RELAY_AGENT_WORKER` service binding to the deployed Worker (preferred), or
+- a `RELAY_AGENT_ORIGIN` Worker variable containing its HTTPS origin.
+
+Presence of either is the flag. The service binding wins when both exist. Add
+the binding or variable only after the relay-agent PR is reviewed and its
+manual deploy workflow has completed. No additional public custom domain is
+required for a service binding. For the origin option, a human must add an HTTPS
+Worker custom domain or route and set `RELAY_AGENT_ORIGIN` to that origin.
+
+To roll back the chat cut-over, remove both settings and redeploy the router;
+the existing Cloud path resumes automatically. This repository's agents must
+not perform the deployment, route, custom-domain, or DNS steps.
