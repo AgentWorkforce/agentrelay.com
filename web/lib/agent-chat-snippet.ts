@@ -43,10 +43,10 @@ export function agentChatSnippet({
       `If you cannot run it outside the sandbox, ask me to run \`${bridgeCommand} ${url}\` in my own terminal. Then send each message through files instead, and run only the part from \`for i\` onward to keep waiting:`,
       '',
       '```sh',
-      `d=${dir}; cat > "$d/out/.msg" <<'EOF'`,
+      `d=${dir}; f=$(mktemp "$d/out/msg.XXXXXX"); cat > "$f" <<'EOF'`,
       '<message>',
       'EOF',
-      'mv "$d/out/.msg" "$d/out/$(date +%s).txt"',
+      'mv "$f" "$f.txt"',
       'for i in $(seq 60); do [ -n "$(ls "$d/in")" ] && break; sleep 1; done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; mv "$d/in/$f" "$d/sent/"; done; else echo "(no reply yet)"; fi',
       '```',
     );

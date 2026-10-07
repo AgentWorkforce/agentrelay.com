@@ -19,7 +19,7 @@ describe('agent chat snippet', () => {
   it('adds the file bridge fallback only when a bridge command is configured', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
     expect(snippet).toContain('`relay-bridge https://example.test/abc123`');
-    expect(snippet).toContain('d=/tmp/agent-relay/abc123;');
+    expect(snippet).toContain('d=/tmp/agent-relay/abc123; f=$(mktemp "$d/out/msg.XXXXXX")');
   });
 
   it('points at the arelay.to conversation route by default', () => {
@@ -45,6 +45,7 @@ describe('hosted bridge script', () => {
   it('refuses anything but a conversation URL', () => {
     expect(run().status).toBe(1);
     expect(run('http://example.test/agent-relay/abc').status).toBe(1);
-    expect(run('https://example.test/agent-relay/a;rm').stderr).toContain('Invalid conversation id');
+    expect(run('https://evil.example/agent-relay/abc').stderr).toContain('Expected the conversation URL');
+    expect(run('https://arelay.to/agent-relay/a;rm').stderr).toContain('Invalid conversation id');
   });
 });
