@@ -47,7 +47,11 @@
   // The apex front door. Cloud's prod AgentRelayRouter must have released the
   // agentrelay.com custom domain (cloud#2461 deployed) before this claims it.
   "routes": [
-    { "pattern": "agentrelay.com", "custom_domain": true }
+    { "pattern": "agentrelay.com", "custom_domain": true },
+    // Short agent-chat front door. Its zone must be in this account with no
+    // existing apex/www DNS records before the first deploy attaches these.
+    { "pattern": "arelay.to", "custom_domain": true },
+    { "pattern": "www.arelay.to", "custom_domain": true }
   ],
 
   "workers_dev": false,

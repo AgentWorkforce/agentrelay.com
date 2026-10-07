@@ -6,20 +6,24 @@ import { agentChatSnippet, newConversationId } from '../agent-chat-snippet';
 describe('agent chat snippet', () => {
   it('uses one fixed command prefix for the conversation', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/', bridgeCommand: '' });
-    expect(snippet).toContain("curl -sS --data-binary @- https://example.test/chat/c/abc123 <<'EOF'");
+    expect(snippet).toContain("curl -sS --data-binary @- https://example.test/chat/abc123 <<'EOF'");
     expect(snippet).toContain('outside the sandbox');
     expect(snippet).not.toContain('/tmp/agent-relay');
   });
 
   it('points the file bridge fallback at the hosted script by default', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test' });
-    expect(snippet).toContain('`curl -fsSL https://agentrelay.com/agent-relay/bridge.sh | sh -s -- https://example.test/c/abc123`');
+    expect(snippet).toContain('`curl -fsSL https://arelay.to/agent-relay/bridge.sh | sh -s -- https://example.test/abc123`');
   });
 
   it('adds the file bridge fallback only when a bridge command is configured', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
-    expect(snippet).toContain('`relay-bridge https://example.test/c/abc123`');
+    expect(snippet).toContain('`relay-bridge https://example.test/abc123`');
     expect(snippet).toContain('d=/tmp/agent-relay/abc123;');
+  });
+
+  it('points at the arelay.to conversation route by default', () => {
+    expect(agentChatSnippet({ conversationId: 'abc123' })).toContain("curl -sS --data-binary @- https://arelay.to/agent-relay/abc123 <<'EOF'");
   });
 
   it('creates unguessable conversation ids', () => {
@@ -40,7 +44,7 @@ describe('hosted bridge script', () => {
 
   it('refuses anything but a conversation URL', () => {
     expect(run().status).toBe(1);
-    expect(run('http://example.test/c/abc').status).toBe(1);
-    expect(run('https://example.test/c/a;rm').stderr).toContain('Invalid conversation id');
+    expect(run('http://example.test/agent-relay/abc').status).toBe(1);
+    expect(run('https://example.test/agent-relay/a;rm').stderr).toContain('Invalid conversation id');
   });
 });

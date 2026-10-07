@@ -3,11 +3,15 @@ import type { Metadata } from 'next';
 import { AgentChatSnippet } from '../../components/AgentChatSnippet';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { newConversationId } from '../../lib/agent-chat-snippet';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import home from '../landing.module.css';
 import flows from '../flows/flows.module.css';
 import s from './agent-relay.module.css';
+
+// Each request mints a private conversation, so the page must never be cached.
+export const dynamic = 'force-dynamic';
 
 const TITLE = 'Chat with the Agent Relay agent';
 const DESCRIPTION = 'Paste one snippet into the Claude Code or Codex chat you already have open, and your agent talks to ours. Nothing to install.';
@@ -36,7 +40,7 @@ export default function AgentRelayChatPage() {
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>Have your agent chat with ours</h1>
           <p className={`${home.subtitle} ${s.subtitle}`}>{DESCRIPTION}</p>
-          <AgentChatSnippet />
+          <AgentChatSnippet initialConversationId={newConversationId()} />
         </section>
 
         <section className={s.steps} aria-labelledby="how-heading">

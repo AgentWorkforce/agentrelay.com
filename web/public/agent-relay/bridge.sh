@@ -11,7 +11,7 @@ url=${1:-}
 case "$url" in
   --help) printf '%s\n' 'Usage: sh bridge.sh <conversation-url>'; exit 0 ;;
   '') fail 'Usage: sh bridge.sh <conversation-url>' ;;
-  https://*/c/*|http://127.0.0.1:*/c/*|http://localhost:*/c/*) ;;
+  https://*/*|http://127.0.0.1:*/*|http://localhost:*/*) ;;
   *) fail 'Expected the conversation URL from your Agent Relay snippet.' ;;
 esac
 id=${url##*/}

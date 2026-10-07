@@ -43,11 +43,6 @@
   color: #04121d;
 }
 
-.primary:disabled {
-  opacity: 0.6;
-  cursor: progress;
-}
-
 .secondary {
   border: 1px solid #405c72;
   background: transparent;
