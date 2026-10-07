@@ -25,7 +25,11 @@ case "$resolved" in https://github.com/AgentWorkforce/relay-desktop-releases/rel
 case "$version" in *[!a-zA-Z0-9._-]*) fail 'Invalid release version.';; esac
 asset="AgentRelay-$platform-$arch-probe.tar.gz"
 base="https://github.com/AgentWorkforce/relay-desktop-releases/releases/download/$version"
-tmp=$(mktemp -d "${TMPDIR:-/tmp}/relay-connect.XXXXXX")
+# Stage beside the install so the probe's checks run on a filesystem that must
+# allow execution anyway; a noexec $TMPDIR would otherwise abort the install.
+root="$HOME/.local/lib/agent-relay/connect"
+mkdir -p "$root"
+tmp=$(mktemp -d "$root/.install.XXXXXX")
 staged=
 cleanup() {
   rm -rf "$tmp"
@@ -56,8 +60,6 @@ for command in create join send status leave end; do
 done
 # Keep Connect private: relay/agent-relay belong to the orchestration CLI,
 # and ~/.local/bin/agent-relay-probe belongs to the desktop-managed copy.
-root="$HOME/.local/lib/agent-relay/connect"
-mkdir -p "$root"
 target="$root/agent-relay-probe"
 [ ! -d "$target" ] || fail 'The probe installation target is a directory; existing installation was not changed.'
 # Stage on the destination filesystem; rename never alters a running executable.
