@@ -12,7 +12,7 @@
 .page .integrationsSection,
 .page .activitySection { --section-bg: #193650; }
 
-.activitySection { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2.5rem, 5vw, 5rem); scroll-margin-top: 80px; --section-pattern-opacity: 0; }
+.activitySection { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2.5rem, 5vw, 5rem); --section-pattern-opacity: 0; }
 .activityIntro { max-width: 440px; margin: 0; text-align: left; }
 .activityIntro h2 { margin: 0; font-family: var(--font-heading), sans-serif; color: var(--flows-text); font-size: clamp(2.25rem, 3.8vw, 3.2rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.035em; text-wrap: balance; }
 .activityIntro p { max-width: 400px; margin: 1.5rem 0 0; color: var(--flows-muted); font-size: clamp(1rem, 1.5vw, 1.125rem); line-height: 1.75; }
@@ -39,7 +39,7 @@
 }
 
 /* Session detail follows the team-wide activity view. */
-.sessionSection { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2.5rem, 5vw, 5rem); --section-bg: #0d2638; --section-pattern-opacity: 0; scroll-margin-top: 100px; }
+.sessionSection { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2.5rem, 5vw, 5rem); --section-bg: #0d2638; --section-pattern-opacity: 0; }
 .sessionIntro { grid-column: 1; grid-row: 1; max-width: 440px; margin: 0; text-align: left; }
 .sessionIntro h2 { margin: 0; font-family: var(--font-heading), sans-serif; color: var(--flows-text); font-size: clamp(2rem, 3.8vw, 3.2rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.035em; text-wrap: balance; }
 .sessionIntro p { max-width: 400px; margin: 1.5rem 0 0; color: var(--flows-muted); font-size: clamp(1rem, 1.5vw, 1.125rem); line-height: 1.75; }
