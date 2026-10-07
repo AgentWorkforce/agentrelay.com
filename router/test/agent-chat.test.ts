@@ -127,6 +127,22 @@ describe("router agent chat", () => {
       .toBe(`/cloud/api/v1/agent-chat/agent-relay/${ID}`);
   });
 
+  it("fails fast and logs a distinct error for an invalid relay-agent origin", async () => {
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const upstreamFetch = vi.spyOn(globalThis, "fetch");
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await worker.fetch(
+      new Request(`https://arelay.to/agent-relay/${ID}`, { method: "POST", body: "hello" }),
+      buildEnv(cloud, { RELAY_AGENT_ORIGIN: "relay-agent.example.test/not-an-origin" }),
+      ctx,
+    );
+
+    expect(response.status).toBe(503);
+    expect(upstreamFetch).not.toHaveBeenCalled();
+    expect(cloud.fetch).not.toHaveBeenCalled();
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("relay_agent_origin_invalid"));
+  });
+
   it("fails closed with a plain-text 503 when the configured upstream fails", async () => {
     const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
     const relayAgent = { fetch: vi.fn(async () => { throw new Error("down"); }) };

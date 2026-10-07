@@ -400,6 +400,28 @@ function relayAgentOrigin(env: Env): string | undefined {
   return origin || undefined;
 }
 
+class RelayAgentOriginError extends Error {}
+
+function validatedRelayAgentOrigin(origin: string): string {
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    throw new RelayAgentOriginError("RELAY_AGENT_ORIGIN is not a valid URL");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new RelayAgentOriginError("RELAY_AGENT_ORIGIN must be an HTTPS origin without credentials, path, query, or fragment");
+  }
+  return url.origin;
+}
+
 function relayAgentEnabled(env: Env): boolean {
   return Boolean(env.RELAY_AGENT_WORKER || relayAgentOrigin(env));
 }
@@ -423,7 +445,7 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
 
   const origin = relayAgentOrigin(env);
   if (!origin) throw new Error("relay agent upstream is not configured");
-  return globalThis.fetch(buildRelayAgentRequest(request, url, origin));
+  return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
 }
 
 export default {
@@ -475,16 +497,17 @@ export default {
       ? (request.clone() as unknown as Request)
       : null;
 
-    // The optional binding/origin is the cut-over flag. Neither is configured
-    // by default, so the existing Cloud route remains unchanged until a human
-    // adds one after the relay-agent Worker is reviewed and deployed.
+    // Production config includes the service binding. Removing it (and any
+    // origin alternative) is the rollback flag that restores the Cloud route.
     if (agentChatCloudPath && relayAgentEnabled(env)) {
       try {
         const workerResponse = await fetchRelayAgent(request, url, env);
         return workerResponse;
       } catch (error) {
         console.error(JSON.stringify({
-          error: "relay_agent_upstream_failed",
+          error: error instanceof RelayAgentOriginError
+            ? "relay_agent_origin_invalid"
+            : "relay_agent_upstream_failed",
           message: error instanceof Error ? error.message : "unknown error",
         }));
         return new Response("The agent chat is unavailable. Retry the same command shortly.\n", {

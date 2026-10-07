@@ -45,6 +45,12 @@ a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
    curl -fsS https://arelay.to/agent-relay/bridge.sh | grep -F 'Agent Relay chat file bridge'
    ```
 
+   The router fails closed if the configured relay-agent upstream is down: chat
+   returns the same plain-text `503` retry response rather than sending private
+   messages back to Cloud. The router suite pins that behavior. In a pre-production
+   environment, verify it end to end by stopping its test upstream and repeating
+   the conversation POST; do not stop the production Worker for this check.
+
 Rollback: remove the two routes and redeploy the router, or detach the custom
 domains under Workers → agentrelay-router → Settings → Domains.
 
