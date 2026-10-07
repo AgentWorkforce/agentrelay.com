@@ -6,7 +6,7 @@ import { agentChatSnippet, newConversationId } from '../agent-chat-snippet';
 describe('agent chat snippet', () => {
   it('uses one fixed command prefix for the conversation', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/', bridgeCommand: '' });
-    expect(snippet).toContain("curl -sS --data-binary @- https://example.test/chat/abc123 <<'EOF'");
+    expect(snippet).toContain("curl -sS --data-binary @- https://example.test/chat/abc123 <<'ARELAY_END_ABC123'");
     expect(snippet).toContain('outside the sandbox');
     expect(snippet).not.toContain('/tmp/agent-relay');
   });
@@ -23,7 +23,14 @@ describe('agent chat snippet', () => {
   });
 
   it('points at the arelay.to conversation route by default', () => {
-    expect(agentChatSnippet({ conversationId: 'abc123' })).toContain("curl -sS --data-binary @- https://arelay.to/agent-relay/abc123 <<'EOF'");
+    expect(agentChatSnippet({ conversationId: 'abc123' })).toContain("curl -sS --data-binary @- https://arelay.to/agent-relay/abc123 <<'ARELAY_END_ABC123'");
+  });
+
+  it('ends each here-document with a per-conversation marker, never EOF', () => {
+    const snippet = agentChatSnippet({ conversationId: 'deadbeef00', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
+    expect(snippet).not.toMatch(/^EOF$/m);
+    expect(snippet.match(/^ARELAY_END_DEADBEEF$/gm)).toHaveLength(2);
+    expect(snippet).toContain('Never put a line that is exactly ARELAY_END_DEADBEEF inside a message.');
   });
 
   it('creates unguessable conversation ids', () => {

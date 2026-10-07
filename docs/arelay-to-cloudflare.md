@@ -17,6 +17,9 @@ a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
 1. Cloudflare dashboard → Add a domain → `arelay.to` → **Add site anyway** →
    Free plan. At GoDaddy, disable DNSSEC if on, then set the two Cloudflare
    nameservers. Wait until the zone is **Active** (done 2026-10-07).
+   If DNSSEC was on at GoDaddy, re-enable it once the zone is Active: in
+   Cloudflare, DNS → Settings → DNSSEC → Enable, then add the DS record it
+   shows at GoDaddy (Domain → DNS → DNSSEC). Check with `dig +dnssec arelay.to`.
 2. In the zone's DNS records, delete any `A`, `AAAA` or `CNAME` record for
    `arelay.to` and `www.arelay.to`, and delete any redirect rule for them.
    Workers custom domains create their own records and refuse to attach over

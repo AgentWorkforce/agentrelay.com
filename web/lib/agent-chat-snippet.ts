@@ -25,14 +25,19 @@ export function agentChatSnippet({
   bridgeCommand?: string;
 }): string {
   const url = `${baseUrl.replace(/\/$/, '')}/${conversationId}`;
+  // A per-conversation end marker instead of EOF: a message line equal to the
+  // marker would end the here-document early and run the rest as shell.
+  const end = `ARELAY_END_${conversationId.slice(0, 8).toUpperCase()}`;
   const lines = [
     'Chat with the Agent Relay agent for me. Send each message with the command below and show me the reply it prints. If it prints "no reply yet", run the same command with an empty message to keep waiting. Start by saying hi and asking what it can help with.',
     '',
     '```sh',
-    `curl -sS --data-binary @- ${url} <<'EOF'`,
+    `curl -sS --data-binary @- ${url} <<'${end}'`,
     '<message>',
-    'EOF',
+    end,
     '```',
+    '',
+    `Never put a line that is exactly ${end} inside a message.`,
     '',
     'If curl cannot connect, your sandbox is blocking the network: ask me to approve running this exact command outside the sandbox.',
   ];
@@ -43,9 +48,9 @@ export function agentChatSnippet({
       `If you cannot run it outside the sandbox, ask me to run \`${bridgeCommand} ${url}\` in my own terminal. Then send each message through files instead, and run only the part from \`for i\` onward to keep waiting:`,
       '',
       '```sh',
-      `d=${dir}; f=$(mktemp "$d/out/msg.XXXXXX"); cat > "$f" <<'EOF'`,
+      `d=${dir}; f=$(mktemp "$d/out/msg.XXXXXX"); cat > "$f" <<'${end}'`,
       '<message>',
-      'EOF',
+      end,
       'mv "$f" "$f.txt"',
       'for i in $(seq 60); do [ -n "$(ls "$d/in")" ] && break; sleep 1; done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; mv "$d/in/$f" "$d/sent/"; done; else echo "(no reply yet)"; fi',
       '```',
