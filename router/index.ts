@@ -406,7 +406,14 @@ function relayAgentEnabled(env: Env): boolean {
 
 function buildRelayAgentRequest(request: Request, requestUrl: URL, origin: string): Request {
   const target = new URL(requestUrl.pathname + requestUrl.search, origin);
-  return new Request(target.toString(), request);
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: "manual",
+    duplex: "half",
+  };
+  return new Request(target.toString(), init);
 }
 
 async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Response> {
@@ -432,7 +439,12 @@ export default {
       return Response.redirect(redirectUrl.toString(), 302);
     }
 
-    const shortHostRedirect = getAgentChatCloudPath(url.hostname, url.pathname, request.method)
+    const agentChatCloudPath = getAgentChatCloudPath(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    const shortHostRedirect = agentChatCloudPath
       ? undefined
       : getShortHostRedirect(url);
     if (shortHostRedirect) {
@@ -456,33 +468,32 @@ export default {
     // harness has no corpus to prove equivalence during Phase 4 cutover.
     // See Codex P2.6 on bundle PR #647.
     const recorderEnv = hasRecorderEnv(env) ? env : null;
-    const recorderRequestClone = recorderEnv
+    // Conversation URLs are bearer secrets and request bodies are private chat
+    // content, so neither the new route nor the existing Cloud fallback belongs
+    // in the replay corpus.
+    const recorderRequestClone = recorderEnv && !agentChatCloudPath
       ? (request.clone() as unknown as Request)
       : null;
 
     // The optional binding/origin is the cut-over flag. Neither is configured
     // by default, so the existing Cloud route remains unchanged until a human
     // adds one after the relay-agent Worker is reviewed and deployed.
-    const agentChatCloudPath = getAgentChatCloudPath(
-      url.hostname,
-      url.pathname,
-      request.method,
-    );
     if (agentChatCloudPath && relayAgentEnabled(env)) {
       try {
         const workerResponse = await fetchRelayAgent(request, url, env);
-        if (recorderRequestClone && recorderEnv) {
-          ctx.waitUntil(
-            maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
-          );
-        }
         return workerResponse;
-      } catch {
+      } catch (error) {
+        console.error(JSON.stringify({
+          error: "relay_agent_upstream_failed",
+          message: error instanceof Error ? error.message : "unknown error",
+        }));
         return new Response("The agent chat is unavailable. Retry the same command shortly.\n", {
           status: 503,
           headers: {
             "content-type": "text/plain; charset=utf-8",
             "cache-control": "no-store",
+            "referrer-policy": "no-referrer",
+            "x-content-type-options": "nosniff",
           },
         });
       }

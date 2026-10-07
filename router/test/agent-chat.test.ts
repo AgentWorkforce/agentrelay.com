@@ -110,6 +110,7 @@ describe("router agent chat", () => {
     expect(cloud.fetch).not.toHaveBeenCalled();
     const forwarded = upstreamFetch.mock.calls[0][0] as Request;
     expect(forwarded.url).toBe(`https://relay-agent.example.test/agent-relay/${ID}`);
+    expect(forwarded.redirect).toBe("manual");
     expect(await forwarded.text()).toBe("hello origin");
   });
 
@@ -129,6 +130,7 @@ describe("router agent chat", () => {
   it("fails closed with a plain-text 503 when the configured upstream fails", async () => {
     const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
     const relayAgent = { fetch: vi.fn(async () => { throw new Error("down"); }) };
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const response = await worker.fetch(
       new Request(`https://arelay.to/agent-relay/${ID}`, { method: "POST", body: "hello" }),
       buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
@@ -137,8 +139,11 @@ describe("router agent chat", () => {
 
     expect(response.status).toBe(503);
     expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+    expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
     expect(await response.text()).toContain("Retry the same command shortly");
     expect(cloud.fetch).not.toHaveBeenCalled();
+    expect(logged).toHaveBeenCalledWith(expect.stringContaining("relay_agent_upstream_failed"));
   });
 
   it("sends the short host's root, www and cloud app to agentrelay.com", () => {
