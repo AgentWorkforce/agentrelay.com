@@ -35,14 +35,35 @@ deliver() {
   printf '<- %s\n' "$1"
 }
 
-# post FILE [KEY]: prints the reply; fails on network or HTTP errors. The key
-# lets the server ignore a retry of a message it already received.
+# post FILE KEY OUT: writes the reply to OUT; fails on network or HTTP errors.
+# The key lets the server ignore a retry of a message it already received.
+# curl runs as a tracked child so a stopping worker can kill it, instead of
+# leaving it waiting on the server where it could swallow a later reply.
 post() {
-  if [ -n "${2:-}" ]; then
-    curl -sS -f --max-time 90 -H "Idempotency-Key: $2" --data-binary "@$1" "$url"
+  if [ -n "$2" ]; then
+    curl -sS -f --max-time 90 -H "Idempotency-Key: $2" --data-binary "@$1" -o "$3" "$url" &
   else
-    curl -sS -f --max-time 90 --data-binary "@$1" "$url"
+    curl -sS -f --max-time 90 --data-binary "@$1" -o "$3" "$url" &
   fi
+  child_pid=$!
+  wait "$child_pid"
+}
+
+# nap SECONDS: an interruptible sleep (a trap waits for a foreground sleep).
+nap() {
+  sleep "$1" &
+  child_pid=$!
+  wait "$child_pid"
+}
+
+# Runs a background worker that stops its own curl or nap when the bridge stops.
+worker() {
+  (
+    child_pid=
+    trap 'kill "$child_pid" 2>/dev/null; exit 0' TERM
+    "$@"
+  ) &
+  pids="$pids $!"
 }
 
 # A message is sent only if it is a plain file with a single link, so a
@@ -56,11 +77,13 @@ is_plain_file() {
 send_one() {
   name=$1
   file=$private/sending/$name
+  out=$private/reply.$name
   attempt=1
   while :; do
-    if reply=$(post "$file" "${name%.txt}"); then
+    if post "$file" "${name%.txt}" "$out"; then
       mv "$file" "$private/sent/$name"
-      deliver "$reply"
+      deliver "$(cat "$out" 2>/dev/null)"
+      rm -f "$out"
       return 0
     fi
     if [ "$attempt" -ge 5 ]; then
@@ -69,22 +92,32 @@ send_one() {
       return 0
     fi
     printf 'send failed (attempt %s), retrying: %s\n' "$attempt" "$name" >&2
-    sleep $((attempt * 5))
+    nap $((attempt * 5))
     attempt=$((attempt + 1))
   done
 }
 
+# Background process ids, tracked explicitly: dash's `jobs` is empty inside $().
+pids=
+stop() {
+  # shellcheck disable=SC2086 # pids is a space-separated list
+  kill $pids 2>/dev/null || true
+  exit 0
+}
+trap stop INT TERM HUP
+
 # Keep one wait open so replies sent while the agent is idle still land in in/.
-(
+receive_forever() {
+  out=$private/reply.wait
   while :; do
-    if reply=$(post /dev/null); then deliver "$reply"; sleep 1; else sleep 3; fi
+    if post /dev/null '' "$out"; then deliver "$(cat "$out" 2>/dev/null)"; nap 1; else nap 3; fi
   done
-) &
-trap 'kill $(jobs -p) 2>/dev/null || true; exit 0' INT TERM HUP
+}
+worker receive_forever
 
 # Resume messages a previous run left mid-send.
 for f in "$private"/sending/*.txt; do
-  if [ -f "$f" ]; then send_one "${f##*/}" & fi
+  if [ -f "$f" ]; then worker send_one "${f##*/}"; fi
 done
 
 printf 'Bridging %s <-> %s (Ctrl+C to stop)\n' "$dir" "$url"
@@ -96,7 +129,7 @@ while :; do
     # The rename claims the file; once moved, the agent can no longer swap it.
     mv "$f" "$staged" || continue
     if ! is_plain_file "$staged"; then
-      rm -f "$staged"
+      rm -rf "$staged" || true
       deliver "(message $name was not sent: messages must be plain files)"
       continue
     fi
@@ -105,7 +138,7 @@ while :; do
       continue
     fi
     printf -- '-> %s\n' "$(head -n 1 "$staged" | cut -c 1-120)"
-    send_one "$name" &
+    worker send_one "$name"
   done
   sleep 1
 done
