@@ -6,8 +6,11 @@ export const AGENT_CHAT_URL = process.env.NEXT_PUBLIC_AGENT_CHAT_URL || 'https:/
 
 // The visitor runs this in their own terminal, outside the agent's sandbox, to
 // carry messages through files when the agent cannot use the network.
+// Served next to the conversations, so a build that points AGENT_CHAT_URL at
+// another origin also gets its own bridge script.
 export const AGENT_CHAT_BRIDGE_COMMAND =
-  process.env.NEXT_PUBLIC_AGENT_CHAT_BRIDGE_COMMAND?.trim() || 'curl -fsSL https://arelay.to/agent-relay/bridge.sh | sh -s --';
+  process.env.NEXT_PUBLIC_AGENT_CHAT_BRIDGE_COMMAND?.trim() ||
+  `curl -fsSL ${AGENT_CHAT_URL.replace(/\/$/, '')}/bridge.sh | sh -s --`;
 
 export function newConversationId(): string {
   const bytes = new Uint8Array(16);
@@ -45,14 +48,14 @@ export function agentChatSnippet({
     const dir = `/tmp/agent-relay/${conversationId}`;
     lines.push(
       '',
-      `If you cannot run it outside the sandbox, ask me to run \`${bridgeCommand} ${url}\` in my own terminal. Then send each message through files instead, and run only the part from \`for i\` onward to keep waiting:`,
+      `If you cannot run it outside the sandbox, ask me to run \`${bridgeCommand} ${url}\` in my own terminal. Then send each message through files instead, and run only the last line to keep waiting (each command runs in a fresh shell, so it repeats \`d=\`):`,
       '',
       '```sh',
       `d=${dir}; f=$(mktemp "$d/out/msg.XXXXXX"); cat > "$f" <<'${end}'`,
       '<message>',
       end,
       'mv "$f" "$f.txt"',
-      'for i in $(seq 60); do [ -n "$(ls "$d/in")" ] && break; sleep 1; done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; mv "$d/in/$f" "$d/sent/"; done; else echo "(no reply yet)"; fi',
+      `d=${dir}; i=0; while [ "$i" -lt 60 ] && [ -z "$(ls "$d/in")" ]; do sleep 1; i=$((i + 1)); done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi`,
       '```',
     );
   }

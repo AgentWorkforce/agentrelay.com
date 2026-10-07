@@ -11,6 +11,13 @@ describe('agent chat snippet', () => {
     expect(snippet).not.toContain('/tmp/agent-relay');
   });
 
+  it('uses only POSIX shell in the file fallback', () => {
+    const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
+    expect(snippet).not.toContain('seq ');
+    // The wait line must stand alone: agents run each command in a fresh shell.
+    expect(snippet).toMatch(/^d=\/tmp\/agent-relay\/abc123; i=0; while \[ "\$i" -lt 60 \]/m);
+  });
+
   it('points the file bridge fallback at the hosted script by default', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test' });
     expect(snippet).toContain('`curl -fsSL https://arelay.to/agent-relay/bridge.sh | sh -s -- https://example.test/abc123`');

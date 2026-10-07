@@ -9,32 +9,45 @@ import s from './agent-chat-snippet.module.css';
 // the page sees a complete snippet too.
 export function AgentChatSnippet({ initialConversationId }: { initialConversationId: string }) {
   const [conversationId, setConversationId] = useState(initialConversationId);
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<'' | 'copied' | 'copy-failed' | 'new'>('');
 
   const snippet = agentChatSnippet({ conversationId });
 
   async function handleCopy() {
-    await navigator.clipboard.writeText(snippet);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(snippet);
+      setStatus('copied');
+      setTimeout(() => setStatus((current) => (current === 'copied' ? '' : current)), 2000);
+    } catch {
+      setStatus('copy-failed');
+    }
+  }
+
+  function handleNewConversation() {
+    setConversationId(newConversationId());
+    setStatus('new');
   }
 
   return (
-    <div className={s.card}>
+    // The snippet carries a private conversation URL: keep it out of session replay.
+    <div className={`${s.card} ph-no-capture ph-sensitive`}>
       <div className={s.header}>
         <span className={s.label}>Paste into Claude Code or Codex</span>
         <div className={s.actions}>
-          <button type="button" className={s.secondary} onClick={() => setConversationId(newConversationId())}>
+          <button type="button" className={s.secondary} onClick={handleNewConversation}>
             New conversation
           </button>
           <button type="button" className={s.primary} onClick={handleCopy}>
-            {copied ? 'Copied' : 'Copy snippet'}
+            {status === 'copied' ? 'Copied' : 'Copy snippet'}
           </button>
         </div>
       </div>
-      <pre className={s.snippet} aria-live="polite">
-        {snippet}
-      </pre>
+      <p className={status === 'copy-failed' ? s.error : s.visuallyHidden} role="status" aria-live="polite">
+        {status === 'copied' && 'Snippet copied.'}
+        {status === 'new' && 'New conversation created. Copy the snippet again.'}
+        {status === 'copy-failed' && 'Copy failed. Select the snippet below and copy it manually.'}
+      </p>
+      <pre className={s.snippet}>{snippet}</pre>
     </div>
   );
 }

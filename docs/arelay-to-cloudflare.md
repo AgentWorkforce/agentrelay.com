@@ -9,7 +9,8 @@ and the chat endpoint:
 - `https://arelay.to/agent-relay/bridge.sh`: the file-bridge fallback
 - `https://arelay.to/agent-relay/<32 hex id>`: the conversation, forwarded to
   cloud's `/cloud/api/v1/agent-chat/agent-relay/<id>`
-- `https://arelay.to/`, `/cloud/*` and `www.arelay.to` redirect to agentrelay.com
+- `https://arelay.to/` and `/cloud/*` redirect to agentrelay.com;
+  `www.arelay.to` redirects to `arelay.to`, except chat POSTs, which it serves
 
 A redirect rule is not enough: curl does not follow redirects without `-L`, and
 a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
@@ -32,6 +33,11 @@ a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
    curl -sI https://arelay.to/ | grep -i '^location'             # https://agentrelay.com/
    curl -s -o /dev/null -w '%{http_code}\n' https://arelay.to/agent-relay   # 200
    curl -sI https://www.arelay.to/agent-relay | grep -i '^location'  # https://arelay.to/agent-relay
+   # Each load mints its own conversation and is never cached:
+   for i in 1 2; do curl -s https://arelay.to/agent-relay | grep -o 'arelay.to/agent-relay/[0-9a-f]\{32\}' | head -1; done  # two different ids
+   curl -sI https://arelay.to/agent-relay | grep -i -e '^cache-control' -e '^cf-cache-status'  # no-store/private; not HIT
+   # A real conversation reaches cloud and gets the agent's reply:
+   printf 'runbook check' | curl -sS --data-binary @- "https://arelay.to/agent-relay/$(openssl rand -hex 16)"  # agent-relay: ...
    ```
 
 Rollback: remove the two routes and redeploy the router, or detach the custom

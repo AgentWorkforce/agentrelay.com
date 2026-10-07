@@ -15,17 +15,34 @@ const ctx = { waitUntil: () => undefined, passThroughOnException: () => undefine
 
 describe("router agent chat", () => {
   it("maps a conversation on either host onto the cloud chat route", () => {
-    for (const host of ["arelay.to", "agentrelay.com"]) {
-      expect(getAgentChatCloudPath(host, `/agent-relay/${ID}`)).toBe(`/cloud/api/v1/agent-chat/agent-relay/${ID}`);
+    for (const host of ["arelay.to", "www.arelay.to", "agentrelay.com"]) {
+      expect(getAgentChatCloudPath(host, `/agent-relay/${ID}`, "POST")).toBe(`/cloud/api/v1/agent-chat/agent-relay/${ID}`);
     }
   });
 
+  it("only claims POSTs", () => {
+    for (const method of ["GET", "HEAD", "OPTIONS", "DELETE"]) {
+      expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID}`, method)).toBeUndefined();
+    }
+  });
+
+  it("sends a www.arelay.to chat POST to cloud instead of redirecting it", async () => {
+    const cloud = { fetch: vi.fn(async (_request: Request) => new Response("agent-relay: hi", { status: 200 })) };
+    const response = await worker.fetch(
+      new Request(`https://www.arelay.to/agent-relay/${ID}`, { method: "POST", body: "hello" }),
+      buildEnv(cloud),
+      ctx,
+    );
+    expect(response.status).toBe(200);
+    expect(new URL(cloud.fetch.mock.calls[0][0].url).pathname).toBe(`/cloud/api/v1/agent-chat/agent-relay/${ID}`);
+  });
+
   it("leaves the page, the bridge script, unknown agents and other hosts alone", () => {
-    expect(getAgentChatCloudPath("arelay.to", "/agent-relay")).toBeUndefined();
-    expect(getAgentChatCloudPath("arelay.to", "/agent-relay/bridge.sh")).toBeUndefined();
-    expect(getAgentChatCloudPath("arelay.to", `/someone-else/${ID}`)).toBeUndefined();
-    expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID.toUpperCase()}`)).toBeUndefined();
-    expect(getAgentChatCloudPath("example.com", `/agent-relay/${ID}`)).toBeUndefined();
+    expect(getAgentChatCloudPath("arelay.to", "/agent-relay", "POST")).toBeUndefined();
+    expect(getAgentChatCloudPath("arelay.to", "/agent-relay/bridge.sh", "POST")).toBeUndefined();
+    expect(getAgentChatCloudPath("arelay.to", `/someone-else/${ID}`, "POST")).toBeUndefined();
+    expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID.toUpperCase()}`, "POST")).toBeUndefined();
+    expect(getAgentChatCloudPath("example.com", `/agent-relay/${ID}`, "POST")).toBeUndefined();
   });
 
   it("forwards a conversation POST, body intact, to the cloud worker", async () => {

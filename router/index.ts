@@ -115,9 +115,18 @@ export function getConnectInviteCloudPath(
   return invitePath ? `${CLOUD_PATH_PREFIX}${invitePath}` : undefined;
 }
 
-// Returns the cloud-app path for an agent chat conversation, or undefined.
-export function getAgentChatCloudPath(hostname: string, pathname: string): string | undefined {
-  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST) {
+// Returns the cloud-app path for an agent chat conversation POST, or undefined.
+// www.arelay.to is accepted here so a chat POST is never sent to its redirect,
+// which curl would not follow and which would turn the POST into a GET.
+export function getAgentChatCloudPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+): string | undefined {
+  if (method !== "POST") {
+    return undefined;
+  }
+  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW) {
     return undefined;
   }
 
@@ -395,7 +404,9 @@ export default {
       return Response.redirect(redirectUrl.toString(), 302);
     }
 
-    const shortHostRedirect = getShortHostRedirect(url);
+    const shortHostRedirect = getAgentChatCloudPath(url.hostname, url.pathname, request.method)
+      ? undefined
+      : getShortHostRedirect(url);
     if (shortHostRedirect) {
       return Response.redirect(shortHostRedirect, 302);
     }
@@ -431,7 +442,7 @@ export default {
       request = new Request(url.toString(), request);
     }
 
-    const agentChatCloudPath = getAgentChatCloudPath(url.hostname, url.pathname);
+    const agentChatCloudPath = getAgentChatCloudPath(url.hostname, url.pathname, request.method);
     if (agentChatCloudPath) {
       url.pathname = agentChatCloudPath;
       request = new Request(url.toString(), request);

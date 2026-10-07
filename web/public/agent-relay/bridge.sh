@@ -19,12 +19,16 @@ id=${url##*/}
 case "$id" in ''|*[!a-zA-Z0-9_-]*) fail 'Invalid conversation id.' ;; esac
 command -v curl >/dev/null 2>&1 || fail 'curl is required.'
 
+# The agent's sandbox can write /tmp, so the shared folder only carries
+# messages in and replies out. Messages are moved into a private folder
+# outside /tmp before they are inspected and sent.
 dir=/tmp/agent-relay/$id
-mkdir -p "$dir/out" "$dir/sending" "$dir/in" "$dir/sent" "$dir/failed"
+private=${XDG_STATE_HOME:-$HOME/.local/state}/agent-relay/$id
+mkdir -p "$dir/out" "$dir/in" "$private/sending" "$private/sent" "$private/failed"
 
 # Atomic write: the agent never reads half a reply.
 deliver() {
-  case "$1" in ''|'(no reply yet'*) return 0 ;; esac
+  case "$1" in ''|'(no reply yet'*|'no reply yet'*) return 0 ;; esac
   tmp=$(mktemp "$dir/in/.reply.XXXXXX")
   printf '%s\n' "$1" > "$tmp"
   mv "$tmp" "$dir/in/$(date +%s)-${tmp##*.}.txt"
@@ -41,21 +45,27 @@ post() {
   fi
 }
 
+# A message is sent only if it is a plain file with a single link, so a
+# symlink or hard link to another file (an SSH key, say) is never read.
+is_plain_file() {
+  [ ! -L "$1" ] && [ -n "$(find "$1" -prune -type f -links 1)" ]
+}
+
 # A message stays in sending/ until the server accepts it; it is archived in
 # sent/ only after a successful POST, and parked in failed/ after 5 attempts.
 send_one() {
   name=$1
-  file=$dir/sending/$name
+  file=$private/sending/$name
   attempt=1
   while :; do
     if reply=$(post "$file" "${name%.txt}"); then
-      mv "$file" "$dir/sent/$name"
+      mv "$file" "$private/sent/$name"
       deliver "$reply"
       return 0
     fi
     if [ "$attempt" -ge 5 ]; then
-      mv "$file" "$dir/failed/$name"
-      deliver "(message not delivered after 5 attempts: $(head -c 80 "$dir/failed/$name") - send it again)"
+      mv "$file" "$private/failed/$name"
+      deliver "(message not delivered after 5 attempts: $(head -n 1 "$private/failed/$name" | cut -c 1-80) - send it again)"
       return 0
     fi
     printf 'send failed (attempt %s), retrying: %s\n' "$attempt" "$name" >&2
@@ -64,32 +74,37 @@ send_one() {
   done
 }
 
-# Resume messages a previous run left mid-send.
-for f in "$dir"/sending/*.txt; do
-  if [ -f "$f" ]; then mv "$f" "$dir/out/"; fi
-done
-
 # Keep one wait open so replies sent while the agent is idle still land in in/.
 (
   while :; do
-    if reply=$(post /dev/null); then deliver "$reply"; else sleep 3; fi
+    if reply=$(post /dev/null); then deliver "$reply"; sleep 1; else sleep 3; fi
   done
 ) &
-receiver=$!
-trap 'kill "$receiver" 2>/dev/null; exit 0' INT TERM HUP
+trap 'kill $(jobs -p) 2>/dev/null || true; exit 0' INT TERM HUP
+
+# Resume messages a previous run left mid-send.
+for f in "$private"/sending/*.txt; do
+  if [ -f "$f" ]; then send_one "${f##*/}" & fi
+done
 
 printf 'Bridging %s <-> %s (Ctrl+C to stop)\n' "$dir" "$url"
 while :; do
   for f in "$dir"/out/*.txt; do
-    [ -f "$f" ] || continue
+    if [ ! -e "$f" ] && [ ! -L "$f" ]; then continue; fi
     name=${f##*/}
-    if [ ! -s "$f" ]; then
-      mv "$f" "$dir/sent/$name"
+    staged=$private/sending/$name
+    # The rename claims the file; once moved, the agent can no longer swap it.
+    mv "$f" "$staged" || continue
+    if ! is_plain_file "$staged"; then
+      rm -f "$staged"
+      deliver "(message $name was not sent: messages must be plain files)"
       continue
     fi
-    # The rename claims the file, so each message has exactly one sender.
-    mv "$f" "$dir/sending/$name" || continue
-    printf -- '-> %s\n' "$(cat "$dir/sending/$name")"
+    if [ ! -s "$staged" ]; then
+      mv "$staged" "$private/sent/$name"
+      continue
+    fi
+    printf -- '-> %s\n' "$(head -n 1 "$staged" | cut -c 1-120)"
     send_one "$name" &
   done
   sleep 1

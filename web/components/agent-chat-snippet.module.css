@@ -30,6 +30,7 @@
 
 .primary,
 .secondary {
+  min-height: 44px;
   border-radius: 8px;
   padding: 7px 14px;
   font-size: 13px;
@@ -60,6 +61,24 @@
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid #23415a;
+  color: #ffb4a8;
+  font-size: 13px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 @media (max-width: 600px) {
