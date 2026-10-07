@@ -34,7 +34,7 @@ const CLOUD_PATH_PREFIX = "/cloud";
 // the invite route lives in the cloud app (basePath /cloud). Only the single
 // opaque-ID segment (with an optional trailing slash) is claimed; /connect
 // itself stays with the marketing site.
-const CONNECT_INVITE_PATH = /^(\/connect\/[^/]+)\/?$/;
+const CONNECT_INVITE_PATH = /^(\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?)\/?$/i;
 // arelay.to is the short public front door for agent chat. It serves the same
 // site, but its bare root and the signed-in cloud app send people to agentrelay.com.
 const SHORT_HOST = "arelay.to";
@@ -111,8 +111,6 @@ export function getConnectInviteCloudPath(
     return undefined;
   }
 
-  // The installer belongs to the marketing origin, not the invite service.
-  if (pathname === "/connect/install.sh" || pathname === "/connect/install.sh/") return undefined;
   const invitePath = CONNECT_INVITE_PATH.exec(pathname)?.[1];
   return invitePath ? `${CLOUD_PATH_PREFIX}${invitePath}` : undefined;
 }

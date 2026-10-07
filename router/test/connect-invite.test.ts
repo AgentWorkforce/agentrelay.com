@@ -26,15 +26,19 @@ function buildCtx(): ExecutionContext {
 
 describe("router Relay Connect invite links", () => {
   it("maps an apex invite link onto the cloud app's route", () => {
-    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/abc123", "GET")).toBe(
-      "/cloud/connect/abc123",
+    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "GET")).toBe(
+      "/cloud/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
-    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/abc123.json", "HEAD")).toBe(
-      "/cloud/connect/abc123.json",
+    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json", "HEAD")).toBe(
+      "/cloud/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.json",
     );
-    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/abc123/", "GET")).toBe(
-      "/cloud/connect/abc123",
+    expect(getConnectInviteCloudPath("agentrelay.com", "/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/", "GET")).toBe(
+      "/cloud/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     );
+  });
+
+  it.each(["install.sh", "install%2Esh", "Install.sh", "checksums.txt", "guide.md", "abc123"])("does not route asset or invalid ID %s as an invite", (segment) => {
+    expect(getConnectInviteCloudPath("agentrelay.com", `/connect/${segment}`, "GET")).toBeUndefined();
   });
 
   it("leaves everything that is not a single-segment apex invite read alone", () => {
@@ -52,7 +56,7 @@ describe("router Relay Connect invite links", () => {
     const cloudWebWorker = makeBinding();
 
     const response = await worker.fetch(
-      new Request("https://agentrelay.com/connect/abc123?format=md", {
+      new Request("https://agentrelay.com/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?format=md", {
         method,
         headers: { accept: "application/json" },
       }),
@@ -63,7 +67,7 @@ describe("router Relay Connect invite links", () => {
     expect(response.status).toBe(200);
     expect(cloudWebWorker.fetch).toHaveBeenCalledTimes(1);
     const forwarded = cloudWebWorker.fetch.mock.calls[0]?.[0] as Request;
-    expect(forwarded.url).toBe("https://agentrelay.com/cloud/connect/abc123?format=md");
+    expect(forwarded.url).toBe("https://agentrelay.com/cloud/connect/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?format=md");
     expect(forwarded.method).toBe(method);
     expect(forwarded.headers.get("accept")).toBe("application/json");
   });

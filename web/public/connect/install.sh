@@ -26,7 +26,15 @@ case "$version" in *[!a-zA-Z0-9._-]*) fail 'Invalid release version.';; esac
 asset="AgentRelay-$platform-$arch-probe.tar.gz"
 base="https://github.com/AgentWorkforce/relay-desktop-releases/releases/download/$version"
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/relay-connect.XXXXXX")
-trap 'rm -rf "$tmp"' EXIT HUP INT TERM
+staged=
+cleanup() {
+  rm -rf "$tmp"
+  if [ -n "$staged" ]; then rm -f "$staged"; fi
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 curl --proto '=https' --proto-redir '=https' -fsSL --max-time 120 --max-filesize 104857600 "$base/$asset" -o "$tmp/probe.tar.gz"
 curl --proto '=https' --proto-redir '=https' -fsSL --max-time 30 --max-filesize 1024 "$base/$asset.sha256" -o "$tmp/checksum"
 expected=$(awk 'NR == 1 { print $1 }' "$tmp/checksum")
@@ -42,19 +50,23 @@ if [ "$platform" = macOS ]; then
   codesign --verify --strict '-R=anchor apple generic and certificate 1[field.1.2.840.113635.100.6.2.6] exists and certificate leaf[field.1.2.840.113635.100.6.1.13] exists and certificate leaf[subject.OU] = "QUJ7SA6X8X"' "$tmp/probe" || fail 'Probe signature verification failed.'
 fi
 # Older releases predate the native commands. Fail before changing any install.
-"$tmp/probe" connect create --help >/dev/null 2>&1 &&
-  "$tmp/probe" connect join --help >/dev/null 2>&1 &&
-  "$tmp/probe" connect end --help >/dev/null 2>&1 || fail 'This release does not yet support native Connect. Retry after a compatible probe is published.'
+"$tmp/probe" --version >/dev/null 2>&1 || fail 'Could not execute the probe on this system. Check OS, architecture and Linux libc compatibility.'
+for command in create join send status leave end; do
+  "$tmp/probe" connect "$command" --help >/dev/null 2>&1 || fail "This release does not support native Connect command: $command. Retry after a compatible probe is published."
+done
 # Keep Connect private: relay/agent-relay belong to the orchestration CLI,
 # and ~/.local/bin/agent-relay-probe belongs to the desktop-managed copy.
 root="$HOME/.local/lib/agent-relay/connect"
 mkdir -p "$root"
+target="$root/agent-relay-probe"
+[ ! -d "$target" ] || fail 'The probe installation target is a directory; existing installation was not changed.'
 # Stage on the destination filesystem; rename never alters a running executable.
 staged=$(mktemp "$root/.agent-relay-probe.XXXXXX")
 if ! cat "$tmp/probe" > "$staged" || ! chmod 755 "$staged"; then
   rm -f "$staged"; fail 'Could not stage the probe.'
 fi
-mv -f "$staged" "$root/agent-relay-probe"
+mv -f "$staged" "$target"
+staged=
 printf '%s\n' 'Relay Connect installed. No relay process has been started.' \
   'Create: ~/.local/lib/agent-relay/connect/agent-relay-probe connect create --task "Work with another agent"' \
   'Join:   ~/.local/lib/agent-relay/connect/agent-relay-probe connect join https://agentrelay.com/connect/INVITE'
