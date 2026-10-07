@@ -35,6 +35,14 @@ const CLOUD_PATH_PREFIX = "/cloud";
 // opaque-ID segment (with an optional trailing slash) is claimed; /connect
 // itself stays with the marketing site.
 const CONNECT_INVITE_PATH = /^(\/connect\/[^/]+)\/?$/;
+// arelay.to is the short public front door for agent chat. It serves the same
+// site, but its bare root and the signed-in cloud app send people to agentrelay.com.
+const SHORT_HOST = "arelay.to";
+const SHORT_HOST_WWW = "www.arelay.to";
+// Agents a visitor's coding agent can chat with from a pasted snippet. The
+// conversation endpoint is /<agent>/<32 hex id> on either host.
+const AGENT_CHAT_AGENTS = new Set(["agent-relay"]);
+const AGENT_CHAT_PATH = /^\/([a-z0-9-]+)\/([0-9a-f]{32})\/?$/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
 export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
@@ -105,6 +113,43 @@ export function getConnectInviteCloudPath(
 
   const invitePath = CONNECT_INVITE_PATH.exec(pathname)?.[1];
   return invitePath ? `${CLOUD_PATH_PREFIX}${invitePath}` : undefined;
+}
+
+// Returns the cloud-app path for an agent chat conversation POST, or undefined.
+// www.arelay.to is accepted here so a chat POST is never sent to its redirect,
+// which curl would not follow and which would turn the POST into a GET.
+export function getAgentChatCloudPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+): string | undefined {
+  if (method !== "POST") {
+    return undefined;
+  }
+  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW) {
+    return undefined;
+  }
+
+  const match = AGENT_CHAT_PATH.exec(pathname);
+  if (!match || !AGENT_CHAT_AGENTS.has(match[1])) {
+    return undefined;
+  }
+  return `${CLOUD_PATH_PREFIX}/api/v1/agent-chat/${match[1]}/${match[2]}`;
+}
+
+// arelay.to only fronts agent chat: its root, its www alias and the signed-in
+// cloud app redirect to the primary host.
+export function getShortHostRedirect(url: URL): string | undefined {
+  if (url.hostname === SHORT_HOST_WWW) {
+    return `https://${SHORT_HOST}${url.pathname}${url.search}`;
+  }
+  if (url.hostname !== SHORT_HOST) {
+    return undefined;
+  }
+  if (url.pathname === "/" || isCloudPath(url.pathname)) {
+    return `https://${PRIMARY_HOST}${url.pathname}${url.search}`;
+  }
+  return undefined;
 }
 
 export function getVanityRedirect(hostname: string, pathname: string): string | undefined {
@@ -359,6 +404,13 @@ export default {
       return Response.redirect(redirectUrl.toString(), 302);
     }
 
+    const shortHostRedirect = getAgentChatCloudPath(url.hostname, url.pathname, request.method)
+      ? undefined
+      : getShortHostRedirect(url);
+    if (shortHostRedirect) {
+      return Response.redirect(shortHostRedirect, 302);
+    }
+
     // Per-key rate limiting runs BEFORE any worker routing so a runaway
     // workspace gets bounded everywhere — including webhook ingress and
     // /cloud* traffic. The bypass list inside maybeRateLimit exempts
@@ -387,6 +439,12 @@ export default {
     );
     if (connectInviteCloudPath) {
       url.pathname = connectInviteCloudPath;
+      request = new Request(url.toString(), request);
+    }
+
+    const agentChatCloudPath = getAgentChatCloudPath(url.hostname, url.pathname, request.method);
+    if (agentChatCloudPath) {
+      url.pathname = agentChatCloudPath;
       request = new Request(url.toString(), request);
     }
 

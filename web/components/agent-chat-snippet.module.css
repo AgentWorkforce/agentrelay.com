@@ -1,0 +1,89 @@
+.card {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  border: 1px solid #405c72;
+  border-radius: 12px;
+  background: #0b1c2a;
+  text-align: left;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #23415a;
+}
+
+.label {
+  color: #94b0c5;
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.primary,
+.secondary {
+  min-height: 44px;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid transparent;
+  background: var(--flows-accent-strong, #7cc4ff);
+  color: #04121d;
+}
+
+.secondary {
+  border: 1px solid #405c72;
+  background: transparent;
+  color: #d6e4ee;
+}
+
+.snippet {
+  margin: 0;
+  padding: 16px;
+  max-height: 420px;
+  overflow: auto;
+  color: #e4eef5;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 16px;
+  border-bottom: 1px solid #23415a;
+  color: #ffb4a8;
+  font-size: 13px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
