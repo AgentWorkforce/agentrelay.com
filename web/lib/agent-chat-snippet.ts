@@ -4,9 +4,10 @@
 export const AGENT_CHAT_URL =
   process.env.NEXT_PUBLIC_AGENT_CHAT_URL || 'https://agentrelay.com/cloud/api/v1/agent-chat/agent-relay';
 
-// Runs outside the visitor's sandbox and carries messages through files when
-// the agent cannot use the network. Unset until a published bridge command exists.
-export const AGENT_CHAT_BRIDGE_COMMAND = process.env.NEXT_PUBLIC_AGENT_CHAT_BRIDGE_COMMAND?.trim() || '';
+// The visitor runs this in their own terminal, outside the agent's sandbox, to
+// carry messages through files when the agent cannot use the network.
+export const AGENT_CHAT_BRIDGE_COMMAND =
+  process.env.NEXT_PUBLIC_AGENT_CHAT_BRIDGE_COMMAND?.trim() || 'curl -fsSL https://agentrelay.com/agent-relay/bridge.sh | sh -s --';
 
 export function newConversationId(): string {
   const bytes = new Uint8Array(16);

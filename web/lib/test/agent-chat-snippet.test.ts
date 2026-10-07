@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
 
 import { agentChatSnippet, newConversationId } from '../agent-chat-snippet';
 
@@ -8,6 +9,11 @@ describe('agent chat snippet', () => {
     expect(snippet).toContain("curl -sS --data-binary @- https://example.test/chat/c/abc123 <<'EOF'");
     expect(snippet).toContain('outside the sandbox');
     expect(snippet).not.toContain('/tmp/agent-relay');
+  });
+
+  it('points the file bridge fallback at the hosted script by default', () => {
+    const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test' });
+    expect(snippet).toContain('`curl -fsSL https://agentrelay.com/agent-relay/bridge.sh | sh -s -- https://example.test/c/abc123`');
   });
 
   it('adds the file bridge fallback only when a bridge command is configured', () => {
@@ -20,5 +26,21 @@ describe('agent chat snippet', () => {
     const id = newConversationId();
     expect(id).toMatch(/^[0-9a-f]{32}$/);
     expect(newConversationId()).not.toBe(id);
+  });
+});
+
+describe('hosted bridge script', () => {
+  const script = new URL('../../public/agent-relay/bridge.sh', import.meta.url).pathname;
+  const run = (...args: string[]) => spawnSync('sh', [script, ...args], { encoding: 'utf8' });
+
+  it('parses as POSIX sh and prints usage', () => {
+    expect(spawnSync('sh', ['-n', script]).status).toBe(0);
+    expect(run('--help').status).toBe(0);
+  });
+
+  it('refuses anything but a conversation URL', () => {
+    expect(run().status).toBe(1);
+    expect(run('http://example.test/c/abc').status).toBe(1);
+    expect(run('https://example.test/c/a;rm').stderr).toContain('Invalid conversation id');
   });
 });
