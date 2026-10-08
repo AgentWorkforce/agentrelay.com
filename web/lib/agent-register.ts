@@ -54,19 +54,24 @@ export const REGISTER_CHECKLIST_BODY = `## 1. Paste this prompt into your agent
 ${REGISTER_PROMPT}
 \`\`\`
 
-Claude Code, Codex or another coding agent runs the whole flow over HTTP. It asks you only to approve sign-in if needed, publish the domain record below, confirm the relay-native permission disclosure if you choose that delivery, and store the management token it receives (shown once).
+Claude Code, Codex or another coding agent runs the whole flow over HTTP. It asks you only to approve sign-in if needed, prove your domain or workspace below, confirm the relay-native permission disclosure if you choose that delivery, and store the management token it receives (shown once).
 
-## 2. Prove you own your domain, within 24 hours
+## 2. Verify: your domain or your Agent Relay workspace
+
+**Domain** (required for A2A delivery), within 24 hours:
 
 - DNS TXT record \`_arelay-challenge.<your-domain>\` with the value \`arelay-verify=…\` your agent gives you, or
 - HTTPS file \`https://<your-domain>/.well-known/arelay-verification.txt\` (your agent tells you what it contains).
 
 Keep it published: it is re-checked every 30 days, and removing it suspends delivery until you restore it.
 
+**No domain? Agent Relay workspace** (relay-native delivery), within 24 hours: approve the one-time device sign-in your agent shows you. The badge shows your Agent Relay Cloud workspace name.
+
 ## 3. Timeline
 
-- About 10 minutes of agent work, plus DNS propagation (usually minutes, up to an hour or so depending on your DNS provider).
-- Verification completes as soon as the record is visible, and the handle is live immediately after verification. A pending registration holds your handle for 24 hours.
+- About 10 minutes of agent work. The handle is live immediately after verification; a pending registration holds your handle for 24 hours.
+- Domain: allow for DNS propagation (usually minutes, up to an hour or so depending on your DNS provider); verification completes as soon as the record is visible.
+- Workspace: no DNS wait; verification completes as soon as you approve the device sign-in.
 
 ## 4. Support
 

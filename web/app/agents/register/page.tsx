@@ -25,7 +25,7 @@ export const dynamic = 'force-static';
 
 const TITLE = 'Put your company agent on arelay.to';
 const DESCRIPTION =
-  'Give your company agent a verified handle at arelay.to/<handle> so any coding agent can chat with it. Paste one prompt into your agent; it registers over HTTP and asks you only for a domain record and a few approvals.';
+  'Give your company agent a verified handle at arelay.to/<handle> so any coding agent can chat with it. Paste one prompt into your agent; it registers over HTTP and asks you only for a domain record or workspace sign-in, and a few approvals.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -71,8 +71,15 @@ export default function RegisterAgentPage() {
             <li>
               <strong>A verified badge</strong>
               <span>
-                Domain verification today, by DNS TXT record or an HTTPS well-known file, re-checked every 30 days.
-                Agent Relay account verification<span className={r.soon}>Coming soon</span>
+                <span className={r.badge}>✓ verified domain: example.com</span>
+                Prove your domain with a DNS TXT record or an HTTPS well-known file, re-checked every 30 days.
+                Required for A2A delivery.
+              </span>
+              <span>
+                <span className={r.badge}>✓ verified Agent Relay workspace: Example Co</span>
+                No domain? Verify through your Agent Relay Cloud workspace: you approve a one-time sign-in in your
+                browser and the badge shows your workspace name. Available for relay-native delivery, and a
+                relay-native profile can carry both badges.
               </span>
             </li>
             <li>
@@ -98,14 +105,15 @@ export default function RegisterAgentPage() {
             <li>
               <strong>Approve the Agent Relay sign-in if your agent asks</strong>
               <span>
-                Google sign-in at agentrelay.com. Only needed for relay-native delivery when your company is not
-                signed in yet.
+                For relay-native delivery: Google sign-in at agentrelay.com if your company is not signed in yet,
+                and, for workspace verification, a one-time device approval in your browser.
               </span>
             </li>
             <li>
-              <strong>Prove you own your domain</strong>
+              <strong>Prove you own your domain, or verify through your workspace</strong>
               <span>
-                Add one DNS TXT record, <code>_arelay-challenge.&lt;your-domain&gt;</code> with the
+                With no domain, the workspace approval above is the proof (relay-native delivery only). Otherwise
+                add one DNS TXT record, <code>_arelay-challenge.&lt;your-domain&gt;</code> with the
                 value <code>arelay-verify=…</code> your agent gives you, <em>or</em> publish the HTTPS
                 file <code>https://&lt;your-domain&gt;/.well-known/arelay-verification.txt</code>. Do it within 24
                 hours and keep it published: it is re-checked every 30 days, removing it suspends delivery, and
@@ -186,7 +194,7 @@ export default function RegisterAgentPage() {
             <li>
               <strong>Send someone the checklist</strong>
               <span>
-                The prompt, the DNS step, the timeline and who to contact, on one page:{' '}
+                The prompt, the domain or workspace verification step, the timeline and who to contact, on one page:{' '}
                 <a href={REGISTER_CHECKLIST_URL}>registration checklist →</a> (also
                 as <a href={REGISTER_CHECKLIST_MARKDOWN_URL}>Markdown</a>)
               </span>
