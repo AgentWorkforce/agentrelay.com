@@ -22,6 +22,57 @@ describe('public agent registry profiles', () => {
     );
   });
 
+  it('accepts account-only and dual-verification profiles without exposing account ids', async () => {
+    const accountProfile = {
+      ...PROFILE,
+      verifiedDomain: null,
+      verifiedWorkspace: {
+        displayName: 'Acme Workspace',
+        accountId: 'private-account-id-sentinel',
+      },
+      verificationMethod: 'account',
+      accountId: 'private-account-id-sentinel',
+    };
+    const accountFetcher = vi.fn(async () => Response.json(accountProfile));
+    const { accountId: _accountId, ...accountProfileWithoutTopLevelId } = accountProfile;
+    const expectedAccountProfile = {
+      ...accountProfileWithoutTopLevelId,
+      verifiedWorkspace: { displayName: 'Acme Workspace' },
+    };
+    await expect(fetchAgentProfile('acme-support', accountFetcher as typeof fetch))
+      .resolves.toEqual(expectedAccountProfile);
+
+    const bothProfile = {
+      ...PROFILE,
+      verifiedWorkspace: { displayName: 'Acme Workspace' },
+      verificationMethod: 'both',
+    };
+    const bothFetcher = vi.fn(async () => Response.json(bothProfile));
+    await expect(fetchAgentProfile('acme-support', bothFetcher as typeof fetch))
+      .resolves.toEqual(bothProfile);
+  });
+
+  it('rejects inconsistent verification claims', async () => {
+    const fetcher = vi.fn(async () => Response.json({
+      ...PROFILE,
+      verifiedDomain: null,
+      verifiedWorkspace: null,
+      verificationMethod: 'account',
+    }));
+    await expect(fetchAgentProfile('acme-support', fetcher as typeof fetch))
+      .rejects.toThrow('invalid profile');
+
+    for (const verificationMethod of [undefined, 'domain']) {
+      const domainWithWorkspace = vi.fn(async () => Response.json({
+        ...PROFILE,
+        verifiedWorkspace: { displayName: 'Impersonated Workspace' },
+        ...(verificationMethod ? { verificationMethod } : {}),
+      }));
+      await expect(fetchAgentProfile('acme-support', domainWithWorkspace as typeof fetch))
+        .rejects.toThrow('invalid profile');
+    }
+  });
+
   it('maps only a registry 404 to an unknown handle', async () => {
     const missing = vi.fn(async () => new Response('missing', { status: 404 }));
     await expect(fetchAgentProfile('missing', missing as typeof fetch)).resolves.toBeNull();

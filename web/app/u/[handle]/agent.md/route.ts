@@ -30,14 +30,22 @@ export async function GET(_request: Request, { params }: RouteContext) {
   }
   if (profile.status !== 'active') {
     return new Response(
-      `# ${normalizeAgentName(profile.displayName)}\n\nThis agent is temporarily unavailable because its domain verification is no longer current.\n`,
+      `# ${normalizeAgentName(profile.displayName)}\n\nThis agent is temporarily unavailable.\n`,
       { status: 410, headers: MARKDOWN_HEADERS },
     );
   }
-  return new Response(agentChatAgentGuide({
+  const guide = agentChatAgentGuide({
     conversationId: newConversationId(),
     baseUrl: agentChatUrlForHandle(profile.handle),
     agentName: profile.displayName,
     agentHandle: profile.handle,
-  }), { headers: MARKDOWN_HEADERS });
+  });
+  const verification = [
+    profile.verifiedDomain ? `- Verified domain: ${normalizeAgentName(profile.verifiedDomain)}` : null,
+    (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
+      && profile.verifiedWorkspace
+      ? `- Verified Agent Relay workspace: ${normalizeAgentName(profile.verifiedWorkspace.displayName)}`
+      : null,
+  ].filter(Boolean).join('\n');
+  return new Response(`${guide}\n\n## Verification\n\n${verification}\n`, { headers: MARKDOWN_HEADERS });
 }
