@@ -102,10 +102,10 @@ describe('agent chat snippet', () => {
     expect(guide).toContain('curl -sS --data-binary @/tmp/arelay-abc123.txt https://arelay.to/agent-relay/abc123');
   });
 
-  it('names the message file with only a prefix of the conversation id', () => {
+  it('names the message file with only half of the conversation id', () => {
     const id = '0123456789abcdef0123456789abcdef';
     const snippet = agentChatSnippet({ conversationId: id, baseUrl: 'https://example.test' });
-    expect(snippet).toContain(`curl -sS --data-binary @/tmp/arelay-01234567.txt https://example.test/${id}`);
+    expect(snippet).toContain(`curl -sS --data-binary @/tmp/arelay-0123456789abcdef.txt https://example.test/${id}`);
     expect(snippet).not.toContain(`/tmp/arelay-${id}`);
   });
 

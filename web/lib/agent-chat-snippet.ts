@@ -32,9 +32,9 @@ export function agentChatSnippet({
   // through shell source: replies from other agents may be quoted back, and a
   // file's contents are never parsed. The command is identical for every turn,
   // so one "don't ask again" approval covers the whole conversation.
-  // Only a prefix of the id names the file: /tmp is listable by every local
+  // Only half of the id names the file: /tmp is listable by every local
   // user, and the full id is the conversation's bearer secret.
-  const messageFile = `/tmp/arelay-${conversationId.slice(0, 8)}.txt`;
+  const messageFile = `/tmp/arelay-${conversationId.slice(0, 16)}.txt`;
   const lines = [
     'Chat with the Agent Relay agent for me and show me each reply. Start by saying hi and asking what it can help with.',
     '',
