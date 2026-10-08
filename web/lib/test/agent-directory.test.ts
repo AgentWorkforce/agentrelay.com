@@ -10,6 +10,7 @@ import {
   getAgentDirectory,
   resetAgentDirectoryCache,
   toDirectoryAgent,
+  verificationBadges,
 } from '../agent-directory';
 
 afterEach(() => {
@@ -31,6 +32,17 @@ const acme = {
   verifiedWorkspace: null,
   verificationMethod: 'domain',
   deliveryType: 'a2a',
+};
+
+const official = {
+  handle: 'agent-relay',
+  displayName: 'Agent Relay',
+  description: 'The official Agent Relay support agent.',
+  verifiedDomain: 'agentrelay.com',
+  verifiedWorkspace: null,
+  verificationMethod: 'internal',
+  verification: { method: 'internal', label: 'Official', domain: 'agentrelay.com', workspace: null },
+  deliveryType: 'internal',
 };
 
 describe('agent directory', () => {
@@ -149,6 +161,40 @@ describe('agent directory', () => {
     expect(account).toMatchObject({ verifiedDomain: null, verifiedWorkspace: 'Acme' });
   });
 
+  it('accepts only a genuine Official entry and pins it first', async () => {
+    expect(toDirectoryAgent(official)).toMatchObject({
+      handle: 'agent-relay',
+      official: true,
+      verifiedDomain: 'agentrelay.com',
+      chatUrl: 'https://arelay.to/agent-relay',
+    });
+    // No entry can borrow the Official badge or name another domain under it.
+    expect(toDirectoryAgent({ ...official, verification: { ...official.verification, domain: 'evil.example' } })).toBeNull();
+    expect(toDirectoryAgent({ ...official, verification: { ...official.verification, label: 'Verified' } })).toBeNull();
+    expect(toDirectoryAgent({ ...official, verification: undefined })).toBeNull();
+    expect(toDirectoryAgent({ ...official, deliveryType: 'a2a' })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, official: true })).toMatchObject({ official: false });
+
+    const { agents } = await fetchAgentDirectory(pages({ agents: [acme, official], nextCursor: null }));
+    expect(agents.map((agent) => agent.handle)).toEqual(['agent-relay', 'acme-support']);
+    expect(verificationBadges(agents[0]!)).toEqual(['Official · agentrelay.com']);
+    expect(filterDirectoryAgents(agents, 'official').map((agent) => agent.handle)).toEqual(['agent-relay']);
+  });
+
+  it('invites the first company while only Official agents are listed', () => {
+    const onlyOfficial = agentDirectoryMarkdown({ complete: true, agents: [toDirectoryAgent(official)!] });
+    expect(onlyOfficial).toContain('## Agent Relay (agent-relay)');
+    expect(onlyOfficial).toContain('- Official · agentrelay.com');
+    expect(onlyOfficial).toContain('- Delivery: Agent Relay');
+    expect(onlyOfficial).toContain('Be the first company to register: https://arelay.to/register');
+    const withCompany = agentDirectoryMarkdown({
+      complete: true,
+      agents: [toDirectoryAgent(official)!, toDirectoryAgent(acme)!],
+    });
+    expect(withCompany).not.toContain('Be the first company');
+    expect(withCompany).toContain('Register your own agent: https://arelay.to/register');
+  });
+
   it('searches every visible field case-insensitively', () => {
     const agents = [toDirectoryAgent(acme)!, toDirectoryAgent({ ...acme, handle: 'beta-bot', displayName: 'Beta', description: 'Ships things.', verifiedDomain: 'beta.example' })!];
     expect(filterDirectoryAgents(agents, 'ACME').map((agent) => agent.handle)).toEqual(['acme-support']);
@@ -177,7 +223,7 @@ describe('agent directory', () => {
     expect(empty.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
     expect(empty.headers.get('vary')).toBe('Accept');
     expect(empty.headers.get('access-control-allow-origin')).toBe('*');
-    expect(await empty.text()).toContain('Be the first: register your agent at https://arelay.to/register');
+    expect(await empty.text()).toContain('Be the first company to register: https://arelay.to/register');
 
     resetAgentDirectoryCache();
     vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })));

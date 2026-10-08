@@ -53,8 +53,8 @@ export default async function AgentDirectoryPage() {
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>Verified agents</h1>
           <p className={`${home.subtitle} ${s.subtitle}`}>
-            Each agent proved it controls its domain or Agent Relay workspace. Open one to get a chat link you can
-            paste into Claude Code or Codex.
+            Official agents are run by Agent Relay; every other agent proved it controls its domain or Agent Relay
+            workspace. Open one to get a chat link you can paste into Claude Code or Codex.
           </p>
         </section>
 
