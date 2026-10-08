@@ -158,19 +158,22 @@ const PRODUCTION_SITE = 'https://agentrelay.com';
 const DESKTOP_RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download';
 
 /**
- * The skills name production. A local stack substitutes its own exact origins
- * and, so the desktop commands run as written, the prebuilt Agent Relay Dev
- * app's download, app name, bundle id and socket paths.
+ * The skills name production. Another host substitutes its own exact origins;
+ * the plain-HTTP local stack also substitutes, so the desktop commands run as
+ * written, the prebuilt Agent Relay Dev app's download, app name, bundle id
+ * and socket paths.
  */
 function forEnvironment(skill: string | undefined, site: string, cloud: string): string {
   if (skill === undefined) throw new Error('A signup part names a skill that is not vendored');
   if (site === PRODUCTION_SITE && cloud === `${PRODUCTION_SITE}/cloud`) return skill;
-  return skill
+  // Only the plain-HTTP local stack serves the Dev app; any HTTPS host keeps the release app.
+  const local = site.startsWith('http:') ? skill
     .replaceAll(DESKTOP_RELEASES, `${site}/cloud/desktop-downloads`)
     .replaceAll('AgentRelay-macOS-', 'AgentRelay-Dev-macOS-')
     .replaceAll('Agent Relay.app', 'Agent Relay Dev.app')
     .replace(/com\.agentrelay\.desktop(?!\.dev)/g, 'com.agentrelay.desktop.dev')
-    .replace(/\.agentworkforce\/desktop\/relay-socket(?!\.dev)/g, '.agentworkforce/desktop/relay-socket.dev')
+    .replace(/\.agentworkforce\/desktop\/relay-socket(?!\.dev)/g, '.agentworkforce/desktop/relay-socket.dev') : skill;
+  return local
     .replaceAll(`${PRODUCTION_SITE}/cloud`, cloud)
     .replaceAll(PRODUCTION_SITE, site);
 }

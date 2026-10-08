@@ -155,6 +155,14 @@ describe('agent signup instructions', () => {
     expect(agentSignupPrompt('teams', 'http://127.0.0.1:3199')).toContain('http://127.0.0.1:3199/signup/agent/teams');
   });
 
+  it('keeps the release desktop app for an HTTPS host other than production', async () => {
+    const content = await guide('teams', 'https://preview.example.com/signup/agent/teams');
+    expect(content).toContain('relay-desktop-releases/releases/latest/download');
+    expect(content).toContain('"$release/AgentRelay-macOS-$relay_arch.dmg"');
+    expect(content).not.toContain('Agent Relay Dev.app');
+    expect(content).not.toContain('com.agentrelay.desktop.dev');
+  });
+
   it('uses the browser local hostname when Next normalizes the request URL', async () => {
     vi.stubEnv('NEXT_PUBLIC_CLOUD_URL', '/cloud');
     const content = await (await GET(new Request('http://localhost:3100/signup/agent/flows', { headers: { host: '127.0.0.1:3100' } }), {
