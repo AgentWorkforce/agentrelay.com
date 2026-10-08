@@ -53,8 +53,9 @@ describe('published Software Garden artifact', () => {
 
   it('never rewrites a published version in place', () => {
     const { versions } = manifest();
+    // Versions only move forward. Output that returns to an earlier version's
+    // bytes is published as a new version, so a digest may recur.
     expect(versions.map(entry => entry.version)).toEqual(versions.map((_, index) => index + 1));
-    expect(new Set(versions.map(entry => entry.sha256)).size).toBe(versions.length);
     for (const entry of versions) {
       expect(existsSync(path.join(web, softwareGardenArtifactPath(entry.version))), `v${entry.version}`).toBe(true);
       expect(sha256(artifact(entry.version)), `v${entry.version} was edited after it was published`).toBe(entry.sha256);

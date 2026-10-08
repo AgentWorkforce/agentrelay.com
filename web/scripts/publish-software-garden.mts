@@ -7,6 +7,7 @@
  * A published version is never rewritten: when the generator output changes,
  * this writes v<N+1>.flow.ts and moves the manifest to it. The catalog keeps
  * serving whichever version it pins until that pin is moved deliberately.
+ * Output that returns to an earlier version's bytes is still a new version.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -20,23 +21,39 @@ import {
   softwareGardenSource,
 } from '../lib/software-garden-artifact';
 
+type Manifest = { version: number; sha256: string; versions: Array<{ version: number; sha256: string }> };
+
 const web = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const manifestPath = path.join(web, SOFTWARE_GARDEN_ARTIFACT_DIR, 'manifest.json');
-const previous = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
-const versions: Array<{ version: number; sha256: string }> = previous?.versions ?? [];
+const previous: Manifest | null = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
+const versions = previous?.versions ?? [];
+const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
 
-const source = softwareGardenSource();
-const sha256 = createHash('sha256').update(source).digest('hex');
-if (previous?.sha256 === sha256) {
-  console.log(`Software Garden v${previous.version} is current (sha256:${sha256}).`);
-  process.exit(0);
+// Every published file must still be what the manifest recorded before
+// anything new is cut; a missing or edited version is an error, not current.
+for (const entry of versions) {
+  const file = path.join(web, softwareGardenArtifactPath(entry.version));
+  if (!existsSync(file) || digest(readFileSync(file)) !== entry.sha256) {
+    throw new Error(`${softwareGardenArtifactPath(entry.version)} is missing or no longer hashes to ${entry.sha256}; restore it from git.`);
+  }
 }
 
-const version = (previous?.version ?? 0) + 1;
+const source = softwareGardenSource();
+const sha256 = digest(source);
+const unchanged = previous?.sha256 === sha256;
+const version = unchanged ? previous!.version : (previous?.version ?? 0) + 1;
 const file = path.join(web, softwareGardenArtifactPath(version));
-if (existsSync(file)) throw new Error(`${softwareGardenArtifactPath(version)} already exists; published versions are immutable.`);
-mkdirSync(path.dirname(file), { recursive: true });
-writeFileSync(file, source);
+if (!unchanged) {
+  // A file with no manifest entry is left by a publish interrupted before the
+  // manifest was written. It is reused only when it holds exactly these bytes.
+  if (existsSync(file) && digest(readFileSync(file)) !== sha256) {
+    throw new Error(`${softwareGardenArtifactPath(version)} exists with other bytes and no manifest entry; remove it and publish again.`);
+  }
+  mkdirSync(path.dirname(file), { recursive: true });
+  writeFileSync(file, source);
+}
+// Rewritten even when the bytes are unchanged, so a draft change the source
+// does not serialize (such as filters Cloud applies) is still recorded.
 writeFileSync(manifestPath, JSON.stringify({
   name: 'Software Garden',
   catalogId: 'software-factory',
@@ -47,6 +64,6 @@ writeFileSync(manifestPath, JSON.stringify({
   url: softwareGardenArtifactUrl(version),
   target: 'cloud',
   draft: SOFTWARE_GARDEN_DRAFT,
-  versions: [...versions, { version, sha256 }],
+  versions: unchanged ? versions : [...versions, { version, sha256 }],
 }, null, 2) + '\n');
-console.log(`Published Software Garden v${version} (sha256:${sha256}).`);
+console.log(`${unchanged ? 'Current' : 'Published'}: Software Garden v${version} (sha256:${sha256}).`);
