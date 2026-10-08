@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import worker, { getAgentChatCloudPath, getAgentPagePath, getLegacyAgentPageRedirect, getShortHostRedirect, prefersHtmlOverMarkdown } from "../index.js";
+import worker, {
+  getAgentChatCloudPath,
+  getAgentPagePath,
+  getLegacyAgentPageRedirect,
+  getShortHostRedirect,
+  isRelayAgentRegistryRoute,
+  prefersHtmlOverMarkdown,
+} from "../index.js";
 
 const ID = "0123456789abcdef0123456789abcdef";
 
@@ -28,6 +35,15 @@ describe("router agent chat", () => {
     }
   });
 
+  it("accepts any handle-shaped chat slug on arelay.to but keeps agentrelay.com scoped", () => {
+    expect(getAgentChatCloudPath("arelay.to", `/acme-support/${ID}`, "POST"))
+      .toBe(`/cloud/api/v1/agent-chat/acme-support/${ID}`);
+    expect(getAgentChatCloudPath("www.arelay.to", `/acme-support/${ID}`, "POST"))
+      .toBe(`/cloud/api/v1/agent-chat/acme-support/${ID}`);
+    expect(getAgentChatCloudPath("agentrelay.com", `/acme-support/${ID}`, "POST"))
+      .toBeUndefined();
+  });
+
   it("only claims POSTs", () => {
     for (const method of ["GET", "HEAD", "OPTIONS", "DELETE"]) {
       expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID}`, method)).toBeUndefined();
@@ -45,12 +61,50 @@ describe("router agent chat", () => {
     expect(new URL(cloud.fetch.mock.calls[0][0].url).pathname).toBe(`/cloud/api/v1/agent-chat/agent-relay/${ID}`);
   });
 
-  it("leaves the page, the bridge script, unknown agents and other hosts alone", () => {
+  it("leaves the page, bridge script, malformed handles and other hosts alone", () => {
     expect(getAgentChatCloudPath("arelay.to", "/agent-relay", "POST")).toBeUndefined();
     expect(getAgentChatCloudPath("arelay.to", "/agent-relay/bridge.sh", "POST")).toBeUndefined();
-    expect(getAgentChatCloudPath("arelay.to", `/someone-else/${ID}`, "POST")).toBeUndefined();
+    expect(getAgentChatCloudPath("arelay.to", `/Not-A-Handle/${ID}`, "POST")).toBeUndefined();
     expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID.toUpperCase()}`, "POST")).toBeUndefined();
     expect(getAgentChatCloudPath("example.com", `/agent-relay/${ID}`, "POST")).toBeUndefined();
+  });
+
+  it("forwards the guide and bounded registry API paths only on arelay.to", async () => {
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register", "GET")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register/", "GET")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register", "POST")).toBe(false);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations", "POST")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations/id/verify", "POST")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/agents/acme/manage", "PATCH")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations-legacy", "GET")).toBe(false);
+    expect(isRelayAgentRegistryRoute("www.arelay.to", "/register", "GET")).toBe(false);
+    expect(isRelayAgentRegistryRoute("agentrelay.com", "/api/v1/agents/acme", "GET")).toBe(false);
+
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const relayAgent = {
+      fetch: vi.fn(async (_request: Request) => Response.json({ handle: "acme" })),
+    };
+    const response = await worker.fetch(
+      new Request("https://arelay.to/api/v1/agents/acme?format=json"),
+      buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
+      ctx,
+    );
+    expect(response.status).toBe(200);
+    expect(cloud.fetch).not.toHaveBeenCalled();
+    const forwarded = relayAgent.fetch.mock.calls[0][0];
+    expect(forwarded.url).toBe("https://arelay.to/api/v1/agents/acme?format=json");
+  });
+
+  it("fails registry routes closed when relay-agent is not configured", async () => {
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const response = await worker.fetch(
+      new Request("https://arelay.to/register"),
+      buildEnv(cloud),
+      ctx,
+    );
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+    expect(cloud.fetch).not.toHaveBeenCalled();
   });
 
   it("forwards a conversation POST, body intact, to the cloud worker", async () => {

@@ -43,10 +43,11 @@ const CONNECT_INVITE_PATH = /^(\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?
 // site, but its bare root and the signed-in cloud app send people to agentrelay.com.
 const SHORT_HOST = "arelay.to";
 const SHORT_HOST_WWW = "www.arelay.to";
-// Agents a visitor's coding agent can chat with from a pasted snippet. The
-// conversation endpoint is /<agent>/<32 hex id> on either host.
-const AGENT_CHAT_AGENTS = new Set(["agent-relay"]);
+// A visitor's coding agent chats through /<handle>/<32 hex id>. arelay.to
+// accepts every handle-shaped slug and lets relay-agent's registry decide
+// whether it exists. agentrelay.com retains its established agent-relay route.
 const AGENT_CHAT_PATH = /^\/([a-z0-9-]+)\/([0-9a-f]{32})\/?$/;
+const REGISTRY_API_PATH = /^\/api\/v1\/(?:registrations|agents)(?:\/|$)/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
 export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
@@ -135,7 +136,7 @@ export function getAgentChatCloudPath(
   }
 
   const match = AGENT_CHAT_PATH.exec(pathname);
-  if (!match || !AGENT_CHAT_AGENTS.has(match[1])) {
+  if (!match || (hostname === PRIMARY_HOST && match[1] !== "agent-relay")) {
     return undefined;
   }
   return `${CLOUD_PATH_PREFIX}/api/v1/agent-chat/${match[1]}/${match[2]}`;
@@ -162,7 +163,7 @@ export function getAgentPagePath(
   } else if (hostname === PRIMARY_HOST) {
     agent = /^\/u\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
   }
-  if (!agent || !AGENT_CHAT_AGENTS.has(agent)) {
+  if (!agent) {
     return undefined;
   }
   const wantsHtml = method === "HEAD" || prefersHtmlOverMarkdown(accept);
@@ -216,9 +217,23 @@ export function getLegacyAgentPageRedirect(url: URL): string | undefined {
     return undefined;
   }
   const agent = /^\/([a-z0-9-]+)\/?$/.exec(url.pathname)?.[1];
-  return agent && AGENT_CHAT_AGENTS.has(agent)
+  return agent === "agent-relay"
     ? `https://${PRIMARY_HOST}/u/${agent}${url.search}`
     : undefined;
+
+// Registration and management are served directly by relay-agent. The public
+// API matcher is prefix-bounded so lookalikes such as /registrations-legacy do
+// not escape the marketing site.
+export function isRelayAgentRegistryRoute(
+  hostname: string,
+  pathname: string,
+  method: string,
+): boolean {
+  if (hostname !== SHORT_HOST) return false;
+  if ((pathname === "/register" || pathname === "/register/") && method === "GET") {
+    return true;
+  }
+  return REGISTRY_API_PATH.test(pathname);
 }
 
 // arelay.to only fronts agent chat: its root, its www alias and the signed-in
@@ -554,7 +569,13 @@ export default {
       request.method,
       request.headers.get("accept"),
     );
-    const shortHostRedirect = agentChatCloudPath || agentPagePath
+    const registryRoute = isRelayAgentRegistryRoute(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    const relayAgentRoute = Boolean(agentChatCloudPath || registryRoute);
+    const shortHostRedirect = relayAgentRoute || agentPagePath
       ? undefined
       : getShortHostRedirect(url);
     if (shortHostRedirect) {
@@ -592,13 +613,13 @@ export default {
     // content, so neither the new route nor the existing Cloud fallback belongs
     // in the replay corpus. Agent pages and guides mint a conversation URL in
     // every response, so they stay out too, however they were reached.
-    const recorderRequestClone = recorderEnv && !agentChatCloudPath && !isAgentPageRequestPath(url.pathname)
+    const recorderRequestClone = recorderEnv && !relayAgentRoute && !isAgentPageRequestPath(url.pathname)
       ? (request.clone() as unknown as Request)
       : null;
 
     // Production config includes the service binding. Removing it (and any
     // origin alternative) is the rollback flag that restores the Cloud route.
-    if (agentChatCloudPath && relayAgentEnabled(env)) {
+    if (relayAgentRoute && relayAgentEnabled(env)) {
       try {
         const workerResponse = await fetchRelayAgent(request, url, env);
         return workerResponse;
@@ -619,6 +640,21 @@ export default {
           },
         });
       }
+    }
+
+    // Unlike the legacy agent-relay chat route, registry endpoints have no
+    // Cloud fallback. Keep them off the marketing origin when the dedicated
+    // Worker is absent during a rollback or unavailable environment.
+    if (registryRoute) {
+      return new Response("The agent registry is unavailable. Retry shortly.\n", {
+        status: 503,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "referrer-policy": "no-referrer",
+          "x-content-type-options": "nosniff",
+        },
+      });
     }
 
     const connectInviteCloudPath = getConnectInviteCloudPath(
