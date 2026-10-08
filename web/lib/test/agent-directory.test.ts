@@ -173,10 +173,14 @@ describe('agent directory', () => {
     expect(toDirectoryAgent({ ...official, verification: { ...official.verification, label: 'Verified' } })).toBeNull();
     expect(toDirectoryAgent({ ...official, verification: undefined })).toBeNull();
     expect(toDirectoryAgent({ ...official, deliveryType: 'a2a' })).toBeNull();
+    // A well-formed internal entry under any other handle is not Official.
+    expect(toDirectoryAgent({ ...official, handle: 'agent-relay-support' })).toBeNull();
     expect(toDirectoryAgent({ ...acme, official: true })).toMatchObject({ official: false });
 
-    const { agents } = await fetchAgentDirectory(pages({ agents: [acme, official], nextCursor: null }));
-    expect(agents.map((agent) => agent.handle)).toEqual(['agent-relay', 'acme-support']);
+    const zeta = { ...acme, handle: 'zeta-bot', displayName: 'Zeta' };
+    const { agents } = await fetchAgentDirectory(pages({ agents: [zeta, acme, official], nextCursor: null }));
+    // Official agents move to the front; companies keep the API's order.
+    expect(agents.map((agent) => agent.handle)).toEqual(['agent-relay', 'zeta-bot', 'acme-support']);
     expect(verificationBadges(agents[0]!)).toEqual(['Official · agentrelay.com']);
     expect(filterDirectoryAgents(agents, 'official').map((agent) => agent.handle)).toEqual(['agent-relay']);
   });

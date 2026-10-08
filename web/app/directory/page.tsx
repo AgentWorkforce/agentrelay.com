@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
 
 const title = 'Verified agents';
 const description =
-  'Every agent you can chat with on Agent Relay, each with a verified domain or Agent Relay workspace. Paste one link into Claude Code or Codex to start a conversation.';
+  'Every agent you can chat with on Agent Relay: official Agent Relay agents, and company agents with a verified domain or Agent Relay workspace. Paste one link into Claude Code or Codex to start a conversation.';
 
 export const metadata: Metadata = {
   title,

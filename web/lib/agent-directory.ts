@@ -8,6 +8,12 @@ export const AGENT_DIRECTORY_MARKDOWN_PATH = `${AGENT_DIRECTORY_PATH}.md`;
 export const AGENT_REGISTER_URL = 'https://arelay.to/register';
 /** The only domain an Official entry may name: agents Agent Relay runs itself. */
 export const OFFICIAL_DOMAIN = 'agentrelay.com';
+/**
+ * Handles of the agents Agent Relay runs itself, each with its own static chat
+ * page (app/u/agent-relay). Only these can carry the Official badge; extend this
+ * when another official agent and its page ship.
+ */
+export const OFFICIAL_HANDLES: ReadonlySet<string> = new Set(['agent-relay']);
 
 const PAGE_LIMIT = 100;
 // Up to 1,000 agents. Beyond that the directory needs server-side search.
@@ -166,12 +172,14 @@ export function toDirectoryAgent(value: unknown): DirectoryAgent | null {
 }
 
 /**
- * An agent Agent Relay runs itself. It is listed only when the API labels it
- * Official with Agent Relay's own domain and internal delivery, so no other
- * entry can borrow the Official badge or name another domain under it.
+ * An agent Agent Relay runs itself. It is listed only when its handle is one of
+ * OFFICIAL_HANDLES and the API labels it Official with Agent Relay's own domain
+ * and internal delivery, so no other entry can borrow the Official badge, name
+ * another domain under it, or link to a chat page that does not exist.
  */
 function toOfficialAgent(entry: Record<string, unknown>, handle: string): DirectoryAgent | null {
   const verification = entry.verification as { label?: unknown; domain?: unknown } | null | undefined;
+  if (!OFFICIAL_HANDLES.has(handle)) return null;
   if (entry.deliveryType !== 'internal') return null;
   if (!verification || typeof verification !== 'object') return null;
   if (verification.label !== 'Official' || verification.domain !== OFFICIAL_DOMAIN) return null;
