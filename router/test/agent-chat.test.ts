@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import worker, { getAgentChatCloudPath, getAgentPagePath, getLegacyAgentPageRedirect, getShortHostRedirect, prefersHtmlOverMarkdown } from "../index.js";
+import worker, {
+  getAgentChatCloudPath,
+  getAgentPagePath,
+  getLegacyAgentPageRedirect,
+  getShortHostRedirect,
+  isRelayAgentRegistryRoute,
+  prefersHtmlOverMarkdown,
+} from "../index.js";
 
 const ID = "0123456789abcdef0123456789abcdef";
 
@@ -28,6 +35,15 @@ describe("router agent chat", () => {
     }
   });
 
+  it("accepts any handle-shaped chat slug on arelay.to but keeps agentrelay.com scoped", () => {
+    expect(getAgentChatCloudPath("arelay.to", `/acme-support/${ID}`, "POST"))
+      .toBe(`/cloud/api/v1/agent-chat/acme-support/${ID}`);
+    expect(getAgentChatCloudPath("www.arelay.to", `/acme-support/${ID}`, "POST"))
+      .toBe(`/cloud/api/v1/agent-chat/acme-support/${ID}`);
+    expect(getAgentChatCloudPath("agentrelay.com", `/acme-support/${ID}`, "POST"))
+      .toBeUndefined();
+  });
+
   it("only claims POSTs", () => {
     for (const method of ["GET", "HEAD", "OPTIONS", "DELETE"]) {
       expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID}`, method)).toBeUndefined();
@@ -45,12 +61,68 @@ describe("router agent chat", () => {
     expect(new URL(cloud.fetch.mock.calls[0][0].url).pathname).toBe(`/cloud/api/v1/agent-chat/agent-relay/${ID}`);
   });
 
-  it("leaves the page, the bridge script, unknown agents and other hosts alone", () => {
+  it("leaves the page, bridge script, malformed handles and other hosts alone", () => {
     expect(getAgentChatCloudPath("arelay.to", "/agent-relay", "POST")).toBeUndefined();
     expect(getAgentChatCloudPath("arelay.to", "/agent-relay/bridge.sh", "POST")).toBeUndefined();
-    expect(getAgentChatCloudPath("arelay.to", `/someone-else/${ID}`, "POST")).toBeUndefined();
+    expect(getAgentChatCloudPath("arelay.to", `/Not-A-Handle/${ID}`, "POST")).toBeUndefined();
     expect(getAgentChatCloudPath("arelay.to", `/agent-relay/${ID.toUpperCase()}`, "POST")).toBeUndefined();
     expect(getAgentChatCloudPath("example.com", `/agent-relay/${ID}`, "POST")).toBeUndefined();
+  });
+
+  it("forwards the guide and bounded registry API paths only on arelay.to", async () => {
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register", "GET")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register", "HEAD")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register/", "GET")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register", "POST")).toBe(false);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations", "POST")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations/id/verify", "POST")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/agents/acme/manage", "PATCH")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations-legacy", "GET")).toBe(false);
+    expect(isRelayAgentRegistryRoute("www.arelay.to", "/register", "GET")).toBe(false);
+    expect(isRelayAgentRegistryRoute("agentrelay.com", "/api/v1/agents/acme", "GET")).toBe(false);
+
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const relayAgent = {
+      fetch: vi.fn(async (_request: Request) => Response.json({ handle: "acme" })),
+    };
+    const response = await worker.fetch(
+      new Request("https://arelay.to/api/v1/agents/acme?format=json"),
+      buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
+      ctx,
+    );
+    expect(response.status).toBe(200);
+    expect(cloud.fetch).not.toHaveBeenCalled();
+    const forwarded = relayAgent.fetch.mock.calls[0][0];
+    expect(forwarded.url).toBe("https://arelay.to/api/v1/agents/acme?format=json");
+
+    const register = await worker.fetch(
+      new Request("https://arelay.to/register", { headers: { accept: "text/html" } }),
+      buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
+      ctx,
+    );
+    expect(register.status).toBe(200);
+    expect(relayAgent.fetch.mock.calls[1][0].url).toBe("https://arelay.to/register");
+  });
+
+  it("fails registry routes closed when relay-agent is not configured", async () => {
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const registryResponse = await worker.fetch(
+      new Request("https://arelay.to/register"),
+      buildEnv(cloud),
+      ctx,
+    );
+    const companyChatResponse = await worker.fetch(
+      new Request(`https://arelay.to/acme-support/${ID}`, { method: "POST", body: "hello" }),
+      buildEnv(cloud),
+      ctx,
+    );
+    expect(registryResponse.status).toBe(503);
+    expect(registryResponse.headers.get("cache-control")).toBe("no-store");
+    expect(await registryResponse.text()).toContain("agent registry is unavailable");
+    expect(companyChatResponse.status).toBe(503);
+    expect(companyChatResponse.headers.get("cache-control")).toBe("no-store");
+    expect(await companyChatResponse.text()).toContain("agent chat is unavailable");
+    expect(cloud.fetch).not.toHaveBeenCalled();
   });
 
   it("forwards a conversation POST, body intact, to the cloud worker", async () => {
@@ -162,8 +234,24 @@ describe("router agent chat", () => {
     expect(logged).toHaveBeenCalledWith(expect.stringContaining("relay_agent_upstream_failed"));
   });
 
+  it("uses registry-specific wording when the registry upstream fails", async () => {
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const relayAgent = { fetch: vi.fn(async () => { throw new Error("down"); }) };
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await worker.fetch(
+      new Request("https://arelay.to/api/v1/agents/acme"),
+      buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
+      ctx,
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain("agent registry is unavailable");
+    expect(cloud.fetch).not.toHaveBeenCalled();
+  });
+
   it("sends the short host's root, www and cloud app to agentrelay.com", () => {
     expect(getShortHostRedirect(new URL("https://arelay.to/"))).toBe("https://agentrelay.com/");
+    expect(getShortHostRedirect(new URL("https://arelay.to/cloud"))).toBe("https://agentrelay.com/cloud");
     expect(getShortHostRedirect(new URL("https://arelay.to/cloud/teams?x=1"))).toBe("https://agentrelay.com/cloud/teams?x=1");
     expect(getShortHostRedirect(new URL("https://www.arelay.to/agent-relay"))).toBe("https://arelay.to/agent-relay");
     expect(getShortHostRedirect(new URL("https://arelay.to/agent-relay"))).toBeUndefined();
@@ -174,9 +262,12 @@ describe("router agent chat", () => {
     const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", browser)).toBe("/u/agent-relay");
     expect(getAgentPagePath("agentrelay.com", "/u/agent-relay", "GET", browser)).toBe("/u/agent-relay");
+    expect(getAgentPagePath("arelay.to", "/acme-support", "GET", browser)).toBe("/u/acme-support");
+    expect(getAgentPagePath("agentrelay.com", "/u/acme-support", "GET", browser)).toBe("/u/acme-support");
     for (const accept of ["*/*", null, "text/markdown", "text/markdown, text/html;q=0.9, */*;q=0.8", "text/plain"]) {
       expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", accept)).toBe("/u/agent-relay/agent.md");
       expect(getAgentPagePath("agentrelay.com", "/u/agent-relay/", "GET", accept)).toBe("/u/agent-relay/agent.md");
+      expect(getAgentPagePath("arelay.to", "/acme-support", "GET", accept)).toBe("/u/acme-support/agent.md");
     }
   });
 
@@ -225,9 +316,13 @@ describe("router agent chat", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("leaves other paths, unknown agents, POSTs and other hosts alone", () => {
+  it("leaves other paths, invalid handles, POSTs and other hosts alone", () => {
     expect(getAgentPagePath("arelay.to", "/agent-relay/bridge.sh", "GET", "*/*")).toBeUndefined();
-    expect(getAgentPagePath("arelay.to", "/someone-else", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("arelay.to", "/-invalid", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("arelay.to", "/x", "GET", "*/*")).toBeUndefined();
+    for (const reserved of ["register", "connect", "api", "cloud", "admin", "www", "help", "support", "docs", "status", "security", "abuse", "login", "signup"]) {
+      expect(getAgentPagePath("arelay.to", `/${reserved}`, "GET", "*/*")).toBeUndefined();
+    }
     expect(getAgentPagePath("arelay.to", "/agent-relay", "POST", "*/*")).toBeUndefined();
     expect(getAgentPagePath("agentrelay.com", "/agent-relay", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("example.com", "/u/agent-relay", "GET", "*/*")).toBeUndefined();
