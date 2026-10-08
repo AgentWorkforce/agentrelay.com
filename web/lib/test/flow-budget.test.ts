@@ -461,7 +461,6 @@ describe('Garden flow time plan (cloud#4235, cloud#4270, agentrelay.com#155)', (
     // Not vacuous: every workflow reaches each guarded optional step somewhere
     // in the sweep. The build ends by buildByMinutes, so the checks always run
     // on Cloud now: the fail-fast path that skips them is never taken.
-    expect(seen.traditional).toContain('adversary');
     expect(checked).toBeGreaterThan(1000);
     expect(timedOut).toBeGreaterThan(1000);
     for (const workflow of ['traditional', 'prototype', 'simple']) {

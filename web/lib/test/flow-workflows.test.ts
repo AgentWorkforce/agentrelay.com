@@ -222,6 +222,16 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
       return { tokens, last: result, exit: read(root, '.relayflow/check.log.exit').trim(), elapsed: Number(read(root, '.relayflow/check.log.elapsed').trim()), limit: Number(read(root, '.relayflow/check.log.limit').trim()), log: read(root, '.relayflow/check.log') };
     }
 
+    /** Whether `pid` (a process, or with a minus a group) is gone, allowing a moment for the kernel to reap it. */
+    function gone(pid: number) {
+      const until = Date.now() + 3000;
+      for (;;) {
+        try { process.kill(pid, 0); } catch { return true; }
+        if (Date.now() > until) return false;
+        spawnSync('/bin/sleep', ['0.1']);
+      }
+    }
+
     it('finishes a check longer than one wait across calls, and honours its exit status', () => {
       const passing = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'echo building\nsleep 3\necho suite-ran\n' }), 'a-1', 60);
       expect(passing.tokens.length).toBeGreaterThan(1);
@@ -259,12 +269,42 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
       const child = Number(read(root, '.relayflow/child.pid').trim());
       expect(group).toBeGreaterThan(0);
       expect(child).toBeGreaterThan(0);
-      expect(() => process.kill(group, 0)).toThrow();
-      expect(() => process.kill(child, 0)).toThrow();
-      expect(() => process.kill(-group, 0)).toThrow();
+      expect(gone(group)).toBe(true);
+      expect(gone(child)).toBe(true);
+      expect(gone(-group)).toBe(true);
     }, 30_000);
 
-    it('puts the check in a group of its own where there is no setsid, as on macOS', () => {
+    it('reports a suite\'s own exit 124 as a failure, not as the flow\'s timeout', () => {
+      // A CI-shaped check.sh can run `timeout 60 some-test` itself.
+      const own = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 2\nexit 124\n' }), 'f-1', 60);
+      expect(own.tokens.at(-1)).toBe('fail');
+      expect(own.exit).toBe('124');
+    }, 30_000);
+
+    it('tells a resumed waiter that a check stopped for time timed out', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      expect(spanned(root, 'g-1', 2).tokens.at(-1)).toBe('timeout');
+      // The same ID again, as a resumed run asks: still a timeout, not a fail.
+      const again = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'g-1', RELAYFLOW_CHECK_TIMEOUT: '2', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(again.token).toBe('timeout');
+    }, 30_000);
+
+    it('stops a check an earlier attempt left running before it starts a new one', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo $$ >> .relayflow/suites\nsleep 60\n' });
+      // The first attempt starts and is abandoned while its check runs.
+      expect(sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'h-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' }).token).toBe('running');
+      const first = Number(read(root, '.relayflow/check.log.group').trim());
+      expect(gone(-first)).toBe(false);
+      const next = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'h-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(next.token).toBe('running');
+      expect(next.stderr).toContain('stopped a check an earlier attempt left running');
+      expect(gone(-first)).toBe(true);
+      // Clean up the second check.
+      const second = Number(read(root, '.relayflow/check.log.group').trim());
+      try { process.kill(-second, 'SIGKILL'); } catch { /* already gone */ }
+    }, 30_000);
+
+    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v perl']).status !== 0)('puts the check in a group of its own where there is no setsid, as on macOS', () => {
       const bin = fixture({});
       for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv']) {
         const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
@@ -280,8 +320,8 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
       const group = Number(read(root, '.relayflow/check.log.group').trim());
       // Its own group: not this test's, and gone with everything in it.
       expect(group).not.toBe(process.pid);
-      expect(() => process.kill(-group, 0)).toThrow();
-      expect(() => process.kill(Number(read(root, '.relayflow/child.pid').trim()), 0)).toThrow();
+      expect(gone(-group)).toBe(true);
+      expect(gone(Number(read(root, '.relayflow/child.pid').trim()))).toBe(true);
     }, 30_000);
 
     it('waits for the check an ID already started instead of starting another, so a resumed run picks it up', () => {

@@ -173,8 +173,17 @@ const CHECK_RUNNER = 'cd "$check_dir" || { printf "%s\\n" 126 > "$check_out.stat
   + 'case "$limiter" in (timeout|gtimeout) "$limiter" "$limit" sh "$script" ;; (perl) perl -e "$relayflow_limiter" "$limit" sh "$script" ;; (*) sh "$script" ;; esac > "$check_out" 2>&1 < /dev/null; '
   + 'printf "%s\\n" "$?" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"';
 
+/**
+ * The detached check: it records its own process group, runs the suite in
+ * it, and keeps a deadline of its own a minute past the total, so a check
+ * whose flow stopped waiting (an interrupted run) still ends. A check stopped
+ * for time leaves `.stopped` beside its status, so whoever reads the status,
+ * a resumed waiter included, reports a timeout.
+ */
 const DETACHED_CHECK_RUNNER = 'printf "%s\\n" "$$" > "$check_out.group"; cd "$check_dir" || { printf "%s\\n" 126 > "$check_out.status"; exit 0; }; unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM; '
-  + 'sh "$script" > "$check_out" 2>&1 < /dev/null; printf "%s\\n" "$?" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"';
+  + 'sh "$script" > "$check_out" 2>&1 < /dev/null & c=$!; '
+  + '( s=$(date +%s); while kill -0 "$c" 2>/dev/null; do if [ $(( $(date +%s) - s )) -gt $((limit + 60)) ]; then : > "$check_out.stopped"; printf "%s\\n" 124 > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"; kill -KILL "-$$" 2>/dev/null || kill -KILL "$c" 2>/dev/null; fi; sleep 5; done ) > /dev/null 2>&1 & '
+  + 'wait "$c"; st=$?; if [ ! -f "$check_out.stopped" ]; then printf "%s\\n" "$st" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"; fi';
 
 /** Starts its arguments in a new process group, deaf to SIGHUP like nohup. */
 const PERL_GROUP = '$SIG{HUP} = "IGNORE"; setpgrp(0, 0); exec @ARGV or exit 127';
@@ -192,29 +201,36 @@ export const FLOW_CHECK_RUN_COMMAND = [
     + `; relayflow_limiter=${shq(PERL_LIMITER)}`
     + '; relayflow_check_done() { printf \'%s\\n\' "$1" > "$check_out.exit"; printf \'%s\\n\' "$2" > "$check_out.elapsed"; printf \'%s\\n\' "$limit" > "$check_out.limit"; tail -n 40 "$check_out" >&2'
     + '; if [ "$1" -eq 0 ]; then echo "relayflow: the checks passed." >&2; echo pass'
-    + '; elif [ "$1" -eq 124 ] && { [ -n "$limiter" ] || [ "${3:-}" = stopped ]; }; then echo "relayflow: the checks did not finish within ${limit}s (they ran $2s)." >&2; echo timeout'
+    // Exit 124 is a timeout only when this flow stopped the check: the
+    // limiter's, in this call, or the total's. A suite's own 124 is a failure.
+    + '; elif [ "$1" -eq 124 ] && { { [ -z "${RELAYFLOW_CHECK_WAIT:-}" ] && [ -n "$limiter" ]; } || [ "${3:-}" = stopped ]; }; then echo "relayflow: the checks did not finish within ${limit}s (they ran $2s)." >&2; echo timeout'
     + '; else echo "relayflow: the checks failed with exit $1; the full output is in $check_out." >&2; echo fail; fi; }'
     + '; if [ -z "${RELAYFLOW_CHECK_WAIT:-}" ]; then'
     + ' echo "relayflow: running $script in $check_dir" >&2; since=$(date +%s)'
     + `; ( ${CHECK_RUNNER} ); relayflow_check_done "$(cat "$check_out.status" 2>/dev/null || echo 125)" "$(( $(date +%s) - since ))"; rm -f "$check_out.status"`
     + '; else id="${RELAYFLOW_CHECK_ID:-1}"'
-    + '; if [ "$(cat "$check_out.id" 2>/dev/null)" != "$id" ]; then'
-    + ' rm -f "$check_out.status" "$check_out.status.tmp" "$check_out.group"; : > "$check_out"; date +%s > "$check_out.since"; printf \'%s\\n\' "$id" > "$check_out.id"'
-    + '; export check_dir check_out script'
-    + `; if command -v setsid >/dev/null 2>&1; then setsid sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & elif command -v perl >/dev/null 2>&1; then perl -e ${shq(PERL_GROUP)} sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & else nohup sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & fi`
-    + '; echo "$!" > "$check_out.pid"; echo "relayflow: started $script in $check_dir; it may run ${limit}s in all, and each step waits up to ${RELAYFLOW_CHECK_WAIT}s for it." >&2; fi'
     // The group leader is the detached shell; until it has said so, the pid
     // that started it stands in.
     + '; relayflow_group() { cat "$check_out.group" 2>/dev/null || cat "$check_out.pid" 2>/dev/null; }'
     + '; relayflow_alive() { g=$(relayflow_group); [ -n "$g" ] && { kill -0 "-$g" 2>/dev/null || kill -0 "$g" 2>/dev/null; }; }'
     + '; relayflow_stop() { g=$(relayflow_group); [ -n "$g" ] || return 0; kill -TERM "-$g" 2>/dev/null || kill -TERM "$g" 2>/dev/null; i=0; while relayflow_alive && [ "$i" -lt 5 ]; do sleep 1; i=$((i + 1)); done; kill -KILL "-$g" 2>/dev/null || kill -KILL "$g" 2>/dev/null; return 0; }'
+    + '; relayflow_status_done() { if [ -f "$check_out.stopped" ]; then relayflow_check_done "$(cat "$check_out.status")" "$1" stopped; else relayflow_check_done "$(cat "$check_out.status")" "$1"; fi; }'
+    + '; if [ "$(cat "$check_out.id" 2>/dev/null)" != "$id" ]; then'
+    // A check an earlier attempt left running (an interrupted local run, a
+    // reused workspace) would write the same files: stop it first, but only
+    // when the recorded group is still that check, never a recycled pid.
+    + ' if [ ! -f "$check_out.status" ] && relayflow_alive && ps -o args= -p "$(relayflow_group)" 2>/dev/null | grep -qF \'check_out.group\'; then relayflow_stop; echo "relayflow: stopped a check an earlier attempt left running." >&2; fi'
+    + '; rm -f "$check_out.status" "$check_out.status.tmp" "$check_out.stopped" "$check_out.group" "$check_out.pid"; : > "$check_out"; date +%s > "$check_out.since"; printf \'%s\\n\' "$id" > "$check_out.id"'
+    + '; export check_dir check_out script limit'
+    + `; if command -v setsid >/dev/null 2>&1; then setsid sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & elif command -v perl >/dev/null 2>&1; then perl -e ${shq(PERL_GROUP)} sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & else nohup sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & fi`
+    + '; echo "$!" > "$check_out.pid"; echo "relayflow: started $script in $check_dir; it may run ${limit}s in all, and each step waits up to ${RELAYFLOW_CHECK_WAIT}s for it." >&2; fi'
     + '; since=$(cat "$check_out.since" 2>/dev/null || date +%s); waited=0'
     + '; while [ ! -f "$check_out.status" ] && [ "$waited" -lt "$RELAYFLOW_CHECK_WAIT" ] && relayflow_alive && [ $(( $(date +%s) - since )) -lt "$limit" ]; do sleep 1; waited=$((waited + 1)); done'
     + '; elapsed=$(( $(date +%s) - since ))'
-    + '; if [ -f "$check_out.status" ]; then relayflow_check_done "$(cat "$check_out.status")" "$elapsed"'
+    + '; if [ -f "$check_out.status" ]; then relayflow_status_done "$elapsed"'
     + '; elif relayflow_alive && [ "$elapsed" -lt "$limit" ]; then echo "relayflow: the checks are still running (${elapsed}s of ${limit}s)." >&2; echo running'
-    + '; elif relayflow_alive; then relayflow_stop; echo "relayflow: stopped the checks after ${elapsed}s, at their ${limit}s." >> "$check_out"; relayflow_check_done 124 "$elapsed" stopped'
-    + '; else sleep 1; if [ -f "$check_out.status" ]; then relayflow_check_done "$(cat "$check_out.status")" "$elapsed"; else echo "relayflow: the checks stopped without reporting an exit status." >> "$check_out"; relayflow_check_done 125 "$elapsed"; fi; fi'
+    + '; elif relayflow_alive; then : > "$check_out.stopped"; printf \'%s\\n\' 124 > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"; relayflow_stop; echo "relayflow: stopped the checks after ${elapsed}s, at their ${limit}s." >> "$check_out"; relayflow_check_done 124 "$elapsed" stopped'
+    + '; else sleep 1; if [ -f "$check_out.status" ]; then relayflow_status_done "$elapsed"; else echo "relayflow: the checks stopped without reporting an exit status." >> "$check_out"; relayflow_check_done 125 "$elapsed"; fi; fi'
     + '; fi'
     + '; fi',
 ].join('; ');

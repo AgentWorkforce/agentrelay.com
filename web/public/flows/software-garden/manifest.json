@@ -2,8 +2,8 @@
   "name": "Software Garden",
   "catalogId": "software-factory",
   "version": 2,
-  "sha256": "db836c62d0e6c8e4f6fb58569b114993cab9a17883e4747d17361d6b10e3234a",
-  "bytes": 80481,
+  "sha256": "9c07c28d747496306263497cc79ab183a461d644d600da76cb1ec1303f0a3caf",
+  "bytes": 86073,
   "path": "web/public/flows/software-garden/v2.flow.ts",
   "url": "https://agentrelay.com/flows/software-garden/v2.flow.ts",
   "target": "cloud",
@@ -28,7 +28,7 @@
     },
     {
       "version": 2,
-      "sha256": "db836c62d0e6c8e4f6fb58569b114993cab9a17883e4747d17361d6b10e3234a"
+      "sha256": "9c07c28d747496306263497cc79ab183a461d644d600da76cb1ec1303f0a3caf"
     }
   ]
 }
