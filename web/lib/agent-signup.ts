@@ -46,6 +46,11 @@ Flows can be configured from any machine with HTTPS and Node.js 22+ for the CLI.
 Use an HTTP client such as fetch or curl. Send JSON request bodies with
 Content-Type: application/json. The sections below specify exact bodies,
 response fields, authentication, polling and error handling.
+Send a User-Agent naming your tool (for example agent-relay-setup/1.0). The
+edge rejects Python urllib's default (Python-urllib/x.y) with HTTP 403 and a
+plain-text "error code: 1010" body before the API sees the request. API errors
+are JSON with error and error_description; report only the status and error of
+any other response, never the raw body.
 
 - Sign-in: POST ${cloud}/api/v1/auth/device/start, then poll POST
   ${cloud}/api/v1/auth/device/token. Only the user approves the returned URL.

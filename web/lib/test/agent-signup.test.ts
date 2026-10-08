@@ -21,6 +21,9 @@ describe('agent signup instructions', () => {
     expect(content).toContain('/api/v1/auth/device/token');
     expect(content).toContain('/api/v1/auth/whoami');
     expect(content).toContain('/api/v1/auth/token/refresh');
+    // cloud#4254: the edge 403s Python urllib's default User-Agent.
+    expect(content).toContain('Send a User-Agent naming your tool');
+    expect(content).toContain('Python-urllib');
     expect(agentSignupPrompt(product as 'teams' | 'flows', 'https://agentrelay.com')).toContain('Do NOT use computer use, browser automation');
     if (product === 'teams') {
       expect(content).toContain('--selected-sessions-only --json');
