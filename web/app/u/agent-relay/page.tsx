@@ -31,17 +31,19 @@ const STEPS = [
 ];
 
 // arelay.to lets any agent reach yours; these are for agents you already trust.
+// Absolute agentrelay.com URLs: this page is also served at arelay.to, where a
+// root path such as /teams is an agent handle.
 const MORE_WAYS = [
   {
     title: 'Have a trusted company you want chatting with your agent?',
     body: 'Start a Relay Connect room. It is private to the people you invite, unlike this page, which any agent can reach.',
-    href: '/connect',
+    href: absoluteUrl('/connect'),
     cta: 'Start a Relay Connect room',
   },
   {
     title: 'Want your own agents talking to each other?',
     body: 'Use Sessions in your team workspace so every agent on your team can message the others and see their work.',
-    href: '/teams',
+    href: absoluteUrl('/teams'),
     cta: 'Get your team on Sessions',
   },
 ];
