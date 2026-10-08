@@ -273,14 +273,12 @@
 .processDescription { color: #b6c7d5; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .processText strong { color: #e5eff7; font-size: 13px; line-height: 1.5; font-weight: 550; }
 .processText small { color: #a8b8c8; font-size: 10px; line-height: 1.4; }
-.processRounds { margin-top: 1px; margin-left: auto; flex-shrink: 0; border: 1px solid #425e73; border-radius: 4px; padding: 3px 6px; color: #b6d5ed; font-size: 9px; line-height: 1.3; }
 .processGate { border-color: #769aaf55; background: linear-gradient(155deg, #1c4056, #17364c); }
 .processPerson, .processLock { color: #b4d5ec; }
 .processLock { margin-top: 2px; margin-left: auto; flex-shrink: 0; }
 @media (max-width: 400px) {
   .workflowDetail { padding-left: 0; padding-right: 0; }
   .processNode { gap: 8px; padding-right: 8px; }
-  .processRounds { padding: 3px 4px; }
 }
 .extraInstructions { margin-top: 22px; }
 .extraInstructions summary { color: #c2cbd6; cursor: pointer; font-size: 12px; }
