@@ -6,8 +6,10 @@ import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../../lib/home-copy';
 import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
 import { GitHubIcon } from './icons';
+import { AgentSignup } from '../AgentSignup';
+import { teamsCloudUrl } from '../../lib/teams-cloud';
 
-export function Hero({ showInvestors = false }: { showInvestors?: boolean }) {
+export function Hero({ showInvestors = false, showSignup = false }: { showInvestors?: boolean; showSignup?: boolean }) {
   return (
     <div className={s.heroSection}>
       <section className={s.heroCenter}>
@@ -19,19 +21,31 @@ export function Hero({ showInvestors = false }: { showInvestors?: boolean }) {
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
 
           <div className={s.heroCenterCtas}>
-            <Link className={s.ctaPrimary} href="/docs">
-              Read the docs
-              <ArrowRight aria-hidden="true" />
-            </Link>
-            <a
-              className={s.ctaSecondary}
-              href="https://github.com/agentworkforce/relay"
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <GitHubIcon />
-              GitHub
-            </a>
+            {showSignup ? (
+              <>
+                <a className={s.ctaPrimary} href={teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect')}>
+                  Sign up for free
+                </a>
+                <AgentSignup product="teams" />
+                <p className={s.homeSignupNote}>No credit card required</p>
+              </>
+            ) : (
+              <>
+                <Link className={s.ctaPrimary} href="/docs">
+                  Read the docs
+                  <ArrowRight aria-hidden="true" />
+                </Link>
+                <a
+                  className={s.ctaSecondary}
+                  href="https://github.com/agentworkforce/relay"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  <GitHubIcon />
+                  GitHub
+                </a>
+              </>
+            )}
           </div>
         </div>
       </section>
