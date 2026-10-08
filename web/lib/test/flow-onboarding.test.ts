@@ -11,8 +11,12 @@ import { FLOW_PUSH_COMMAND, FLOW_REFERENCE_LIMIT } from '../flow-workflows';
 
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=abc123; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
-/** A check command without the limits and ID the flow gives it (RELAYFLOW_CHECK_*), so it compares as written. */
-const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_[A-Z]+=[^;]*; /g, '');
+/**
+ * A check command without what the flow gives it, so it compares as written:
+ * a branch check's ID, total and wait, in that order, or the base check's
+ * limit alone. A branch check missing any of the three no longer matches.
+ */
+const plain = (command: string) => command.replace(/^RELAYFLOW_CHECK_ID=\d+-\d+; RELAYFLOW_CHECK_TIMEOUT=\d+; RELAYFLOW_CHECK_WAIT=\d+; /, '').replace(/^(base=[^;]*; )RELAYFLOW_CHECK_TIMEOUT=\d+; /, '$1');
 
 const matchingIssue = { source: 'github', title: '  Fix   login  ', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 

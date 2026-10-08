@@ -152,14 +152,18 @@ const PERL_LIMITER =
  * cargo tests, the schema, the surface gate and the full SDK tests). With
  * `RELAYFLOW_CHECK_WAIT` (seconds) set, the check runs detached (setsid, or
  * nohup where there is none, every descriptor away from the lease) under the
- * same limiter, with `RELAYFLOW_CHECK_TIMEOUT` as its total, and each call
- * waits at most `RELAYFLOW_CHECK_WAIT` for it: `running` means call again.
+ * in a process group of its own (setsid; else perl's setpgrp; nohup only
+ * where neither exists), with `RELAYFLOW_CHECK_TIMEOUT` as its total, and
+ * each call waits at most `RELAYFLOW_CHECK_WAIT` for it: `running` means call
+ * again. The waiting call enforces the total: at it, it sends the check's
+ * whole group SIGTERM, then SIGKILL after a 5s grace, and reports `timeout`.
+ * The group is the detached shell's own (it records `$$`), so the signal
+ * reaches the suite and everything it started, not just a wrapper.
  * `RELAYFLOW_CHECK_ID` names the attempt. A call with a new ID starts a
  * check; one with the ID already started only waits, so a resumed run picks
- * up the check it started. A check that outlives its total by 30s (no limiter
- * stopped it) is stopped here and reported as `timeout`; one that died
- * without an exit status is a `fail`. Without `RELAYFLOW_CHECK_WAIT` the
- * check runs in this call, as the base-commit check does.
+ * up the check it started. One that died without an exit status is a `fail`.
+ * Without `RELAYFLOW_CHECK_WAIT` the check runs in this call under the
+ * limiter, as the base-commit check does.
  *
  * Every finished check leaves its exit status, the seconds it ran and its
  * limit next to the log (`$check_out.exit`, `.elapsed`, `.limit`), so the
@@ -168,6 +172,12 @@ const PERL_LIMITER =
 const CHECK_RUNNER = 'cd "$check_dir" || { printf "%s\\n" 126 > "$check_out.status"; exit 0; }; unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM; '
   + 'case "$limiter" in (timeout|gtimeout) "$limiter" "$limit" sh "$script" ;; (perl) perl -e "$relayflow_limiter" "$limit" sh "$script" ;; (*) sh "$script" ;; esac > "$check_out" 2>&1 < /dev/null; '
   + 'printf "%s\\n" "$?" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"';
+
+const DETACHED_CHECK_RUNNER = 'printf "%s\\n" "$$" > "$check_out.group"; cd "$check_dir" || { printf "%s\\n" 126 > "$check_out.status"; exit 0; }; unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM; '
+  + 'sh "$script" > "$check_out" 2>&1 < /dev/null; printf "%s\\n" "$?" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"';
+
+/** Starts its arguments in a new process group, deaf to SIGHUP like nohup. */
+const PERL_GROUP = '$SIG{HUP} = "IGNORE"; setpgrp(0, 0); exec @ARGV or exit 127';
 
 export const FLOW_CHECK_RUN_COMMAND = [
   'root="$PWD"',
@@ -189,16 +199,21 @@ export const FLOW_CHECK_RUN_COMMAND = [
     + `; ( ${CHECK_RUNNER} ); relayflow_check_done "$(cat "$check_out.status" 2>/dev/null || echo 125)" "$(( $(date +%s) - since ))"; rm -f "$check_out.status"`
     + '; else id="${RELAYFLOW_CHECK_ID:-1}"'
     + '; if [ "$(cat "$check_out.id" 2>/dev/null)" != "$id" ]; then'
-    + ' rm -f "$check_out.status" "$check_out.status.tmp"; : > "$check_out"; date +%s > "$check_out.since"; printf \'%s\\n\' "$id" > "$check_out.id"'
-    + '; export check_dir check_out script limit limiter relayflow_limiter'
-    + `; if command -v setsid >/dev/null 2>&1; then setsid sh -c ${shq(CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & else nohup sh -c ${shq(CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & fi`
+    + ' rm -f "$check_out.status" "$check_out.status.tmp" "$check_out.group"; : > "$check_out"; date +%s > "$check_out.since"; printf \'%s\\n\' "$id" > "$check_out.id"'
+    + '; export check_dir check_out script'
+    + `; if command -v setsid >/dev/null 2>&1; then setsid sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & elif command -v perl >/dev/null 2>&1; then perl -e ${shq(PERL_GROUP)} sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & else nohup sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & fi`
     + '; echo "$!" > "$check_out.pid"; echo "relayflow: started $script in $check_dir; it may run ${limit}s in all, and each step waits up to ${RELAYFLOW_CHECK_WAIT}s for it." >&2; fi'
-    + '; since=$(cat "$check_out.since" 2>/dev/null || date +%s); pid=$(cat "$check_out.pid" 2>/dev/null); waited=0'
-    + '; while [ ! -f "$check_out.status" ] && [ "$waited" -lt "$RELAYFLOW_CHECK_WAIT" ] && kill -0 "$pid" 2>/dev/null && [ $(( $(date +%s) - since )) -le $((limit + 30)) ]; do sleep 1; waited=$((waited + 1)); done'
+    // The group leader is the detached shell; until it has said so, the pid
+    // that started it stands in.
+    + '; relayflow_group() { cat "$check_out.group" 2>/dev/null || cat "$check_out.pid" 2>/dev/null; }'
+    + '; relayflow_alive() { g=$(relayflow_group); [ -n "$g" ] && { kill -0 "-$g" 2>/dev/null || kill -0 "$g" 2>/dev/null; }; }'
+    + '; relayflow_stop() { g=$(relayflow_group); [ -n "$g" ] || return 0; kill -TERM "-$g" 2>/dev/null || kill -TERM "$g" 2>/dev/null; i=0; while relayflow_alive && [ "$i" -lt 5 ]; do sleep 1; i=$((i + 1)); done; kill -KILL "-$g" 2>/dev/null || kill -KILL "$g" 2>/dev/null; return 0; }'
+    + '; since=$(cat "$check_out.since" 2>/dev/null || date +%s); waited=0'
+    + '; while [ ! -f "$check_out.status" ] && [ "$waited" -lt "$RELAYFLOW_CHECK_WAIT" ] && relayflow_alive && [ $(( $(date +%s) - since )) -lt "$limit" ]; do sleep 1; waited=$((waited + 1)); done'
     + '; elapsed=$(( $(date +%s) - since ))'
     + '; if [ -f "$check_out.status" ]; then relayflow_check_done "$(cat "$check_out.status")" "$elapsed"'
-    + '; elif kill -0 "$pid" 2>/dev/null && [ "$elapsed" -le $((limit + 30)) ]; then echo "relayflow: the checks are still running (${elapsed}s of ${limit}s)." >&2; echo running'
-    + '; elif kill -0 "$pid" 2>/dev/null; then kill -TERM -- "-$pid" 2>/dev/null || kill -TERM "$pid" 2>/dev/null; echo "relayflow: stopped the checks after ${elapsed}s, past their ${limit}s." >> "$check_out"; relayflow_check_done 124 "$elapsed" stopped'
+    + '; elif relayflow_alive && [ "$elapsed" -lt "$limit" ]; then echo "relayflow: the checks are still running (${elapsed}s of ${limit}s)." >&2; echo running'
+    + '; elif relayflow_alive; then relayflow_stop; echo "relayflow: stopped the checks after ${elapsed}s, at their ${limit}s." >> "$check_out"; relayflow_check_done 124 "$elapsed" stopped'
     + '; else sleep 1; if [ -f "$check_out.status" ]; then relayflow_check_done "$(cat "$check_out.status")" "$elapsed"; else echo "relayflow: the checks stopped without reporting an exit status." >> "$check_out"; relayflow_check_done 125 "$elapsed"; fi; fi'
     + '; fi'
     + '; fi',
@@ -495,16 +510,22 @@ export const FLOW_TIME = (() => {
   // A branch check runs detached and is waited on lease after lease, up to
   // this in all: b71c1687's CI-shaped check.sh ran past 14 (flows#626).
   const checkTotalMinutes = 30;
+  // The most waits one branch check takes; each may hold its lease a minute
+  // past its wait.
+  const checkPolls = Math.ceil((checkTotalMinutes + 1) / checkLimitMinutes);
   // Below these, a step is not worth starting: the run skips it and says so.
   const checkFloorMinutes = 5;
   const repairFloorMinutes = 5;
   const reviewFloorMinutes = 8;
   // Repairs took 19m27s and 37m18s in bda21b91; a 15m limit would have
-  // stopped the first just short of done.
+  // stopped the first just short of done. Cloud only: a local run keeps 15.
   const repairMinutes = 20;
+  const localRepairMinutes = 15;
   // A second round runs only when the re-check still fails and the first
-  // repair finished, and only when it leaves the review its floor.
+  // repair finished, and only when it leaves the review and the base check
+  // their time. Cloud only: a local agent has no limit to stop it.
   const repairRounds = 2;
+  const localRepairRounds = 1;
   const reviewMinutes = 20;
   // Check discovery reads CI configuration and writes one script; it took
   // 6m and 9m24s in bda21b91, against a 10m limit. A discovery stopped at its
@@ -547,7 +568,7 @@ export const FLOW_TIME = (() => {
   const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + closeMinutes);
   return Object.freeze({
     headerMinutes, localHeaderMinutes, setupMinutes,
-    checkMinutes, checkLimitMinutes, checkTotalMinutes, checkFloorMinutes, repairMinutes, repairRounds, repairFloorMinutes, reviewMinutes, reviewFloorMinutes,
+    checkMinutes, checkLimitMinutes, checkTotalMinutes, checkPolls, checkFloorMinutes, repairMinutes, localRepairMinutes, repairRounds, localRepairRounds, repairFloorMinutes, reviewMinutes, reviewFloorMinutes,
     discoveryMinutes, prototypeMinutes, comparatorMinutes, implementerFloorMinutes, buildByMinutes, agentLimitMaxMinutes,
     forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, closeMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
@@ -1161,11 +1182,13 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     checkTook = (await clock() - from) / 60;
     return result === "running" ? "timeout" : result;
   };
-  // Behind each check: the two clock reads around it, its last wait's minute
-  // beyond the limit, publishing, and the review's floor where there is one.
-  const reviewing = ${workflow === 'simple' ? 0 : t.reviewFloorMinutes + t.reviewReserveMinutes};
+  // Behind each check: the two clock reads around it and each wait's minute
+  // of lease beyond it, then publishing, and the review's floor where there
+  // is one (its whole allowance locally, where nothing stops it sooner).
+  const checkSlack = ${1 + t.checkPolls};
+  const reviewing = ${workflow === 'simple' ? 0 : `${floor(t.reviewFloorMinutes, t.reviewMinutes) + t.reviewReserveMinutes}`};
   let check = "skipped";
-  const checkLimit = await allowance(checkTotal, 2 + publishing + reviewing);
+  const checkLimit = await allowance(checkTotal, checkSlack + publishing + reviewing);
   if (checkLimit < ${t.checkFloorMinutes}) {
     console.error("Skipped the checks: too little of the flow's time budget is left to run them and still publish. The pull request opens as a draft that says no checks ran.");
   } else {
@@ -1174,12 +1197,17 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // A second repair round runs only for checks that still fail after the
   // first, and leaves the review, where there is one, its floor: it is
   // recovery, never a longer plan.
-  for (let round = 1; round <= ${t.repairRounds} && broken(check); round++) {
-    // Each round: the repair, freeing disk, the re-check and publishing must
-    // fit in what is left.
+  // The base-commit check that may follow, as compareWithBase budgets it:
+  // nothing when it would be skipped anyway.
+  const baseReserve = () => checkPlan === "none" || Math.ceil(checkTook) > ${t.checkMinutes - 2} ? 0 : Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook)) + 5;
+  for (let round = 1; round <= ${cloud ? t.repairRounds : t.localRepairRounds} && broken(check); round++) {
+    // Each round: the repair, freeing disk, the re-check, publishing and the
+    // review must fit in what is left; a second round also keeps the base
+    // check's time, and its re-check is held to what was kept for it.
     const recheck = Math.min(checkTotal, Math.ceil(checkTook) + 1);
-    const repairLimit = await allowance(${t.repairMinutes}, recheck + 3 + publishing + (round > 1 ? reviewing : 0));
-    if (repairLimit < ${floor(t.repairFloorMinutes, t.repairMinutes)}) {
+    const baseHold = round > 1 ? baseReserve() : 0;
+    const repairLimit = await allowance(${cloud ? t.repairMinutes : t.localRepairMinutes}, recheck + 1 + checkSlack + publishing + reviewing + baseHold);
+    if (repairLimit < ${floor(t.repairFloorMinutes, cloud ? t.repairMinutes : t.localRepairMinutes)}) {
       console.error(round === 1
         ? "Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are."
         : "Skipped the second repair: too little of the flow's time budget is left to repair again and still publish and review. The checks stand as they are.");
@@ -1189,7 +1217,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
       ${options('check-repair', 'builder', '', 'repairLimit')}
     });
     await f.run(freeDisk);
-    const recheckLimit = await allowance(checkTotal, 2 + publishing + reviewing);
+    const recheckLimit = await allowance(checkTotal, checkSlack + publishing + reviewing + baseHold);
     if (recheckLimit >= 1) check = verdict(await spannedCheck(recheckLimit));
     else console.error("No time was left to check the repair again; the checks stand as they were before it.");
     if (timedOut(repair)) {
@@ -1213,7 +1241,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     // check's lease, so it gets two minutes beyond the limit, within f.run's
     // 15. It never gets less time than the branch's check took: a branch check
     // that ran to its own limit cannot be compared at all.
-    const baseLimit = await allowance(${t.checkMinutes - 2}, 4 + publishing);
+    const baseLimit = await allowance(${t.checkMinutes - 2}, 4 + publishing + reviewing);
     if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook))) return "skipped";
     await f.run(freeDisk);
     const result = await timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit, baseLimit + 2);
