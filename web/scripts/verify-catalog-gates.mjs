@@ -180,8 +180,8 @@ function validateActivationGate(gate, label, requiredDependencies) {
 if (pluginCatalog.version !== 3 || !Array.isArray(pluginCatalog.plugins)) {
   fail('flow plugin catalog must be version 3');
 }
-if (recommendedCatalog.schemaVersion !== 1 || recommendedCatalog.catalogVersion !== 4 || !Array.isArray(recommendedCatalog.flows)) {
-  fail('recommended flow catalog must be schemaVersion 1 and catalogVersion 4');
+if (recommendedCatalog.schemaVersion !== 1 || recommendedCatalog.catalogVersion !== 5 || !Array.isArray(recommendedCatalog.flows)) {
+  fail('recommended flow catalog must be schemaVersion 1 and catalogVersion 5');
 }
 
 const plugin = pluginCatalog.plugins.find(entry => entry.name === 'babysitter');

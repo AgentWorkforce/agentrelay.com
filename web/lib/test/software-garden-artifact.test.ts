@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import catalog from '../../data/recommended-flow-catalog.v1.json';
 import { cloudConnectionsHref, DEFAULT_FACTORY, type FactoryDraft } from '../flow-onboarding';
+import { assertRecommendedFlowSourceContract } from '../../scripts/recommended-flow-contract.mjs';
 import {
   SOFTWARE_GARDEN_ARTIFACT_DIR,
   SOFTWARE_GARDEN_DRAFT,
@@ -89,5 +90,45 @@ describe('published Software Garden artifact', () => {
     expect(SOFTWARE_GARDEN_DRAFT.sources).toEqual([entry.defaultTrigger.provider]);
     expect(SOFTWARE_GARDEN_DRAFT.sourceSettings).toEqual(entry.defaultTrigger.settings);
     expect(SOFTWARE_GARDEN_DRAFT).toMatchObject({ workflow: 'traditional', task: '', otherAgent: '' });
+  });
+
+  it('keeps the ticket-title and exact closing-reference contract the catalog requires', () => {
+    const entry = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    // Both what the catalog serves and what the generator would publish next.
+    const pinned = readFileSync(path.join(web, entry.source.path.replace(/^web\//, '')), 'utf8');
+    expect(() => assertRecommendedFlowSourceContract(entry, pinned)).not.toThrow();
+    expect(() => assertRecommendedFlowSourceContract(entry, softwareGardenSource())).not.toThrow();
+  });
+
+  it('is what the catalog serves as Software Garden, pinned at a published version', () => {
+    const { source } = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    const published = manifest().versions.find(entry => `web/${softwareGardenArtifactPath(entry.version)}` === source.path);
+    expect(published, `catalog source ${source.path} is not a published Software Garden version`).toBeDefined();
+    expect(source).toMatchObject({
+      kind: 'github',
+      owner: 'AgentWorkforce',
+      repo: 'agentrelay.com',
+      release: `software-garden-v${published!.version}`,
+      sha256: published!.sha256,
+      mediaType: 'text/typescript',
+    });
+    expect(sha256(artifact(published!.version))).toBe(source.sha256);
+  });
+
+  it('advances catalogVersion whenever the Software Garden source changes', () => {
+    // Cloud refuses to upgrade an activation onto a different source at the
+    // catalogVersion it was deployed from ("The catalog changed an artifact
+    // without advancing its version", upgradeRecommendedFlowActivation in
+    // cloud's flow-activations.ts). So every source the catalog has served
+    // keeps the catalogVersion it was served at; moving the pin adds a row.
+    const SOURCE_BY_CATALOG_VERSION: Record<number, string> = {
+      4: '3c58ee16d10a9e2400db980f5bbafac84e437f20:4339c0c45a4fc928092a3e32275c061000887ed95acdc2f898966c35aca91a2d',
+      5: 'e3f5442652edd7651225fd1f5435f0e65378ec4b:b89a36e2cf9054036a7fc53fba20011a42ef0275ffbaaa907b080738ab46ad27',
+    };
+    const { source } = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    // A catalog-wide bump may keep this source, so a row may repeat the one
+    // before it; what it may not do is change the source without a new row.
+    expect(Math.max(...Object.keys(SOURCE_BY_CATALOG_VERSION).map(Number)), 'record the new source here').toBe(catalog.catalogVersion);
+    expect(SOURCE_BY_CATALOG_VERSION[catalog.catalogVersion], 'the pinned source changed: advance catalogVersion and record it').toBe(`${source.ref}:${source.sha256}`);
   });
 });
