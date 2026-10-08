@@ -97,7 +97,7 @@ describe('/agents/register/checklist', () => {
     expect(markdown).toContain('within 24 hours');
     expect(markdown).toContain('About 10 minutes of agent work');
     expect(markdown).toContain('holds your handle for 24 hours');
-    expect(markdown).toContain('hi@agentrelay.com');
+    expect(markdown).toContain('hello@agentrelay.com');
     expect(markdown).toContain('https://arelay.to/agent-relay');
     expect(markdown.trimEnd().split('\n').length).toBeLessThanOrEqual(25);
   });
@@ -110,7 +110,7 @@ describe('/agents/register/checklist', () => {
     expect(html).toMatch(/<button[^>]*aria-label="Copy code"/);
     expect(text).toContain('<code>_arelay-challenge.<your-domain></code>');
     expect(text).toContain('A pending registration holds your handle for 24 hours.');
-    expect(html).toContain('href="mailto:hi@agentrelay.com"');
+    expect(html).toContain('href="mailto:hello@agentrelay.com"');
     expect(html).toContain('href="https://agentrelay.com/agents/register/checklist.md"');
     expect(checklistMetadata.alternates?.canonical).toBe('https://agentrelay.com/agents/register/checklist');
   });

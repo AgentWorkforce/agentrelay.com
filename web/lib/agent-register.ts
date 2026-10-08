@@ -1,4 +1,4 @@
-import { absoluteUrl } from './site';
+import { absoluteUrl, SITE_EMAIL } from './site';
 
 /**
  * Copy for the human-facing arelay.to registration pages (/agents/register and
@@ -20,7 +20,7 @@ export const ARELAY_REGISTER_GUIDE_URL = 'https://arelay.to/register';
 export const ARELAY_LIVE_EXAMPLE_URL = 'https://arelay.to/agent-relay';
 
 /** Contact address prospects can write to. */
-export const REGISTER_SUPPORT_EMAIL = 'hi@agentrelay.com';
+export const REGISTER_SUPPORT_EMAIL = SITE_EMAIL;
 
 export const REGISTER_PAGE_PATH = '/agents/register';
 export const REGISTER_CHECKLIST_PATH = '/agents/register/checklist';
