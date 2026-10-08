@@ -293,7 +293,11 @@ export function getLegacyAgentPageRedirect(url: URL): string | undefined {
 // Browsers opening arelay.to/register get the human page on agentrelay.com.
 // Agents (curl's */*, no Accept, text/markdown, ties) and HEAD keep getting
 // relay-agent's Markdown registration guide from isRelayAgentRegistryRoute.
+// `?format=md` lets a person open the raw guide in a browser (the human page
+// links to it that way).
 export const HUMAN_REGISTER_PAGE_URL = `https://${PRIMARY_HOST}/agents/register`;
+const REGISTER_FORMAT_PARAM = "format";
+const REGISTER_MARKDOWN_FORMATS = new Set(["md", "markdown"]);
 
 export function getHumanRegisterPageRedirect(
   url: URL,
@@ -303,7 +307,9 @@ export function getHumanRegisterPageRedirect(
   if (url.hostname !== SHORT_HOST && url.hostname !== SHORT_HOST_WWW) return undefined;
   if (url.pathname !== "/register" && url.pathname !== "/register/") return undefined;
   if (method !== "GET" || !prefersHtmlOverMarkdown(accept)) return undefined;
-  return HUMAN_REGISTER_PAGE_URL;
+  const format = url.searchParams.get(REGISTER_FORMAT_PARAM)?.toLowerCase();
+  if (format && REGISTER_MARKDOWN_FORMATS.has(format)) return undefined;
+  return `${HUMAN_REGISTER_PAGE_URL}${url.search}`;
 }
 
 export function isRelayAgentRegistryRoute(
@@ -311,11 +317,14 @@ export function isRelayAgentRegistryRoute(
   pathname: string,
   method: string,
 ): boolean {
-  if (hostname !== SHORT_HOST) return false;
-  if ((pathname === "/register" || pathname === "/register/")
+  // The guide is served on the www alias too: curl does not follow the
+  // canonicalizing redirect. The registry API stays on the bare host.
+  if ((hostname === SHORT_HOST || hostname === SHORT_HOST_WWW)
+    && (pathname === "/register" || pathname === "/register/")
     && (method === "GET" || method === "HEAD")) {
     return true;
   }
+  if (hostname !== SHORT_HOST) return false;
   return REGISTRY_API_PATH.test(pathname);
 }
 

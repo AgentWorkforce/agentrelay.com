@@ -80,7 +80,9 @@ describe("router agent chat", () => {
     expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations/id/verify", "POST")).toBe(true);
     expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/agents/acme/manage", "PATCH")).toBe(true);
     expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations-legacy", "GET")).toBe(false);
-    expect(isRelayAgentRegistryRoute("www.arelay.to", "/register", "GET")).toBe(false);
+    expect(isRelayAgentRegistryRoute("www.arelay.to", "/register", "GET")).toBe(true);
+    expect(isRelayAgentRegistryRoute("www.arelay.to", "/register", "HEAD")).toBe(true);
+    expect(isRelayAgentRegistryRoute("www.arelay.to", "/api/v1/registrations", "POST")).toBe(false);
     expect(isRelayAgentRegistryRoute("agentrelay.com", "/api/v1/agents/acme", "GET")).toBe(false);
 
     const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
@@ -132,6 +134,33 @@ describe("router agent chat", () => {
     );
     expect(head.status).toBe(200);
     expect(relayAgent.fetch).toHaveBeenCalledTimes(6);
+
+    // The www alias serves agents and HEAD the guide directly (curl does not
+    // follow the canonicalizing redirect).
+    for (const init of [{ headers: { accept: "*/*" } }, { headers: { accept: "text/markdown" } }, { method: "HEAD" }]) {
+      const response = await worker.fetch(new Request("https://www.arelay.to/register", init), env, ctx);
+      expect(response.status).toBe(200);
+    }
+    expect(relayAgent.fetch).toHaveBeenCalledTimes(9);
+
+    // The browser redirect keeps the query string.
+    const campaign = await worker.fetch(
+      new Request("https://arelay.to/register?utm_campaign=launch&ref=x", { headers: { accept: browser } }),
+      env,
+      ctx,
+    );
+    expect(campaign.headers.get("location")).toBe("https://agentrelay.com/agents/register?utm_campaign=launch&ref=x");
+
+    // ?format=md lets a person open the raw guide in a browser.
+    for (const format of ["md", "markdown", "MD"]) {
+      const raw = await worker.fetch(
+        new Request(`https://arelay.to/register?format=${format}`, { headers: { accept: browser } }),
+        env,
+        ctx,
+      );
+      expect(raw.status).toBe(200);
+    }
+    expect(relayAgent.fetch).toHaveBeenCalledTimes(12);
     expect(getHumanRegisterPageRedirect(new URL("https://agentrelay.com/register"), "GET", browser)).toBeUndefined();
     expect(getHumanRegisterPageRedirect(new URL("https://arelay.to/registerx"), "GET", browser)).toBeUndefined();
   });

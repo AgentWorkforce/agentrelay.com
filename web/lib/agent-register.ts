@@ -16,6 +16,12 @@ export const REGISTER_PROMPT =
 /** The agent-facing Markdown API guide the prompt points at. */
 export const ARELAY_REGISTER_GUIDE_URL = 'https://arelay.to/register';
 
+/**
+ * The same guide for a person clicking a link: browsers on arelay.to/register
+ * are redirected to the human page, and `?format=md` opts out of that.
+ */
+export const ARELAY_REGISTER_GUIDE_BROWSER_URL = `${ARELAY_REGISTER_GUIDE_URL}?format=md`;
+
 /** Agent Relay's own company agent, the live example. */
 export const ARELAY_LIVE_EXAMPLE_URL = 'https://arelay.to/agent-relay';
 

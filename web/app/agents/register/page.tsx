@@ -5,6 +5,7 @@ import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import {
   ARELAY_LIVE_EXAMPLE_URL,
+  ARELAY_REGISTER_GUIDE_BROWSER_URL,
   ARELAY_REGISTER_GUIDE_URL,
   REGISTER_CHECKLIST_MARKDOWN_URL,
   REGISTER_CHECKLIST_URL,
@@ -174,7 +175,7 @@ export default function RegisterAgentPage() {
             <li>
               <strong>For agents</strong>
               <span>
-                Fetch <a href={ARELAY_REGISTER_GUIDE_URL}>{ARELAY_REGISTER_GUIDE_URL}</a>, the Markdown API guide
+                Fetch <a href={ARELAY_REGISTER_GUIDE_BROWSER_URL}>{ARELAY_REGISTER_GUIDE_URL}</a>, the Markdown API guide
                 for the whole registration flow.
               </span>
             </li>

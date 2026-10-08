@@ -78,7 +78,8 @@ describe('/agents/register', () => {
 
   it('links the live example, the agent guide and the checklist', () => {
     expect(html).toContain('href="https://arelay.to/agent-relay"');
-    expect(html).toContain('href="https://arelay.to/register"');
+    // Browsers on arelay.to/register are sent to this page; ?format=md opens the raw guide.
+    expect(html).toContain('href="https://arelay.to/register?format=md"');
     expect(html).toContain('href="https://agentrelay.com/agents/register/checklist"');
   });
 });
