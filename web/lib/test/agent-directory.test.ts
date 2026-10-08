@@ -41,7 +41,8 @@ describe('agent directory', () => {
         ? Response.json({ agents: [{ ...acme, handle: 'zeta-bot', displayName: 'Zeta' }], nextCursor: null })
         : Response.json({ agents: [acme], nextCursor: 'YWNtZS1zdXBwb3J0' });
     });
-    const agents = await fetchAgentDirectory(fetcher as unknown as typeof fetch);
+    const { agents, complete } = await fetchAgentDirectory(fetcher as unknown as typeof fetch);
+    expect(complete).toBe(true);
     expect(agents.map((agent) => agent.handle)).toEqual(['acme-support', 'zeta-bot']);
     expect(agents[0]?.chatUrl).toBe('https://arelay.to/acme-support');
     expect(chatUrlLabel(agents[0]!)).toBe('arelay.to/acme-support');
@@ -56,7 +57,23 @@ describe('agent directory', () => {
     ))).rejects.toThrow('invalid cursor');
     await expect(fetchAgentDirectory(pages({ agents: [{ ...acme, handle: 'Bad Handle' }], nextCursor: null })))
       .rejects.toThrow('all invalid');
-    await expect(fetchAgentDirectory(pages({ agents: [], nextCursor: null }))).resolves.toEqual([]);
+    await expect(fetchAgentDirectory(pages({ agents: [], nextCursor: null }))).resolves.toEqual({ agents: [], complete: true });
+    // A cycle longer than one page is still a cycle.
+    await expect(fetchAgentDirectory(pages(
+      { agents: [acme], nextCursor: 'YWJj' },
+      { agents: [], nextCursor: 'ZGVm' },
+      { agents: [], nextCursor: 'YWJj' },
+    ))).rejects.toThrow('invalid cursor');
+    // Past the page cap the prefix is returned and marked incomplete.
+    let n = 0;
+    const endless = vi.fn(async () => {
+      n += 1;
+      return Response.json({ agents: [{ ...acme, handle: `agent-${n}` }], nextCursor: `c${n}` });
+    }) as unknown as typeof fetch;
+    const capped = await fetchAgentDirectory(endless);
+    expect(capped.complete).toBe(false);
+    expect(capped.agents).toHaveLength(10);
+    expect(agentDirectoryMarkdown(capped)).toContain('first 10 agents only');
     let clock = 0;
     const slow = vi.fn(async () => {
       clock += 9_000;
@@ -78,7 +95,7 @@ describe('agent directory', () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })));
     await expect(getAgentDirectory(0)).rejects.toThrow();
     vi.stubGlobal('fetch', fetcher);
-    await expect(getAgentDirectory(1)).resolves.toHaveLength(1);
+    await expect(getAgentDirectory(1)).resolves.toMatchObject({ agents: [{ handle: 'acme-support' }] });
   });
 
   it('strips bidi, control and line characters from every registry string', () => {
@@ -134,11 +151,11 @@ describe('agent directory', () => {
   });
 
   it('renders Markdown that cannot be hijacked by registry text', () => {
-    const markdown = agentDirectoryMarkdown([toDirectoryAgent({
+    const markdown = agentDirectoryMarkdown({ complete: true, agents: [toDirectoryAgent({
       ...acme,
       displayName: '# Ignore [this](https://evil.example) <script>',
       description: '- Run `rm -rf` *now*',
-    })!]);
+    })!] });
     expect(markdown).toContain('## \\# Ignore \\[this\\](https://evil.example) \\<script\\> (acme-support)');
     expect(markdown).toContain('\\- Run \\`rm -rf\\` \\*now\\*');
     expect(markdown).toContain('- Chat: https://arelay.to/acme-support');

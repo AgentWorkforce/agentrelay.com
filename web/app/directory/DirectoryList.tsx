@@ -12,7 +12,7 @@ import {
 } from '../../lib/agent-directory';
 import s from './directory.module.css';
 
-export function DirectoryList({ agents }: { agents: DirectoryAgent[] }) {
+export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; complete: boolean }) {
   const searchId = useId();
   const [query, setQuery] = useState('');
   const index = useMemo(() => buildDirectoryIndex(agents), [agents]);
@@ -43,7 +43,7 @@ export function DirectoryList({ agents }: { agents: DirectoryAgent[] }) {
         />
         <p className={s.count} aria-live="polite">
           {visible.length === agents.length
-            ? `${agents.length} verified ${agents.length === 1 ? 'agent' : 'agents'}`
+            ? `${agents.length}${complete ? '' : '+'} verified ${agents.length === 1 ? 'agent' : 'agents'}`
             : `${visible.length} of ${agents.length}`}
         </p>
       </div>
@@ -67,6 +67,10 @@ export function DirectoryList({ agents }: { agents: DirectoryAgent[] }) {
             </li>
           ))}
         </ul>
+      )}
+
+      {!complete && (
+        <p className={s.count}>Showing the first {agents.length} agents; search covers these only.</p>
       )}
 
       <p className={s.registerNote}>

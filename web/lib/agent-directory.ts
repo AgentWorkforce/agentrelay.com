@@ -27,14 +27,20 @@ export type DirectoryAgent = {
   chatUrl: string;
 };
 
-let cached: { at: number; agents: Promise<DirectoryAgent[]> } | null = null;
+export type AgentDirectory = {
+  agents: DirectoryAgent[];
+  /** False when the registry holds more agents than the page cap allows. */
+  complete: boolean;
+};
+
+let cached: { at: number; agents: Promise<AgentDirectory> } | null = null;
 
 /**
  * The directory for page renders, shared for 60 seconds per server instance
  * (the API's own edge TTL), so visitors do not each walk every page. A failed
  * walk is not cached.
  */
-export function getAgentDirectory(now = Date.now()): Promise<DirectoryAgent[]> {
+export function getAgentDirectory(now = Date.now()): Promise<AgentDirectory> {
   if (cached && now - cached.at < CACHE_TTL_MS) return cached.agents;
   const entry = { at: now, agents: fetchAgentDirectory() };
   cached = entry;
@@ -59,9 +65,11 @@ export function resetAgentDirectoryCache(): void {
 export async function fetchAgentDirectory(
   fetcher: typeof globalThis.fetch = globalThis.fetch,
   now: () => number = Date.now,
-): Promise<DirectoryAgent[]> {
+): Promise<AgentDirectory> {
   const agents: DirectoryAgent[] = [];
   const seen = new Set<string>();
+  const cursors = new Set<string>();
+  let complete = false;
   const deadline = now() + TOTAL_BUDGET_MS;
   let received = 0;
   let cursor: string | null = null;
@@ -95,15 +103,21 @@ export async function fetchAgentDirectory(
       }
     }
     const next = (body as { nextCursor?: unknown }).nextCursor;
-    if (next === null || next === undefined) break;
-    if (typeof next !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(next) || next === cursor) {
+    if (next === null || next === undefined) {
+      complete = true;
+      break;
+    }
+    if (typeof next !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(next) || cursors.has(next)) {
       throw new Error('Agent directory returned an invalid cursor');
     }
+    cursors.add(next);
     cursor = next;
   }
   // A populated registry whose every entry failed validation is a fault, not an empty directory.
   if (received > 0 && agents.length === 0) throw new Error('Agent directory entries were all invalid');
-  return agents;
+  // Past the page cap the list is a valid prefix, reported as incomplete rather
+  // than failing the whole directory for being large.
+  return { agents, complete };
 }
 
 /** Validates one API entry and returns its sanitized form, or null to skip it. */
@@ -202,7 +216,7 @@ export function escapeMarkdown(value: string): string {
     .replace(/^(\s*)([#>+-]|\d+[.)])/, (_match, space: string, marker: string) => `${space}\\${marker}`);
 }
 
-export function agentDirectoryMarkdown(agents: readonly DirectoryAgent[]): string {
+export function agentDirectoryMarkdown({ agents, complete }: AgentDirectory): string {
   const lines = [
     '# Verified agents on Agent Relay',
     '',
@@ -229,6 +243,9 @@ export function agentDirectoryMarkdown(agents: readonly DirectoryAgent[]): strin
       `- Delivery: ${agent.deliveryType === 'a2a' ? 'A2A' : 'Agent Relay'}`,
       '',
     );
+  }
+  if (!complete) {
+    lines.push(`This list shows the first ${agents.length} agents only; the registry holds more.`, '');
   }
   lines.push(`Register your own agent: ${AGENT_REGISTER_URL}`, '');
   return lines.join('\n');

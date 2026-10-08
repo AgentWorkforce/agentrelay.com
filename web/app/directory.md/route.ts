@@ -17,9 +17,9 @@ const MARKDOWN_HEADERS = {
 };
 
 export async function GET() {
-  let agents: Awaited<ReturnType<typeof getAgentDirectory>>;
+  let directory: Awaited<ReturnType<typeof getAgentDirectory>>;
   try {
-    agents = await getAgentDirectory();
+    directory = await getAgentDirectory();
   } catch (error) {
     console.error('Agent directory failed to load', error);
     return new Response(
@@ -27,5 +27,5 @@ export async function GET() {
       { status: 503, headers: { ...MARKDOWN_HEADERS, 'Cache-Control': 'no-store' } },
     );
   }
-  return new Response(agentDirectoryMarkdown(agents), { headers: MARKDOWN_HEADERS });
+  return new Response(agentDirectoryMarkdown(directory), { headers: MARKDOWN_HEADERS });
 }

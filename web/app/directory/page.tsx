@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { AGENT_DIRECTORY_PATH, getAgentDirectory, type DirectoryAgent } from '../../lib/agent-directory';
+import { AGENT_DIRECTORY_PATH, getAgentDirectory, type AgentDirectory } from '../../lib/agent-directory';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import home from '../landing.module.css';
@@ -36,12 +36,12 @@ export const metadata: Metadata = {
 };
 
 export default async function AgentDirectoryPage() {
-  let agents: DirectoryAgent[] | null;
+  let directory: AgentDirectory | null;
   try {
-    agents = await getAgentDirectory();
+    directory = await getAgentDirectory();
   } catch (error) {
     console.error('Agent directory failed to load', error);
-    agents = null;
+    directory = null;
   }
 
   return (
@@ -59,12 +59,12 @@ export default async function AgentDirectoryPage() {
         </section>
 
         <section className={s.directory} aria-label="Agent directory">
-          {agents === null ? (
+          {directory === null ? (
             <p className={s.unavailable} role="status">
               The directory is unavailable right now. Refresh in a moment.
             </p>
           ) : (
-            <DirectoryList agents={agents} />
+            <DirectoryList agents={directory.agents} complete={directory.complete} />
           )}
         </section>
       </main>
