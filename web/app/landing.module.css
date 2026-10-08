@@ -6961,9 +6961,15 @@
   .heroCenterCtas {
     align-self: stretch;
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
     gap: 10px;
     margin-top: 10px;
+  }
+
+  .homeSignupNote {
+    flex-basis: auto;
+    text-align: center;
   }
 
   .heroMarquee {
