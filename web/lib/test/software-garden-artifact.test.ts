@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import catalog from '../../data/recommended-flow-catalog.v1.json';
 import { cloudConnectionsHref, DEFAULT_FACTORY, type FactoryDraft } from '../flow-onboarding';
+import { assertRecommendedFlowSourceContract } from '../../scripts/recommended-flow-contract.mjs';
 import {
   SOFTWARE_GARDEN_ARTIFACT_DIR,
   SOFTWARE_GARDEN_DRAFT,
@@ -89,5 +90,25 @@ describe('published Software Garden artifact', () => {
     expect(SOFTWARE_GARDEN_DRAFT.sources).toEqual([entry.defaultTrigger.provider]);
     expect(SOFTWARE_GARDEN_DRAFT.sourceSettings).toEqual(entry.defaultTrigger.settings);
     expect(SOFTWARE_GARDEN_DRAFT).toMatchObject({ workflow: 'traditional', task: '', otherAgent: '' });
+  });
+
+  it('keeps the ticket-title and exact closing-reference contract the catalog requires', () => {
+    const entry = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    expect(() => assertRecommendedFlowSourceContract(entry, softwareGardenSource())).not.toThrow();
+  });
+
+  it('is what the catalog serves as Software Garden, pinned at a published version', () => {
+    const { source } = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    const published = manifest().versions.find(entry => `web/${softwareGardenArtifactPath(entry.version)}` === source.path);
+    expect(published, `catalog source ${source.path} is not a published Software Garden version`).toBeDefined();
+    expect(source).toMatchObject({
+      kind: 'github',
+      owner: 'AgentWorkforce',
+      repo: 'agentrelay.com',
+      release: `software-garden-v${published!.version}`,
+      sha256: published!.sha256,
+      mediaType: 'text/typescript',
+    });
+    expect(sha256(artifact(published!.version))).toBe(source.sha256);
   });
 });

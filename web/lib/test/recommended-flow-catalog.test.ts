@@ -15,7 +15,7 @@ describe('recommended flow catalog', () => {
       flows: [{
         id: 'software-factory',
         kind: 'flow',
-        version: 4,
+        version: 5,
         name: 'Software Garden',
         summary: expect.any(String),
         description: expect.any(String),
@@ -64,14 +64,14 @@ describe('recommended flow catalog', () => {
         source: {
           kind: 'github',
           owner: 'AgentWorkforce',
-          repo: 'flows',
-          path: 'examples/software-factory/software-factory.flow.ts',
-          release: 'v2.0.42',
-          ref: '3c58ee16d10a9e2400db980f5bbafac84e437f20',
-          url: 'https://github.com/AgentWorkforce/flows/blob/3c58ee16d10a9e2400db980f5bbafac84e437f20/examples/software-factory/software-factory.flow.ts',
-          rawUrl: 'https://raw.githubusercontent.com/AgentWorkforce/flows/3c58ee16d10a9e2400db980f5bbafac84e437f20/examples/software-factory/software-factory.flow.ts',
+          repo: 'agentrelay.com',
+          path: 'web/public/flows/software-garden/v1.flow.ts',
+          release: 'software-garden-v1',
+          ref: 'e3f5442652edd7651225fd1f5435f0e65378ec4b',
+          url: 'https://github.com/AgentWorkforce/agentrelay.com/blob/e3f5442652edd7651225fd1f5435f0e65378ec4b/web/public/flows/software-garden/v1.flow.ts',
+          rawUrl: 'https://raw.githubusercontent.com/AgentWorkforce/agentrelay.com/e3f5442652edd7651225fd1f5435f0e65378ec4b/web/public/flows/software-garden/v1.flow.ts',
           mediaType: 'text/typescript',
-          sha256: '4339c0c45a4fc928092a3e32275c061000887ed95acdc2f898966c35aca91a2d',
+          sha256: 'b89a36e2cf9054036a7fc53fba20011a42ef0275ffbaaa907b080738ab46ad27',
         },
       }, {
         id: 'babysitter',
@@ -158,7 +158,7 @@ describe('recommended flow catalog HTTP surface', () => {
     await expect(detail.json()).resolves.toMatchObject({
       id: 'software-factory',
       name: 'Software Garden',
-      source: { ref: '3c58ee16d10a9e2400db980f5bbafac84e437f20' },
+      source: { ref: 'e3f5442652edd7651225fd1f5435f0e65378ec4b' },
       extensions: [{ id: 'babysitter', activation: { state: 'blocked' } }],
     });
 
