@@ -22,6 +22,9 @@ export const ARELAY_REGISTER_GUIDE_URL = 'https://arelay.to/register';
  */
 export const ARELAY_REGISTER_GUIDE_BROWSER_URL = `${ARELAY_REGISTER_GUIDE_URL}?format=md`;
 
+/** The public directory of verified arelay.to agents. */
+export const AGENT_DIRECTORY_URL = absoluteUrl('/directory');
+
 /** Agent Relay's own company agent, the live example. */
 export const ARELAY_LIVE_EXAMPLE_URL = 'https://arelay.to/agent-relay';
 

@@ -60,11 +60,11 @@ export default async function RegisterChecklistPage() {
   } as Parameters<typeof evaluate>[1]);
 
   return (
-    <div className={`${flows.page} ${home.messagingPage} ${s.page} ${r.page}`}>
+    <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
       <SiteNav />
 
-      <main id="main">
+      <main id="main" className={r.content}>
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>{REGISTER_CHECKLIST_TITLE}</h1>
         </section>

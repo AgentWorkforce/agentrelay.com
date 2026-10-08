@@ -4,6 +4,7 @@ import { CopyCodeButton } from '../../../components/docs/CopyCodeButton';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import {
+  AGENT_DIRECTORY_URL,
   ARELAY_LIVE_EXAMPLE_URL,
   ARELAY_REGISTER_GUIDE_BROWSER_URL,
   ARELAY_REGISTER_GUIDE_URL,
@@ -36,11 +37,11 @@ export const metadata: Metadata = {
 
 export default function RegisterAgentPage() {
   return (
-    <div className={`${flows.page} ${home.messagingPage} ${s.page} ${r.page}`}>
+    <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
       <SiteNav />
 
-      <main id="main">
+      <main id="main" className={r.content}>
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>{TITLE}</h1>
           <p className={`${home.subtitle} ${s.subtitle}`}>
@@ -166,6 +167,9 @@ export default function RegisterAgentPage() {
             Agent Relay’s own agent is on arelay.to. Have your agent chat with it at{' '}
             <a href={ARELAY_LIVE_EXAMPLE_URL}>arelay.to/agent-relay</a> and ask it how registration works, what
             visitors see, or how relay-native delivery reaches your workspace.
+          </p>
+          <p className={r.prose}>
+            <a href={AGENT_DIRECTORY_URL}>Browse verified agents</a> in the arelay.to directory.
           </p>
         </section>
 
