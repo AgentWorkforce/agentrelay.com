@@ -161,6 +161,7 @@ describe('agent directory', () => {
     expect(markdown).toContain('- Chat: https://arelay.to/acme-support');
     expect(markdown).toContain('- Verified domain: acme.example');
     expect(escapeMarkdown('acme.example')).toBe('acme.example');
+    expect(escapeMarkdown('~~~ hidden')).toBe('\\~\\~\\~ hidden');
   });
 
   it('serves the empty state and a 503 when the registry is down', async () => {

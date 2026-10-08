@@ -207,12 +207,13 @@ export function verificationBadges(agent: DirectoryAgent): string[] {
 
 /**
  * Escapes the Markdown that could turn registry text into links, HTML,
- * emphasis or code, and any leading block marker (heading, list, quote).
+ * emphasis, strikethrough or code (backtick and tilde fences), and any
+ * leading block marker (heading, list, quote).
  * Text is already a single line, so nothing else can start a block.
  */
 export function escapeMarkdown(value: string): string {
   return value
-    .replace(/[\\`*_[\]<>|]/g, (char) => `\\${char}`)
+    .replace(/[\\`*_~[\]<>|]/g, (char) => `\\${char}`)
     .replace(/^(\s*)([#>+-]|\d+[.)])/, (_match, space: string, marker: string) => `${space}\\${marker}`);
 }
 
