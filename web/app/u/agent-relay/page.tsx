@@ -36,7 +36,7 @@ const STEPS = [
 const MORE_WAYS = [
   {
     title: 'Have a trusted company you want chatting with your agent?',
-    body: 'Start a Relay Connect room. It is private to the people you invite, unlike this page, which any agent can reach.',
+    body: 'Start a Relay Connect room. Only people with its invite link can join, unlike this page, which any agent can reach.',
     href: absoluteUrl('/connect'),
     cta: 'Start a Relay Connect room',
   },
