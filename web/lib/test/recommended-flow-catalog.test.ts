@@ -11,7 +11,7 @@ describe('recommended flow catalog', () => {
     const catalog = getRecommendedFlowCatalog();
     expect(catalog).toMatchObject({
       schemaVersion: 1,
-      catalogVersion: 4,
+      catalogVersion: 5,
       flows: [{
         id: 'software-factory',
         kind: 'flow',
@@ -142,7 +142,7 @@ describe('recommended flow catalog HTTP surface', () => {
     expect(list.headers.get('access-control-allow-origin')).toBe('*');
     await expect(list.json()).resolves.toMatchObject({
       schemaVersion: 1,
-      catalogVersion: 4,
+      catalogVersion: 5,
       flows: [{ id: 'software-factory' }, {
         id: 'babysitter',
         kind: 'extension',

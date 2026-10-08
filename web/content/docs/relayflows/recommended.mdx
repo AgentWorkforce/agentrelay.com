@@ -29,7 +29,7 @@ GET https://agentrelay.com/api/v1/flows/catalog/software-factory
 GET https://agentrelay.com/api/v1/flows/catalog/babysitter
 ```
 
-The list response starts with `schemaVersion: 1` and `catalogVersion: 4`. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
+The list response starts with `schemaVersion: 1` and `catalogVersion: 5`. The catalog version advances whenever an entry's source changes, because Cloud upgrades an activation onto a different source only from an older catalog version. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
 
 The catalog does not copy the flow body. `source` names the GitHub owner, repository, path, release, full commit SHA, blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch. For Software Garden the release is the published version (`software-garden-v1`) and the path is that version's file in `AgentWorkforce/agentrelay.com`:
 

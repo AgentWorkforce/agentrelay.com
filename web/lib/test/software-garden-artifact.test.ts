@@ -111,4 +111,20 @@ describe('published Software Garden artifact', () => {
     });
     expect(sha256(artifact(published!.version))).toBe(source.sha256);
   });
+
+  it('advances catalogVersion whenever the Software Garden source changes', () => {
+    // Cloud refuses to upgrade an activation onto a different source at the
+    // catalogVersion it was deployed from ("The catalog changed an artifact
+    // without advancing its version", upgradeRecommendedFlowActivation in
+    // cloud's flow-activations.ts). So every source the catalog has served
+    // keeps the catalogVersion it was served at; moving the pin adds a row.
+    const SOURCE_BY_CATALOG_VERSION: Record<number, string> = {
+      4: '3c58ee16d10a9e2400db980f5bbafac84e437f20:4339c0c45a4fc928092a3e32275c061000887ed95acdc2f898966c35aca91a2d',
+      5: 'e3f5442652edd7651225fd1f5435f0e65378ec4b:b89a36e2cf9054036a7fc53fba20011a42ef0275ffbaaa907b080738ab46ad27',
+    };
+    const { source } = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    expect(new Set(Object.values(SOURCE_BY_CATALOG_VERSION)).size).toBe(Object.keys(SOURCE_BY_CATALOG_VERSION).length);
+    expect(Math.max(...Object.keys(SOURCE_BY_CATALOG_VERSION).map(Number)), 'record the new source here').toBe(catalog.catalogVersion);
+    expect(SOURCE_BY_CATALOG_VERSION[catalog.catalogVersion], 'the pinned source changed: advance catalogVersion and record it').toBe(`${source.ref}:${source.sha256}`);
+  });
 });

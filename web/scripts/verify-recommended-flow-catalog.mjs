@@ -11,8 +11,8 @@ const catalog = JSON.parse(await readFile(catalogUrl, 'utf8'));
 const MAX_SOURCE_BYTES = 1024 * 1024;
 const gardenManifest = JSON.parse(await readFile(new URL('../public/flows/software-garden/manifest.json', import.meta.url), 'utf8'));
 
-if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 4 || !Array.isArray(catalog.flows)) {
-  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 4, with a flows array');
+if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 5 || !Array.isArray(catalog.flows)) {
+  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 5, with a flows array');
 }
 
 for (const flow of catalog.flows) {
