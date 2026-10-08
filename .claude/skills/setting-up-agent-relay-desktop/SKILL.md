@@ -107,9 +107,18 @@ fi
 test -S "${relay_socket:-/nonexistent}" && printf 'socket=%s\n' "$relay_socket"
 ```
 
+Shell variables do not survive between separate tool calls. Every later block
+uses `relay_socket`, and some use variables set earlier in the same section (the
+sign-in poll uses `sign_in`, the sign-in request's response). Run a section's
+blocks in one shell. In a new shell, re-establish every variable the next block
+reads first: re-run this discovery block for `relay_socket`, and never re-send a
+sign-in request just to restore `sign_in`; the poll falls back to a 5-second
+interval without it.
+
 If the socket exists, inspect it before installing anything:
 
 ```sh
+test -S "${relay_socket:-/nonexistent}" || { printf 'relay_socket is not set: run the socket discovery block first.\n' >&2; exit 1; }
 curl -sS --max-time 60 --unix-socket "$relay_socket" http://relay/setup/status | jq
 ```
 
@@ -175,18 +184,19 @@ and at least 13.0.0. Find the same user-level npm, mise, or nvm CLI the app
 discovers; never run the desktop's `/usr/bin/agent-relay` launcher as a CLI:
 
 ```sh
-relay_cli=
-for candidate in \
-  "$HOME/.local/bin/agent-relay" \
-  "$HOME/.npm-global/bin/agent-relay" \
-  "$HOME/.agentworkforce/relay/bin/agent-relay"
-do
-  if test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
-    relay_cli=$candidate
-    break
-  fi
-done
-if test -z "$relay_cli"; then
+# The installed Agent Relay CLI: user-level npm, mise or nvm, then PATH;
+# never the .deb's /usr/bin/agent-relay Desktop launcher. Section 2 and
+# section 6 define this identically; change both together.
+find_relay_cli() {
+  for candidate in \
+    "$HOME/.local/bin/agent-relay" \
+    "$HOME/.npm-global/bin/agent-relay" \
+    "$HOME/.agentworkforce/relay/bin/agent-relay"
+  do
+    if test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+      printf '%s\n' "$candidate"; return
+    fi
+  done
   for relay_root in \
     "$HOME/.local/share/mise/installs/node" \
     "$HOME/.nvm/versions/node"
@@ -195,11 +205,15 @@ if test -z "$relay_cli"; then
     candidate=$(find -L "$relay_root" -mindepth 3 -maxdepth 3 \
       -path '*/bin/agent-relay' -type f -perm -u+x -print -quit 2>/dev/null)
     if test -n "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
-      relay_cli=$candidate
-      break
+      printf '%s\n' "$candidate"; return
     fi
   done
-fi
+  candidate=$(command -v agent-relay 2>/dev/null || true)
+  if test -n "$candidate" && test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+    printf '%s\n' "$candidate"
+  fi
+}
+relay_cli=$(find_relay_cli)
 if test -n "$relay_cli"; then
   "$relay_cli" --version
   "$relay_cli" integration subscribe --help >/dev/null
@@ -455,7 +469,12 @@ while :; do
         '{sign_in: .data.sign_in, workspace: .data.workspace}'
       break
       ;;
-    preparing|pending_approval) ;;
+    preparing|pending_approval) relay_unknown=0 ;;
+    signed_out|not_signed_in)
+      # signed_out: the attempt ended or was cancelled; not_signed_in: the error code.
+      printf 'Sign-in is not in progress; send the sign-in request again (see Recovery).\n' >&2
+      exit 1
+      ;;
     denied|expired|error)
       msg=$(printf '%s' "$state" | jq -r '.data.sign_in_message // .error.message // "no message reported"')
       printf 'Sign-in %s: %s\n' "$phase" "$msg" >&2
@@ -468,8 +487,18 @@ while :; do
       esac
       exit 1
       ;;
+    *)
+      # A failed or empty status read: allow three in a row, then stop and report.
+      relay_unknown=$(( ${relay_unknown:-0} + 1 ))
+      printf 'Unexpected sign-in state: %s (attempt %s of 3)\n' "${phase:-none}" "$relay_unknown" >&2
+      if test "$relay_unknown" -ge 3; then
+        printf 'Agent Relay status is unreadable; check that the app is running, then retry sign-in.\n' >&2
+        exit 1
+      fi
+      ;;
   esac
-  sleep "$(printf '%s' "$sign_in" | jq -r '.data.interval // 5')"
+  relay_interval=$(printf '%s' "${sign_in:-}" | jq -r '.data.interval // empty' 2>/dev/null)
+  sleep "${relay_interval:-5}"
 done
 ```
 
@@ -873,6 +902,39 @@ is set:
 
 ```sh
 pull_glob='/github/repos/OWNER/REPO/pulls/NUMBER/**'
+# Shell variables do not survive between tool calls: when relay_cli is unset
+# here, find the installed CLI again with section 2's helper, so an installed
+# CLI is not replaced by the npx fallback.
+# The installed Agent Relay CLI: user-level npm, mise or nvm, then PATH;
+# never the .deb's /usr/bin/agent-relay Desktop launcher. Section 2 and
+# section 6 define this identically; change both together.
+find_relay_cli() {
+  for candidate in \
+    "$HOME/.local/bin/agent-relay" \
+    "$HOME/.npm-global/bin/agent-relay" \
+    "$HOME/.agentworkforce/relay/bin/agent-relay"
+  do
+    if test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+      printf '%s\n' "$candidate"; return
+    fi
+  done
+  for relay_root in \
+    "$HOME/.local/share/mise/installs/node" \
+    "$HOME/.nvm/versions/node"
+  do
+    test -d "$relay_root" || continue
+    candidate=$(find -L "$relay_root" -mindepth 3 -maxdepth 3 \
+      -path '*/bin/agent-relay' -type f -perm -u+x -print -quit 2>/dev/null)
+    if test -n "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+      printf '%s\n' "$candidate"; return
+    fi
+  done
+  candidate=$(command -v agent-relay 2>/dev/null || true)
+  if test -n "$candidate" && test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+    printf '%s\n' "$candidate"
+  fi
+}
+test -n "${relay_cli:-}" || relay_cli=$(find_relay_cli)
 relay_cli_major=
 if test -n "${relay_cli:-}"; then
   relay_cli_major=$("$relay_cli" --version 2>/dev/null | sed -n 's/^[^0-9]*\([0-9][0-9]*\)\..*/\1/p' | sed -n '1p')
@@ -891,7 +953,8 @@ else
 fi
 ```
 
-Use the `relay_cli` found in section 2, never a bare `agent-relay`: on a
+Use the `relay_cli` found in section 2 (re-discovered above when this runs in
+a new shell), never a bare `agent-relay`: on a
 `.deb` host `/usr/bin/agent-relay` is the Desktop launcher, and `PATH` may
 resolve to it or to a different, older CLI than the one whose version was
 checked.
