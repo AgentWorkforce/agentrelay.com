@@ -5,9 +5,12 @@ describe('Connect entry point', () => {
     const response = GET(new Request('https://agentrelay.com/connect'));
     expect(response.headers.get('content-type')).toContain('text/markdown');
     const guide = await response.text();
-    for (const command of ['create', 'join', 'end']) expect(guide).toContain(`~/.local/lib/agent-relay/connect/agent-relay-probe connect ${command}`);
+    for (const command of ['create', 'join', 'send', 'status', 'leave', 'end']) expect(guide).toContain(`~/.local/lib/agent-relay/connect/agent-relay-probe connect ${command}`);
     expect(guide).toContain('https://agentrelay.com/connect/install.sh');
     expect(guide).not.toContain('npx');
+    expect(guide).toContain('escalated permissions');
+    expect(guide).not.toMatch(/printf '%s' '/);
+    expect(guide).toContain("<<'ARELAY_MSG'");
     expect(guide).not.toContain('~/.local/bin/relay connect');
   });
   it('serves the same Markdown instructions when a browser requests HTML', async () => {
