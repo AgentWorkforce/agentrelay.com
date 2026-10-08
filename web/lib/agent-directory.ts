@@ -78,19 +78,22 @@ export function toDirectoryAgent(value: unknown): DirectoryAgent | null {
   if (entry.deliveryType !== 'a2a' && entry.deliveryType !== 'relay') return null;
   const method = entry.verificationMethod ?? 'domain';
   if (method !== 'domain' && method !== 'account' && method !== 'both') return null;
-  const domain = boundedString(entry.verifiedDomain, 253) ? sanitizeRegistryText(entry.verifiedDomain) : null;
+  const displayName = sanitizeRegistryText(entry.displayName);
+  const description = sanitizeRegistryText(entry.description);
+  if (!displayName || !description) return null;
+  const domain = boundedString(entry.verifiedDomain, 253) ? sanitizeRegistryText(entry.verifiedDomain) || null : null;
   const workspaceValue = entry.verifiedWorkspace as { displayName?: unknown } | null | undefined;
   const workspace = workspaceValue && typeof workspaceValue === 'object'
     && boundedString(workspaceValue.displayName, 200)
-    ? sanitizeRegistryText(workspaceValue.displayName)
+    ? sanitizeRegistryText(workspaceValue.displayName) || null
     : null;
   // The badge must name what was verified; an entry with no verified subject is not listed.
   if ((method === 'domain' || method === 'both') && !domain) return null;
   if ((method === 'account' || method === 'both') && !workspace) return null;
   return {
     handle: entry.handle,
-    displayName: sanitizeRegistryText(entry.displayName),
-    description: sanitizeRegistryText(entry.description),
+    displayName,
+    description,
     verifiedDomain: method === 'account' ? null : domain,
     verifiedWorkspace: method === 'domain' ? null : workspace,
     verificationMethod: method,
@@ -99,9 +102,14 @@ export function toDirectoryAgent(value: unknown): DirectoryAgent | null {
   };
 }
 
-/** normalizeAgentName's rule: control, format (bidi) and line characters become single spaces. */
+/**
+ * normalizeAgentName's rule (control, format/bidi and line characters become
+ * single spaces) without its placeholder fallback: text that sanitizes to
+ * nothing returns '' so the caller can reject it instead of displaying a
+ * fabricated name or verified subject.
+ */
 export function sanitizeRegistryText(value: string): string {
-  return normalizeAgentName(value);
+  return /[^\p{C}\s]/u.test(value) ? normalizeAgentName(value) : '';
 }
 
 /** Case-insensitive match across everything a visitor can see on a card. */

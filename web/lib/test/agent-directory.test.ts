@@ -60,6 +60,17 @@ describe('agent directory', () => {
     expect(toDirectoryAgent({ ...acme, verifiedDomain: null })).toBeNull();
     expect(toDirectoryAgent({ ...acme, verificationMethod: 'account' })).toBeNull();
     expect(toDirectoryAgent({ ...acme, description: 'x'.repeat(1_001) })).toBeNull();
+    for (const blank of ['   ', '\u202E\u200F', '\n\t']) {
+      expect(toDirectoryAgent({ ...acme, verifiedDomain: blank })).toBeNull();
+      expect(toDirectoryAgent({ ...acme, displayName: blank })).toBeNull();
+      expect(toDirectoryAgent({ ...acme, description: blank })).toBeNull();
+      expect(toDirectoryAgent({
+        ...acme,
+        verifiedDomain: null,
+        verifiedWorkspace: { displayName: blank },
+        verificationMethod: 'account',
+      })).toBeNull();
+    }
     const account = toDirectoryAgent({
       ...acme,
       verifiedDomain: null,
