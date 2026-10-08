@@ -564,10 +564,6 @@
   composes: btn btn-primary from global;
 }
 
-.ctaSecondary {
-  composes: btn btn-secondary from global;
-}
-
 .detailBody {
   display: grid;
   grid-template-columns: 1.6fr 1fr;
@@ -1154,8 +1150,7 @@ a.agentRef:hover {
     align-items: stretch;
   }
 
-  .ctaPrimary,
-  .ctaSecondary {
+  .ctaPrimary {
     width: 100%;
     justify-content: center;
   }
