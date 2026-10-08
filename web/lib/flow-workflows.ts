@@ -241,28 +241,51 @@ export const FLOW_BODY_LIMIT = 60000;
  */
 const REPORT_SECTION_LIMITS = { script: 4000, log: 10000, repair: 4000 } as const;
 
-/** Bytes kept free for the closing reference line (`Fixes #N`, or a ticket URL). */
-const REFERENCE_RESERVE = 1024;
+/**
+ * Bytes kept free, besides the closing reference line itself, for the line
+ * breaks around it.
+ */
+const REFERENCE_MARGIN = 64;
+
+/**
+ * Prints the fence that closes a Markdown code block still open at the end of
+ * its input, or nothing: a fence of three or more backticks opens a block,
+ * and a bare fence at least as long closes it.
+ */
+const OPEN_FENCE_AWK = String.raw`{ if (match($0, /^[ \t]*` + '```' + String.raw`+/)) { f = substr($0, RSTART, RLENGTH); sub(/^[ \t]*/, "", f); if (open == "") open = f; else { rest = $0; sub(/^[ \t]*` + '`' + String.raw`+[ \t]*$/, "", rest); if (rest == "" && length(f) >= length(open)) open = ""; } } } END { if (open != "") print open }`;
 
 /**
  * `relayflow_cap <file> <bytes> <head|tail> <where>` cuts `file` to at most
- * `bytes`, keeping its start (`head`) or its end (`tail`), at a line boundary
- * so no multibyte character is split. The cut is marked in the file, naming
- * `where` the full text is, and the full text goes to stderr, so the step's
- * output in the run journal keeps it. A code fence the kept start leaves open
- * is closed, so whatever follows is not swallowed by it. A file within
- * `bytes` is left as it is. Always returns 0.
+ * `bytes`, keeping its start (`head`) or its end (`tail`). It cuts at a line
+ * boundary, and inside a line only when the kept part has no line break at
+ * all, then at a character boundary, so no multibyte character is split and a
+ * one-line file keeps what fits. The cut is marked in the file, naming
+ * `where` the full text is. A code fence the kept start leaves open is
+ * closed, so whatever follows is not swallowed by it. The text cut is never
+ * printed: a log or review can hold credentials the run journal must not
+ * show. With less than CAP_RESERVE bytes to keep, the file is emptied. A file
+ * within `bytes` is left as it is. Always returns 0.
  */
-const CAP_FUNCTION = 'relayflow_cap() { '
-  + 'cap_size=$(LC_ALL=C wc -c < "$1" | tr -d " "); if [ "$cap_size" -le "$2" ]; then return 0; fi; '
-  + 'cap_keep=$(($2 - 400)); if [ "$cap_keep" -lt 0 ]; then cap_keep=0; fi; '
-  + `cap_note="_…truncated to fit GitHub's limit: $cap_size bytes were cut to under $2. The full text is $4, and in this step's output._"; `
-  + 'echo "relayflow: $1 is $cap_size bytes, more than the $2 a body may hold, so it was cut. The full text follows." >&2; cat "$1" >&2; '
-  + 'if [ "$3" = tail ]; then { printf \'%s\\n\\n\' "$cap_note"; LC_ALL=C tail -c "$cap_keep" "$1" | LC_ALL=C sed 1d; } > "$1.cap"; '
-  + 'else LC_ALL=C head -c "$cap_keep" "$1" | LC_ALL=C sed \'$d\' > "$1.cap"; '
-  + 'if [ $(( $(LC_ALL=C grep -c \'^[[:space:]]*```\' "$1.cap" || :) % 2 )) -eq 1 ]; then printf \'```\\n\' >> "$1.cap"; fi; '
-  + 'printf \'\\n%s\\n\' "$cap_note" >> "$1.cap"; fi; '
-  + 'mv -f "$1.cap" "$1"; return 0; }';
+const CAP_RESERVE = 512;
+const CAP_FUNCTION = 'relayflow_cap() { ' + [
+  'cap_size=$(LC_ALL=C wc -c < "$1" | tr -d " ")',
+  'if [ "$cap_size" -le "$2" ]; then return 0; fi',
+  'echo "relayflow: $1 is $cap_size bytes, more than the $2 it may hold, so it was cut; the full text is $4." >&2',
+  `cap_keep=$(($2 - ${CAP_RESERVE}))`,
+  'if [ "$cap_keep" -le 0 ]; then : > "$1"; return 0; fi',
+  `cap_note="_…truncated to fit GitHub's limit: $cap_size bytes were cut to under $2. The full text is $4._"`,
+  // The bytes that start a multibyte character, and those that continue one.
+  "cap_lead=$(printf '[\\300-\\377]'); cap_cont=$(printf '[\\200-\\277]')",
+  'if [ "$3" = tail ]; then LC_ALL=C tail -c "$cap_keep" "$1" > "$1.cut"; else LC_ALL=C head -c "$cap_keep" "$1" > "$1.cut"; fi',
+  'cap_lines=$(LC_ALL=C tr -cd "\\n" < "$1.cut" | wc -c | tr -d " ")',
+  'if [ "$3" = tail ]; then '
+    + '{ printf \'%s\\n\\n\' "$cap_note"; if [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed 1d "$1.cut"; else LC_ALL=C sed "s/^$cap_cont*//" "$1.cut"; fi; } > "$1.cap"; '
+    + 'else '
+    + '{ if [ "$(LC_ALL=C tail -c 1 "$1.cut" | wc -l | tr -d " ")" -eq 1 ]; then cat "$1.cut"; elif [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed \'$d\' "$1.cut"; else LC_ALL=C sed "s/$cap_lead$cap_cont*\\$//" "$1.cut"; echo; fi; } > "$1.cap"; '
+    + `LC_ALL=C awk '${OPEN_FENCE_AWK}' "$1.cap" > "$1.cut"; cat "$1.cut" >> "$1.cap"; `
+    + 'printf \'\\n%s\\n\' "$cap_note" >> "$1.cap"; fi',
+  'rm -f "$1.cut"; mv -f "$1.cap" "$1"; return 0',
+].join('; ') + '; }';
 
 /**
  * Writes what the checks found to `.relayflow/check-report.md`, and the pull
@@ -272,7 +295,7 @@ const CAP_FUNCTION = 'relayflow_cap() { '
  * time to run the checks), `baseline` (the base commit's token, empty when it
  * was not needed, or `skipped` when there was no time to check it), and
  * `implementer_timeout=yes` when the implementer was stopped at its time
- * limit. The base commit's output is shown whenever it ran, including when
+ * limit, and `reference` to the closing reference line the next step adds. The base commit's output is shown whenever it ran, including when
  * its verdict is `unknown` (it ran out of time against a branch that failed
  * outright). A reviewer reads the verdict, the
  * script that ran and the tail of each log on the pull request itself, without
@@ -314,8 +337,9 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + `; if [ -s "$parts/repair" ]; then printf '\\n### What the repair agent found\\n\\n'; cat "$parts/repair"; fi`
     + '; } > "$report"',
   // The summary gets what the report leaves, less room for the closing
-  // reference FLOW_PREPARE_CHANGE_METADATA_COMMAND appends.
-  `if [ -s summary.md ]; then cp summary.md "$parts/summary"; relayflow_cap "$parts/summary" $((${FLOW_BODY_LIMIT - REFERENCE_RESERVE} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - 2)) head "summary.md in the run workspace"; fi`,
+  // reference (\`reference\`, set by the caller) that
+  // FLOW_PREPARE_CHANGE_METADATA_COMMAND appends.
+  `if [ -s summary.md ]; then cp summary.md "$parts/summary"; relayflow_cap "$parts/summary" $((${FLOW_BODY_LIMIT - REFERENCE_MARGIN} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - $(printf %s "\${reference:-}" | LC_ALL=C wc -c | tr -d " "))) head "summary.md in the run workspace"; fi`,
   '{ if [ -s "$parts/summary" ]; then cat "$parts/summary"; printf \'\\n\\n\'; fi; cat "$report"; } > .relayflow/pr-body.md',
   'rm -rf "$parts"',
   'echo "relayflow: wrote the check report to $report." >&2',
@@ -613,7 +637,9 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
   // Builds the reviewer-facing section. The heading, explanation and a file
   // list capped at 50 entries are written and measured first; only the room
   // left under FLOW_BODY_LIMIT (minus what the body already holds and ~400
-  // bytes of fences and notes) goes to the patch.
+  // bytes of fences and notes) goes to the patch. The whole section is then
+  // capped to that room, so a long file list cannot overflow the body either.
+  CAP_FUNCTION,
   'relayflow_section() { '
     + 'used=0; if [ "${comment:-}" != yes ] && [ -f .relayflow/pr-body.md ]; then used=$(wc -c < .relayflow/pr-body.md | tr -d " "); fi; '
     + `{ printf '\\n## Workflow changes not applied\\n\\n%s\\n\\n' "The GitHub App token this run pushes with lacks the \\\`workflows\\\` permission, so GitHub refused the commits that change \\\`.github/workflows/\\\`. The rest of the work is pushed; these edits were taken out of its commits. Apply them manually:"; `
@@ -623,7 +649,8 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
     + 'limit=${RELAYFLOW_WITHHELD_PATCH_LIMIT:-61440}; room=$((' + FLOW_BODY_LIMIT + ' - used - overhead)); if [ "$room" -lt "$limit" ]; then limit=$room; fi; size=$(wc -c < "$patch" | tr -d " "); '
     + `{ cat "$tmp/head"; if [ "$limit" -le 0 ]; then printf '\\n%s\\n' "_The patch ($size bytes) does not fit in the pull request body. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; `
     + `elif [ "$size" -le "$limit" ]; then printf '\\n\`\`\`\`diff\\n'; cat "$patch"; printf '\`\`\`\`\\n'; `
-    + `else printf '\\n\`\`\`\`diff\\n'; head -c "$limit" "$patch" | sed '$d'; printf '\`\`\`\`\\n\\n%s\\n' "_Truncated to $limit of $size bytes. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; fi; } > "$section"; }`,
+    + `else printf '\\n\`\`\`\`diff\\n'; head -c "$limit" "$patch" | sed '$d'; printf '\`\`\`\`\\n\\n%s\\n' "_Truncated to $limit of $size bytes. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; fi; } > "$section"; `
+    + 'relayflow_cap "$section" $((' + FLOW_BODY_LIMIT + ' - used)) head "$patch in the run workspace"; }',
   // Workflow paths with uncommitted (staged, unstaged or untracked) edits
   // relative to the original tip are never reset below: only committed edits
   // are withheld, and an agent's in-progress work stays exactly as it was.
@@ -1075,7 +1102,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Failing, unrun or unfinished work is never thrown away: the pull request
   // opens as a draft, with the verdict, the script and the output in its body.
   const checkReport = ${JSON.stringify(FLOW_CHECK_REPORT_COMMAND)};
-  await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; implementer_timeout=" + (implementerTimedOut ? "yes" : "no") + "; " + checkReport);
+  await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; implementer_timeout=" + (implementerTimedOut ? "yes" : "no") + "; reference=" + shellQuote(changeReference) + "; " + checkReport);
   const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
   await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
   const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};

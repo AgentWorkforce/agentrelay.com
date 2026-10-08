@@ -349,6 +349,27 @@ describe('FLOW_PUSH_COMMAND', { timeout: 30_000 }, () => {
     expect(body.split('````').length % 2).toBe(1);
   }, 60_000);
 
+  // Review on #161: a near-full body and 50 long workflow paths must not
+  // overflow it either; the whole section is capped, not just the patch.
+  it('keeps a near-full pull-request body under the cap with 50 long workflow paths', () => {
+    const files: Record<string, string> = { 'README.md': '#\n' };
+    const edits: Record<string, string> = { 'src/x.ts': 'x\n' };
+    for (let i = 0; i < 50; i += 1) {
+      const name = `.github/workflows/${'w'.repeat(200)}-${i}.yml`;
+      files[name] = 'name: w\n';
+      edits[name] = 'name: w\n# edited\n';
+    }
+    const { root, base } = setup(files);
+    commit(root, 'long workflow paths', edits);
+    write(root, { '.relayflow/pr-body.md': BODY + 'x\n'.repeat(29000) });
+    const result = push(root, base);
+    expect(result.code).toBe(0);
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('## Workflow changes not applied');
+    expect(body).toMatch(/truncated to fit GitHub's limit/);
+  }, 60_000);
+
   it('bounds the patch in the pull-request body and says where the rest is', () => {
     const { root, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
     commit(root, 'ci', { '.github/workflows/ci.yml': CI + '# padding\n'.repeat(4000), 'docs/a.md': 'a\n' });
