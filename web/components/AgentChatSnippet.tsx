@@ -42,7 +42,7 @@ export function AgentChatSnippet({
     // The snippet carries a private conversation URL: keep it out of session replay.
     <div className={`${s.card} ph-no-capture ph-sensitive`}>
       <div className={s.header}>
-        <span className={s.label}>Paste into Claude Code or Codex</span>
+        <span className={s.label}>Paste into Claude Code, Codex or Grok</span>
         <div className={s.actions}>
           <button type="button" className={s.secondary} onClick={handleNewConversation}>
             New conversation
