@@ -227,6 +227,44 @@ export const FLOW_BASE_CHECK_COMMAND = [
 ].join('; ');
 
 /**
+ * The most, in bytes, of any body the flow posts: the pull request's, and every
+ * comment. GitHub refuses a body over 65,536 characters (`gh pr create` and the
+ * GitLab merge request API alike), and Garden run 80faae32 lost its pull
+ * request that way after 92 minutes of work (agentrelay.com#160). A byte is at
+ * most one character, so this bounds the characters too, with room to spare.
+ */
+export const FLOW_BODY_LIMIT = 60000;
+
+/**
+ * The most, in bytes, each long section of the check report may hold. Their
+ * sum, with the report's own text, leaves summary.md over half the body.
+ */
+const REPORT_SECTION_LIMITS = { script: 4000, log: 10000, repair: 4000 } as const;
+
+/** Bytes kept free for the closing reference line (`Fixes #N`, or a ticket URL). */
+const REFERENCE_RESERVE = 1024;
+
+/**
+ * `relayflow_cap <file> <bytes> <head|tail> <where>` cuts `file` to at most
+ * `bytes`, keeping its start (`head`) or its end (`tail`), at a line boundary
+ * so no multibyte character is split. The cut is marked in the file, naming
+ * `where` the full text is, and the full text goes to stderr, so the step's
+ * output in the run journal keeps it. A code fence the kept start leaves open
+ * is closed, so whatever follows is not swallowed by it. A file within
+ * `bytes` is left as it is. Always returns 0.
+ */
+const CAP_FUNCTION = 'relayflow_cap() { '
+  + 'cap_size=$(LC_ALL=C wc -c < "$1" | tr -d " "); if [ "$cap_size" -le "$2" ]; then return 0; fi; '
+  + 'cap_keep=$(($2 - 400)); if [ "$cap_keep" -lt 0 ]; then cap_keep=0; fi; '
+  + `cap_note="_…truncated to fit GitHub's limit: $cap_size bytes were cut to under $2. The full text is $4, and in this step's output._"; `
+  + 'echo "relayflow: $1 is $cap_size bytes, more than the $2 a body may hold, so it was cut. The full text follows." >&2; cat "$1" >&2; '
+  + 'if [ "$3" = tail ]; then { printf \'%s\\n\\n\' "$cap_note"; LC_ALL=C tail -c "$cap_keep" "$1" | LC_ALL=C sed 1d; } > "$1.cap"; '
+  + 'else LC_ALL=C head -c "$cap_keep" "$1" | LC_ALL=C sed \'$d\' > "$1.cap"; '
+  + 'if [ $(( $(LC_ALL=C grep -c \'^[[:space:]]*```\' "$1.cap" || :) % 2 )) -eq 1 ]; then printf \'```\\n\' >> "$1.cap"; fi; '
+  + 'printf \'\\n%s\\n\' "$cap_note" >> "$1.cap"; fi; '
+  + 'mv -f "$1.cap" "$1"; return 0; }';
+
+/**
  * Writes what the checks found to `.relayflow/check-report.md`, and the pull
  * request body — summary.md followed by that report — to `.relayflow/pr-body.md`.
  *
@@ -239,10 +277,23 @@ export const FLOW_BASE_CHECK_COMMAND = [
  * outright). A reviewer reads the verdict, the
  * script that ran and the tail of each log on the pull request itself, without
  * opening the run journal.
+ *
+ * The body stays within FLOW_BODY_LIMIT (agentrelay.com#160): the script, each
+ * log and the repair notes are cut to REPORT_SECTION_LIMITS (a log keeps its
+ * end, where the failure is), and summary.md is cut to what the report leaves.
+ * The verdict is never cut.
  */
 export const FLOW_CHECK_REPORT_COMMAND = [
   'mkdir -p .relayflow',
+  CAP_FUNCTION,
   'report=.relayflow/check-report.md',
+  // Each long section is a capped copy, so the report stays within
+  // REPORT_SECTION_LIMITS and summary.md gets the rest of FLOW_BODY_LIMIT.
+  'parts=.relayflow/report-parts; rm -rf "$parts"; mkdir -p "$parts"',
+  `if [ -s ${FLOW_CHECK_SCRIPT} ]; then cp ${FLOW_CHECK_SCRIPT} "$parts/script"; relayflow_cap "$parts/script" ${REPORT_SECTION_LIMITS.script} head "${FLOW_CHECK_SCRIPT} in the run workspace"; fi`,
+  `if [ -s .relayflow/check.log ]; then tail -n 80 .relayflow/check.log > "$parts/check"; relayflow_cap "$parts/check" ${REPORT_SECTION_LIMITS.log} tail ".relayflow/check.log in the run workspace"; fi`,
+  `if [ -s .relayflow/base-check.log ]; then tail -n 80 .relayflow/base-check.log > "$parts/base"; relayflow_cap "$parts/base" ${REPORT_SECTION_LIMITS.log} tail ".relayflow/base-check.log in the run workspace"; fi`,
+  `if [ -s .relayflow/repair-notes.md ]; then cp .relayflow/repair-notes.md "$parts/repair"; relayflow_cap "$parts/repair" ${REPORT_SECTION_LIMITS.repair} head ".relayflow/repair-notes.md in the run workspace"; fi`,
   '{ printf \'## Checks\\n\\n\''
     + `; if [ "\${implementer_timeout:-}" = yes ]; then printf '%s\\n\\n' "**The implementer was stopped at its time limit**, so this change may be incomplete. Its committed work is what was checked and pushed; the pull request is a draft."; fi`
     + '; case "$check" in'
@@ -257,12 +308,16 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + ` *) printf '%s\\n' "**The checks failed**, and the base commit could not be checked for comparison, so it is not known whether this change caused them. This pull request is a draft until someone looks." ;;`
     + ' esac ;;'
     + ' esac'
-    + `; if [ -s ${FLOW_CHECK_SCRIPT} ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n\`\`\`sh\\n'; cat ${FLOW_CHECK_SCRIPT}; printf '\`\`\`\\n</details>\\n'; fi`
-    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s .relayflow/check.log ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n\`\`\`\\n'; tail -n 80 .relayflow/check.log; printf '\`\`\`\\n</details>\\n'; fi`
-    + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s .relayflow/base-check.log ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n\`\`\`\\n'; tail -n 80 .relayflow/base-check.log; printf '\`\`\`\\n</details>\\n'; fi; fi`
-    + `; if [ -s .relayflow/repair-notes.md ]; then printf '\\n### What the repair agent found\\n\\n'; cat .relayflow/repair-notes.md; fi`
+    + `; if [ -s "$parts/script" ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n\`\`\`sh\\n'; cat "$parts/script"; printf '\`\`\`\\n</details>\\n'; fi`
+    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n\`\`\`\\n'; cat "$parts/check"; printf '\`\`\`\\n</details>\\n'; fi`
+    + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s "$parts/base" ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n\`\`\`\\n'; cat "$parts/base"; printf '\`\`\`\\n</details>\\n'; fi; fi`
+    + `; if [ -s "$parts/repair" ]; then printf '\\n### What the repair agent found\\n\\n'; cat "$parts/repair"; fi`
     + '; } > "$report"',
-  '{ if [ -s summary.md ]; then cat summary.md; printf \'\\n\\n\'; fi; cat "$report"; } > .relayflow/pr-body.md',
+  // The summary gets what the report leaves, less room for the closing
+  // reference FLOW_PREPARE_CHANGE_METADATA_COMMAND appends.
+  `if [ -s summary.md ]; then cp summary.md "$parts/summary"; relayflow_cap "$parts/summary" $((${FLOW_BODY_LIMIT - REFERENCE_RESERVE} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - 2)) head "summary.md in the run workspace"; fi`,
+  '{ if [ -s "$parts/summary" ]; then cat "$parts/summary"; printf \'\\n\\n\'; fi; cat "$report"; } > .relayflow/pr-body.md',
+  'rm -rf "$parts"',
   'echo "relayflow: wrote the check report to $report." >&2',
   'echo written',
 ].join('; ');
@@ -382,6 +437,8 @@ export const FLOW_TIME = (() => {
 export const FLOW_TIME_STOP_COMMAND = [
   'mkdir -p .relayflow',
   `printf '%s\\n' "**This run ran out of time before its review was done** (the flow's time budget). The work is pushed and this pull request is a draft so it is not lost; review it by hand or run the flow again." > .relayflow/time-stop.md`,
+  CAP_FUNCTION,
+  `relayflow_cap .relayflow/time-stop.md ${FLOW_BODY_LIMIT} head "the run journal"`,
   `if ${FLOW_DRAFT_CHANGE_COMMAND} >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft." >&2; fi`,
   `if ${flowCommentChangeCommand('.relayflow/time-stop.md')} >/dev/null 2>&1; then echo "relayflow: posted the time stop to the pull request."; else echo "relayflow: could not comment on the pull request." >&2; fi`,
 ].join('; ');
@@ -555,16 +612,15 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
   'n=$(git diff --name-only "$mb" "$orig" -- "$wf" | wc -l | tr -d " ")',
   // Builds the reviewer-facing section. The heading, explanation and a file
   // list capped at 50 entries are written and measured first; only the room
-  // left under GitHub's 65,536-character body/comment limit (kept at 65,000,
-  // minus what the body already holds and ~400 bytes of fences and notes)
-  // goes to the patch.
+  // left under FLOW_BODY_LIMIT (minus what the body already holds and ~400
+  // bytes of fences and notes) goes to the patch.
   'relayflow_section() { '
     + 'used=0; if [ "${comment:-}" != yes ] && [ -f .relayflow/pr-body.md ]; then used=$(wc -c < .relayflow/pr-body.md | tr -d " "); fi; '
     + `{ printf '\\n## Workflow changes not applied\\n\\n%s\\n\\n' "The GitHub App token this run pushes with lacks the \\\`workflows\\\` permission, so GitHub refused the commits that change \\\`.github/workflows/\\\`. The rest of the work is pushed; these edits were taken out of its commits. Apply them manually:"; `
     + `git diff --name-status "$mb" "$orig" -- "$wf" | awk -F '\\t' '{ printf "- %s \\140%s\\140\\n", substr($1, 1, 1), $NF }' | head -n 50; `
     + `if [ "$n" -gt 50 ]; then printf -- '- …and %s more\\n' "$((n - 50))"; fi; } > "$tmp/head"; `
     + 'overhead=$(( $(wc -c < "$tmp/head" | tr -d " ") + 400 )); '
-    + 'limit=${RELAYFLOW_WITHHELD_PATCH_LIMIT:-61440}; room=$((65000 - used - overhead)); if [ "$room" -lt "$limit" ]; then limit=$room; fi; size=$(wc -c < "$patch" | tr -d " "); '
+    + 'limit=${RELAYFLOW_WITHHELD_PATCH_LIMIT:-61440}; room=$((' + FLOW_BODY_LIMIT + ' - used - overhead)); if [ "$room" -lt "$limit" ]; then limit=$room; fi; size=$(wc -c < "$patch" | tr -d " "); '
     + `{ cat "$tmp/head"; if [ "$limit" -le 0 ]; then printf '\\n%s\\n' "_The patch ($size bytes) does not fit in the pull request body. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; `
     + `elif [ "$size" -le "$limit" ]; then printf '\\n\`\`\`\`diff\\n'; cat "$patch"; printf '\`\`\`\`\\n'; `
     + `else printf '\\n\`\`\`\`diff\\n'; head -c "$limit" "$patch" | sed '$d'; printf '\`\`\`\`\\n\\n%s\\n' "_Truncated to $limit of $size bytes. The full patch is .relayflow/workflow-changes.patch in the run workspace, and in this push step's output._"; fi; } > "$section"; }`,
@@ -601,10 +657,17 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
  * The reference is supplied through a shell-quoted variable by the generated
  * flow; grep matches a complete, fixed line so an agent-written matching line
  * is retained rather than duplicated.
+ *
+ * A body over FLOW_BODY_LIMIT is cut to fit (agentrelay.com#160), and a
+ * reference the cut removed is put back at the end: a closing reference is
+ * never lost to truncation.
  */
 export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
   'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body; exit 0; fi',
-  'if [ -n "$reference" ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi',
+  CAP_FUNCTION,
+  'relayflow_reference() { if [ -n "$reference" ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi; }',
+  'relayflow_reference',
+  `if [ "$(LC_ALL=C wc -c < .relayflow/pr-body.md | tr -d " ")" -gt ${FLOW_BODY_LIMIT} ]; then relayflow_cap .relayflow/pr-body.md $((${FLOW_BODY_LIMIT} - 2 - $(printf %s "$reference" | LC_ALL=C wc -c | tr -d " "))) head "the run journal"; relayflow_reference; fi`,
   'echo prepared',
 ].join('; ');
 
@@ -699,6 +762,8 @@ const REVIEW_TIMEOUT_NOTE = 'The review was stopped at its %s before it finished
 export const FLOW_REVIEW_BLOCKED_COMMAND = [
   'set -e',
   `{ printf '%s\\n\\n' "${REVIEW_BLOCKED_HEADING}"; if [ "\${review_timeout:-}" = yes ]; then if [ -n "\${review_limit:-}" ]; then stopped_at="\${review_limit}-minute limit"; else stopped_at="time limit"; fi; printf '${REVIEW_TIMEOUT_NOTE}\\n\\n' "$stopped_at"; fi; if [ -s review.md ]; then cat review.md; else printf '%s\\n' "_The reviewer left no review.md; see the review step in the run journal._"; fi; } > review-blocked.md || true`,
+  CAP_FUNCTION,
+  `relayflow_cap review-blocked.md ${FLOW_BODY_LIMIT} head "review.md in the run workspace" || true`,
   'echo "relayflow: the adversarial review did not pass; wrote review-blocked.md."',
   `if ${FLOW_DRAFT_CHANGE_COMMAND} >/dev/null 2>&1; then echo "relayflow: converted the pull request to a draft."; else echo "relayflow: could not convert the pull request to a draft; review-blocked.md still holds the findings." >&2; fi`,
   `if ${flowCommentChangeCommand('review-blocked.md')} >/dev/null 2>&1; then echo "relayflow: posted the unresolved review to the pull request."; else echo "relayflow: could not comment on the pull request; review-blocked.md still holds the findings." >&2; fi`,

@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { FLOW_PUSH_COMMAND, WORKFLOW_FILES_HINT } from '../flow-workflows';
+import { FLOW_BODY_LIMIT, FLOW_PUSH_COMMAND, WORKFLOW_FILES_HINT } from '../flow-workflows';
 import { factorySource, DEFAULT_FACTORY, type FactoryDraft } from '../flow-onboarding';
 
 /**
@@ -329,7 +329,7 @@ describe('FLOW_PUSH_COMMAND', { timeout: 30_000 }, () => {
   });
 
   // Review on #114: the whole section, not just the patch, must fit GitHub's
-  // 65,536-character body limit.
+  // 65,536-character body limit, within the flow's own cap (agentrelay.com#160).
   it('keeps the pull-request body under GitHub\'s limit even with a long file list', () => {
     const files: Record<string, string> = { 'README.md': '#\n' };
     const edits: Record<string, string> = { 'src/x.ts': 'x\n' };
@@ -344,7 +344,7 @@ describe('FLOW_PUSH_COMMAND', { timeout: 30_000 }, () => {
     const result = push(root, base);
     expect(result.code).toBe(0);
     const body = read(root, '.relayflow/pr-body.md');
-    expect(body.length).toBeLessThanOrEqual(65536);
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
     expect(body).toContain('…and 70 more');
     expect(body.split('````').length % 2).toBe(1);
   }, 60_000);
