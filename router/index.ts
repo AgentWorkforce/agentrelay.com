@@ -44,6 +44,13 @@ const CONNECT_INVITE_PATH = /^(\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?
 const SHORT_HOST = "arelay.to";
 const SHORT_HOST_WWW = "www.arelay.to";
 const HANDLE_SEGMENT = "[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])";
+// Keep this aligned with relay-agent's registry reservation set. agent-relay is
+// the one seeded exception; every other reserved site/API slug must retain its
+// router meaning instead of being rewritten as a company profile.
+const RESERVED_AGENT_PAGE_HANDLES = new Set([
+  "register", "connect", "api", "cloud", "admin", "www", "help", "support",
+  "docs", "status", "security", "abuse", "login", "signup",
+]);
 // A visitor's coding agent chats through /<handle>/<32 hex id>. arelay.to
 // accepts every handle-shaped slug and lets relay-agent's registry decide
 // whether it exists. agentrelay.com retains its established agent-relay route.
@@ -164,7 +171,7 @@ export function getAgentPagePath(
   } else if (hostname === PRIMARY_HOST) {
     agent = new RegExp(`^/u/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
   }
-  if (!agent) {
+  if (!agent || RESERVED_AGENT_PAGE_HANDLES.has(agent)) {
     return undefined;
   }
   const wantsHtml = method === "HEAD" || prefersHtmlOverMarkdown(accept);

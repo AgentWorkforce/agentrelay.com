@@ -94,6 +94,14 @@ describe("router agent chat", () => {
     expect(cloud.fetch).not.toHaveBeenCalled();
     const forwarded = relayAgent.fetch.mock.calls[0][0];
     expect(forwarded.url).toBe("https://arelay.to/api/v1/agents/acme?format=json");
+
+    const register = await worker.fetch(
+      new Request("https://arelay.to/register", { headers: { accept: "text/html" } }),
+      buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
+      ctx,
+    );
+    expect(register.status).toBe(200);
+    expect(relayAgent.fetch.mock.calls[1][0].url).toBe("https://arelay.to/register");
   });
 
   it("fails registry routes closed when relay-agent is not configured", async () => {
@@ -243,6 +251,7 @@ describe("router agent chat", () => {
 
   it("sends the short host's root, www and cloud app to agentrelay.com", () => {
     expect(getShortHostRedirect(new URL("https://arelay.to/"))).toBe("https://agentrelay.com/");
+    expect(getShortHostRedirect(new URL("https://arelay.to/cloud"))).toBe("https://agentrelay.com/cloud");
     expect(getShortHostRedirect(new URL("https://arelay.to/cloud/teams?x=1"))).toBe("https://agentrelay.com/cloud/teams?x=1");
     expect(getShortHostRedirect(new URL("https://www.arelay.to/agent-relay"))).toBe("https://arelay.to/agent-relay");
     expect(getShortHostRedirect(new URL("https://arelay.to/agent-relay"))).toBeUndefined();
@@ -311,6 +320,9 @@ describe("router agent chat", () => {
     expect(getAgentPagePath("arelay.to", "/agent-relay/bridge.sh", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("arelay.to", "/-invalid", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("arelay.to", "/x", "GET", "*/*")).toBeUndefined();
+    for (const reserved of ["register", "connect", "api", "cloud", "admin", "www", "help", "support", "docs", "status", "security", "abuse", "login", "signup"]) {
+      expect(getAgentPagePath("arelay.to", `/${reserved}`, "GET", "*/*")).toBeUndefined();
+    }
     expect(getAgentPagePath("arelay.to", "/agent-relay", "POST", "*/*")).toBeUndefined();
     expect(getAgentPagePath("agentrelay.com", "/agent-relay", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("example.com", "/u/agent-relay", "GET", "*/*")).toBeUndefined();
