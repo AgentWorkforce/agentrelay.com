@@ -967,11 +967,16 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     if (!broken(check)) return "";
     if (checkPlan === "none") return "new";
     // Checking out the base commit and returning to the branch share the
-    // check's lease, so it gets two minutes beyond the limit, within f.run's 15.
+    // check's lease, so it gets two minutes beyond the limit, within f.run's
+    // 15. It never gets less time than the branch's check took: a branch check
+    // that ran to its own limit cannot be compared at all.
     const baseLimit = await allowance(${t.checkMinutes - 2}, 3 + publishing);
-    if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.min(${t.checkMinutes - 2}, Math.ceil(checkTook) + 1))) return "skipped";
+    if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook))) return "skipped";
     await f.run(freeDisk);
-    return timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit, baseLimit + 2);
+    const result = await timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit, baseLimit + 2);
+    // A base check that ran out of time says nothing about a branch that
+    // failed outright; only a branch that timed out too compares with it.
+    return result === "timeout" && check !== "timeout" ? "unknown" : result;
   };
   const baseline = await compareWithBase();` });
   sections.push({ id: 'pull-request', code: `  // Publish the branch and open the pull request without an agent.
@@ -1031,7 +1036,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     // change is at fault, so the review still runs and a person decides.
     console.error(baseline === "skipped"
       ? "The checks fail, and there was no time left to check the base commit (base not checked), so it is not known whether this change caused them. The pull request is a draft with the output."
-      : "The checks fail, but not because of this change as far as the base commit shows. The pull request is a draft with the output of both.");
+      : baseline === "fail" || baseline === "timeout"
+        ? "The checks fail, but not because of this change as far as the base commit shows. The pull request is a draft with the output of both."
+        : "The checks fail, and the base commit could not be checked for comparison, so it is not known whether this change caused them. The pull request is a draft with the output.");
   }` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'One independent adversarial review. There is no fix round: what it finds goes on the pull request.' : 'Review the final implementation against the ticket and comparison findings.'}
   // A review that found problems is this flow's verdict on its own work, so it

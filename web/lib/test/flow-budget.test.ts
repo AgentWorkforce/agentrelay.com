@@ -392,7 +392,7 @@ describe('Garden flow time plan (cloud#4235, agentrelay.com#155)', () => {
     // The limit stops only the check script; the checkout, the worktree and the
     // way back to the branch run inside the same f.run lease, and a lease that
     // runs out throws and takes the run down.
-    for (const minutes of [2, FLOW_TIME.checkLimitMinutes]) {
+    for (const minutes of [2, 12]) {
       const run = await runTimed({
         agents: { 'check-discovery': 1, 'implementer': 1, 'check-repair': 1 },
         checks: [{ minutes, verdict: 'fail' }],
@@ -404,6 +404,29 @@ describe('Garden flow time plan (cloud#4235, agentrelay.com#155)', () => {
       // f.run refuses a lease above 15 minutes.
       for (const lease of run.leases) expect(lease.lease!).toBeLessThanOrEqual(FLOW_TIME.checkMinutes);
     }
+  });
+
+  it('never checks the base commit with less time than the branch\'s check took', async () => {
+    // A 14-minute branch check cannot be compared with a base check limited
+    // to 13: the base would time out and read as failing too.
+    const run = await runTimed({
+      agents: { 'check-discovery': 1, 'implementer': 1, 'check-repair': 1 },
+      checks: [{ minutes: FLOW_TIME.checkLimitMinutes, verdict: 'fail' }],
+      baseline: { minutes: 1, verdict: 'fail' },
+    }, 'simple');
+    expect(run.names).not.toContain('base-check');
+    expect(run.calls.find(call => call.command?.includes('.relayflow/check-report.md'))?.command).toMatch(/baseline=skipped; /);
+  });
+
+  it('reports a base check that timed out as unknown, not as failing too, when the branch failed outright', async () => {
+    const run = await runTimed({
+      agents: { 'check-discovery': 1, 'implementer': 1, 'check-repair': 1 },
+      checks: [{ minutes: 3, verdict: 'fail' }],
+      baseline: { minutes: 100, verdict: 'fail' },
+    }, 'simple');
+    expect(run.names).toContain('base-check');
+    expect(run.calls.find(call => call.command?.includes('.relayflow/check-report.md'))?.command).toMatch(/baseline=unknown; /);
+    expect(errorsOf(run)).not.toMatch(/as far as the base commit shows/);
   });
 
   it('fails fast to a draft when there is no time left to run the checks', async () => {
