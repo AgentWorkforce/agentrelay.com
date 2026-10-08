@@ -1,0 +1,129 @@
+/* Additions to the /u/agent-relay layout (agent-relay.module.css) for the
+   arelay.to registration pages. Colours come from the flows tokens so the
+   pages read the same as the agent chat pages they lead to. Rules are scoped
+   to .content (the <main> element) so SiteNav and SiteFooter keep their own
+   link styles. */
+
+.content code {
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: rgba(116, 184, 226, 0.12);
+  color: var(--flows-text);
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+.content a {
+  color: var(--flows-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The prompt card uses the AgentChatSnippet card; the copy button sits in its
+   header instead of floating over the text. */
+.content .copy {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #405c72;
+  color: var(--flows-text);
+}
+
+.content .copy:hover {
+  background: rgba(116, 184, 226, 0.12);
+  color: var(--flows-accent-strong);
+}
+
+.promptNote {
+  max-width: 640px;
+  margin: 0;
+  color: var(--flows-muted);
+  line-height: 1.7;
+}
+
+.content .soon {
+  display: inline-block;
+  margin-left: 6px;
+  border: 1px solid #8a7a4a;
+  border-radius: 999px;
+  padding: 1px 8px;
+  color: #f3dfa2;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+
+.prose {
+  margin: 0 0 16px;
+  color: var(--flows-muted);
+  line-height: 1.7;
+}
+
+.disclosure {
+  border: 1px solid #405c72;
+  border-radius: 12px;
+  padding: 20px;
+  background: #0b1c2a;
+}
+
+.disclosure p {
+  margin: 0;
+  color: var(--flows-muted);
+  line-height: 1.7;
+}
+
+/* The steps section has generous bottom padding; stacked sections share it. */
+.tight {
+  padding-bottom: 32px;
+}
+
+/* ---- Checklist: Markdown rendered through the docs MDX components ---- */
+
+.markdown {
+  color: var(--flows-muted);
+  line-height: 1.7;
+}
+
+.markdown > p:first-child {
+  margin-top: 0;
+}
+
+.markdown h2 {
+  margin: 36px 0 12px;
+  color: var(--flows-text);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-weight: 500;
+}
+
+.markdown p,
+.markdown ul {
+  margin: 0 0 14px;
+}
+
+.markdown ul {
+  padding-left: 20px;
+}
+
+.markdown li + li {
+  margin-top: 6px;
+}
+
+.markdown pre {
+  margin: 0;
+  border: 1px solid #405c72;
+  border-radius: 12px;
+  padding: 16px 56px 16px 16px;
+  background: #0b1c2a;
+  color: #e4eef5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.markdown pre code {
+  padding: 0;
+  background: none;
+  font-size: 13px;
+}

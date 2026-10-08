@@ -290,16 +290,41 @@ export function getLegacyAgentPageRedirect(url: URL): string | undefined {
 // Registration and management are served directly by relay-agent. The public
 // API matcher is prefix-bounded so lookalikes such as /registrations-legacy do
 // not escape the marketing site.
+// Browsers opening arelay.to/register get the human page on agentrelay.com.
+// Agents (curl's */*, no Accept, text/markdown, ties) and HEAD keep getting
+// relay-agent's Markdown registration guide from isRelayAgentRegistryRoute.
+// `?format=md` lets a person open the raw guide in a browser (the human page
+// links to it that way).
+export const HUMAN_REGISTER_PAGE_URL = `https://${PRIMARY_HOST}/agents/register`;
+const REGISTER_FORMAT_PARAM = "format";
+const REGISTER_MARKDOWN_FORMATS = new Set(["md", "markdown"]);
+
+export function getHumanRegisterPageRedirect(
+  url: URL,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (url.hostname !== SHORT_HOST && url.hostname !== SHORT_HOST_WWW) return undefined;
+  if (url.pathname !== "/register" && url.pathname !== "/register/") return undefined;
+  if (method !== "GET" || !prefersHtmlOverMarkdown(accept)) return undefined;
+  const format = url.searchParams.get(REGISTER_FORMAT_PARAM)?.toLowerCase();
+  if (format && REGISTER_MARKDOWN_FORMATS.has(format)) return undefined;
+  return `${HUMAN_REGISTER_PAGE_URL}${url.search}`;
+}
+
 export function isRelayAgentRegistryRoute(
   hostname: string,
   pathname: string,
   method: string,
 ): boolean {
-  if (hostname !== SHORT_HOST) return false;
-  if ((pathname === "/register" || pathname === "/register/")
+  // The guide is served on the www alias too: curl does not follow the
+  // canonicalizing redirect. The registry API stays on the bare host.
+  if ((hostname === SHORT_HOST || hostname === SHORT_HOST_WWW)
+    && (pathname === "/register" || pathname === "/register/")
     && (method === "GET" || method === "HEAD")) {
     return true;
   }
+  if (hostname !== SHORT_HOST) return false;
   return REGISTRY_API_PATH.test(pathname);
 }
 
@@ -658,6 +683,15 @@ export default {
       url.pathname,
       request.method,
     );
+    const humanRegisterPage = getHumanRegisterPageRedirect(
+      url,
+      request.method,
+      request.headers.get("accept"),
+    );
+    if (humanRegisterPage) {
+      return Response.redirect(humanRegisterPage, 302);
+    }
+
     // Agents fetching the www alias get the guide directly: plain curl does
     // not follow the canonicalizing redirect.
     const agentPagePath = getAgentPagePath(

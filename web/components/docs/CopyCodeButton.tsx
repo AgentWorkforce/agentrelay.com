@@ -4,7 +4,19 @@ import { useState } from 'react';
 
 import s from './docs.module.css';
 
-export function CopyCodeButton({ code, inline = false }: { code: string; inline?: boolean }) {
+export function CopyCodeButton({
+  code,
+  inline = false,
+  label = 'Copy code',
+  className,
+}: {
+  code: string;
+  inline?: boolean;
+  /** Accessible name, e.g. "Copy prompt" when the block is not code. */
+  label?: string;
+  /** Extra class for callers outside the docs scope (e.g. a dark marketing card). */
+  className?: string;
+}) {
   const [copied, setCopied] = useState(false);
 
   async function handleCopy() {
@@ -15,10 +27,11 @@ export function CopyCodeButton({ code, inline = false }: { code: string; inline?
 
   return (
     <button
-      className={`${s.copyBtn} ${inline ? s.copyBtnInline : ''}`}
+      type="button"
+      className={[s.copyBtn, inline ? s.copyBtnInline : '', className].filter(Boolean).join(' ')}
       onClick={handleCopy}
-      aria-label="Copy code"
-      title="Copy code"
+      aria-label={label}
+      title={label}
     >
       {copied ? (
         <svg
