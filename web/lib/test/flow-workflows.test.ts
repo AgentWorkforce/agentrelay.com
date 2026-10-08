@@ -8,7 +8,7 @@ import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
   FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
-  flowCommentChangeCommand, FLOW_BODY_LIMIT, FLOW_WITHHELD_NOTICE_RESERVE,
+  flowCommentChangeCommand, FLOW_BODY_LIMIT, FLOW_WITHHELD_NOTICE_RESERVE, FLOW_REFERENCE_LIMIT,
   WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
@@ -953,7 +953,8 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
   });
 
   it('keeps the verdict and the whole reference when the reference is long', () => {
-    const reference = 'Ticket: https://tickets.example.com/' + 'a'.repeat(3000);
+    // As long as a reference may be: well past the old fixed 1 KB reserve's margin.
+    const reference = 'Ticket: https://tickets.example.com/' + 'a'.repeat(FLOW_REFERENCE_LIMIT - 36);
     const { verdict, body } = publishBody({ 'summary.md': longLines('summary', 400, 60), '.relayflow/check.log': longLines('FAIL', 80, 400) }, 'fail', 'pass', reference, 'linear');
     expect(verdict).toBe('valid');
     expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
@@ -992,6 +993,28 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     sh(`check=pass; baseline=; ${FLOW_CHECK_REPORT_COMMAND}`, root);
     const lines = read(root, '.relayflow/pr-body.md').split('\n');
     expect(lines.filter(line => line === '```')).toHaveLength(2);
+  });
+
+  it('closes an HTML comment the cut leaves open, so the report is not hidden in it', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n<!-- note: done -->\n<!--\n' + longLines('hidden', 400, 60) + '-->\n' }, 'pass', '');
+    expect(verdict).toBe('valid');
+    const lines = body.split('\n');
+    const closer = lines.lastIndexOf('-->');
+    expect(closer).toBeGreaterThan(0);
+    expect(lines.indexOf('## Checks')).toBeGreaterThan(closer);
+    // A comment opened inside a code block is code, not a comment.
+    const fenced = publishBody({ 'summary.md': '```\n<!--\n' + longLines('code', 400, 60) }, 'pass', '').body.split('\n');
+    expect(fenced).not.toContain('-->');
+  });
+
+  it('refuses a reference longer than FLOW_REFERENCE_LIMIT before anything is pushed', () => {
+    const reference = 'Ticket: https://tickets.example.com/' + 'a'.repeat(FLOW_REFERENCE_LIMIT);
+    const { prepare, body } = publishBody({ 'summary.md': 'Fixed it.\n' }, 'pass', '', reference, 'linear');
+    expect(prepare.token).toBe('prepared');
+    expect(body).not.toContain(reference);
+    expect(sh(`reference='${reference}'; title='Fix login'; title_length=9; source='linear'; identifier='ENG-1'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, fixture({ '.relayflow/pr-body.md': 'Fixed it.\n' })).token).toBe('reference-too-long');
+    const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
+    expect(source).toContain('f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle)');
   });
 
   it('puts back a closing reference that truncation cut from the summary', () => {

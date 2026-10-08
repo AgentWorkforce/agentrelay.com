@@ -248,6 +248,13 @@ const REPORT_SECTION_LIMITS = { script: 4000, log: 10000, repair: 4000 } as cons
 const REFERENCE_MARGIN = 64;
 
 /**
+ * The longest closing reference line, in bytes, a body may carry. A longer
+ * one (a runaway ticket URL or identifier) is refused before anything is
+ * pushed, rather than crowding out the body or overflowing it.
+ */
+export const FLOW_REFERENCE_LIMIT = 1024;
+
+/**
  * Bytes the prepared pull-request body leaves free under FLOW_BODY_LIMIT, so
  * the push step always has room to say it withheld workflow edits
  * (FLOW_PUSH_COMMAND), however full the body is.
@@ -255,12 +262,14 @@ const REFERENCE_MARGIN = 64;
 export const FLOW_WITHHELD_NOTICE_RESERVE = 2048;
 
 /**
- * Prints the fence that closes a Markdown code block still open at the end of
- * its input, or nothing: a fence of three or more backticks or tildes opens a
- * block, and a bare fence of the same character, at least as long, closes it.
+ * Prints what closes a Markdown code block or an HTML comment still open at
+ * the end of its input, or nothing, so a truncated agent text cannot hide
+ * the report appended after it. A fence of three or more backticks or tildes
+ * opens a block, and a bare fence of the same character, at least as long,
+ * closes it; outside a block, `<!--` opens a comment and `-->` closes it.
  */
 const BACKTICK = '`';
-const OPEN_FENCE_AWK = String.raw`{ if (match($0, /^[ \t]*(` + BACKTICK.repeat(3) + String.raw`+|~~~+)/)) { f = substr($0, RSTART, RLENGTH); sub(/^[ \t]*/, "", f); if (open == "") open = f; else if (substr(f, 1, 1) == substr(open, 1, 1) && length(f) >= length(open)) { rest = $0; sub(substr(f, 1, 1) == "~" ? "^[ \t]*~+[ \t]*$" : "^[ \t]*` + BACKTICK + String.raw`+[ \t]*$", "", rest); if (rest == "") open = ""; } } } END { if (open != "") print open }`;
+const OPEN_FENCE_AWK = String.raw`{ line = $0; if (incomment) { k = index(line, "-->"); if (k == 0) next; incomment = 0; line = substr(line, k + 3); } else if (match($0, /^[ \t]*(` + BACKTICK.repeat(3) + String.raw`+|~~~+)/)) { f = substr($0, RSTART, RLENGTH); sub(/^[ \t]*/, "", f); if (open == "") open = f; else if (substr(f, 1, 1) == substr(open, 1, 1) && length(f) >= length(open)) { rest = $0; sub(substr(f, 1, 1) == "~" ? "^[ \t]*~+[ \t]*$" : "^[ \t]*` + BACKTICK + String.raw`+[ \t]*$", "", rest); if (rest == "") open = ""; } next; } if (open != "") next; while ((k = index(line, "<!--")) > 0) { line = substr(line, k + 4); k = index(line, "-->"); if (k == 0) { incomment = 1; break; } line = substr(line, k + 3); } } END { if (incomment) print "-->"; if (open != "") print open }`;
 
 /**
  * `relayflow_cap <file> <bytes> <head|tail> <where>` cuts `file` to at most
@@ -709,7 +718,7 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
 export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
   'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body; exit 0; fi',
   CAP_FUNCTION,
-  'relayflow_reference() { if [ -n "$reference" ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi; }',
+  `relayflow_reference() { if [ -n "$reference" ] && [ "$(printf %s "$reference" | LC_ALL=C wc -c | tr -d " ")" -le ${FLOW_REFERENCE_LIMIT} ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi; }`,
   'relayflow_reference',
   `if [ "$(LC_ALL=C wc -c < .relayflow/pr-body.md | tr -d " ")" -gt ${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} ]; then relayflow_cap .relayflow/pr-body.md $((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} - 2 - $(printf %s "$reference" | LC_ALL=C wc -c | tr -d " "))) head "the run journal"; relayflow_reference; fi`,
   'echo prepared',
@@ -719,10 +728,12 @@ export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
  * Final fail-closed contract immediately before a branch is pushed or a
  * change request is opened. It deliberately exits zero with one verdict: an
  * invalid verdict is handled by the flow instead of being retried as a flaky
- * command. GitHub inputs must have exactly one normalized closing line.
+ * command. GitHub inputs must have exactly one normalized closing line, and
+ * no `reference` may exceed FLOW_REFERENCE_LIMIT.
  */
 export const FLOW_VALIDATE_CHANGE_METADATA_COMMAND = [
   'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body',
+  `elif [ "$(printf %s "\${reference:-}" | LC_ALL=C wc -c | tr -d " ")" -gt ${FLOW_REFERENCE_LIMIT} ]; then echo reference-too-long`,
   'elif [ -z "$title" ]; then echo empty-title',
   'elif ! printf "%s\\n" "$title_length" | grep -Eq "^[0-9]+$"; then echo malformed-title-length',
   'elif [ "$title_length" -gt 240 ]; then echo title-too-long',
@@ -1123,7 +1134,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
   await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
   const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};
-  const metadataVerdict = (await f.run("title=" + shellQuote(changeTitle) + "; title_length=" + changeTitleLength + "; source=" + shellQuote(issueSource) + "; identifier=" + shellQuote(issueIdentifier) + "; " + validateChangeMetadata)).trim();
+  const metadataVerdict = (await f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle) + "; title_length=" + changeTitleLength + "; source=" + shellQuote(issueSource) + "; identifier=" + shellQuote(issueIdentifier) + "; " + validateChangeMetadata)).trim();
   if (metadataVerdict !== "valid") {
     console.error("Stopped: invalid pull-request metadata (" + metadataVerdict + "). No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
