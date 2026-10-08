@@ -33,7 +33,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          for _ in $(seq 1 80); do
+          for _ in $(seq 1 240); do
             state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1" \
               --jq '.workflow_runs[0] | if . == null then "missing" else "\(.status) \(.conclusion // "")" end')
             echo "web deploy for ${GITHUB_SHA::9}: ${state}"
@@ -43,7 +43,7 @@ jobs:
             esac
             sleep 30
           done
-          echo "::error::Timed out after 40 minutes waiting for Deploy Web (Cloudflare) for this commit."
+          echo "::error::Timed out after 2 hours waiting for Deploy Web (Cloudflare) for this commit. Re-run this workflow once it finishes."
           exit 1
 
       - name: Checkout code
