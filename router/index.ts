@@ -141,11 +141,12 @@ export function getAgentChatCloudPath(
   return `${CLOUD_PATH_PREFIX}/api/v1/agent-chat/${match[1]}/${match[2]}`;
 }
 
-// Agents told to "go to arelay.to/agent-relay" fetch it with curl (Accept: */*)
-// or a web-fetch tool (Accept: text/markdown). Both get the agent-readable
-// instructions; browsers, which ask for text/html and never for markdown, get
-// the page.
-export function getAgentPageMarkdownPath(
+// Agent pages live under /u/<handle> on agentrelay.com, so company handles never
+// collide with the site's own pages, and at the root on arelay.to. Agents told
+// to "go to arelay.to/agent-relay" fetch it with curl (Accept: */*) or a
+// web-fetch tool (Accept: text/markdown); both get the agent-readable guide.
+// Browsers, which ask for text/html and never for markdown, get the page.
+export function getAgentPagePath(
   hostname: string,
   pathname: string,
   method: string,
@@ -154,18 +155,29 @@ export function getAgentPageMarkdownPath(
   if (method !== "GET" && method !== "HEAD") {
     return undefined;
   }
-  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST) {
-    return undefined;
+  let agent: string | undefined;
+  if (hostname === SHORT_HOST) {
+    agent = /^\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
+  } else if (hostname === PRIMARY_HOST) {
+    agent = /^\/u\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
   }
-  const agent = /^\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
   if (!agent || !AGENT_CHAT_AGENTS.has(agent)) {
     return undefined;
   }
   const accepted = (accept ?? "").toLowerCase();
-  if (!accepted.includes("text/markdown") && accepted.includes("text/html")) {
+  const wantsHtml = !accepted.includes("text/markdown") && accepted.includes("text/html");
+  return wantsHtml ? `/u/${agent}` : `/u/${agent}/agent.md`;
+}
+
+// The page first shipped at agentrelay.com/agent-relay; keep that link working.
+export function getLegacyAgentPageRedirect(url: URL): string | undefined {
+  if (url.hostname !== PRIMARY_HOST) {
     return undefined;
   }
-  return `/${agent}/agent.md`;
+  const agent = /^\/([a-z0-9-]+)\/?$/.exec(url.pathname)?.[1];
+  return agent && AGENT_CHAT_AGENTS.has(agent)
+    ? `https://${PRIMARY_HOST}/u/${agent}${url.search}`
+    : undefined;
 }
 
 // arelay.to only fronts agent chat: its root, its www alias and the signed-in
@@ -500,13 +512,18 @@ export default {
       return Response.redirect(shortHostRedirect, 302);
     }
 
-    const agentPagePath = getAgentPageMarkdownPath(
+    const legacyAgentPage = getLegacyAgentPageRedirect(url);
+    if (legacyAgentPage && (request.method === "GET" || request.method === "HEAD")) {
+      return Response.redirect(legacyAgentPage, 301);
+    }
+
+    const agentPagePath = getAgentPagePath(
       url.hostname,
       url.pathname,
       request.method,
       request.headers.get("accept"),
     );
-    if (agentPagePath) {
+    if (agentPagePath && agentPagePath !== url.pathname.replace(/\/$/, "")) {
       url.pathname = agentPagePath;
       request = new Request(url.toString(), request);
     }

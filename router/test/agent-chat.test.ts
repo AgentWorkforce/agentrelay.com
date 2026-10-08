@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import worker, { getAgentChatCloudPath, getAgentPageMarkdownPath, getShortHostRedirect } from "../index.js";
+import worker, { getAgentChatCloudPath, getAgentPagePath, getLegacyAgentPageRedirect, getShortHostRedirect } from "../index.js";
 
 const ID = "0123456789abcdef0123456789abcdef";
 
@@ -170,19 +170,30 @@ describe("router agent chat", () => {
     expect(getShortHostRedirect(new URL("https://agentrelay.com/"))).toBeUndefined();
   });
 
-  it("sends agents fetching the chat page to its agent-readable markdown", () => {
+  it("serves agent pages at the arelay.to root and under /u on agentrelay.com", () => {
+    const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+    expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", browser)).toBe("/u/agent-relay");
+    expect(getAgentPagePath("agentrelay.com", "/u/agent-relay", "GET", browser)).toBe("/u/agent-relay");
     for (const accept of ["*/*", null, "text/markdown", "text/markdown, text/html;q=0.9, */*;q=0.8", "text/plain"]) {
-      expect(getAgentPageMarkdownPath("arelay.to", "/agent-relay", "GET", accept)).toBe("/agent-relay/agent.md");
+      expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", accept)).toBe("/u/agent-relay/agent.md");
+      expect(getAgentPagePath("agentrelay.com", "/u/agent-relay/", "HEAD", accept)).toBe("/u/agent-relay/agent.md");
     }
-    expect(getAgentPageMarkdownPath("agentrelay.com", "/agent-relay/", "HEAD", "*/*")).toBe("/agent-relay/agent.md");
   });
 
-  it("keeps browsers, other paths, unknown agents and POSTs on their existing routes", () => {
-    const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
-    expect(getAgentPageMarkdownPath("arelay.to", "/agent-relay", "GET", browser)).toBeUndefined();
-    expect(getAgentPageMarkdownPath("arelay.to", "/agent-relay/bridge.sh", "GET", "*/*")).toBeUndefined();
-    expect(getAgentPageMarkdownPath("arelay.to", "/someone-else", "GET", "*/*")).toBeUndefined();
-    expect(getAgentPageMarkdownPath("arelay.to", "/agent-relay", "POST", "*/*")).toBeUndefined();
-    expect(getAgentPageMarkdownPath("example.com", "/agent-relay", "GET", "*/*")).toBeUndefined();
+  it("leaves other paths, unknown agents, POSTs and other hosts alone", () => {
+    expect(getAgentPagePath("arelay.to", "/agent-relay/bridge.sh", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("arelay.to", "/someone-else", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("arelay.to", "/agent-relay", "POST", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("agentrelay.com", "/agent-relay", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("example.com", "/u/agent-relay", "GET", "*/*")).toBeUndefined();
+  });
+
+  it("permanently redirects the original agentrelay.com/agent-relay link to /u/agent-relay", async () => {
+    expect(getLegacyAgentPageRedirect(new URL("https://agentrelay.com/agent-relay?x=1"))).toBe("https://agentrelay.com/u/agent-relay?x=1");
+    expect(getLegacyAgentPageRedirect(new URL("https://agentrelay.com/agent-relay/bridge.sh"))).toBeUndefined();
+    expect(getLegacyAgentPageRedirect(new URL("https://arelay.to/agent-relay"))).toBeUndefined();
+    const response = await worker.fetch(new Request("https://agentrelay.com/agent-relay"), buildEnv({ fetch: vi.fn() }), ctx);
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe("https://agentrelay.com/u/agent-relay");
   });
 });
