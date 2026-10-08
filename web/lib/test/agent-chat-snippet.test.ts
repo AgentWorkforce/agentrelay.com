@@ -178,4 +178,18 @@ describe('hosted bridge script', () => {
     expect(run('https://evil.example/agent-relay/abc').stderr).toContain('Expected the conversation URL');
     expect(run('https://arelay.to/agent-relay/a;rm').stderr).toContain('Invalid conversation id');
   });
+
+  it('keeps our own agent identity and setup line in the agent guide', () => {
+    for (const guide of [
+      agentChatAgentGuide({ conversationId: 'abc123' }),
+      agentChatAgentGuide({ conversationId: 'abc123', agentHandle: 'agent-relay', agentName: 'Agent Relay' }),
+    ]) {
+      expect(guide).toContain('Chat with the Agent Relay agent for me');
+      expect(guide).not.toContain('registered agent');
+      expect(guide).toContain('Before you set anything up for Agent Relay');
+    }
+    const company = agentChatAgentGuide({ conversationId: 'abc123', agentHandle: 'acme', agentName: 'Acme' });
+    expect(company).toContain('the registered agent "Acme"');
+    expect(company).not.toContain('Before you set anything up for Agent Relay');
+  });
 });
