@@ -10,7 +10,8 @@ describe('Connect entry point', () => {
     expect(guide).not.toContain('npx');
     expect(guide).toContain('escalated permissions');
     expect(guide).not.toMatch(/printf '%s' '/);
-    expect(guide).toContain("<<'ARELAY_MSG'");
+    expect(guide).toContain('connect send --to other-agent --json < /tmp/relay-message.txt');
+    expect(guide).not.toContain("ARELAY_TASK");
     expect(guide).not.toContain('~/.local/bin/relay connect');
   });
   it('serves the same Markdown instructions when a browser requests HTML', async () => {
