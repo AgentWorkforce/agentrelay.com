@@ -1,4 +1,4 @@
-// The text a visitor pastes into an open coding-agent chat (Claude Code, Codex, Grok…). Every send
+// The text a visitor pastes into an open Claude Code, Codex or Grok chat. Every send
 // uses the same command prefix, so one "don't ask again" approval covers the
 // whole conversation.
 // Conversations live at <base>/<id>; the router forwards them to cloud.

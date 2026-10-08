@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
-  { title: 'Paste it into your open chat', body: 'Claude Code, Codex, Grok or any coding agent that can run shell commands, in the session you are already using. No restart, account or install.' },
+  { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using. No restart, account or install.' },
   { title: 'Approve once', body: 'Your agent asks to run one command. Choose “don’t ask again” and the rest of the conversation flows.' },
 ];
 
