@@ -78,6 +78,18 @@ describe('agent signup instructions', () => {
     expect(header).not.toContain('/api/v1/flows/deploy');
   });
 
+  it('keeps Flows on the v2 engine: it may warn about @relayflows/core but never imports or installs it', async () => {
+    const content = await guide('flows');
+    expect(content).toContain('@relayflows/surface');
+    expect(content).not.toMatch(/from\s+['"]@relayflows\/core['"]/);
+    expect(content).not.toMatch(/(?:npm|pnpm|yarn|bun)\s+(?:i|install|add)\b[^\n]*@relayflows\/core/);
+    expect(content).not.toMatch(/require\(\s*['"]@relayflows\/core['"]\s*\)/);
+    // The only mentions are writing-relayflows' warning against the older engine.
+    const header = content.slice(0, content.indexOf('# Part 1:'));
+    expect(header).not.toContain('@relayflows/core');
+    expect(content.slice(0, content.indexOf('# Part 3:'))).not.toContain('@relayflows/core');
+  });
+
   it('renders both Teams skills\' headings and claims completion only after the Sessions round trip', async () => {
     const content = await guide('teams');
     const desktop = content.indexOf('# Set Up Agent Relay Desktop');
