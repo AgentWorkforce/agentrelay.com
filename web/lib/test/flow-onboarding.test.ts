@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import ts from 'typescript';
 import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
-import { FLOW_PUSH_COMMAND } from '../flow-workflows';
+import { FLOW_PUSH_COMMAND, FLOW_REFERENCE_LIMIT } from '../flow-workflows';
 
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=abc123; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
@@ -25,9 +29,9 @@ const withoutComments = (source: string) => source.split('\n').filter(line => !l
  * each run of the repository's checks reports, in order (pass once the list is
  * used up), and `baseline` what the base commit's check reports. Three
  * commands are built as `base=<commit>; ...`, so the mock matches each by the
- * command it ends with.
+ * command it ends with. `validate` answers the metadata validation step.
  */
-async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish', checks: string[] = [], baseline = 'pass', edit = (source: string) => source) {
+async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish', checks: string[] = [], baseline = 'pass', edit = (source: string) => source, validate = (_command: string) => 'valid') {
   const calls: string[] = [];
   const errors: string[] = [];
   let finish = '';
@@ -48,7 +52,7 @@ async function runFactory(clean: boolean[], _approved = true, issue = matchingIs
         if (command === FLOW_CHECK_RUN_COMMAND) return checks[checkIndex++] ?? 'pass';
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
-        if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
+        if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return validate(command);
         if (command === FLOW_REPORT_REVIEW_FINDINGS_COMMAND) return 'relayflow report-review-findings: review.clean absent; remaining findings from review.md:\nOne P2 remains.\n';
         return command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : '';
       },
@@ -343,6 +347,25 @@ describe('software factory onboarding', () => {
     expect(finish).toBe('needs_human');
     // The reason reaches the operator, so "nothing was built" is never silent.
     expect(errors.join('\n')).toContain('no commits');
+  });
+
+  it('stops before any push or pull request when the closing reference is too long (agentrelay.com#160)', async () => {
+    // The real validation command decides, as the generated flow calls it.
+    const root = mkdtempSync(path.join(tmpdir(), 'flow-reference-'));
+    try {
+      mkdirSync(path.join(root, '.relayflow'));
+      writeFileSync(path.join(root, '.relayflow/pr-body.md'), 'Fixed it.\n\nFixes #507\n');
+      const real = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: root, encoding: 'utf8' }).stdout.trim();
+      const runaway = { ...matchingIssue, identifier: '#' + '1'.repeat(FLOW_REFERENCE_LIMIT), url: '' };
+      const { calls, finish, errors } = await runFactory([true, true], true, runaway, completed, 'publish', [], 'pass', source => source, real);
+      expect(calls.some(call => call.includes(FLOW_PUSH_COMMAND))).toBe(false);
+      expect(calls.some(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
+      expect(finish).toBe('needs_human');
+      expect(errors.join('\n')).toContain('invalid pull-request metadata (reference-too-long)');
+      // The same harness with an ordinary reference publishes.
+      const ordinary = await runFactory([true, true], true, matchingIssue, completed, 'publish', [], 'pass', source => source, real);
+      expect(ordinary.calls).toContain(PUSH);
+    } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   it('pushes the work but opens no pull request when no summary.md was written', async () => {

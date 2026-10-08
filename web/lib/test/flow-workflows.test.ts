@@ -954,7 +954,9 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
 
   it('keeps the verdict and the whole reference when the reference is long', () => {
     // As long as a reference may be: well past the old fixed 1 KB reserve's margin.
-    const reference = 'Ticket: https://tickets.example.com/' + 'a'.repeat(FLOW_REFERENCE_LIMIT - 36);
+    const prefix = 'Ticket: https://tickets.example.com/';
+    const reference = prefix + 'a'.repeat(FLOW_REFERENCE_LIMIT - prefix.length);
+    expect(Buffer.byteLength(reference)).toBe(FLOW_REFERENCE_LIMIT);
     const { verdict, body } = publishBody({ 'summary.md': longLines('summary', 400, 60), '.relayflow/check.log': longLines('FAIL', 80, 400) }, 'fail', 'pass', reference, 'linear');
     expect(verdict).toBe('valid');
     expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
@@ -1008,13 +1010,25 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
   });
 
   it('refuses a reference longer than FLOW_REFERENCE_LIMIT before anything is pushed', () => {
-    const reference = 'Ticket: https://tickets.example.com/' + 'a'.repeat(FLOW_REFERENCE_LIMIT);
+    const prefix = 'Ticket: https://tickets.example.com/';
+    const reference = prefix + 'a'.repeat(FLOW_REFERENCE_LIMIT - prefix.length + 1);
+    expect(Buffer.byteLength(reference)).toBe(FLOW_REFERENCE_LIMIT + 1);
     const { prepare, body } = publishBody({ 'summary.md': 'Fixed it.\n' }, 'pass', '', reference, 'linear');
     expect(prepare.token).toBe('prepared');
     expect(body).not.toContain(reference);
     expect(sh(`reference='${reference}'; title='Fix login'; title_length=9; source='linear'; identifier='ENG-1'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, fixture({ '.relayflow/pr-body.md': 'Fixed it.\n' })).token).toBe('reference-too-long');
     const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
     expect(source).toContain('f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle)');
+  });
+
+  it('treats only fences indented at most three spaces as fences', () => {
+    // Four spaces (or a tab) make an indented code line, not a fence: no closer.
+    for (const indent of ['    ', '\t']) {
+      const { body } = publishBody({ 'summary.md': '## What changed\n\n' + indent + '```\n' + longLines('code', 400, 60) }, 'pass', '');
+      expect(body.split('\n')).not.toContain('```');
+    }
+    const { body } = publishBody({ 'summary.md': '## What changed\n\n   ```\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(body.split('\n')).toContain('```');
   });
 
   it('puts back a closing reference that truncation cut from the summary', () => {
