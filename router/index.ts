@@ -505,6 +505,28 @@ function relayAgentOrigin(env: Env): string | undefined {
   return origin || undefined;
 }
 
+// arelay.to carries agent chat, so it is HTTPS only. agentrelay.com gets this
+// from the zone's Always Use HTTPS setting; arelay.to's zone does not have it,
+// and keeping it here keeps it in source control. GET and HEAD get a permanent
+// redirect. Anything else gets a 308 whose body names the HTTPS URL, so an
+// agent's curl (which does not follow redirects) prints what to use instead,
+// and the message is never processed over plain HTTP.
+export function getInsecureShortHostResponse(url: URL, method: string): Response | undefined {
+  if (url.protocol !== "http:" || (url.hostname !== SHORT_HOST && url.hostname !== SHORT_HOST_WWW)) {
+    return undefined;
+  }
+  const secure = new URL(url);
+  secure.protocol = "https:";
+  secure.port = "";
+  if (method === "GET" || method === "HEAD") {
+    return Response.redirect(secure.toString(), 301);
+  }
+  return new Response(`agent-relay: use HTTPS: ${secure.toString()}\n`, {
+    status: 308,
+    headers: { location: secure.toString(), "content-type": "text/plain; charset=utf-8" },
+  });
+}
+
 class RelayAgentOriginError extends Error {}
 
 function validatedRelayAgentOrigin(origin: string): string {
@@ -556,6 +578,11 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
+
+    const insecureShortHost = getInsecureShortHostResponse(url, request.method);
+    if (insecureShortHost) {
+      return insecureShortHost;
+    }
 
     const vanityRedirect = getVanityRedirect(url.hostname, url.pathname);
     if (vanityRedirect) {
