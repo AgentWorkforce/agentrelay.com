@@ -3,9 +3,9 @@
   "lockfileVersion": 1,
   "packages": {
     "@agent-relay/setting-up-agent-relay-desktop#claude": {
-      "version": "1.1.7",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-desktop/1.1.7.tar.gz",
-      "integrity": "sha256-8dacdacdd3aeafb004b434a5786d2b0803c2d0f951ecc0575d61999a1fc4d572",
+      "version": "1.1.9",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-desktop/1.1.9.tar.gz",
+      "integrity": "sha256-5995b95ee1e6f059572c1b1c1028b8f9a66ca6b22557d28e66793fd28db268d3",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
@@ -13,9 +13,9 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-desktop/SKILL.md"
     },
     "@agent-relay/setting-up-agent-relay-sessions#claude": {
-      "version": "0.2.6",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.2.6.tar.gz",
-      "integrity": "sha256-9488abb24d2f52f39db1700c24cc3f00b2ee4873902fdfc4546400ee957862f7",
+      "version": "0.2.8",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.2.8.tar.gz",
+      "integrity": "sha256-59dee9d4ba51adde445a5c5bb21e6a260ee8b12fd2ca95d531ecb90e03c9b31a",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
@@ -53,5 +53,5 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-flows/SKILL.md"
     }
   },
-  "generated": "2026-10-08T13:36:22.947Z"
+  "generated": "2026-10-08T16:14:45.506Z"
 }
