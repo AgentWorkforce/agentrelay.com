@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 import { agentChatAgentGuide, agentChatSnippet, newConversationId } from '../agent-chat-snippet';
 
@@ -38,10 +38,10 @@ describe('agent chat snippet', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
     expect(snippet).not.toContain('seq ');
     expect(snippet.split('\n')).toContain(
-      'd=/tmp/agent-relay/abc123; [ -d "$d/in" ] || { echo "(bridge not running: ask me to start it)"; exit 1; }; '
-        + 'mv "$d/out/next.tmp" "$d/out/$(date +%s)-$$.txt" 2>/dev/null; '
+      '(d=/tmp/agent-relay/abc123; [ -d "$d/in" ] || { echo "(bridge not running: ask me to start it)"; exit 1; }; '
+        + 'if [ -f "$d/out/next.tmp" ]; then f=$(mktemp "$d/out/msg.XXXXXX") && mv "$d/out/next.tmp" "$f" && mv "$f" "$f.txt"; fi; '
         + 'i=0; while [ "$i" -lt 60 ] && [ -z "$(ls "$d/in")" ]; do sleep 1; i=$((i + 1)); done; '
-        + 'if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi',
+        + 'if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi)',
     );
   });
 
@@ -49,22 +49,31 @@ describe('agent chat snippet', () => {
     const id = newConversationId();
     const dir = `/tmp/agent-relay/${id}`;
     const snippet = agentChatSnippet({ conversationId: id, baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
-    const command = snippet.split('\n').find((line) => line.startsWith(`d=${dir};`));
+    const command = snippet.split('\n').find((line) => line.startsWith(`(d=${dir};`));
     expect(command).toBeDefined();
     try {
-      const missing = spawnSync('sh', ['-c', command!], { encoding: 'utf8' });
-      expect(missing.status).toBe(1);
+      // A trailing echo proves exit only ends the subshell, not the caller's shell.
+      const missing = spawnSync('sh', ['-c', `${command!}; echo "shell still open"`], { encoding: 'utf8', timeout: 10000 });
       expect(missing.stdout).toContain('bridge not running');
+      expect(missing.stdout).toContain('shell still open');
 
       mkdirSync(`${dir}/out`, { recursive: true });
       mkdirSync(`${dir}/in`, { recursive: true });
       writeFileSync(`${dir}/out/next.tmp`, 'hello');
       writeFileSync(`${dir}/in/1-reply.txt`, 'agent-relay: hi');
-      const sent = spawnSync('sh', ['-c', command!], { encoding: 'utf8' });
+      const sent = spawnSync('sh', ['-c', command!], { encoding: 'utf8', timeout: 10000 });
       expect(sent.status).toBe(0);
       expect(sent.stdout).toBe('agent-relay: hi');
       expect(existsSync(`${dir}/out/next.tmp`)).toBe(false);
-      expect(readdirSync(`${dir}/out`).filter((name) => name.endsWith('.txt'))).toHaveLength(1);
+      const queued = readdirSync(`${dir}/out`);
+      expect(queued).toHaveLength(1);
+      expect(queued[0]).toMatch(/^msg\.[A-Za-z0-9]{6}\.txt$/);
+      expect(readFileSync(`${dir}/out/${queued[0]}`, 'utf8')).toBe('hello');
+
+      // Waiting with no new message queues nothing.
+      writeFileSync(`${dir}/in/2-reply.txt`, 'agent-relay: more');
+      expect(spawnSync('sh', ['-c', command!], { encoding: 'utf8', timeout: 10000 }).stdout).toBe('agent-relay: more');
+      expect(readdirSync(`${dir}/out`)).toHaveLength(1);
       expect(readdirSync(`${dir}/in`)).toHaveLength(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -91,6 +100,13 @@ describe('agent chat snippet', () => {
     expect(guide).toMatch(/^# Chat with the Agent Relay agent/);
     expect(guide).toContain("don't fetch this page again");
     expect(guide).toContain('curl -sS --data-binary @/tmp/arelay-abc123.txt https://arelay.to/agent-relay/abc123');
+  });
+
+  it('names the message file with only a prefix of the conversation id', () => {
+    const id = '0123456789abcdef0123456789abcdef';
+    const snippet = agentChatSnippet({ conversationId: id, baseUrl: 'https://example.test' });
+    expect(snippet).toContain(`curl -sS --data-binary @/tmp/arelay-01234567.txt https://example.test/${id}`);
+    expect(snippet).not.toContain(`/tmp/arelay-${id}`);
   });
 
   it('creates unguessable conversation ids', () => {

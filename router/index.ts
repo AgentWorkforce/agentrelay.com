@@ -205,6 +205,11 @@ export function prefersHtmlOverMarkdown(accept: string | null): boolean {
   return acceptQuality(accept, "text/html") > acceptQuality(accept, "text/markdown");
 }
 
+// Any /u/<handle> page or guide, on any host, after the rewrite above.
+export function isAgentPageRequestPath(pathname: string): boolean {
+  return /^\/u\/[^/]+(?:\/agent\.md)?\/?$/i.test(pathname);
+}
+
 // The page first shipped at agentrelay.com/agent-relay; keep that link working.
 export function getLegacyAgentPageRedirect(url: URL): string | undefined {
   if (url.hostname !== PRIMARY_HOST) {
@@ -586,8 +591,8 @@ export default {
     // Conversation URLs are bearer secrets and request bodies are private chat
     // content, so neither the new route nor the existing Cloud fallback belongs
     // in the replay corpus. Agent pages and guides mint a conversation URL in
-    // every response, so they stay out too.
-    const recorderRequestClone = recorderEnv && !agentChatCloudPath && !agentPagePath
+    // every response, so they stay out too, however they were reached.
+    const recorderRequestClone = recorderEnv && !agentChatCloudPath && !isAgentPageRequestPath(url.pathname)
       ? (request.clone() as unknown as Request)
       : null;
 

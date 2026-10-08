@@ -32,7 +32,9 @@ export function agentChatSnippet({
   // through shell source: replies from other agents may be quoted back, and a
   // file's contents are never parsed. The command is identical for every turn,
   // so one "don't ask again" approval covers the whole conversation.
-  const messageFile = `/tmp/arelay-${conversationId}.txt`;
+  // Only a prefix of the id names the file: /tmp is listable by every local
+  // user, and the full id is the conversation's bearer secret.
+  const messageFile = `/tmp/arelay-${conversationId.slice(0, 8)}.txt`;
   const lines = [
     'Chat with the Agent Relay agent for me and show me each reply. Start by saying hi and asking what it can help with.',
     '',
@@ -55,7 +57,7 @@ export function agentChatSnippet({
       `If you cannot run it outside the sandbox, ask me to run \`${bridgeCommand} ${url}\` in my own terminal. Then, for each message, write it to ${dir}/out/next.tmp with your file-editing tool and run this exact command. It hands the message to the bridge and waits up to a minute for the reply; with no new message it only waits:`,
       '',
       '```sh',
-      `d=${dir}; [ -d "$d/in" ] || { echo "(bridge not running: ask me to start it)"; exit 1; }; mv "$d/out/next.tmp" "$d/out/$(date +%s)-$$.txt" 2>/dev/null; i=0; while [ "$i" -lt 60 ] && [ -z "$(ls "$d/in")" ]; do sleep 1; i=$((i + 1)); done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi`,
+      `(d=${dir}; [ -d "$d/in" ] || { echo "(bridge not running: ask me to start it)"; exit 1; }; if [ -f "$d/out/next.tmp" ]; then f=$(mktemp "$d/out/msg.XXXXXX") && mv "$d/out/next.tmp" "$f" && mv "$f" "$f.txt"; fi; i=0; while [ "$i" -lt 60 ] && [ -z "$(ls "$d/in")" ]; do sleep 1; i=$((i + 1)); done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi)`,
       '```',
     );
   }

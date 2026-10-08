@@ -216,10 +216,12 @@ describe("router agent chat", () => {
     await worker.fetch(new Request("https://arelay.to/agent-relay", { headers: { accept: "*/*" } }), env, recordingCtx);
     await worker.fetch(new Request("https://www.arelay.to/agent-relay", { headers: { accept: "text/markdown" } }), env, recordingCtx);
     await worker.fetch(new Request("https://arelay.to/agent-relay", { headers: { accept: "text/html,*/*;q=0.8" } }), env, recordingCtx);
+    await worker.fetch(new Request("https://agentrelay.com/u/agent-relay/agent.md"), env, recordingCtx);
+    await worker.fetch(new Request("https://arelay.to/u/agent-relay/agent.md"), env, recordingCtx);
     await Promise.all(waits);
 
     const paths = upstream.mock.calls.map(([input]) => new URL((input as Request).url).pathname);
-    expect(paths).toEqual(["/u/agent-relay/agent.md", "/u/agent-relay/agent.md", "/u/agent-relay"]);
+    expect(paths).toEqual(["/u/agent-relay/agent.md", "/u/agent-relay/agent.md", "/u/agent-relay", "/u/agent-relay/agent.md", "/u/agent-relay/agent.md"]);
     expect(put).not.toHaveBeenCalled();
   });
 
