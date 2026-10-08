@@ -112,10 +112,11 @@ ${product === 'teams' ? `Progress steps for Teams:
    live round trip; only then PATCH step: 5, state: complete. A self-verified
    read path without a teammate is not completion.` : `Progress steps for Flows:
 1. Sign in: before Part 1.
-2. Choose the flow/repository: before Part 2's section 1.
-3. Connect tools: before Part 2's section 2.
-4. Activate the flow: before Part 2's section 3.
-5. Verify the listening state: before Part 2's section 4. After its checks
+2. Choose the flow/repository: before Part 2's section 1 (through section 2,
+   and Part 3 for a custom flow).
+3. Connect tools: before Part 2's section 3.
+4. Activate the flow: before Part 2's section 4.
+5. Verify the listening state: before Part 2's section 5. After its checks
    succeed, PATCH step: 5, state: complete.`}
 
 On HTTP 409, GET current progress and reconcile; never overwrite newer progress
@@ -147,23 +148,40 @@ const signupParts: Record<AgentSignupProduct, readonly { label: string; skill: s
 
 const PRODUCTION_SITE = 'https://agentrelay.com';
 
-/** The skills name production; a local stack substitutes its own exact origins. */
+const DESKTOP_RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download';
+
+/**
+ * The skills name production. A local stack substitutes its own exact origins
+ * and, so the desktop commands run as written, the prebuilt Agent Relay Dev
+ * app's download, app name, bundle id and socket paths.
+ */
 function forEnvironment(skill: string | undefined, site: string, cloud: string): string {
   if (skill === undefined) throw new Error('A signup part names a skill that is not vendored');
   if (site === PRODUCTION_SITE && cloud === `${PRODUCTION_SITE}/cloud`) return skill;
-  return skill.replaceAll(`${PRODUCTION_SITE}/cloud`, cloud).replaceAll(PRODUCTION_SITE, site);
+  return skill
+    .replaceAll(DESKTOP_RELEASES, `${site}/cloud/desktop-downloads`)
+    .replaceAll('AgentRelay-macOS-', 'AgentRelay-Dev-macOS-')
+    .replaceAll('Agent Relay.app', 'Agent Relay Dev.app')
+    .replace(/com\.agentrelay\.desktop(?!\.dev)/g, 'com.agentrelay.desktop.dev')
+    .replace(/\.agentworkforce\/desktop\/relay-socket(?!\.dev)/g, '.agentworkforce/desktop/relay-socket.dev')
+    .replaceAll(`${PRODUCTION_SITE}/cloud`, cloud)
+    .replaceAll(PRODUCTION_SITE, site);
 }
 
 function localDevelopmentNote(product: AgentSignupProduct, site: string): string {
   return `
 
 This is a local development stack. The skills' production URLs have been
-replaced with the origins above.${product === 'teams' ? ` For the desktop, use only the prebuilt
-Agent Relay Dev app served by the local stack, in place of the release download:
+replaced with the origins above.${product === 'teams' ? ` Part 2's macOS commands have also been
+rewritten for the prebuilt Agent Relay Dev app served by the local stack, so run
+them as written: they download
 ${site}/cloud/desktop-downloads/AgentRelay-Dev-macOS-<arch>.dmg and the same URL
-plus .sha256 (arm64 or x64). Its bundle id is com.agentrelay.desktop.dev and its
-socket pointer is ~/.agentworkforce/desktop/relay-socket.dev. If the DMG or its
-checksum is unavailable, stop and report the missing prebuilt artifact.
+plus .sha256 (arm64 or x64), install Agent Relay Dev.app, require bundle id
+com.agentrelay.desktop.dev, and use the socket pointer
+~/.agentworkforce/desktop/relay-socket.dev. Use only those Dev paths for every
+socket lookup in Parts 2 and 3. The local stack serves only the macOS Dev app:
+on Linux, stop and report that no local desktop artifact exists. If the DMG or
+its checksum is unavailable, stop and report the missing prebuilt artifact.
 Do not build it, run the development launcher to produce it, or switch to a
 production download.` : ''}`;
 }

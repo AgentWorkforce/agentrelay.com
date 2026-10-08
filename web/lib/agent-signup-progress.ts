@@ -44,7 +44,7 @@ export const signupSteps = {
     { title: 'Sign in', detail: 'Your agent opens Google. You approve access.' },
     { title: 'Install the app', detail: 'Download, verify, and install the Agent Relay desktop app.' },
     { title: 'Connect your workspace', detail: 'Link the app to your account and workspace.' },
-    { title: 'Choose what to share', detail: 'New sessions are shared; your agent asks before changing an existing choice.' },
+    { title: 'Choose what to share', detail: 'New sessions are shared by default; if you already chose a sharing mode, your agent asks before changing it.' },
     { title: 'Check everything works', detail: 'Verify the app, then one live session handoff with a teammate.' },
   ],
   flows: [

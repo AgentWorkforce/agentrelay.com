@@ -81,7 +81,7 @@ describe('agent signup instructions', () => {
   it('keeps Flows on the v2 engine: it may warn about @relayflows/core but never imports or installs it', async () => {
     const content = await guide('flows');
     expect(content).toContain('@relayflows/surface');
-    expect(content).not.toMatch(/from\s+['"]@relayflows\/core['"]/);
+    expect(content).not.toMatch(/\b(?:from\s+|import\s*(?:\(\s*)?)['"]@relayflows\/core['"]/);
     expect(content).not.toMatch(/(?:npm|pnpm|yarn|bun)\s+(?:i|install|add)\b[^\n]*@relayflows\/core/);
     expect(content).not.toMatch(/require\(\s*['"]@relayflows\/core['"]\s*\)/);
     // The only mentions are writing-relayflows' warning against the older engine.
@@ -139,6 +139,12 @@ describe('agent signup instructions', () => {
     expect(content).toContain('Cloud API base: http://127.0.0.1:3199/cloud');
     expect(content).toContain('http://127.0.0.1:3199/cloud/desktop-downloads/AgentRelay-Dev-macOS-<arch>.dmg');
     expect(content).toContain('relay-socket.dev');
+    // Part 2's executable desktop commands target the Dev app, not production.
+    expect(content).not.toContain('relay-desktop-releases');
+    expect(content).not.toMatch(/com\.agentrelay\.desktop(?!\.dev)/);
+    expect(content).not.toMatch(/relay-socket(?!\.dev)"/);
+    expect(content).not.toContain('Agent Relay.app');
+    expect(content).toContain('"$release/AgentRelay-Dev-macOS-$relay_arch.dmg"');
     expect(content).toContain('http://127.0.0.1:3199/cloud/api/v1/mcp/shared-sessions');
     expect(content).not.toContain('https://agentrelay.com/cloud');
     expect(agentSignupPrompt('teams', 'http://127.0.0.1:3199')).toContain('http://127.0.0.1:3199/signup/agent/teams');

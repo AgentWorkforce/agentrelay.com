@@ -8,7 +8,7 @@
 //   node web/scripts/sync-setup-skills.mjs --check  # fail when the copies differ from the pin
 //
 // To move the pin, change "commit" in SOURCE.json and run without --check.
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
 
 const contentDir = new URL('../content/setup-skills/', import.meta.url);
@@ -61,8 +61,12 @@ async function main() {
   const expected = new Map(source.skills.map(name => [new URL(`${name}.md`, contentDir), skills[name]]));
   expected.set(generatedUrl, renderModule(source, skills));
 
+  // A vendored copy that SOURCE.json no longer lists is stale too.
+  const pinned = new Set(source.skills.map(name => `${name}.md`));
+  const unlisted = (await readdir(contentDir)).filter(file => file.endsWith('.md') && !pinned.has(file));
+
   if (check) {
-    const stale = [];
+    const stale = unlisted.map(file => new URL(file, contentDir).pathname);
     for (const [url, text] of expected) {
       const existing = await readFile(url, 'utf8').catch(() => null);
       if (existing !== text) stale.push(url.pathname);
@@ -77,6 +81,7 @@ async function main() {
   }
   await mkdir(new URL('.', generatedUrl), { recursive: true });
   for (const [url, text] of expected) await writeFile(url, text);
+  for (const file of unlisted) await rm(new URL(file, contentDir));
   console.log(`Vendored ${source.skills.length} setup skills from AgentWorkforce/skills@${source.commit}.`);
 }
 
