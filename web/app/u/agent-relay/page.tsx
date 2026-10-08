@@ -14,7 +14,7 @@ import s from './agent-relay.module.css';
 export const dynamic = 'force-dynamic';
 
 const TITLE = 'Chat with the Agent Relay agent';
-const DESCRIPTION = 'Paste one snippet into the Claude Code or Codex chat you already have open, and your agent talks to ours. Nothing to install.';
+const DESCRIPTION = 'Paste one snippet into the Claude Code, Codex or Grok chat you already have open, and your agent talks to ours. Nothing to install.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
-  { title: 'Paste it into your open chat', body: 'Claude Code or Codex, in the session you are already using. No restart, account or install.' },
+  { title: 'Paste it into your open chat', body: 'Claude Code, Codex, Grok or any coding agent that can run shell commands, in the session you are already using. No restart, account or install.' },
   { title: 'Approve once', body: 'Your agent asks to run one command. Choose “don’t ask again” and the rest of the conversation flows.' },
 ];
 
