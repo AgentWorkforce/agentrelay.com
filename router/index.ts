@@ -1,7 +1,8 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
 import { maybeRateLimit, type RateLimitEnv } from "./src/rate-limit.js";
+import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 
-interface Env {
+interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
   CLOUD_WEB_WORKER?: {
     fetch(request: Request): Promise<Response>;
@@ -214,9 +215,23 @@ export function prefersHtmlOverMarkdown(accept: string | null): boolean {
   return acceptQuality(accept, "text/html") > acceptQuality(accept, "text/markdown");
 }
 
-// Any /u/<handle> page or guide, on any host, after the rewrite above.
+// Any /u/<handle> page, guide, or owner dashboard, on any host, after the
+// rewrite above. Dashboard requests can carry a single-use ?grant=..., so
+// neither the exchange nor the bare dashboard URL may reach the recorder.
 export function isAgentPageRequestPath(pathname: string): boolean {
-  return /^\/u\/[^/]+(?:\/agent\.md)?\/?$/i.test(pathname);
+  return /^\/u\/[^/]+(?:\/agent\.md|\/dashboard(?:\/.*)?)?\/?$/i.test(pathname);
+}
+
+// The handle whose agent guide this request negotiated, when it is an external
+// GET that analytics may count. HTML, HEAD and Worker subrequests never count.
+export function getGuideAnalyticsHandle(
+  request: Request,
+  agentPagePath: string | undefined,
+): string | undefined {
+  if (request.method !== "GET" || !agentPagePath || request.headers.has("cf-worker")) {
+    return undefined;
+  }
+  return /^\/u\/([a-z0-9-]+)\/agent\.md$/.exec(agentPagePath)?.[1];
 }
 
 // The page first shipped at agentrelay.com/agent-relay; keep that link working.
@@ -630,6 +645,8 @@ export default {
       return Response.redirect(legacyAgentPage, 301);
     }
 
+    const guideAnalyticsHandle = getGuideAnalyticsHandle(request, agentPagePath);
+
     if (agentPagePath && agentPagePath !== url.pathname.replace(/\/$/, "")) {
       url.pathname = agentPagePath;
       request = new Request(url.toString(), request);
@@ -825,6 +842,12 @@ export default {
 
       if (recordingRequest && hasRecorderEnv(env)) {
         ctx.waitUntil(maybeRecord(recordingRequest, response.clone(), env, ctx));
+      }
+
+      // Count a guide fetch only once the upstream guide answered 2xx;
+      // not-found, suspended, redirect and error responses write nothing.
+      if (guideAnalyticsHandle && upstreamResponse.status >= 200 && upstreamResponse.status < 300) {
+        ctx.waitUntil(recordGuideFetched(request, guideAnalyticsHandle, env));
       }
 
       return response;
