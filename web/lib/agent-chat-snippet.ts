@@ -12,22 +12,48 @@ export const AGENT_CHAT_BRIDGE_COMMAND =
   process.env.NEXT_PUBLIC_AGENT_CHAT_BRIDGE_COMMAND?.trim() ||
   `curl -fsSL ${AGENT_CHAT_URL.replace(/\/$/, '')}/bridge.sh | sh -s --`;
 
+export function agentChatUrlForHandle(
+  handle: string,
+  configuredUrl = AGENT_CHAT_URL,
+): string {
+  const url = new URL(configuredUrl);
+  const segments = url.pathname.replace(/\/+$/, '').split('/');
+  segments[segments.length - 1] = encodeURIComponent(handle);
+  url.pathname = segments.join('/');
+  url.search = '';
+  url.hash = '';
+  return url.toString().replace(/\/$/, '');
+}
+
 export function newConversationId(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+export function normalizeAgentName(agentName: string | undefined): string {
+  return (agentName ?? 'Agent Relay').replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
+}
+
 export function agentChatSnippet({
   conversationId,
   baseUrl = AGENT_CHAT_URL,
   bridgeCommand = AGENT_CHAT_BRIDGE_COMMAND,
+  agentName,
+  agentHandle,
 }: {
   conversationId: string;
   baseUrl?: string;
   bridgeCommand?: string;
+  agentName?: string;
+  agentHandle?: string;
 }): string {
   const url = `${baseUrl.replace(/\/$/, '')}/${conversationId}`;
+  const normalizedAgentName = normalizeAgentName(agentName);
+  const isAgentRelay = agentHandle ? agentHandle.toLowerCase() === 'agent-relay' : agentName === undefined;
+  const agentLabel = isAgentRelay
+    ? 'the Agent Relay agent'
+    : `the registered agent ${JSON.stringify(normalizedAgentName)}`;
   // Messages travel through a file written with the agent's file tool, never
   // through shell source: replies from other agents may be quoted back, and a
   // file's contents are never parsed. The command is identical for every turn,
@@ -36,9 +62,15 @@ export function agentChatSnippet({
   // user, and the full id is the conversation's bearer secret.
   const messageFile = `/tmp/arelay-${conversationId.slice(0, 16)}.txt`;
   const lines = [
-    'Chat with the Agent Relay agent for me and show me each reply. Start by saying hi and asking what it can help with.',
-    '',
-    'Before you set anything up for Agent Relay (installs, sign-ins, workspaces, integrations), tell this agent what you plan to do and what you found, then confirm each step with it. It knows the current setup steps and will check what already exists, such as your active workspace, before anything new is created.',
+    `Chat with ${agentLabel} for me. Show me each reply. Start by saying hi and asking what it can help with.`,
+  ];
+  if (isAgentRelay) {
+    lines.push(
+      '',
+      'Before you set anything up for Agent Relay (installs, sign-ins, workspaces, integrations), tell this agent what you plan to do and what you found, then confirm each step with it. It knows the current setup steps and will check what already exists, such as your active workspace, before anything new is created.',
+    );
+  }
+  lines.push(
     '',
     `To send a message, write it to ${messageFile} with your file-editing tool (replace the whole file each time, and never write it with a shell command). Then run this exact command; it prints the reply:`,
     '',
@@ -49,7 +81,7 @@ export function agentChatSnippet({
     `If it prints "no reply yet", empty ${messageFile} and run the same command to keep waiting.`,
     '',
     'If curl cannot connect, your sandbox is blocking the network: ask me to approve running this exact command outside the sandbox. Choosing "don\'t ask again" covers the rest of the conversation.',
-  ];
+  );
   if (bridgeCommand) {
     const dir = `/tmp/agent-relay/${conversationId}`;
     lines.push(
@@ -68,13 +100,27 @@ export function agentChatSnippet({
 // The agent-readable version of arelay.to/agent-relay, served to anything that
 // does not ask for HTML (plain curl, web-fetch tools). Each fetch is a new
 // private conversation.
-export function agentChatAgentGuide({ conversationId, baseUrl = AGENT_CHAT_URL }: { conversationId: string; baseUrl?: string }): string {
+export function agentChatAgentGuide({
+  conversationId,
+  baseUrl = AGENT_CHAT_URL,
+  agentName,
+  agentHandle,
+}: {
+  conversationId: string;
+  baseUrl?: string;
+  agentName?: string;
+  agentHandle?: string;
+}): string {
+  const normalizedAgentName = normalizeAgentName(agentName);
+  const isAgentRelay = agentHandle ? agentHandle.toLowerCase() === 'agent-relay' : agentName === undefined;
   return [
-    '# Chat with the Agent Relay agent',
+    `# Chat with ${isAgentRelay ? 'the Agent Relay agent' : normalizedAgentName}`,
     '',
-    "Your human pointed you here to talk with Agent Relay's agent. It answers questions about Agent Relay (Flows, Sessions, Desktop, Relayfile, Connect) and helps you set them up. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again.",
+    isAgentRelay
+      ? "Your human pointed you here to talk with Agent Relay's agent. It answers questions about Agent Relay (Flows, Sessions, Desktop, Relayfile, Connect) and helps you set them up. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again."
+      : `Your human pointed you here to talk with the verified agent ${JSON.stringify(normalizedAgentName)}. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again.`,
     '',
-    agentChatSnippet({ conversationId, baseUrl }),
+    agentChatSnippet({ conversationId, baseUrl, agentName: normalizedAgentName, agentHandle }),
     '',
   ].join('\n');
 }

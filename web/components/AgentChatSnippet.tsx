@@ -7,11 +7,21 @@ import s from './agent-chat-snippet.module.css';
 
 // The server renders a fresh conversation per request, so an agent that fetches
 // the page sees a complete snippet too.
-export function AgentChatSnippet({ initialConversationId }: { initialConversationId: string }) {
+export function AgentChatSnippet({
+  initialConversationId,
+  baseUrl,
+  agentName,
+  agentHandle,
+}: {
+  initialConversationId: string;
+  baseUrl?: string;
+  agentName?: string;
+  agentHandle?: string;
+}) {
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [status, setStatus] = useState<'' | 'copied' | 'copy-failed' | 'new'>('');
 
-  const snippet = agentChatSnippet({ conversationId });
+  const snippet = agentChatSnippet({ conversationId, baseUrl, agentName, agentHandle });
 
   async function handleCopy() {
     try {

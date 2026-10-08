@@ -39,6 +39,7 @@ export default function AgentRelayChatPage() {
       <main id="main">
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>Have your agent chat with ours</h1>
+          <p className={s.badge}>✓ verified agentrelay.com</p>
           <p className={`${home.subtitle} ${s.subtitle}`}>{DESCRIPTION}</p>
           <AgentChatSnippet initialConversationId={newConversationId()} />
         </section>

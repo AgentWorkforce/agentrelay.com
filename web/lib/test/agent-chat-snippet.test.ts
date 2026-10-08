@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
-import { agentChatAgentGuide, agentChatSnippet, newConversationId } from '../agent-chat-snippet';
+import { agentChatAgentGuide, agentChatSnippet, agentChatUrlForHandle, newConversationId } from '../agent-chat-snippet';
 
 describe('agent chat snippet', () => {
   it('uses one identical command for every turn of the conversation', () => {
@@ -107,6 +107,53 @@ describe('agent chat snippet', () => {
     const snippet = agentChatSnippet({ conversationId: id, baseUrl: 'https://example.test' });
     expect(snippet).toContain(`curl -sS --data-binary @/tmp/arelay-0123456789abcdef.txt https://example.test/${id}`);
     expect(snippet).not.toContain(`/tmp/arelay-${id}`);
+  });
+
+  it('names a selected registry agent without changing the Agent Relay default', () => {
+    expect(agentChatSnippet({ conversationId: 'abc123', bridgeCommand: '' }))
+      .toContain('Chat with the Agent Relay agent for me.');
+    expect(agentChatSnippet({
+      conversationId: 'abc123',
+      bridgeCommand: '',
+      agentName: 'Acme\nSupport',
+    })).toContain('Chat with the registered agent "Acme Support" for me.');
+  });
+
+  it('does not grant official identity from a registered display name', () => {
+    const snippet = agentChatSnippet({
+      conversationId: 'abc123',
+      bridgeCommand: '',
+      agentName: 'Agent Relay',
+      agentHandle: 'acme-support',
+    });
+    expect(snippet).toContain('Chat with the registered agent "Agent Relay" for me.');
+    expect(snippet).not.toContain('active workspace');
+
+    const guide = agentChatAgentGuide({
+      conversationId: 'abc123',
+      agentName: 'Agent Relay',
+      agentHandle: 'acme-support',
+    });
+    expect(guide).toMatch(/^# Chat with Agent Relay/);
+    expect(guide).toContain('the verified agent "Agent Relay"');
+    expect(guide).not.toContain("Agent Relay's agent");
+  });
+
+  it('keeps handle chats on the configured conversation origin', () => {
+    expect(agentChatUrlForHandle('acme-support', 'https://staging.example/prefix/agent-relay/'))
+      .toBe('https://staging.example/prefix/acme-support');
+  });
+
+  it('serves a selected registry agent guide with the file-based command', () => {
+    const guide = agentChatAgentGuide({
+      conversationId: 'abc123',
+      baseUrl: 'https://arelay.to/acme-support',
+      agentName: 'Acme Support',
+    });
+    expect(guide).toMatch(/^# Chat with Acme Support/);
+    expect(guide).toContain('the verified agent "Acme Support"');
+    expect(guide).toContain('curl -sS --data-binary @/tmp/arelay-abc123.txt https://arelay.to/acme-support/abc123');
+    expect(guide).not.toContain('<<');
   });
 
   it('creates unguessable conversation ids', () => {
