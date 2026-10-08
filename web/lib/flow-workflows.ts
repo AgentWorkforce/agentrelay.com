@@ -234,7 +234,9 @@ export const FLOW_BASE_CHECK_COMMAND = [
  * time to run the checks), `baseline` (the base commit's token, empty when it
  * was not needed, or `skipped` when there was no time to check it), and
  * `implementer_timeout=yes` when the implementer was stopped at its time
- * limit. A reviewer reads the verdict, the
+ * limit. The base commit's output is shown whenever it ran, including when
+ * its verdict is `unknown` (it ran out of time against a branch that failed
+ * outright). A reviewer reads the verdict, the
  * script that ran and the tail of each log on the pull request itself, without
  * opening the run journal.
  */
@@ -257,7 +259,7 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + ' esac'
     + `; if [ -s ${FLOW_CHECK_SCRIPT} ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n\`\`\`sh\\n'; cat ${FLOW_CHECK_SCRIPT}; printf '\`\`\`\\n</details>\\n'; fi`
     + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s .relayflow/check.log ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n\`\`\`\\n'; tail -n 80 .relayflow/check.log; printf '\`\`\`\\n</details>\\n'; fi`
-    + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ]; then if [ -s .relayflow/base-check.log ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n\`\`\`\\n'; tail -n 80 .relayflow/base-check.log; printf '\`\`\`\\n</details>\\n'; fi; fi`
+    + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s .relayflow/base-check.log ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n\`\`\`\\n'; tail -n 80 .relayflow/base-check.log; printf '\`\`\`\\n</details>\\n'; fi; fi`
     + `; if [ -s .relayflow/repair-notes.md ]; then printf '\\n### What the repair agent found\\n\\n'; cat .relayflow/repair-notes.md; fi`
     + '; } > "$report"',
   '{ if [ -s summary.md ]; then cat summary.md; printf \'\\n\\n\'; fi; cat "$report"; } > .relayflow/pr-body.md',
@@ -928,8 +930,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     checkTook = (await clock() - from) / 60;
     return result;
   };
+  // Behind each check: the two clock reads around it, and its lease's
+  // minute beyond the limit.
   let check = "skipped";
-  const checkLimit = await allowance(${t.checkLimitMinutes}, 1 + publishing);
+  const checkLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
   if (checkLimit < ${t.checkFloorMinutes}) {
     console.error("Skipped the checks: too little of the flow's time budget is left to run them and still publish. The pull request opens as a draft that says no checks ran.");
   } else {
@@ -939,7 +943,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     // One repair round: the repair, freeing disk, the re-check and publishing
     // must fit in what is left.
     const recheck = Math.min(${t.checkLimitMinutes}, Math.ceil(checkTook) + 1);
-    const repairLimit = await allowance(${t.repairMinutes}, recheck + 2 + publishing);
+    const repairLimit = await allowance(${t.repairMinutes}, recheck + 3 + publishing);
     if (repairLimit < ${floor(t.repairFloorMinutes, t.repairMinutes)}) {
       console.error("Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are.");
     } else {
@@ -947,7 +951,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
         ${options('check-repair', 'builder', '', 'repairLimit')}
       });
       await f.run(freeDisk);
-      const recheckLimit = await allowance(${t.checkLimitMinutes}, 1 + publishing);
+      const recheckLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
       if (recheckLimit >= 1) check = verdict(await timedCheck("", runChecks, recheckLimit));
       else console.error("No time was left to check the repair again; the checks stand as they were before it.");
       if (timedOut(repair)) {
@@ -970,7 +974,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     // check's lease, so it gets two minutes beyond the limit, within f.run's
     // 15. It never gets less time than the branch's check took: a branch check
     // that ran to its own limit cannot be compared at all.
-    const baseLimit = await allowance(${t.checkMinutes - 2}, 3 + publishing);
+    const baseLimit = await allowance(${t.checkMinutes - 2}, 4 + publishing);
     if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook))) return "skipped";
     await f.run(freeDisk);
     const result = await timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit, baseLimit + 2);

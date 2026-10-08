@@ -116,9 +116,13 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
   };
   const checked = (name: string, command: string, run: { minutes: number; verdict: string }, lease?: string) => {
     const limit = checkLimitMinutes(command);
-    leases.push({ name, limit, lease: durationMs(lease) === undefined ? undefined : durationMs(lease)! / MINUTE });
+    const leaseMinutes = durationMs(lease) === undefined ? undefined : durationMs(lease)! / MINUTE;
+    leases.push({ name, limit, lease: leaseMinutes });
     const stopped = run.minutes > limit;
-    step(name, (stopped ? limit : run.minutes) * MINUTE, false, command);
+    // At every step's limit, the setup around the script (the base check's
+    // checkouts and return) also takes all the slack its f.run lease leaves.
+    const minutes = (stopped ? limit : run.minutes) + (timing.fullTimeouts && leaseMinutes !== undefined ? leaseMinutes - limit : 0);
+    step(name, minutes * MINUTE, false, command);
     calls[calls.length - 1]!.limit = limit;
     return stopped ? 'timeout' : run.verdict;
   };
@@ -277,9 +281,10 @@ describe('Garden flow time plan (cloud#4235, agentrelay.com#155)', () => {
         for (let implementer = 0; implementer <= 60; implementer += 0.5) {
           const run = await runTimed({
             // Prototypes that run to their limit take everything above the
-            // implementer's floor, so with a fast suite they finish early,
-            // which leaves the base check something to guard.
-            agents: { 'check-discovery': early, 'prototype': checkMinutes === 3 ? 2 : 100, 'comparator': 100, 'implementer': implementer, 'check-repair': 100, 'adversary': 100 },
+            // implementer's floor, so with a fast suite they (and the
+            // comparator) finish early, which leaves the base check something
+            // to guard.
+            agents: { 'check-discovery': early, 'prototype': checkMinutes === 3 ? 2 : 100, 'comparator': checkMinutes === 3 ? 1 : 100, 'implementer': implementer, 'check-repair': 100, 'adversary': 100 },
             checks: [{ minutes: checkMinutes, verdict }],
             baseline: { minutes: 100, verdict: 'fail' },
             fullTimeouts: true,

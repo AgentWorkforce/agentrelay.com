@@ -713,6 +713,14 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     expect(unchecked.body).not.toContain('could not be checked for comparison');
   });
 
+  it('keeps the base commit\'s output when its verdict is unknown, such as a base check that ran out of time', () => {
+    const unknown = report('fail', 'unknown');
+    expect(unknown.body).toContain('could not be checked for comparison');
+    expect(unknown.body).toContain('FAIL src/other.test.ts');
+    // No base run, no log: nothing is shown.
+    expect(report('fail', 'unknown', { '.relayflow/base-check.log': '' }).body).not.toContain('Output on the base commit');
+  });
+
   it('says when the implementer was stopped at its time limit', () => {
     const root = fixture({ 'summary.md': 'Fixed it.\n' });
     expect(sh(`check=pass; baseline=; implementer_timeout=yes; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
