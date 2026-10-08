@@ -50,8 +50,12 @@ const HANDLE_SEGMENT = "[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])";
 // router meaning instead of being rewritten as a company profile.
 const RESERVED_AGENT_PAGE_HANDLES = new Set([
   "register", "connect", "api", "cloud", "admin", "www", "help", "support",
-  "docs", "status", "security", "abuse", "login", "signup",
+  "docs", "status", "security", "abuse", "login", "signup", "agents", "directory",
 ]);
+// The verified-agent directory page. web/lib/agent-directory.ts names the same
+// path (AGENT_DIRECTORY_PATH); keep the two in step.
+const AGENT_DIRECTORY_PAGE_PATH = "/directory";
+const AGENT_DIRECTORY_MARKDOWN_PATH = `${AGENT_DIRECTORY_PAGE_PATH}.md`;
 // A visitor's coding agent chats through /<handle>/<32 hex id>. arelay.to
 // accepts every handle-shaped slug and lets relay-agent's registry decide
 // whether it exists. agentrelay.com retains its established agent-relay route.
@@ -181,6 +185,34 @@ export function getAgentPagePath(
     return undefined;
   }
   return wantsHtml ? `/u/${agent}` : `/u/${agent}/agent.md`;
+}
+
+// The verified-agent directory lives at agentrelay.com/directory and is
+// advertised as arelay.to/agents. Like an agent page, browsers get the HTML
+// page and agents (curl, web-fetch tools) get the Markdown directory; HEAD
+// always gets the page. Browsers on www.arelay.to are canonicalized by
+// getShortHostRedirect instead.
+export function getAgentDirectoryPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (method !== "GET" && method !== "HEAD") {
+    return undefined;
+  }
+  const path = pathname.replace(/\/$/, "");
+  const directory = hostname === SHORT_HOST || hostname === SHORT_HOST_WWW
+    ? path === "/agents"
+    : hostname === PRIMARY_HOST && path === AGENT_DIRECTORY_PAGE_PATH;
+  if (!directory) {
+    return undefined;
+  }
+  const wantsHtml = method === "HEAD" || prefersHtmlOverMarkdown(accept);
+  if (wantsHtml && hostname === SHORT_HOST_WWW) {
+    return undefined;
+  }
+  return wantsHtml ? AGENT_DIRECTORY_PAGE_PATH : AGENT_DIRECTORY_MARKDOWN_PATH;
 }
 
 // Quality the Accept header gives one media type, using the most specific
@@ -634,6 +666,9 @@ export default {
       request.method,
       request.headers.get("accept"),
     );
+    const agentDirectoryPath = agentPagePath
+      ? undefined
+      : getAgentDirectoryPath(url.hostname, url.pathname, request.method, request.headers.get("accept"));
     const registryRoute = isRelayAgentRegistryRoute(
       url.hostname,
       url.pathname,
@@ -643,7 +678,7 @@ export default {
       agentChatCloudPath && AGENT_CHAT_PATH.exec(url.pathname)?.[1] !== "agent-relay",
     );
     const relayAgentRoute = Boolean(agentChatCloudPath || registryRoute);
-    const shortHostRedirect = relayAgentRoute || agentPagePath
+    const shortHostRedirect = relayAgentRoute || agentPagePath || agentDirectoryPath
       ? undefined
       : getShortHostRedirect(url);
     if (shortHostRedirect) {
@@ -662,6 +697,10 @@ export default {
 
     if (agentPagePath && agentPagePath !== url.pathname.replace(/\/$/, "")) {
       url.pathname = agentPagePath;
+      request = new Request(url.toString(), request);
+    }
+    if (agentDirectoryPath && agentDirectoryPath !== url.pathname.replace(/\/$/, "")) {
+      url.pathname = agentDirectoryPath;
       request = new Request(url.toString(), request);
     }
 

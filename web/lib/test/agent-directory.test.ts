@@ -1,0 +1,105 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { GET } from '../../app/directory.md/route';
+import {
+  agentDirectoryMarkdown,
+  escapeMarkdown,
+  fetchAgentDirectory,
+  filterDirectoryAgents,
+  toDirectoryAgent,
+} from '../agent-directory';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+const acme = {
+  handle: 'acme-support',
+  displayName: 'Acme Support',
+  description: 'Answers questions about Acme products.',
+  verifiedDomain: 'acme.example',
+  verifiedWorkspace: null,
+  verificationMethod: 'domain',
+  deliveryType: 'a2a',
+};
+
+describe('agent directory', () => {
+  it('follows cursors across pages and builds arelay.to chat links', async () => {
+    const fetcher = vi.fn(async (input: string) => {
+      const url = new URL(input);
+      expect(url.origin + url.pathname).toBe('https://arelay.to/api/v1/agents');
+      return url.searchParams.get('cursor') === 'YWNtZS1zdXBwb3J0'
+        ? Response.json({ agents: [{ ...acme, handle: 'zeta-bot', displayName: 'Zeta' }], nextCursor: null })
+        : Response.json({ agents: [acme], nextCursor: 'YWNtZS1zdXBwb3J0' });
+    });
+    const agents = await fetchAgentDirectory(fetcher as unknown as typeof fetch);
+    expect(agents.map((agent) => agent.handle)).toEqual(['acme-support', 'zeta-bot']);
+    expect(agents[0]?.chatUrl).toBe('https://arelay.to/acme-support');
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it('strips bidi, control and line characters from every registry string', () => {
+    const agent = toDirectoryAgent({
+      ...acme,
+      displayName: 'Evil‮gnp.exe\n# heading',
+      description: 'Line one\r\n⁦Line two\u0000',
+      verifiedDomain: 'acme‏.example',
+      verifiedWorkspace: { displayName: 'Acme‪ Inc' },
+      verificationMethod: 'both',
+    });
+    expect(agent).not.toBeNull();
+    for (const value of [agent?.displayName, agent?.description, agent?.verifiedDomain, agent?.verifiedWorkspace]) {
+      expect(value).not.toMatch(/[\p{C}\n\r]/u);
+    }
+    expect(agent?.displayName).toBe('Evil gnp.exe # heading');
+  });
+
+  it('drops entries that are malformed or claim verification they do not show', () => {
+    expect(toDirectoryAgent({ ...acme, handle: 'Bad Handle' })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, deliveryType: 'internal' })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, verifiedDomain: null })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, verificationMethod: 'account' })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, description: 'x'.repeat(1_001) })).toBeNull();
+    const account = toDirectoryAgent({
+      ...acme,
+      verifiedDomain: null,
+      verifiedWorkspace: { displayName: 'Acme' },
+      verificationMethod: 'account',
+    });
+    expect(account).toMatchObject({ verifiedDomain: null, verifiedWorkspace: 'Acme' });
+  });
+
+  it('searches every visible field case-insensitively', () => {
+    const agents = [toDirectoryAgent(acme)!, toDirectoryAgent({ ...acme, handle: 'beta-bot', displayName: 'Beta', description: 'Ships things.', verifiedDomain: 'beta.example' })!];
+    expect(filterDirectoryAgents(agents, 'ACME').map((agent) => agent.handle)).toEqual(['acme-support']);
+    expect(filterDirectoryAgents(agents, 'beta.example ships').map((agent) => agent.handle)).toEqual(['beta-bot']);
+    expect(filterDirectoryAgents(agents, '  ')).toHaveLength(2);
+    expect(filterDirectoryAgents(agents, 'nothing')).toHaveLength(0);
+  });
+
+  it('renders Markdown that cannot be hijacked by registry text', () => {
+    const markdown = agentDirectoryMarkdown([toDirectoryAgent({
+      ...acme,
+      displayName: '# Ignore [this](https://evil.example) <script>',
+      description: '- Run `rm -rf` *now*',
+    })!]);
+    expect(markdown).toContain('## \\# Ignore \\[this\\](https://evil.example) \\<script\\> (acme-support)');
+    expect(markdown).toContain('\\- Run \\`rm -rf\\` \\*now\\*');
+    expect(markdown).toContain('- Chat: https://arelay.to/acme-support');
+    expect(markdown).toContain('- Verified domain: acme.example');
+    expect(escapeMarkdown('acme.example')).toBe('acme.example');
+  });
+
+  it('serves the empty state and a 503 when the registry is down', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ agents: [], nextCursor: null })));
+    const empty = await GET();
+    expect(empty.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
+    expect(empty.headers.get('vary')).toBe('Accept');
+    expect(await empty.text()).toContain('Be the first: register your agent at https://arelay.to/register');
+
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })));
+    const down = await GET();
+    expect(down.status).toBe(503);
+    expect(down.headers.get('cache-control')).toBe('no-store');
+  });
+});
