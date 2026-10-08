@@ -141,6 +141,33 @@ export function getAgentChatCloudPath(
   return `${CLOUD_PATH_PREFIX}/api/v1/agent-chat/${match[1]}/${match[2]}`;
 }
 
+// Agents told to "go to arelay.to/agent-relay" fetch it with curl (Accept: */*)
+// or a web-fetch tool (Accept: text/markdown). Both get the agent-readable
+// instructions; browsers, which ask for text/html and never for markdown, get
+// the page.
+export function getAgentPageMarkdownPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (method !== "GET" && method !== "HEAD") {
+    return undefined;
+  }
+  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST) {
+    return undefined;
+  }
+  const agent = /^\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
+  if (!agent || !AGENT_CHAT_AGENTS.has(agent)) {
+    return undefined;
+  }
+  const accepted = (accept ?? "").toLowerCase();
+  if (!accepted.includes("text/markdown") && accepted.includes("text/html")) {
+    return undefined;
+  }
+  return `/${agent}/agent.md`;
+}
+
 // arelay.to only fronts agent chat: its root, its www alias and the signed-in
 // cloud app redirect to the primary host.
 export function getShortHostRedirect(url: URL): string | undefined {
@@ -471,6 +498,17 @@ export default {
       : getShortHostRedirect(url);
     if (shortHostRedirect) {
       return Response.redirect(shortHostRedirect, 302);
+    }
+
+    const agentPagePath = getAgentPageMarkdownPath(
+      url.hostname,
+      url.pathname,
+      request.method,
+      request.headers.get("accept"),
+    );
+    if (agentPagePath) {
+      url.pathname = agentPagePath;
+      request = new Request(url.toString(), request);
     }
 
     // Per-key rate limiting runs BEFORE any worker routing so a runaway

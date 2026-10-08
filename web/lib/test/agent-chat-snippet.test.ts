@@ -1,21 +1,27 @@
 import { describe, expect, it } from 'vitest';
 import { spawnSync } from 'node:child_process';
 
-import { agentChatSnippet, newConversationId } from '../agent-chat-snippet';
+import { agentChatAgentGuide, agentChatSnippet, newConversationId } from '../agent-chat-snippet';
 
 describe('agent chat snippet', () => {
-  it('uses one fixed command prefix for the conversation', () => {
+  it('uses one identical command for every turn of the conversation', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/', bridgeCommand: '' });
-    expect(snippet).toContain("curl -sS --data-binary @- https://example.test/chat/abc123 <<'ARELAY_END_ABC123'");
+    expect(snippet).toContain('curl -sS --data-binary @/tmp/arelay-abc123.txt https://example.test/chat/abc123');
     expect(snippet).toContain('outside the sandbox');
     expect(snippet).not.toContain('/tmp/agent-relay');
   });
 
-  it('uses only POSIX shell in the file fallback', () => {
+  it('never puts message text into shell source', () => {
+    const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
+    expect(snippet).not.toContain('<<');
+    expect(snippet).not.toContain('<message>');
+    expect(snippet).toContain('with your file-editing tool');
+  });
+
+  it('uses only POSIX shell and one fixed command in the file fallback', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
     expect(snippet).not.toContain('seq ');
-    // The wait line must stand alone: agents run each command in a fresh shell.
-    expect(snippet).toMatch(/^d=\/tmp\/agent-relay\/abc123; i=0; while \[ "\$i" -lt 60 \]/m);
+    expect(snippet).toMatch(/^d=\/tmp\/agent-relay\/abc123; mv "\$d\/out\/next\.tmp" "\$d\/out\/\$\(date \+%s\)-\$\$\.txt" 2>\/dev\/null; i=0; while \[ "\$i" -lt 60 \]/m);
   });
 
   it('points the file bridge fallback at the hosted script by default', () => {
@@ -26,18 +32,18 @@ describe('agent chat snippet', () => {
   it('adds the file bridge fallback only when a bridge command is configured', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
     expect(snippet).toContain('`relay-bridge https://example.test/abc123`');
-    expect(snippet).toContain('d=/tmp/agent-relay/abc123; f=$(mktemp "$d/out/msg.XXXXXX")');
+    expect(snippet).toContain('/tmp/agent-relay/abc123/out/next.tmp');
   });
 
   it('points at the arelay.to conversation route by default', () => {
-    expect(agentChatSnippet({ conversationId: 'abc123' })).toContain("curl -sS --data-binary @- https://arelay.to/agent-relay/abc123 <<'ARELAY_END_ABC123'");
+    expect(agentChatSnippet({ conversationId: 'abc123' })).toContain('curl -sS --data-binary @/tmp/arelay-abc123.txt https://arelay.to/agent-relay/abc123');
   });
 
-  it('ends each here-document with a per-conversation marker, never EOF', () => {
-    const snippet = agentChatSnippet({ conversationId: 'deadbeef00', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
-    expect(snippet).not.toMatch(/^EOF$/m);
-    expect(snippet.match(/^ARELAY_END_DEADBEEF$/gm)).toHaveLength(2);
-    expect(snippet).toContain('Never put a line that is exactly ARELAY_END_DEADBEEF inside a message.');
+  it('serves agents a guide around a fresh conversation', () => {
+    const guide = agentChatAgentGuide({ conversationId: 'abc123' });
+    expect(guide).toMatch(/^# Chat with the Agent Relay agent/);
+    expect(guide).toContain("don't fetch this page again");
+    expect(guide).toContain('curl -sS --data-binary @/tmp/arelay-abc123.txt https://arelay.to/agent-relay/abc123');
   });
 
   it('creates unguessable conversation ids', () => {
