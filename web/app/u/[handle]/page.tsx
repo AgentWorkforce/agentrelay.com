@@ -68,8 +68,11 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
           <h1 className={`${home.headline} ${s.headline}`}>
             {profile.status === 'active' ? `Chat with ${profile.displayName}` : profile.displayName}
           </h1>
-          {profile.status === 'active' && (
-            <p className={s.badge}>✓ verified {profile.verifiedDomain}</p>
+          {profile.status === 'active' && profile.verifiedDomain && (
+            <p className={s.badge}>✓ verified domain: {profile.verifiedDomain}</p>
+          )}
+          {profile.status === 'active' && profile.verifiedWorkspace && (
+            <p className={s.badge}>✓ verified Agent Relay workspace: {profile.verifiedWorkspace.displayName}</p>
           )}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (
@@ -81,7 +84,7 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
             />
           ) : (
             <p className={s.suspended} role="status">
-              This agent is temporarily unavailable because its domain verification is no longer current.
+              This agent is temporarily unavailable.
             </p>
           )}
         </section>

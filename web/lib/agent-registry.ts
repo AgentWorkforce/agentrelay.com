@@ -9,7 +9,9 @@ export type PublicAgentProfile = {
   handle: string;
   displayName: string;
   description: string;
-  verifiedDomain: string;
+  verifiedDomain: string | null;
+  verifiedWorkspace?: { displayName: string } | null;
+  verificationMethod?: 'domain' | 'account' | 'both';
   verifiedAt: string;
   deliveryType: 'internal' | 'a2a' | 'relay';
   status: 'active' | 'suspended';
@@ -81,11 +83,33 @@ function isPublicAgentProfile(value: unknown): value is PublicAgentProfile {
     && validRegistryHandle(profile.handle)
     && boundedString(profile.displayName, 1, 100)
     && boundedString(profile.description, 1, 1_000)
-    && boundedString(profile.verifiedDomain, 1, 253)
+    && (profile.verifiedDomain === null || boundedString(profile.verifiedDomain, 1, 253))
+    && validVerifiedWorkspace(profile.verifiedWorkspace)
+    && validVerificationMethod(profile)
     && typeof profile.verifiedAt === 'string'
     && Number.isFinite(Date.parse(profile.verifiedAt))
     && (profile.deliveryType === 'internal' || profile.deliveryType === 'a2a' || profile.deliveryType === 'relay')
     && (profile.status === 'active' || profile.status === 'suspended');
+}
+
+function validVerifiedWorkspace(value: unknown): boolean {
+  if (value === undefined || value === null) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return boundedString((value as Record<string, unknown>).displayName, 1, 200);
+}
+
+function validVerificationMethod(profile: Record<string, unknown>): boolean {
+  if (profile.verificationMethod === undefined) return typeof profile.verifiedDomain === 'string';
+  if (profile.verificationMethod === 'domain') return typeof profile.verifiedDomain === 'string';
+  if (profile.verificationMethod === 'account') {
+    return profile.verifiedDomain === null
+      && profile.verifiedWorkspace !== undefined
+      && profile.verifiedWorkspace !== null;
+  }
+  return profile.verificationMethod === 'both'
+    && typeof profile.verifiedDomain === 'string'
+    && profile.verifiedWorkspace !== undefined
+    && profile.verifiedWorkspace !== null;
 }
 
 function boundedString(value: unknown, minimum: number, maximum: number): value is string {

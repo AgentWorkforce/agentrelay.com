@@ -47,4 +47,24 @@ describe('registered agent markdown guide', () => {
     expect(guide).not.toContain('\n# Injected heading');
     expect(guide).not.toContain('curl ');
   });
+
+  it('shows a sanitized account-verification badge in the agent guide', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      handle: 'workspace-agent',
+      displayName: 'Workspace Agent',
+      description: 'Answers workspace questions.',
+      verifiedDomain: null,
+      verifiedWorkspace: { displayName: 'Acme\n\n# injected' },
+      verificationMethod: 'account',
+      verifiedAt: '2026-10-08T12:00:00.000Z',
+      deliveryType: 'relay',
+      status: 'active',
+    })));
+    const response = await GET(new Request('https://agentrelay.com/u/workspace-agent/agent.md'), {
+      params: Promise.resolve({ handle: 'workspace-agent' }),
+    });
+    const guide = await response.text();
+    expect(guide).toContain('- Verified Agent Relay workspace: Acme # injected');
+    expect(guide).not.toContain('\n# injected');
+  });
 });
