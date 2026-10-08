@@ -26,29 +26,56 @@ jobs:
       # The router rewrites public paths onto web pages (arelay.to/<handle> ->
       # /u/<handle>), so a router that ships before the web deploy of the same
       # commit routes to pages that don't exist yet. That took
-      # arelay.to/agent-relay down for ~10 minutes when #150 merged. Wait for
-      # this commit's web deploy and refuse to ship if it failed.
-      - name: Wait for the web deploy of this commit
+      # arelay.to/agent-relay down for ~10 minutes when #150 merged. Wait until
+      # a successful web deploy includes this commit: its own, or a later one
+      # (a newer push supersedes a queued web deploy in its concurrency group,
+      # and the later deploy contains this commit's pages too). Refuse to ship
+      # if this commit's own web deploy failed.
+      - name: Wait for a web deploy that includes this commit
+        id: wait
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           for _ in $(seq 1 240); do
-            state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1" \
-              --jq '.workflow_runs[0] | if . == null then "missing" else "\(.status) \(.conclusion // "")" end' \
-              || echo "lookup failed (will retry)")
-            echo "web deploy for ${GITHUB_SHA::9}: ${state}"
-            case "$state" in
-              "completed success") exit 0 ;;
-              completed*) echo "::error::Deploy Web (Cloudflare) did not succeed for this commit; not deploying the router."; exit 1 ;;
+            # On an HTTP error gh still prints the error body, so replace the whole
+            # value instead of appending to it.
+            if ! own=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1" \
+              --jq '.workflow_runs[0] | if . == null then "missing" else "\(.status) \(.conclusion // "")" end' 2>/dev/null); then
+              own="lookup-failed"
+            fi
+            echo "web deploy for ${GITHUB_SHA::9}: ${own}"
+            case "$own" in
+              "completed success") echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              "completed failure"|"completed timed_out"|"completed startup_failure")
+                echo "::error::Deploy Web (Cloudflare) failed for this commit; not deploying the router."; exit 1 ;;
+              lookup-failed) sleep 30; continue ;;
             esac
+            # Own deploy is missing, queued, running or cancelled (superseded):
+            # accept the newest successful web deploy if it contains this commit,
+            # and deploy the router at THAT revision so router and pages match.
+            if ! latest=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?branch=main&event=push&status=success&per_page=1" \
+              --jq '.workflow_runs[0].head_sha // ""' 2>/dev/null); then
+              latest=""
+            fi
+            if [ -n "$latest" ]; then
+              if ! rel=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${GITHUB_SHA}...${latest}" --jq '.status' 2>/dev/null); then
+                rel=""
+              fi
+              echo "latest successful web deploy ${latest::9} is ${rel:-unknown} relative to this commit"
+              case "$rel" in ahead|identical) echo "sha=${latest}" >> "$GITHUB_OUTPUT"; exit 0 ;; esac
+            fi
             sleep 30
           done
-          echo "::error::Timed out after 2 hours waiting for Deploy Web (Cloudflare) for this commit. Re-run this workflow once it finishes."
+          echo "::error::Timed out after 2 hours waiting for a web deploy that includes this commit. Re-run this workflow once one succeeds."
           exit 1
 
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          # The revision whose web deploy succeeded (this commit, or a later one
+          # that contains it), so the router never ships ahead of or behind it.
+          ref: ${{ steps.wait.outputs.sha || github.sha }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
