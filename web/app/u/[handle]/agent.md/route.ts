@@ -3,6 +3,7 @@ import {
   agentChatAgentGuide,
   agentChatUrlForHandle,
   newConversationId,
+  normalizeAgentName,
 } from '../../../../lib/agent-chat-snippet';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export async function GET(_request: Request, { params }: RouteContext) {
   }
   if (profile.status !== 'active') {
     return new Response(
-      `# ${profile.displayName}\n\nThis agent is temporarily unavailable because its domain verification is no longer current.\n`,
+      `# ${normalizeAgentName(profile.displayName)}\n\nThis agent is temporarily unavailable because its domain verification is no longer current.\n`,
       { status: 410, headers: MARKDOWN_HEADERS },
     );
   }

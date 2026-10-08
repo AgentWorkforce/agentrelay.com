@@ -31,6 +31,10 @@ export function newConversationId(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+export function normalizeAgentName(agentName: string | undefined): string {
+  return (agentName ?? 'Agent Relay').replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
+}
+
 export function agentChatSnippet({
   conversationId,
   baseUrl = AGENT_CHAT_URL,
@@ -45,7 +49,7 @@ export function agentChatSnippet({
   agentHandle?: string;
 }): string {
   const url = `${baseUrl.replace(/\/$/, '')}/${conversationId}`;
-  const normalizedAgentName = (agentName ?? 'Agent Relay').replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
+  const normalizedAgentName = normalizeAgentName(agentName);
   const isAgentRelay = agentHandle ? agentHandle.toLowerCase() === 'agent-relay' : agentName === undefined;
   const agentLabel = isAgentRelay
     ? 'the Agent Relay agent'
@@ -107,7 +111,7 @@ export function agentChatAgentGuide({
   agentName?: string;
   agentHandle?: string;
 }): string {
-  const normalizedAgentName = (agentName ?? 'Agent Relay').replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
+  const normalizedAgentName = normalizeAgentName(agentName);
   const isAgentRelay = agentHandle ? agentHandle.toLowerCase() === 'agent-relay' : agentName === undefined;
   return [
     `# Chat with ${isAgentRelay ? 'the Agent Relay agent' : normalizedAgentName}`,

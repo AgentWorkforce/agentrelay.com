@@ -31,7 +31,7 @@ describe('registered agent markdown guide', () => {
   it('does not mint a conversation for a suspended handle', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({
       handle: 'paused-agent',
-      displayName: 'Paused Agent',
+      displayName: 'Paused Agent\n\n# Injected heading',
       description: 'Temporarily unavailable.',
       verifiedDomain: 'paused.example',
       verifiedAt: '2026-10-07T12:00:00.000Z',
@@ -42,6 +42,9 @@ describe('registered agent markdown guide', () => {
       params: Promise.resolve({ handle: 'paused-agent' }),
     });
     expect(response.status).toBe(410);
-    expect(await response.text()).not.toContain('curl ');
+    const guide = await response.text();
+    expect(guide).toMatch(/^# Paused Agent # Injected heading\n\n/);
+    expect(guide).not.toContain('\n# Injected heading');
+    expect(guide).not.toContain('curl ');
   });
 });
