@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 
-import { AgentChatSnippet } from '../../components/AgentChatSnippet';
-import { SiteFooter } from '../../components/SiteFooter';
-import { SiteNav } from '../../components/SiteNav';
-import { newConversationId } from '../../lib/agent-chat-snippet';
-import { defaultOgImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
-import home from '../landing.module.css';
-import flows from '../flows/flows.module.css';
+import { AgentChatSnippet } from '../../../components/AgentChatSnippet';
+import { SiteFooter } from '../../../components/SiteFooter';
+import { SiteNav } from '../../../components/SiteNav';
+import { newConversationId } from '../../../lib/agent-chat-snippet';
+import { defaultOgImage } from '../../../lib/og-meta';
+import { absoluteUrl } from '../../../lib/site';
+import home from '../../landing.module.css';
+import flows from '../../flows/flows.module.css';
 import s from './agent-relay.module.css';
 
 // Each request mints a private conversation, so the page must never be cached.
@@ -19,8 +19,8 @@ const DESCRIPTION = 'Paste one snippet into the Claude Code or Codex chat you al
 export const metadata: Metadata = {
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: absoluteUrl('/agent-relay') },
-  openGraph: { title: TITLE, description: DESCRIPTION, url: absoluteUrl('/agent-relay'), type: 'website', images: [defaultOgImage()] },
+  alternates: { canonical: absoluteUrl('/u/agent-relay') },
+  openGraph: { title: TITLE, description: DESCRIPTION, url: absoluteUrl('/u/agent-relay'), type: 'website', images: [defaultOgImage()] },
   twitter: { card: 'summary_large_image', title: TITLE, description: DESCRIPTION, images: [defaultOgImage().url] },
 };
 
