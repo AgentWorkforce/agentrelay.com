@@ -115,6 +115,8 @@ export async function fetchAgentDirectory(
   }
   // A populated registry whose every entry failed validation is a fault, not an empty directory.
   if (received > 0 && agents.length === 0) throw new Error('Agent directory entries were all invalid');
+  // Pages that keep pointing onward without listing anyone are not an empty directory either.
+  if (!complete && agents.length === 0) throw new Error('Agent directory returned no agents before its page cap');
   // Past the page cap the list is a valid prefix, reported as incomplete rather
   // than failing the whole directory for being large.
   return { agents, complete };

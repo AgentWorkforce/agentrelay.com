@@ -74,6 +74,12 @@ describe('agent directory', () => {
     expect(capped.complete).toBe(false);
     expect(capped.agents).toHaveLength(10);
     expect(agentDirectoryMarkdown(capped)).toContain('first 10 agents only');
+    let m = 0;
+    const hollow = vi.fn(async () => {
+      m += 1;
+      return Response.json({ agents: [], nextCursor: `h${m}` });
+    }) as unknown as typeof fetch;
+    await expect(fetchAgentDirectory(hollow)).rejects.toThrow('page cap');
     let clock = 0;
     const slow = vi.fn(async () => {
       clock += 9_000;
