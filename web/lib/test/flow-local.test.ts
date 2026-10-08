@@ -17,8 +17,8 @@ import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_REVIEW_BLOCKED_CO
  */
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
-/** A check command without the limit the flow gives it (RELAYFLOW_CHECK_TIMEOUT), so it compares as written. */
-const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_TIMEOUT=\d+; /, '');
+/** A check command without the limits and ID the flow gives it (RELAYFLOW_CHECK_*), so it compares as written. */
+const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_[A-Z]+=[^;]*; /g, '');
 
 function answer(raw: string, { publish = 'publish', clean = 'yes', check = 'pass' as string | (() => string), baseline = 'pass' } = {}) {
   const command = plain(raw);

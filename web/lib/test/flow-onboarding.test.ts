@@ -11,8 +11,8 @@ import { FLOW_PUSH_COMMAND, FLOW_REFERENCE_LIMIT } from '../flow-workflows';
 
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=abc123; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
-/** A check command without the limit the flow gives it (RELAYFLOW_CHECK_TIMEOUT), so it compares as written. */
-const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_TIMEOUT=\d+; /, '');
+/** A check command without the limits and ID the flow gives it (RELAYFLOW_CHECK_*), so it compares as written. */
+const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_[A-Z]+=[^;]*; /g, '');
 
 const matchingIssue = { source: 'github', title: '  Fix   login  ', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 
@@ -101,7 +101,7 @@ describe('software factory onboarding', () => {
       const again = source.indexOf('if (checkPlan === "none") await f.run(resolveChecks);');
       expect(implementer, workflow).toBeGreaterThan(-1);
       expect(again, workflow).toBeGreaterThan(implementer);
-      expect(source.indexOf('await timedCheck("", runChecks'), workflow).toBeGreaterThan(again);
+      expect(source.indexOf('await spannedCheck(checkLimit)'), workflow).toBeGreaterThan(again);
     }
   });
 

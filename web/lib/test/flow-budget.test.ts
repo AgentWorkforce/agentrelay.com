@@ -32,6 +32,12 @@ const CLOUD_CAP_MINUTES = 180;
  * and a 20m review. 85m.
  */
 const SIXTY_MINUTE_PLAN_MINUTES = 34 + 14 + 17 + 20;
+/**
+ * What the plan may plan now: 109m. Only waits on work outside the agents
+ * grew: one check may run 30m (flows#626) and publishing 25m (slow pushes).
+ * The agents' own allowances, the build window and the review, did not.
+ */
+const PLANNED_CEILING_MINUTES = 34 + 30 + 25 + 20;
 
 const issue = { source: 'github', title: 'Fix login', body: 'Login fails', labels: ['ready'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 const draft: FactoryDraft = { version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'traditional', step: 3 };
@@ -138,6 +144,25 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
     calls[calls.length - 1]!.limit = limit;
     return stopped ? 'timeout' : run.verdict;
   };
+  // A detached branch check (RELAYFLOW_CHECK_WAIT): each call waits at most
+  // its wait, and the check runs until it finishes or reaches its total.
+  const spans = new Map<string, { run: { minutes: number; verdict: string }; ran: number }>();
+  const polled = (command: string, lease?: string) => {
+    const id = /RELAYFLOW_CHECK_ID=([^;]+);/.exec(command)![1]!;
+    const wait = Number(/RELAYFLOW_CHECK_WAIT=(\d+);/.exec(command)![1]) / 60;
+    const limit = checkLimitMinutes(command);
+    const leaseMinutes = durationMs(lease)! / MINUTE;
+    leases.push({ name: 'check', limit: wait, lease: leaseMinutes });
+    if (!spans.has(id)) spans.set(id, { run: timing.checks[Math.min(checkIndex++, timing.checks.length - 1)]!, ran: 0 });
+    const span = spans.get(id)!;
+    const end = Math.min(span.run.minutes, limit);
+    const minutes = Math.min(wait, end - span.ran);
+    span.ran += minutes;
+    step('check', minutes * MINUTE, false, command);
+    calls[calls.length - 1]!.limit = limit;
+    if (span.ran < end) return 'running';
+    return span.run.minutes > limit ? 'timeout' : span.run.verdict;
+  };
   const originalError = console.error;
   console.error = (message: string) => { errors.push(String(message)); };
   try {
@@ -157,6 +182,7 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) {
           return checked('base-check', command, timing.baseline ?? { minutes: FLOW_TIME.checkLimitMinutes, verdict: 'fail' }, runOptions?.timeout);
         }
+        if (command.endsWith(FLOW_CHECK_RUN_COMMAND) && command.includes('RELAYFLOW_CHECK_WAIT=')) return polled(command, runOptions?.timeout);
         if (command.endsWith(FLOW_CHECK_RUN_COMMAND)) {
           return checked('check', command, timing.checks[Math.min(checkIndex++, timing.checks.length - 1)]!, runOptions?.timeout);
         }
@@ -231,20 +257,68 @@ describe('Garden flow time plan (cloud#4235, cloud#4270, agentrelay.com#155)', (
     // floor by the end of the build: the mandatory path fits by construction.
     expect(1 + t.discoveryMinutes + 3 + t.implementerFloorMinutes).toBeLessThanOrEqual(t.buildByMinutes);
     expect(t.buildReserveMinutes).toBe(t.bodyMinutes - t.buildByMinutes);
-    // What follows the build always holds the checks, a repair at its floor
-    // and its re-check, and publishing.
-    expect(2 + t.checkLimitMinutes + t.repairFloorMinutes + 3 + t.checkLimitMinutes + 1 + t.publishReserveMinutes).toBeLessThanOrEqual(t.buildReserveMinutes);
+    // What follows the build always holds a check at its whole budget,
+    // publishing and the review's floor.
+    expect(2 + t.checkTotalMinutes + t.publishReserveMinutes + t.reviewFloorMinutes + t.reviewReserveMinutes).toBeLessThanOrEqual(t.buildReserveMinutes);
+    // A check may span leases, each within f.run's 15 minutes.
+    expect(t.checkTotalMinutes).toBe(30);
+    expect(t.checkLimitMinutes + 1).toBeLessThanOrEqual(t.checkMinutes);
   });
 
-  it('keeps the happy path\'s planned allowances within 10% of the 60-minute plan', () => {
+  it('keeps the happy path\'s planned allowances at 109m, with the agents\' share where the 60-minute plan had it', () => {
     // The extra time is margin, not a longer plan: the build ends where it
-    // did, and a clean run plans one check, publishing and one review. Only
-    // publishing's limits grew (slow pushes to large repositories). A change
+    // did, and a clean run plans one check, publishing and one review. The
+    // check budget (14m to 30m, flows#626) and publishing's limits (17m to
+    // 25m) grew: 85m to 109m, +28%. Both are waits on a suite or a forge, and
+    // a clean run uses only what they take. The agents' allowances, the build
+    // window and the review, are pinned at the 60-minute plan's 54m. A change
     // that lengthens the plan has to change this test.
     const t = FLOW_TIME;
-    const planned = t.buildByMinutes + t.checkLimitMinutes + t.publishMinutes + t.reviewMinutes;
-    expect(planned).toBeLessThanOrEqual(1.1 * SIXTY_MINUTE_PLAN_MINUTES);
-    expect(t.buildByMinutes).toBeLessThanOrEqual(34);
+    const planned = t.buildByMinutes + t.checkTotalMinutes + t.publishMinutes + t.reviewMinutes;
+    expect(planned).toBeLessThanOrEqual(PLANNED_CEILING_MINUTES);
+    expect(PLANNED_CEILING_MINUTES).toBe(109);
+    expect(SIXTY_MINUTE_PLAN_MINUTES).toBe(85);
+    expect(t.buildByMinutes + t.reviewMinutes).toBeLessThanOrEqual(34 + 20);
+  });
+
+  it('runs a 20-minute check across several leases and honours its verdict (flows#626)', async () => {
+    for (const verdict of ['pass', 'fail'] as const) {
+      const run = await runTimed({
+        agents: { 'check-discovery': 6, 'implementer': 10, 'check-repair': 100, 'adversary': 8 },
+        // A failing suite's re-check after the repair fails again, quickly.
+        checks: [{ minutes: 20, verdict }, { minutes: 2, verdict }],
+        baseline: { minutes: 2, verdict: 'fail' },
+        reviewClean: true,
+      });
+      const first = named(run, 'check').filter(call => call.name === 'check');
+      const id = /RELAYFLOW_CHECK_ID=([^;]+);/.exec(first[0]!.command!)![1];
+      const polls = first.filter(call => call.command!.includes(`RELAYFLOW_CHECK_ID=${id};`));
+      // One check, waited on in more than one lease, each within f.run's 15
+      // minutes, and run to the end: 20 minutes in all, not stopped at 14.
+      expect(polls.length, verdict).toBeGreaterThan(1);
+      expect(polls.reduce((sum, call) => sum + call.minutes, 0), verdict).toBeCloseTo(20);
+      for (const lease of run.leases.filter(lease => lease.name === 'check')) expect(lease.lease!).toBeLessThanOrEqual(FLOW_TIME.checkMinutes);
+      const report = run.calls.find(call => call.command?.includes('.relayflow/check-report.md'))!;
+      expect(report.command, verdict).toMatch(new RegExp(`^check=${verdict}; `));
+      if (verdict === 'pass') expect(run.opened?.command).not.toContain(' --draft');
+      else expect(run.opened?.command).toContain(' --draft');
+      expect(run.refused, verdict).toBeNull();
+    }
+  });
+
+  it('reports a check that runs past its whole budget as a timeout, not a failure', async () => {
+    const run = await runTimed({
+      agents: { 'check-discovery': 6, 'implementer': 10, 'check-repair': 100 },
+      checks: [{ minutes: 45, verdict: 'pass' }],
+    }, 'simple');
+    const first = run.calls.filter(call => call.name === 'check').slice(0, 1)[0]!;
+    expect(first.limit).toBe(FLOW_TIME.checkTotalMinutes);
+    const report = run.calls.find(call => call.command?.includes('.relayflow/check-report.md'))!;
+    expect(report.command).toMatch(/^check=timeout; /);
+    expect(errorsOf(run)).toMatch(/The checks timed out \(stopped at their time budget, not a test failure\)/);
+    expect(errorsOf(run)).not.toMatch(/The checks fail\b/);
+    expect(run.opened?.command).toContain(' --draft');
+    expect(run.refused).toBeNull();
   });
 
   it('declares the 2h wallclock in the cloud header, and keeps 3h for a local run', () => {
