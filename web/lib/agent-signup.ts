@@ -73,7 +73,7 @@ Setup is complete only in Part 3's finished state: a proven live round trip.` : 
 Part 1 creates the account with signup_source "flows". Part 2 uses its access
 token and its user.id and currentWorkspace.id. Part 3 is writing-relayflows,
 the authoring guide Part 2's custom-flow path defers to; skip it for a
-prebuilt flow.`}${site.startsWith('http:') ? localDevelopmentNote(product, site) : ''}
+prebuilt flow.`}${isLocalStack(site) ? localDevelopmentNote(product, site) : ''}
 
 ## Live progress (when the user's prompt includes a progress session)
 
@@ -155,19 +155,25 @@ const signupParts: Record<AgentSignupProduct, readonly { label: string; skill: s
 
 const PRODUCTION_SITE = 'https://agentrelay.com';
 
+/** The paired local stack: plain HTTP on localhost or 127.0.0.1, the hosts the route keeps. */
+function isLocalStack(site: string): boolean {
+  const { protocol, hostname } = new URL(site);
+  return protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1');
+}
+
 const DESKTOP_RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download';
 
 /**
  * The skills name production. Another host substitutes its own exact origins;
- * the plain-HTTP local stack also substitutes, so the desktop commands run as
+ * the local stack (http://localhost or http://127.0.0.1) also substitutes, so the desktop commands run as
  * written, the prebuilt Agent Relay Dev app's download, app name, bundle id
  * and socket paths.
  */
 function forEnvironment(skill: string | undefined, site: string, cloud: string): string {
   if (skill === undefined) throw new Error('A signup part names a skill that is not vendored');
   if (site === PRODUCTION_SITE && cloud === `${PRODUCTION_SITE}/cloud`) return skill;
-  // Only the plain-HTTP local stack serves the Dev app; any HTTPS host keeps the release app.
-  const local = site.startsWith('http:') ? skill
+  // Only the local stack serves the Dev app; every other host keeps the release app.
+  const local = isLocalStack(site) ? skill
     .replaceAll(DESKTOP_RELEASES, `${site}/cloud/desktop-downloads`)
     .replaceAll('AgentRelay-macOS-', 'AgentRelay-Dev-macOS-')
     .replaceAll('Agent Relay.app', 'Agent Relay Dev.app')

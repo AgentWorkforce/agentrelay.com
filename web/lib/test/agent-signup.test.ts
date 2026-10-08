@@ -155,8 +155,8 @@ describe('agent signup instructions', () => {
     expect(agentSignupPrompt('teams', 'http://127.0.0.1:3199')).toContain('http://127.0.0.1:3199/signup/agent/teams');
   });
 
-  it('keeps the release desktop app for an HTTPS host other than production', async () => {
-    const content = await guide('teams', 'https://preview.example.com/signup/agent/teams');
+  it.each(['https://preview.example.com', 'http://staging.example.com'])('keeps the release desktop app for %s, which is not the local stack', async (origin) => {
+    const content = await guide('teams', `${origin}/signup/agent/teams`);
     expect(content).toContain('relay-desktop-releases/releases/latest/download');
     expect(content).toContain('"$release/AgentRelay-macOS-$relay_arch.dmg"');
     expect(content).not.toContain('Agent Relay Dev.app');
