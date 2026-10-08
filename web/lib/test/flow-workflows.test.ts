@@ -8,7 +8,7 @@ import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
   FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
-  flowCommentChangeCommand, FLOW_BODY_LIMIT,
+  flowCommentChangeCommand, FLOW_BODY_LIMIT, FLOW_WITHHELD_NOTICE_RESERVE,
   WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
@@ -921,7 +921,8 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(prepare.token).toBe('prepared');
     expect(verdict).toBe('valid');
     expect(chars(body)).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
-    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    // Room is left for the push step's withheld-workflow notice.
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
     expect(FLOW_BODY_LIMIT).toBeLessThan(65536);
     // Valid UTF-8: no multibyte character was split.
     expect(body).not.toContain('\uFFFD');
@@ -965,6 +966,15 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
   it('tells the check report the closing reference it must leave room for', () => {
     const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
     expect(source).toContain('"; reference=" + shellQuote(changeReference) + "; " + checkReport');
+  });
+
+  it('stays under the cap when the summary opens a fence longer than the reserve', () => {
+    const fence = '`'.repeat(5000);
+    const { verdict, body } = publishBody({ 'summary.md': fence + '\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(body.split('\n').filter(line => line === fence)).toHaveLength(2);
+    expect(body).toContain('Relayflow ran this repository\'s checks');
   });
 
   it('puts back a closing reference that truncation cut from the summary', () => {

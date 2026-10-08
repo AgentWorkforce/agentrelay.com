@@ -248,6 +248,13 @@ const REPORT_SECTION_LIMITS = { script: 4000, log: 10000, repair: 4000 } as cons
 const REFERENCE_MARGIN = 64;
 
 /**
+ * Bytes the prepared pull-request body leaves free under FLOW_BODY_LIMIT, so
+ * the push step always has room to say it withheld workflow edits
+ * (FLOW_PUSH_COMMAND), however full the body is.
+ */
+export const FLOW_WITHHELD_NOTICE_RESERVE = 2048;
+
+/**
  * Prints the fence that closes a Markdown code block still open at the end of
  * its input, or nothing: a fence of three or more backticks opens a block,
  * and a bare fence at least as long closes it.
@@ -263,27 +270,35 @@ const OPEN_FENCE_AWK = String.raw`{ if (match($0, /^[ \t]*` + '```' + String.raw
  * `where` the full text is. A code fence the kept start leaves open is
  * closed, so whatever follows is not swallowed by it. The text cut is never
  * printed: a log or review can hold credentials the run journal must not
- * show. With less than CAP_RESERVE bytes to keep, the file is emptied. A file
- * within `bytes` is left as it is. Always returns 0.
+ * show. The result never exceeds `bytes`: with less than CAP_RESERVE bytes
+ * to keep, or no fit after three tries, the file is emptied. A file within
+ * `bytes` is left as it is. Always returns 0.
  */
 const CAP_RESERVE = 512;
 const CAP_FUNCTION = 'relayflow_cap() { ' + [
   'cap_size=$(LC_ALL=C wc -c < "$1" | tr -d " ")',
   'if [ "$cap_size" -le "$2" ]; then return 0; fi',
   'echo "relayflow: $1 is $cap_size bytes, more than the $2 it may hold, so it was cut; the full text is $4." >&2',
-  `cap_keep=$(($2 - ${CAP_RESERVE}))`,
-  'if [ "$cap_keep" -le 0 ]; then : > "$1"; return 0; fi',
   `cap_note="_…truncated to fit GitHub's limit: $cap_size bytes were cut to under $2. The full text is $4._"`,
   // The bytes that start a multibyte character, and those that continue one.
   "cap_lead=$(printf '[\\300-\\377]'); cap_cont=$(printf '[\\200-\\277]')",
-  'if [ "$3" = tail ]; then LC_ALL=C tail -c "$cap_keep" "$1" > "$1.cut"; else LC_ALL=C head -c "$cap_keep" "$1" > "$1.cut"; fi',
-  'cap_lines=$(LC_ALL=C tr -cd "\\n" < "$1.cut" | wc -c | tr -d " ")',
-  'if [ "$3" = tail ]; then '
+  // A closing fence as long as an agent's opening one can outgrow the
+  // reserve; each further try keeps less by what the last one ran over.
+  `cap_keep=$(($2 - ${CAP_RESERVE})); cap_tries=0`,
+  'while :; do '
+    + 'if [ "$cap_keep" -le 0 ] || [ "$cap_tries" -ge 3 ]; then : > "$1.cap"; break; fi; '
+    + 'cap_tries=$((cap_tries + 1)); '
+    + 'if [ "$3" = tail ]; then LC_ALL=C tail -c "$cap_keep" "$1" > "$1.cut"; else LC_ALL=C head -c "$cap_keep" "$1" > "$1.cut"; fi; '
+    + 'cap_lines=$(LC_ALL=C tr -cd "\\n" < "$1.cut" | wc -c | tr -d " "); '
+    + 'if [ "$3" = tail ]; then '
     + '{ printf \'%s\\n\\n\' "$cap_note"; if [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed 1d "$1.cut"; else LC_ALL=C sed "s/^$cap_cont*//" "$1.cut"; fi; } > "$1.cap"; '
     + 'else '
     + '{ if [ "$(LC_ALL=C tail -c 1 "$1.cut" | wc -l | tr -d " ")" -eq 1 ]; then cat "$1.cut"; elif [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed \'$d\' "$1.cut"; else LC_ALL=C sed "s/$cap_lead$cap_cont*\\$//" "$1.cut"; echo; fi; } > "$1.cap"; '
     + `LC_ALL=C awk '${OPEN_FENCE_AWK}' "$1.cap" > "$1.cut"; cat "$1.cut" >> "$1.cap"; `
-    + 'printf \'\\n%s\\n\' "$cap_note" >> "$1.cap"; fi',
+    + 'printf \'\\n%s\\n\' "$cap_note" >> "$1.cap"; fi; '
+    + 'cap_out=$(LC_ALL=C wc -c < "$1.cap" | tr -d " "); '
+    + 'if [ "$cap_out" -le "$2" ]; then break; fi; '
+    + 'cap_keep=$((cap_keep - cap_out + $2)); done',
   'rm -f "$1.cut"; mv -f "$1.cap" "$1"; return 0',
 ].join('; ') + '; }';
 
@@ -301,7 +316,8 @@ const CAP_FUNCTION = 'relayflow_cap() { ' + [
  * script that ran and the tail of each log on the pull request itself, without
  * opening the run journal.
  *
- * The body stays within FLOW_BODY_LIMIT (agentrelay.com#160): the script, each
+ * The body stays within FLOW_BODY_LIMIT, less FLOW_WITHHELD_NOTICE_RESERVE
+ * for the push step (agentrelay.com#160): the script, each
  * log and the repair notes are cut to REPORT_SECTION_LIMITS (a log keeps its
  * end, where the failure is), and summary.md is cut to what the report leaves.
  * The verdict is never cut.
@@ -339,7 +355,7 @@ export const FLOW_CHECK_REPORT_COMMAND = [
   // The summary gets what the report leaves, less room for the closing
   // reference (\`reference\`, set by the caller) that
   // FLOW_PREPARE_CHANGE_METADATA_COMMAND appends.
-  `if [ -s summary.md ]; then cp summary.md "$parts/summary"; relayflow_cap "$parts/summary" $((${FLOW_BODY_LIMIT - REFERENCE_MARGIN} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - $(printf %s "\${reference:-}" | LC_ALL=C wc -c | tr -d " "))) head "summary.md in the run workspace"; fi`,
+  `if [ -s summary.md ]; then cp summary.md "$parts/summary"; relayflow_cap "$parts/summary" $((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE - REFERENCE_MARGIN} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - $(printf %s "\${reference:-}" | LC_ALL=C wc -c | tr -d " "))) head "summary.md in the run workspace"; fi`,
   '{ if [ -s "$parts/summary" ]; then cat "$parts/summary"; printf \'\\n\\n\'; fi; cat "$report"; } > .relayflow/pr-body.md',
   'rm -rf "$parts"',
   'echo "relayflow: wrote the check report to $report." >&2',
@@ -685,16 +701,16 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
  * flow; grep matches a complete, fixed line so an agent-written matching line
  * is retained rather than duplicated.
  *
- * A body over FLOW_BODY_LIMIT is cut to fit (agentrelay.com#160), and a
- * reference the cut removed is put back at the end: a closing reference is
- * never lost to truncation.
+ * A body over FLOW_BODY_LIMIT, less FLOW_WITHHELD_NOTICE_RESERVE, is cut to
+ * fit (agentrelay.com#160), and a reference the cut removed is put back at the
+ * end: a closing reference is never lost to truncation.
  */
 export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
   'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body; exit 0; fi',
   CAP_FUNCTION,
   'relayflow_reference() { if [ -n "$reference" ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi; }',
   'relayflow_reference',
-  `if [ "$(LC_ALL=C wc -c < .relayflow/pr-body.md | tr -d " ")" -gt ${FLOW_BODY_LIMIT} ]; then relayflow_cap .relayflow/pr-body.md $((${FLOW_BODY_LIMIT} - 2 - $(printf %s "$reference" | LC_ALL=C wc -c | tr -d " "))) head "the run journal"; relayflow_reference; fi`,
+  `if [ "$(LC_ALL=C wc -c < .relayflow/pr-body.md | tr -d " ")" -gt ${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} ]; then relayflow_cap .relayflow/pr-body.md $((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} - 2 - $(printf %s "$reference" | LC_ALL=C wc -c | tr -d " "))) head "the run journal"; relayflow_reference; fi`,
   'echo prepared',
 ].join('; ');
 

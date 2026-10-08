@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { FLOW_BODY_LIMIT, FLOW_PUSH_COMMAND, WORKFLOW_FILES_HINT } from '../flow-workflows';
+import { FLOW_BODY_LIMIT, FLOW_PUSH_COMMAND, FLOW_WITHHELD_NOTICE_RESERVE, WORKFLOW_FILES_HINT } from '../flow-workflows';
 import { factorySource, DEFAULT_FACTORY, type FactoryDraft } from '../flow-onboarding';
 
 /**
@@ -368,6 +368,20 @@ describe('FLOW_PUSH_COMMAND', { timeout: 30_000 }, () => {
     expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
     expect(body).toContain('## Workflow changes not applied');
     expect(body).toMatch(/truncated to fit GitHub's limit/);
+  }, 60_000);
+
+  // Review on #161: a body prepared as full as it may be still leaves room to
+  // say the workflow edits were withheld.
+  it('still says the workflow edits were withheld when the prepared body is as full as it may be', () => {
+    const { root, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
+    commit(root, 'one', { 'src/x.ts': 'x\n', '.github/workflows/ci.yml': CI_EDITED });
+    const filler = FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE - Buffer.byteLength(BODY);
+    write(root, { '.relayflow/pr-body.md': BODY + 'x'.repeat(filler - 1) + '\n' });
+    expect(push(root, base).code).toBe(0);
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('## Workflow changes not applied');
+    expect(body).toContain('.github/workflows/ci.yml');
   }, 60_000);
 
   it('bounds the patch in the pull-request body and says where the rest is', () => {
