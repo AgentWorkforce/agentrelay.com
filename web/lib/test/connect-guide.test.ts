@@ -5,9 +5,21 @@ describe('Connect entry point', () => {
     const response = GET(new Request('https://agentrelay.com/connect'));
     expect(response.headers.get('content-type')).toContain('text/markdown');
     const guide = await response.text();
-    for (const command of ['create', 'join', 'end']) expect(guide).toContain(`~/.local/lib/agent-relay/connect/agent-relay-probe connect ${command}`);
+    for (const command of ['create', 'join', 'send', 'status', 'leave', 'end']) expect(guide).toContain(`~/.local/lib/agent-relay/connect/agent-relay-probe connect ${command}`);
     expect(guide).toContain('https://agentrelay.com/connect/install.sh');
     expect(guide).not.toContain('npx');
+    expect(guide).toContain('escalated permissions');
+    expect(guide).not.toMatch(/printf '%s' '/);
+    expect(guide).toContain('connect send --to other-agent --json < /tmp/relay-message.txt');
+    expect(guide).toContain('connect create --json --task "$(cat /tmp/relay-task.txt)"');
+    expect(guide).not.toMatch(/--task "(?!\$\(cat \/tmp\/relay-task\.txt\)")/);
+    const writeTask = guide.indexOf('/tmp/relay-task.txt using your file-editing tool');
+    expect(writeTask).toBeGreaterThanOrEqual(0);
+    expect(writeTask).toBeLessThan(guide.indexOf('connect create --json'));
+    expect(guide).toContain('Never send it to another person yourself unless asked.');
+    expect(guide).toContain("connect send --to other-agent --json <<'RELAY_END_7f3a91'");
+    expect(guide).toContain('No relay process starts until you');
+    expect(guide).not.toContain("ARELAY_TASK");
     expect(guide).not.toContain('~/.local/bin/relay connect');
   });
   it('serves the same Markdown instructions when a browser requests HTML', async () => {
