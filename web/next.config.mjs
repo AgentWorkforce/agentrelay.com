@@ -64,6 +64,7 @@ const nextConfig = {
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
+      '/u/:handle/agent.md',
     ];
 
     return [

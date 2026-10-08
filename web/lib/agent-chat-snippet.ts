@@ -36,7 +36,7 @@ export function agentChatSnippet({
   const lines = [
     'Chat with the Agent Relay agent for me and show me each reply. Start by saying hi and asking what it can help with.',
     '',
-    'Before you set anything up for Agent Relay (installs, sign-ins, workspaces, integrations), tell this agent what you plan to do and what you found, then follow its checks and confirm each step with it. It knows the current setup steps and will check what already exists, such as your active workspace, before anything new is created.',
+    'Before you set anything up for Agent Relay (installs, sign-ins, workspaces, integrations), tell this agent what you plan to do and what you found, then confirm each step with it. It knows the current setup steps and will check what already exists, such as your active workspace, before anything new is created.',
     '',
     `To send a message, write it to ${messageFile} with your file-editing tool (replace the whole file each time, and never write it with a shell command). Then run this exact command; it prints the reply:`,
     '',
@@ -55,7 +55,7 @@ export function agentChatSnippet({
       `If you cannot run it outside the sandbox, ask me to run \`${bridgeCommand} ${url}\` in my own terminal. Then, for each message, write it to ${dir}/out/next.tmp with your file-editing tool and run this exact command. It hands the message to the bridge and waits up to a minute for the reply; with no new message it only waits:`,
       '',
       '```sh',
-      `d=${dir}; mv "$d/out/next.tmp" "$d/out/$(date +%s)-$$.txt" 2>/dev/null; i=0; while [ "$i" -lt 60 ] && [ -z "$(ls "$d/in")" ]; do sleep 1; i=$((i + 1)); done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi`,
+      `d=${dir}; [ -d "$d/in" ] || { echo "(bridge not running: ask me to start it)"; exit 1; }; mv "$d/out/next.tmp" "$d/out/$(date +%s)-$$.txt" 2>/dev/null; i=0; while [ "$i" -lt 60 ] && [ -z "$(ls "$d/in")" ]; do sleep 1; i=$((i + 1)); done; if [ -n "$(ls "$d/in")" ]; then for f in $(ls "$d/in"); do cat "$d/in/$f"; rm -f "$d/in/$f"; done; else echo "(no reply yet)"; fi`,
       '```',
     );
   }

@@ -145,7 +145,8 @@ export function getAgentChatCloudPath(
 // collide with the site's own pages, and at the root on arelay.to. Agents told
 // to "go to arelay.to/agent-relay" fetch it with curl (Accept: */*) or a
 // web-fetch tool (Accept: text/markdown); both get the agent-readable guide.
-// Browsers, which ask for text/html and never for markdown, get the page.
+// Browsers, which prefer text/html, get the page. HEAD always gets the page, so
+// uptime probes and `curl -I` neither change content type nor mint a guide.
 export function getAgentPagePath(
   hostname: string,
   pathname: string,
@@ -156,7 +157,7 @@ export function getAgentPagePath(
     return undefined;
   }
   let agent: string | undefined;
-  if (hostname === SHORT_HOST) {
+  if (hostname === SHORT_HOST || hostname === SHORT_HOST_WWW) {
     agent = /^\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
   } else if (hostname === PRIMARY_HOST) {
     agent = /^\/u\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
@@ -164,9 +165,44 @@ export function getAgentPagePath(
   if (!agent || !AGENT_CHAT_AGENTS.has(agent)) {
     return undefined;
   }
-  const accepted = (accept ?? "").toLowerCase();
-  const wantsHtml = !accepted.includes("text/markdown") && accepted.includes("text/html");
+  const wantsHtml = method === "HEAD" || prefersHtmlOverMarkdown(accept);
+  if (wantsHtml && hostname === SHORT_HOST_WWW) {
+    // Browsers on the www alias are canonicalized by getShortHostRedirect.
+    return undefined;
+  }
   return wantsHtml ? `/u/${agent}` : `/u/${agent}/agent.md`;
+}
+
+// Quality the Accept header gives one media type, using the most specific
+// matching range (exact, then type/*, then */*), per RFC 9110 section 12.5.1.
+function acceptQuality(accept: string, mediaType: string): number {
+  const [type] = mediaType.split("/");
+  let best = -1;
+  let quality = 0;
+  for (const part of accept.split(",")) {
+    const [range, ...params] = part.trim().toLowerCase().split(";");
+    const name = range.trim();
+    const specificity = name === mediaType ? 2 : name === `${type}/*` ? 1 : name === "*/*" ? 0 : -1;
+    if (specificity <= best) {
+      continue;
+    }
+    const q = params
+      .map((param) => /^\s*q\s*=\s*([0-9.]+)\s*$/.exec(param)?.[1])
+      .find((value) => value !== undefined);
+    const parsed = q === undefined ? 1 : Number(q);
+    best = specificity;
+    quality = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 1) : 0;
+  }
+  return quality;
+}
+
+// HTML only when the client rates it strictly above markdown. Ties (curl's
+// */*, no Accept, text/plain) go to the agent guide.
+export function prefersHtmlOverMarkdown(accept: string | null): boolean {
+  if (!accept) {
+    return false;
+  }
+  return acceptQuality(accept, "text/html") > acceptQuality(accept, "text/markdown");
 }
 
 // The page first shipped at agentrelay.com/agent-relay; keep that link working.
@@ -505,7 +541,15 @@ export default {
       url.pathname,
       request.method,
     );
-    const shortHostRedirect = agentChatCloudPath
+    // Agents fetching the www alias get the guide directly: plain curl does
+    // not follow the canonicalizing redirect.
+    const agentPagePath = getAgentPagePath(
+      url.hostname,
+      url.pathname,
+      request.method,
+      request.headers.get("accept"),
+    );
+    const shortHostRedirect = agentChatCloudPath || agentPagePath
       ? undefined
       : getShortHostRedirect(url);
     if (shortHostRedirect) {
@@ -517,12 +561,6 @@ export default {
       return Response.redirect(legacyAgentPage, 301);
     }
 
-    const agentPagePath = getAgentPagePath(
-      url.hostname,
-      url.pathname,
-      request.method,
-      request.headers.get("accept"),
-    );
     if (agentPagePath && agentPagePath !== url.pathname.replace(/\/$/, "")) {
       url.pathname = agentPagePath;
       request = new Request(url.toString(), request);
@@ -547,8 +585,9 @@ export default {
     const recorderEnv = hasRecorderEnv(env) ? env : null;
     // Conversation URLs are bearer secrets and request bodies are private chat
     // content, so neither the new route nor the existing Cloud fallback belongs
-    // in the replay corpus.
-    const recorderRequestClone = recorderEnv && !agentChatCloudPath
+    // in the replay corpus. Agent pages and guides mint a conversation URL in
+    // every response, so they stay out too.
+    const recorderRequestClone = recorderEnv && !agentChatCloudPath && !agentPagePath
       ? (request.clone() as unknown as Request)
       : null;
 

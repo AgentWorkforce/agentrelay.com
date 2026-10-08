@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import worker, { getAgentChatCloudPath, getAgentPagePath, getLegacyAgentPageRedirect, getShortHostRedirect } from "../index.js";
+import worker, { getAgentChatCloudPath, getAgentPagePath, getLegacyAgentPageRedirect, getShortHostRedirect, prefersHtmlOverMarkdown } from "../index.js";
 
 const ID = "0123456789abcdef0123456789abcdef";
 
@@ -176,8 +176,51 @@ describe("router agent chat", () => {
     expect(getAgentPagePath("agentrelay.com", "/u/agent-relay", "GET", browser)).toBe("/u/agent-relay");
     for (const accept of ["*/*", null, "text/markdown", "text/markdown, text/html;q=0.9, */*;q=0.8", "text/plain"]) {
       expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", accept)).toBe("/u/agent-relay/agent.md");
-      expect(getAgentPagePath("agentrelay.com", "/u/agent-relay/", "HEAD", accept)).toBe("/u/agent-relay/agent.md");
+      expect(getAgentPagePath("agentrelay.com", "/u/agent-relay/", "GET", accept)).toBe("/u/agent-relay/agent.md");
     }
+  });
+
+  it("answers HEAD with the page, so probes keep text/html and mint no guide", () => {
+    for (const accept of ["*/*", null, "text/markdown"]) {
+      expect(getAgentPagePath("arelay.to", "/agent-relay", "HEAD", accept)).toBe("/u/agent-relay");
+      expect(getAgentPagePath("agentrelay.com", "/u/agent-relay/", "HEAD", accept)).toBe("/u/agent-relay");
+    }
+  });
+
+  it("serves agents the guide on the www alias and leaves browsers to the canonical redirect", () => {
+    expect(getAgentPagePath("www.arelay.to", "/agent-relay", "GET", "*/*")).toBe("/u/agent-relay/agent.md");
+    expect(getAgentPagePath("www.arelay.to", "/agent-relay", "GET", "text/html")).toBeUndefined();
+  });
+
+  it("weighs Accept quality values when choosing HTML or markdown", () => {
+    expect(prefersHtmlOverMarkdown("text/html;q=0.9, text/markdown;q=0.1")).toBe(true);
+    expect(prefersHtmlOverMarkdown("text/html, text/markdown;q=0")).toBe(true);
+    expect(prefersHtmlOverMarkdown("text/html;q=0, */*")).toBe(false);
+    expect(prefersHtmlOverMarkdown("text/html;q=0.5, text/*;q=0.8")).toBe(false);
+    expect(prefersHtmlOverMarkdown("text/markdown;q=0.5, text/html")).toBe(true);
+    expect(prefersHtmlOverMarkdown("*/*")).toBe(false);
+    expect(prefersHtmlOverMarkdown(null)).toBe(false);
+    expect(prefersHtmlOverMarkdown("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")).toBe(true);
+  });
+
+  it("forwards agent fetches to the guide and browsers to the page, and records neither", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response("ok", { status: 200 }));
+    const put = vi.fn();
+    const env = buildEnv({ fetch: vi.fn() }, {
+      TRAFFIC_RECORDER: { put },
+      ROUTER_CONFIG: { get: vi.fn(async () => "100") },
+    });
+    const waits: Promise<unknown>[] = [];
+    const recordingCtx = { waitUntil: (p: Promise<unknown>) => waits.push(p), passThroughOnException: () => undefined } as unknown as ExecutionContext;
+
+    await worker.fetch(new Request("https://arelay.to/agent-relay", { headers: { accept: "*/*" } }), env, recordingCtx);
+    await worker.fetch(new Request("https://www.arelay.to/agent-relay", { headers: { accept: "text/markdown" } }), env, recordingCtx);
+    await worker.fetch(new Request("https://arelay.to/agent-relay", { headers: { accept: "text/html,*/*;q=0.8" } }), env, recordingCtx);
+    await Promise.all(waits);
+
+    const paths = upstream.mock.calls.map(([input]) => new URL((input as Request).url).pathname);
+    expect(paths).toEqual(["/u/agent-relay/agent.md", "/u/agent-relay/agent.md", "/u/agent-relay"]);
+    expect(put).not.toHaveBeenCalled();
   });
 
   it("leaves other paths, unknown agents, POSTs and other hosts alone", () => {
