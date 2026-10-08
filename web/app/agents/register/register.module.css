@@ -41,19 +41,6 @@
   line-height: 1.7;
 }
 
-.content .soon {
-  display: inline-block;
-  margin-left: 6px;
-  border: 1px solid #8a7a4a;
-  border-radius: 999px;
-  padding: 1px 8px;
-  color: #f3dfa2;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  vertical-align: 2px;
-}
 
 .prose {
   margin: 0 0 16px;
