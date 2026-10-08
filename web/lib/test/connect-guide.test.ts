@@ -13,7 +13,9 @@ describe('Connect entry point', () => {
     expect(guide).toContain('connect send --to other-agent --json < /tmp/relay-message.txt');
     expect(guide).toContain('connect create --json --task "$(cat /tmp/relay-task.txt)"');
     expect(guide).not.toMatch(/--task "(?!\$\(cat \/tmp\/relay-task\.txt\)")/);
-    expect(guide.indexOf('to /tmp/relay-task.txt using your file-editing tool')).toBeLessThan(guide.indexOf('connect create --json'));
+    const writeTask = guide.indexOf('/tmp/relay-task.txt using your file-editing tool');
+    expect(writeTask).toBeGreaterThanOrEqual(0);
+    expect(writeTask).toBeLessThan(guide.indexOf('connect create --json'));
     expect(guide).toContain('Never send it to another person yourself unless asked.');
     expect(guide).toContain("connect send --to other-agent --json <<'RELAY_END_7f3a91'");
     expect(guide).toContain('No relay process starts until you');
