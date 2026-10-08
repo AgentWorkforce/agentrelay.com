@@ -656,6 +656,9 @@ export default {
     }
 
     const guideAnalyticsHandle = getGuideAnalyticsHandle(request, agentPagePath);
+    // Keep the original request: rewrites build new Requests, which do not
+    // carry the incoming request.cf (and with it the country).
+    const guideAnalyticsRequest = request;
 
     if (agentPagePath && agentPagePath !== url.pathname.replace(/\/$/, "")) {
       url.pathname = agentPagePath;
@@ -860,7 +863,7 @@ export default {
       // Count a guide fetch only once the upstream guide answered 2xx;
       // not-found, suspended, redirect and error responses write nothing.
       if (guideAnalyticsHandle && upstreamResponse.status >= 200 && upstreamResponse.status < 300) {
-        ctx.waitUntil(recordGuideFetched(request, guideAnalyticsHandle, env));
+        ctx.waitUntil(recordGuideFetched(guideAnalyticsRequest, guideAnalyticsHandle, env));
       }
 
       return response;

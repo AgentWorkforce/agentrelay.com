@@ -35,8 +35,9 @@ function setup(status = 200, extra: Record<string, unknown> = {}) {
     waitUntil: (promise: Promise<unknown>) => { waits.push(promise); },
     passThroughOnException: () => undefined,
   } as unknown as ExecutionContext;
-  const fetch = async (url: string, init: RequestInit = {}) => {
-    const response = await worker.fetch(new Request(url, init), env, ctx);
+  const fetch = async (url: string | Request, init: RequestInit = {}) => {
+    const request = typeof url === "string" ? new Request(url, init) : url;
+    const response = await worker.fetch(request, env, ctx);
     await Promise.all(waits);
     return response;
   };
@@ -64,6 +65,16 @@ describe("router guide analytics", () => {
       expect(point.blobs?.[8]).toBe("router");
       expect(point.doubles).toEqual([1, -1]);
     }
+  });
+
+  it("records the incoming request's cf.country even though the guide path is rewritten", async () => {
+    const { points, fetch } = setup();
+    // Like Workers, rebuilt Requests here do not inherit the incoming cf.
+    const request = new Request("https://arelay.to/agent-relay", { headers: AGENT });
+    Object.defineProperty(request, "cf", { value: { country: "NZ" } });
+    await fetch(request);
+    expect(points).toHaveLength(1);
+    expect(points[0]?.blobs?.[5]).toBe("NZ");
   });
 
   it("writes nothing for HTML, HEAD, direct guide paths, or Worker subrequests", async () => {
