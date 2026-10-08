@@ -111,7 +111,10 @@ describe('agent signup instructions', () => {
 
   it('reads the sharing mode from the desktop and asks before changing an existing one', async () => {
     const content = await guide('teams');
-    expect(content).toContain("jq -r '.data.sharing_mode'");
+    expect(content).toContain("jq -r '.data.sharing_mode // empty'");
+    // The defaults keep the reported mode unless the human chose another; nothing forces new.
+    expect(content).not.toContain('relay_sharing_mode=new');
+    expect(content).toContain('"${relay_sharing_mode:?set relay_sharing_mode to the mode chosen in section 4}"');
     expect(content).toContain('Never change it silently.');
     expect(content).toContain('sharing_mode: .data.sharing_mode');
     expect(content).toContain('Report\n   waiting while the user decides about an existing sharing mode.');
@@ -119,7 +122,8 @@ describe('agent signup instructions', () => {
 
   it('keeps the agent-relay CLI optional and carries the latency and HTTP-client guidance', async () => {
     const content = await guide('teams');
-    expect(content).toContain('do not install or\nupgrade it just for these checks');
+    expect(content).toContain('do not install or upgrade it just for these checks');
+    expect(content).toContain("case \"$relay_cli\" in ''|/usr/bin/agent-relay) relay_cli= ;; esac");
     expect(content).not.toMatch(/npm install -g agent-relay/);
     expect(content).toContain('relay-desktop#333');
     expect(content).toContain('60-second timeout');
