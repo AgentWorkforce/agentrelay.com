@@ -11,6 +11,8 @@ import {
   type DashboardWindow,
   fetchDashboardStats,
   type HandleStats,
+  DASHBOARD_LINK_USED_PARAM,
+  DASHBOARD_LINK_USED_VALUE,
   parseDashboardWindow,
 } from '../../../../lib/agent-dashboard';
 import { validRegistryHandle } from '../../../../lib/agent-registry';
@@ -48,12 +50,21 @@ const numberFormat = new Intl.NumberFormat('en-US');
 export default async function AgentDashboardPage({ params, searchParams }: PageProps) {
   const { handle } = await params;
   if (!validRegistryHandle(handle)) notFound();
-  const selected = parseDashboardWindow((await searchParams).window);
+  const query = await searchParams;
+  const selected = parseDashboardWindow(query.window);
+  // Set only by the exchange when a link could not be redeemed (fixed value,
+  // never echoed): an older session may still be shown, with this notice.
+  const linkUsed = query[DASHBOARD_LINK_USED_PARAM] === DASHBOARD_LINK_USED_VALUE;
 
   // The session stays on the server: it is only ever sent to the registry as a
   // Bearer token and never passed to a client component or rendered.
   const session = (await cookies()).get(DASHBOARD_SESSION_COOKIE)?.value;
   if (!session) return <Shell handle={handle}><ExpiredState handle={handle} /></Shell>;
+  const linkNotice = linkUsed ? (
+    <p className={s.notice} role="status">
+      That dashboard link was already used or has expired. Showing your current session instead.
+    </p>
+  ) : null;
 
   const [week, month] = await Promise.all([
     fetchDashboardStats(handle, session, 7),
@@ -76,6 +87,7 @@ export default async function AgentDashboardPage({ params, searchParams }: PageP
   const stats = selected === 30 ? month.stats : week.stats;
   return (
     <Shell handle={handle}>
+      {linkNotice}
       <WindowToggle handle={handle} selected={selected} />
       <Comparison week={week.stats} month={month.stats} />
       <WindowView stats={stats} />

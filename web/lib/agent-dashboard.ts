@@ -109,18 +109,6 @@ export function dashboardSessionCookie(handle: string, { session, expiresAt }: D
   ].join('; ');
 }
 
-/** Clears the handle-scoped session so a failed link never shows an older session's data. */
-export function clearDashboardSessionCookie(handle: string): string {
-  return [
-    `${DASHBOARD_SESSION_COOKIE}=`,
-    `Path=${dashboardPath(handle)}`,
-    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
-    'HttpOnly',
-    'Secure',
-    'SameSite=Lax',
-  ].join('; ');
-}
-
 function notFound(): Response {
   return new Response('Not found\n', {
     status: 404,
@@ -159,24 +147,34 @@ export function dashboardConfirmPage(request: Request, handle: string): Response
   });
 }
 
+/** Query marker the exchange adds when a link could not be redeemed. */
+export const DASHBOARD_LINK_USED_PARAM = 'link';
+export const DASHBOARD_LINK_USED_VALUE = 'used';
+
+/** Exact HTTPS origin match (scheme, host, and port) against this site. */
 function sameOrigin(request: Request): boolean {
   const origin = request.headers.get('origin');
   if (!origin || origin === 'null') return false;
-  const requestUrl = new URL(request.url);
-  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  let parsed: URL;
   try {
-    const parsed = new URL(origin);
-    return parsed.host === requestUrl.host || (!!forwardedHost && parsed.host === forwardedHost);
+    parsed = new URL(origin);
   } catch {
     return false;
   }
+  if (parsed.protocol !== 'https:' || parsed.origin !== origin) return false;
+  const allowed = new Set<string>([new URL(request.url).origin]);
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  if (forwardedHost) allowed.add(`https://${forwardedHost}`);
+  return allowed.has(parsed.origin);
 }
 
 /**
  * POST `/u/<handle>/dashboard/exchange` from the confirmation page: redeem the
- * grant server-to-server, then 303 to the bare URL. Success sets the session
- * cookie; failure clears any older session so the page shows the expired-link
- * state. The grant is never reflected in the response.
+ * grant server-to-server, then 303 to the dashboard. Success sets the session
+ * cookie. Failure never touches the cookie (Back or a double submit replays an
+ * already-used grant, and a cross-site form must not be able to log the owner
+ * out); it redirects with `?link=used` so the page says the link did not work.
+ * The grant is never reflected in the response.
  */
 export async function handleDashboardExchange(
   request: Request,
@@ -185,7 +183,6 @@ export async function handleDashboardExchange(
 ): Promise<Response> {
   if (!validRegistryHandle(handle)) return notFound();
   const headers = new Headers(DASHBOARD_EXCHANGE_HEADERS);
-  headers.set('Location', dashboardPath(handle));
   let grant: string | null = null;
   if (sameOrigin(request)) {
     try {
@@ -196,10 +193,12 @@ export async function handleDashboardExchange(
     }
   }
   const session = grant ? await exchangeDashboardGrant(handle, grant, fetcher) : null;
-  headers.append(
-    'Set-Cookie',
-    session ? dashboardSessionCookie(handle, session) : clearDashboardSessionCookie(handle),
-  );
+  if (session) {
+    headers.set('Location', dashboardPath(handle));
+    headers.append('Set-Cookie', dashboardSessionCookie(handle, session));
+  } else {
+    headers.set('Location', `${dashboardPath(handle)}?${DASHBOARD_LINK_USED_PARAM}=${DASHBOARD_LINK_USED_VALUE}`);
+  }
   return new Response(null, { status: 303, headers });
 }
 

@@ -108,26 +108,25 @@ describe('dashboard grant exchange', () => {
     ['a registry outage', async () => { throw new Error('network down'); }],
     ['an already-expired session', async () => Response.json({ session: SESSION, expiresAt: '2000-01-01T00:00:00Z' })],
     ['a malformed session', async () => Response.json({ session: 'bad; Path=/', expiresAt: EXPIRES_AT })],
-  ])('clears any older session on %s', async (_label, impl) => {
+  ])('flags the used link and leaves any existing session alone on %s', async (_label, impl) => {
     const fetcher = vi.fn(impl);
     const response = await handleDashboardExchange(exchangeRequest(), 'acme-support', fetcher as typeof fetch);
     expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toBe('/u/acme-support/dashboard');
-    const cookie = response.headers.get('set-cookie') ?? '';
-    expect(cookie).toMatch(new RegExp(`^${DASHBOARD_SESSION_COOKIE}=;`));
-    expect(cookie).toContain('Path=/u/acme-support/dashboard');
-    expect(cookie).toContain('Expires=Thu, 01 Jan 1970 00:00:00 GMT');
+    expect(response.headers.get('location')).toBe('/u/acme-support/dashboard?link=used');
+    // Back or a double submit replays a used grant; it must not log the owner out.
+    expect(response.headers.get('set-cookie')).toBeNull();
     expect(response.headers.get('cache-control')).toBe('private, no-store');
   });
 
   it('refuses cross-origin or origin-less exchanges without calling the registry', async () => {
     const fetcher = vi.fn();
-    for (const origin of ['https://evil.example', null, 'null']) {
+    for (const origin of ['https://evil.example', 'http://agentrelay.com', 'https://agentrelay.com:8443', null, 'null']) {
       const response = await handleDashboardExchange(
         exchangeRequest('acme-support', GRANT, origin), 'acme-support', fetcher as typeof fetch,
       );
       expect(response.status).toBe(303);
-      expect(response.headers.get('set-cookie')).toContain('Expires=Thu, 01 Jan 1970');
+      // A cross-site form can neither redeem a grant nor clear the owner's session.
+      expect(response.headers.get('set-cookie')).toBeNull();
     }
     expect(fetcher).not.toHaveBeenCalled();
   });

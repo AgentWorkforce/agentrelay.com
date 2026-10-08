@@ -58,6 +58,15 @@ describe('agent dashboard page', () => {
     expect(metadata.robots).toMatchObject({ index: false });
   });
 
+  it('notes an already-used link while keeping the current session', async () => {
+    vi.stubGlobal('fetch', statsFetch((windowDays) => Response.json(stats(windowDays))));
+    const html = await render({ link: 'used' });
+    expect(html).toContain('That dashboard link was already used or has expired.');
+    expect(html).toContain('Last 7 days');
+    const plain = await render({ link: 'something-else' });
+    expect(plain).not.toContain('already used or has expired. Showing');
+  });
+
   it('fetches both windows server-side with the Bearer session and never renders the session', async () => {
     const fetcher = statsFetch((w) => Response.json(stats(w, w === 30 ? { estimated: true } : {})));
     vi.stubGlobal('fetch', fetcher);
