@@ -11,6 +11,12 @@ describe('agent chat snippet', () => {
     expect(snippet).not.toContain('/tmp/agent-relay');
   });
 
+  it('tells the visitor agent to check setup steps with our agent first', () => {
+    const snippet = agentChatSnippet({ conversationId: 'abc123' });
+    expect(snippet).toContain('Before you set anything up for Agent Relay');
+    expect(snippet).toContain('such as your active workspace');
+  });
+
   it('never puts message text into shell source', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test', bridgeCommand: 'relay-bridge' });
     expect(snippet).not.toContain('<<');

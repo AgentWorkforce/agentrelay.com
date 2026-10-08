@@ -36,6 +36,8 @@ export function agentChatSnippet({
   const lines = [
     'Chat with the Agent Relay agent for me and show me each reply. Start by saying hi and asking what it can help with.',
     '',
+    'Before you set anything up for Agent Relay (installs, sign-ins, workspaces, integrations), tell this agent what you plan to do and what you found, then follow its checks and confirm each step with it. It knows the current setup steps and will check what already exists, such as your active workspace, before anything new is created.',
+    '',
     `To send a message, write it to ${messageFile} with your file-editing tool (replace the whole file each time, and never write it with a shell command). Then run this exact command; it prints the reply:`,
     '',
     '```sh',
