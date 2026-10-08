@@ -4,11 +4,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ts from 'typescript';
+import { micromark } from 'micromark';
+import { gfm, gfmHtml } from 'micromark-extension-gfm';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
   FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
-  flowCommentChangeCommand,
+  flowCommentChangeCommand, FLOW_BODY_LIMIT, FLOW_WITHHELD_NOTICE_RESERVE, FLOW_REFERENCE_LIMIT,
   WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
@@ -883,6 +885,216 @@ describe('change metadata contract', () => {
     prepare(markdown, '');
     expect(read(markdown, '.relayflow/pr-body.md')).toBe('## Summary\n');
     expect(validate(markdown, 'tasks.md', 'markdown', '').token).toBe('valid');
+  });
+});
+
+/**
+ * Garden run 80faae32 (AgentWorkforce/flows#494) worked for 92 minutes and then
+ * lost its pull request to `Body is too long (maximum is 65536 characters)`:
+ * nothing bounded summary.md plus the check report (agentrelay.com#160). Every
+ * body the flow posts is capped at FLOW_BODY_LIMIT, measured in bytes, which
+ * also bounds the characters, and the closing reference always survives.
+ */
+describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.com#160)', () => {
+  const chars = (text: string) => Array.from(text).length;
+  /** Renders a body as GitHub does: GFM, raw HTML allowed. */
+  const render = (body: string) => micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()], allowDangerousHtml: true });
+  /**
+   * What a reader sees before the check report, or null when the report is
+   * hidden: inside a code block, an HTML comment, or a collapsed <details>.
+   */
+  const beforeReport = (body: string) => {
+    const html = render(body)
+      .replace(/<!--[\s\S]*?(-->|$)/g, '');
+    const at = html.indexOf('<h2>Checks</h2>');
+    if (at < 0) return null;
+    const before = html.slice(0, at);
+    return (before.match(/<details/g) ?? []).length === (before.match(/<\/details>/g) ?? []).length ? before : null;
+  };
+  const longLines = (prefix: string, count: number, width: number) =>
+    Array.from({ length: count }, (_, i) => `${prefix} ${i} ${'修'.repeat(width)}`).join('\n') + '\n';
+
+  function publishBody(files: Record<string, string>, check = 'fail', baseline = 'fail', reference = 'Fixes #160', source = 'github') {
+    const root = fixture(files);
+    const report = sh(`check=${check}; baseline=${baseline}; reference='${reference}'; ${FLOW_CHECK_REPORT_COMMAND}`, root);
+    const prepare = sh(`reference='${reference}'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
+    const verdict = sh(`title='Fix login'; title_length=9; source='${source}'; identifier='#160'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root).token;
+    return { root, report, prepare, verdict, body: read(root, '.relayflow/pr-body.md') };
+  }
+
+  it('stays under the cap a verbose summary and long check output would break, keeping the summary, the verdict and Fixes', () => {
+    const files = {
+      'summary.md': '## What changed\n\nFixed the login bug.\n\n```ts\n' + longLines('summary', 400, 60),
+      [FLOW_CHECK_SCRIPT]: 'set -e\n' + longLines('# step', 200, 40),
+      '.relayflow/check.log': longLines('FAIL src/login.test.ts', 200, 400),
+      '.relayflow/base-check.log': longLines('FAIL src/other.test.ts', 200, 400),
+      '.relayflow/repair-notes.md': longLines('note', 100, 200),
+    };
+    expect(chars(Object.values(files).join(''))).toBeGreaterThan(65536);
+    const { report, prepare, verdict, body } = publishBody(files);
+    expect(report.code).toBe(0);
+    expect(prepare.token).toBe('prepared');
+    expect(verdict).toBe('valid');
+    expect(chars(body)).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    // Room is left for the push step's withheld-workflow notice.
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(FLOW_BODY_LIMIT).toBeLessThan(65536);
+    // Valid UTF-8: no multibyte character was split.
+    expect(body).not.toContain('\uFFFD');
+    expect(body.startsWith('````text\n## What changed\n\nFixed the login bug.')).toBe(true);
+    expect(body).toContain('**The checks fail on the base commit too**');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    // The newest output is what a reviewer needs, so the logs keep their tail.
+    expect(body).toContain('FAIL src/login.test.ts 199 ');
+    expect(body).toContain('FAIL src/other.test.ts 199 ');
+    expect(body).toMatch(/truncated to fit GitHub's limit/);
+    expect(body).toContain('summary.md in the run workspace');
+    expect(body).toContain('.relayflow/check.log in the run workspace');
+    // The summary's open code fence cannot swallow the report or the reference.
+    expect(beforeReport(body)).toContain('Fixed the login bug.');
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    // A cut script is fenced inside the report's own block, which still ends
+    // where it should: the logs after it render as their own sections.
+    expect(render(body)).toMatch(/<summary>Output on this branch \(last 80 lines\)<\/summary>/);
+    expect(render(body)).toMatch(/<summary>Output on the base commit \(last 80 lines\)<\/summary>/);
+    // The step says what it cut, but never prints the text: a log can hold credentials.
+    expect(body).not.toContain('FAIL src/login.test.ts 120 ');
+    expect(report.stderr).toContain('so it was cut; the full text is .relayflow/check.log in the run workspace');
+    expect(report.stderr).not.toContain('FAIL src/login.test.ts 120 ');
+  });
+
+  it('keeps what fits of a one-line summary, cut at a character boundary', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '修'.repeat(30000) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).not.toContain('\uFFFD');
+    expect(body.split('\n')[1]).toMatch(/^修{15000,}$/);
+    expect(body).toMatch(/truncated to fit GitHub's limit/);
+  });
+
+  it('keeps the verdict and the whole reference when the reference is long', () => {
+    // As long as a reference may be: well past the old fixed 1 KB reserve's margin.
+    const prefix = 'Ticket: https://tickets.example.com/';
+    const reference = prefix + 'a'.repeat(FLOW_REFERENCE_LIMIT - prefix.length);
+    expect(Buffer.byteLength(reference)).toBe(FLOW_REFERENCE_LIMIT);
+    const { verdict, body } = publishBody({ 'summary.md': longLines('summary', 400, 60), '.relayflow/check.log': longLines('FAIL', 80, 400) }, 'fail', 'pass', reference, 'linear');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('**This change breaks checks that pass on the base commit.**');
+    // The whole report survives, to the end of the log: the summary made the room.
+    expect(body).toContain('FAIL 79 ');
+    expect(body.split('\n').filter(line => line === reference)).toHaveLength(1);
+  });
+
+  it('tells the check report the closing reference it must leave room for', () => {
+    const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
+    expect(source).toContain('"; reference=" + shellQuote(changeReference) + "; " + checkReport');
+  });
+
+  it('stays under the cap when the summary opens a fence longer than the reserve', () => {
+    const fence = '`'.repeat(5000);
+    const { verdict, body } = publishBody({ 'summary.md': fence + '\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(beforeReport(body)).not.toBeNull();
+    expect(body).toContain('Relayflow ran this repository\'s checks');
+  });
+
+  // Review on #161: a cut can leave any construct open. The kept text is
+  // shown as plain text, so none of them can hide the report or Fixes.
+  it.each([
+    ['a backtick fence', '```ts\n'],
+    ['a tilde fence', '~~~~text\n'],
+    ['an indented fence', '   ```\n'],
+    ['an HTML comment', '<!--\n'],
+    ['an HTML comment after inline code', 'Strips `<!--` markers.\n\n<!--\n'],
+    ['a comment marker in uneven backticks', 'See ``<!--```.\n\n```\n'],
+    ['a multi-line code span', 'A `<!--\nspan` then\n\n```\n'],
+    ['a collapsed <details>', '<details>\n<summary>More</summary>\n\n'],
+    ['CRLF line endings', 'Done.\r\n\r\n```\r\nx\r\n```\r\n\r\n```\r\n'],
+    ['an invalid backtick fence', '```not `a` fence\n'],
+  ])('keeps the report and Fixes visible when the cut leaves %s open', (_name, opening) => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n' + opening + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(beforeReport(body)).toContain('## What changed');
+    const html = render(body);
+    expect(html).toContain('<p>Fixes #160</p>');
+    expect(html).toMatch(/<em>…truncated to fit GitHub's limit/);
+  });
+
+  it('refuses a reference longer than FLOW_REFERENCE_LIMIT before anything is pushed', () => {
+    const prefix = 'Ticket: https://tickets.example.com/';
+    const reference = prefix + 'a'.repeat(FLOW_REFERENCE_LIMIT - prefix.length + 1);
+    expect(Buffer.byteLength(reference)).toBe(FLOW_REFERENCE_LIMIT + 1);
+    const { prepare, body } = publishBody({ 'summary.md': 'Fixed it.\n' }, 'pass', '', reference, 'linear');
+    expect(prepare.token).toBe('prepared');
+    expect(body).not.toContain(reference);
+    expect(sh(`reference='${reference}'; title='Fix login'; title_length=9; source='linear'; identifier='ENG-1'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, fixture({ '.relayflow/pr-body.md': 'Fixed it.\n' })).token).toBe('reference-too-long');
+    const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
+    expect(source).toContain('f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle)');
+  });
+
+  it('moves a closing reference out of a cut summary, where it would be code', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\nFixes #160\n\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    // So does the last-resort cap of a whole body.
+    const root = fixture({ '.relayflow/pr-body.md': 'Fixes #160\n\n' + longLines('line', 400, 100) });
+    sh(`reference='Fixes #160'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
+    const capped = read(root, '.relayflow/pr-body.md');
+    expect(capped.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    expect(render(capped)).toContain('<p>Fixes #160</p>');
+  });
+
+  it('fences check output that holds a fence of its own', () => {
+    const { body } = publishBody({ 'summary.md': 'Fixed it.\n', '.relayflow/check.log': 'FAIL\n```\nnot the end\n' }, 'fail', 'pass');
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    expect(body).toContain('````\nFAIL\n```\nnot the end\n````\n');
+  });
+
+  it('puts back a closing reference that truncation cut from the summary', () => {
+    const { verdict, body } = publishBody({ 'summary.md': 'x'.repeat(80000) + '\n\nFixes #160\n' }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(chars(body)).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('Relayflow ran this repository\'s checks');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+  });
+
+  it('caps a body that is already too long when the reference is added, ending with the reference', () => {
+    const root = fixture({ '.relayflow/pr-body.md': longLines('line', 400, 100) });
+    expect(sh(`reference='Fixes #160'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root).token).toBe('prepared');
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).not.toContain('\uFFFD');
+    expect(body.trimEnd().endsWith('Fixes #160')).toBe(true);
+    expect(sh(`title='Fix login'; title_length=9; source='github'; identifier='#160'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root).token).toBe('valid');
+  });
+
+  it('leaves a body under the cap exactly as it was', () => {
+    const { body } = publishBody({ 'summary.md': '## What changed\n\nFixed the login bug.\n', '.relayflow/check.log': 'FAIL src/login.test.ts\n' });
+    expect(body).not.toContain('truncated');
+    expect(body).toContain('FAIL src/login.test.ts\n');
+  });
+
+  it('caps the unresolved review it posts', () => {
+    const { code, blocked, ghCalls, stderr } = runReviewBlocked({ 'review.md': '## Findings\n\n' + longLines('P1', 600, 60) }, 'works');
+    expect(code).toBe(0);
+    expect(ghCalls).toContain('pr comment --body-file review-blocked.md');
+    expect(Buffer.byteLength(blocked, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(blocked).not.toContain('\uFFFD');
+    expect(blocked).toContain('## Findings');
+    expect(blocked).toContain('review.md in the run workspace');
+    expect(stderr).toContain('so it was cut');
+    expect(stderr).not.toContain('P1 599 ');
+  });
+
+  it('keeps the time-stop comment under the cap', () => {
+    const root = fixture({});
+    expect(sh(FLOW_TIME_STOP_COMMAND, root, { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` }).code).toBe(0);
+    expect(Buffer.byteLength(read(root, '.relayflow/time-stop.md'), 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(FLOW_TIME_STOP_COMMAND).toContain(`relayflow_cap .relayflow/time-stop.md ${FLOW_BODY_LIMIT}`);
   });
 });
 
