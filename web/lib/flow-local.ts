@@ -472,7 +472,7 @@ export function localKitFiles(draft: FactoryDraft): Record<string, string> {
     'software-factory.flow.mts': factorySource({ ...draft, step: 3 }, 'local'),
     'flow-input.json': JSON.stringify(localInput(draft), null, 2) + '\n',
     [LOCAL_PREFLIGHT]: LOCAL_PREFLIGHT_SCRIPT,
-    'START-HERE.txt': `RUN YOUR SOFTWARE FACTORY LOCALLY
+    'START-HERE.txt': `RUN YOUR SOFTWARE GARDEN LOCALLY
 
 Requirements
 - Node.js 22.18+ (for native TypeScript), npm, and Git.

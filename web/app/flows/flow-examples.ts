@@ -1,7 +1,7 @@
 export const flowExamples = [
   {
     "id": "software-factory",
-    "label": "Software factory",
+    "label": "Software Garden",
     "title": "Turn a ticket into a pull request.",
     "description": "Plan the change, write the code, and run the tests before opening a PR.",
     "filename": "software-factory.flow.ts",

@@ -42,10 +42,10 @@ export function trackedSignupPrompt(product: AgentSignupProduct, origin: string,
 export const signupSteps = {
   teams: [
     { title: 'Sign in', detail: 'Your agent opens Google. You approve access.' },
-    { title: 'Install the app', detail: 'Download, verify, and install Agent Relay on your Mac.' },
+    { title: 'Install the app', detail: 'Download, verify, and install the Agent Relay desktop app.' },
     { title: 'Connect your workspace', detail: 'Link the app to your account and workspace.' },
-    { title: 'Choose what to share', detail: 'Your agent asks which sessions you want to share.' },
-    { title: 'Check everything works', detail: 'Verify the connection and open your workspace.' },
+    { title: 'Choose what to share', detail: 'New sessions are shared; your agent asks before changing an existing choice.' },
+    { title: 'Check everything works', detail: 'Verify the app, then one live session handoff with a teammate.' },
   ],
   flows: [
     { title: 'Sign in', detail: 'Your agent opens Google. You approve access.' },

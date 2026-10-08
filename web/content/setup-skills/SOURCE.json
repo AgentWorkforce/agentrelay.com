@@ -1,0 +1,11 @@
+{
+  "repository": "AgentWorkforce/skills",
+  "commit": "23a0754950654d765c417c188af52d130864b664",
+  "skills": [
+    "signing-in-to-agent-relay-cloud",
+    "setting-up-agent-relay-desktop",
+    "setting-up-agent-relay-sessions",
+    "setting-up-agent-relay-flows",
+    "writing-relayflows"
+  ]
+}

@@ -95,7 +95,7 @@ export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, jou
   // id from shared browser storage. Carrying it here lets Cloud measure whether
   // that continuity actually held and merge the two people when it did not.
   const analytics = { ...(journeyId ? { journeyId } : {}), ...(distinctId ? { distinctId } : {}) };
-  const payload = { version: 1, handoffId, ...(Object.keys(analytics).length ? { analytics } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
+  const payload = { version: 1, handoffId, ...(Object.keys(analytics).length ? { analytics } : {}), name: 'Software Garden', source: factorySource({ ...draft, step: 3 }),
     workflow: draft.workflow, preview: flowPreview(draft), sources: draft.sources, sourceSettings: draft.sourceSettings,
     agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
   const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
