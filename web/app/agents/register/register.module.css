@@ -114,3 +114,21 @@
   background: none;
   font-size: 13px;
 }
+
+/* Example verification badges, matching the /u/<handle> profile badges. Scoped
+   under .content so they win over the list's `.stepList span` colour, and a
+   block-level chip so they never sit inline in (or overlap) the text. */
+.content .badge {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px 0 6px;
+  border: 1px solid #47708d;
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #b9ddf5;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}

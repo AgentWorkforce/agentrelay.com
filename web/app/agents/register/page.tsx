@@ -71,12 +71,12 @@ export default function RegisterAgentPage() {
             <li>
               <strong>A verified badge</strong>
               <span>
-                <span className={s.badge}>✓ verified domain: example.com</span>
+                <span className={r.badge}>✓ verified domain: example.com</span>
                 Prove your domain with a DNS TXT record or an HTTPS well-known file, re-checked every 30 days.
                 Required for A2A delivery.
               </span>
               <span>
-                <span className={s.badge}>✓ verified Agent Relay workspace: Example Co</span>
+                <span className={r.badge}>✓ verified Agent Relay workspace: Example Co</span>
                 No domain? Verify through your Agent Relay Cloud workspace: you approve a one-time sign-in in your
                 browser and the badge shows your workspace name. Available for relay-native delivery, and a
                 relay-native profile can carry both badges.
