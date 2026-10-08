@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { LOCAL_INSTALL, LOCAL_PREFLIGHT, LOCAL_RUN, PLACEHOLDER_BODY, PLACEHOLDER_TITLE, RELAYFLOWS_VERSION, localInput, localKitArchive, localKitFiles } from '../flow-local';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_PUSH_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_PUSH_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 
 /**
  * What each deterministic step reports, keyed by the command itself: three
@@ -17,9 +17,11 @@ import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COM
  */
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
-const REVISION_PUSH = 'base=; comment=yes; ' + FLOW_PUSH_COMMAND;
+/** A check command without the limit the flow gives it (RELAYFLOW_CHECK_TIMEOUT), so it compares as written. */
+const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_TIMEOUT=\d+; /, '');
 
-function answer(command: string, { publish = 'publish', clean = 'yes', check = 'pass' as string | (() => string), baseline = 'pass' } = {}) {
+function answer(raw: string, { publish = 'publish', clean = 'yes', check = 'pass' as string | (() => string), baseline = 'pass' } = {}) {
+  const command = plain(raw);
   if (command === FLOW_CHECK_RUN_COMMAND) return typeof check === 'function' ? check() : check;
   if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
   if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
@@ -258,7 +260,7 @@ describe('local flow starter kit', () => {
       run: async (command: string) => answer(command),
       done: (reason: string) => { finish = reason; },
     }, localRunInput());
-    expect(calls).toEqual(['planner', 'plan-reviewer', 'check-discovery', 'implementer', 'adversary-1', 'adversary-2']);
+    expect(calls).toEqual(['check-discovery', 'implementer', 'adversary']);
     expect(finish).toBe('needs_human');
     expect(factorySource(draft)).toContain('return f.done("needs_human")');
     expect(factorySource(draft, 'local')).not.toContain('f.human(');
@@ -278,7 +280,7 @@ describe('local flow starter kit', () => {
     try {
       await compile(localKitFiles(draft)['software-factory.flow.mts'])({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); return answer(command, { publish: 'no-commits' }); },
+        run: async (command: string) => { commands.push(plain(command)); return answer(command, { publish: 'no-commits' }); },
         done: (reason: string) => { finish = reason; },
       }, localRunInput());
     } finally { console.error = original; }
@@ -295,7 +297,7 @@ describe('local flow starter kit', () => {
       const selected = { ...draft, workflow };
       await compile(factorySource(selected, 'local'))({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); return answer(command); },
+        run: async (command: string) => { commands.push(plain(command)); return answer(command); },
         done: (reason: string) => { finish = reason; },
       }, localRunInput(selected));
       expect(finish).toBe('needs_human');
@@ -317,7 +319,7 @@ describe('local flow starter kit', () => {
       const selected = { ...draft, workflow };
       await compile(factorySource(selected, 'local'))({
         agent: async () => {},
-        run: async (command: string) => { commands.push(command); return answer(command, { check: 'fail', baseline: 'pass' }); },
+        run: async (command: string) => { commands.push(plain(command)); return answer(command, { check: 'fail', baseline: 'pass' }); },
         done: (reason: string) => { finish = reason; },
       }, localRunInput(selected));
       const create = commands.find(command => command.startsWith(FLOW_OPEN_CHANGE_COMMAND)) ?? '';
@@ -327,32 +329,27 @@ describe('local flow starter kit', () => {
     }
   });
 
-  it.each([false, true])('checks and pushes fixer revisions, drafting the pull request if they break passing checks (failure: %s)', async (fail) => {
+  it('runs one review and no fix round: an unresolved review drafts the pull request with its findings', async () => {
     const calls: string[] = [];
-    let checks = 0;
+    const agents: string[] = [];
     let finish = '';
     await compile(factorySource(draft, 'local'))({
-      agent: async (name: string, options: { task: string }) => {
-        calls.push(name);
-        if (name === 'fixer') expect(options.task).toContain('Commit fixes without pushing');
-      },
-      run: async (command: string) => {
-        calls.push(command);
-        return answer(command, { clean: 'no', check: () => (++checks >= 2 && fail ? 'fail' : 'pass') });
-      },
+      agent: async (name: string) => { calls.push(name); agents.push(name); },
+      run: async (command: string) => { calls.push(plain(command)); return answer(command, { clean: 'no' }); },
       done: (reason: string) => { finish = reason; },
     }, localRunInput());
-    const fixer = calls.indexOf('fixer');
-    expect(fixer).toBeGreaterThan(0);
-    expect(calls[fixer + 1]).toBe(FLOW_CHECK_RUN_COMMAND);
-    // Pushed either way: the revision is work, and work is never thrown away.
-    expect(calls.indexOf(REVISION_PUSH)).toBeGreaterThan(fixer);
-    if (fail) {
-      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf(REVISION_PUSH));
-      expect(finish).toBe('step_failed');
-    } else {
-      expect(calls).not.toContain(FLOW_CHECK_BLOCKED_COMMAND);
-    }
+    // Every agent the run started, in order: one review, and nothing after it.
+    expect(agents).toEqual(['check-discovery', 'implementer', 'adversary']);
+    expect(calls.filter(call => call === PUSH)).toHaveLength(1);
+    expect(calls.findIndex(call => call.endsWith(FLOW_REVIEW_BLOCKED_COMMAND))).toBeGreaterThan(calls.indexOf('adversary'));
+    expect(finish).toBe('step_failed');
+  });
+
+  it('tells the person the same wall-clock budget the local flow declares', () => {
+    const files = localKitFiles(draft);
+    expect(files['software-factory.flow.mts']).toContain('wallclock: "3h"');
+    expect(files['START-HERE.txt']).toContain('three-hour wall-clock budget');
+    expect(files['START-HERE.txt']).not.toContain('two-hour');
   });
 
   it('generates valid local source for every preset with an explicit runtime limit', () => {

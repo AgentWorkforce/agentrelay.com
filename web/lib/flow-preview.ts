@@ -23,19 +23,17 @@ export function flowPreview(draft: FactoryDraft) {
       ...workflow.steps.map(step => {
         const configs = rolesForStep(step).map(role => resolveGeneratedAgentSettings(workflow.id, role, draft.agents, draft.agentSettings));
         const human = step === 'Human gate';
-        const review = step === '2× adversarial review';
-        const agents = (review ? configs.slice(0, 1) : configs).map(config => ({
+        const agents = configs.map(config => ({
           id: config.agent, label: CODING_AGENTS.find(agent => agent.id === config.agent)!.label,
           model: config.model,
         }));
         return {
           kind: human ? 'approval' : configs.length ? 'agent' : 'script',
-          title: human ? 'Your approval' : review ? 'Adversarial review' : step,
+          title: human ? 'Your approval' : step,
           description: WORKFLOW_STEP_DETAILS[step],
           owner: human ? 'You' : !agents.length ? 'Script' : agents.length > 1 ? 'Parallel' : agents[0].label,
           detail: agents.map(agent => agents.length > 1 ? `${agent.label} · ${agent.model}` : agent.model).join('\n'),
           icons: step === 'Open PR' ? [repositoryHost(draft.sources)] : agents.map(agent => agent.id),
-          ...(review ? { badge: '2 rounds' } : {}),
         };
       }),
     ],

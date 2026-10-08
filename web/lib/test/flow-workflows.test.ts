@@ -7,7 +7,7 @@ import ts from 'typescript';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
-  FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
+  FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
   flowCommentChangeCommand,
   WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
@@ -530,11 +530,66 @@ describe('FLOW_BASE_CHECK_COMMAND', () => {
     expect(git(root, 'worktree', 'list').trim().split('\n')).toHaveLength(1);
   });
 
+  it('reuses the branch build in a throwaway worktree instead of building a second copy (agentrelay.com#155)', () => {
+    // A Rust build is several GB; a second one for the base commit filled the
+    // 10 GB sandbox. The worktree gets the branch's cache-tagged build
+    // directory, and removing the worktree leaves that directory in place.
+    const { root, ids } = history([{ '.gitignore': 'target/\n', state: 'good' }, { state: 'bad' }]);
+    mkdirSync(path.join(root, '.relayflow'), { recursive: true });
+    mkdirSync(path.join(root, 'target/debug'), { recursive: true });
+    writeFileSync(path.join(root, 'target/CACHEDIR.TAG'), 'Signature: 8a477f597d28d172789f06886806bc55\n');
+    writeFileSync(path.join(root, 'target/debug/built'), 'artifact\n');
+    writeFileSync(path.join(root, FLOW_CHECK_SCRIPT), 'if [ -f target/debug/built ]; then echo "build reused"; else echo "built from scratch"; fi\ngrep -q good state\n');
+    writeFileSync(path.join(root, 'state'), 'bad but edited\n');
+    expect(sh(`base=${ids[0]}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'pass' });
+    expect(read(root, '.relayflow/base-check.log')).toContain('build reused');
+    expect(read(root, 'target/debug/built')).toBe('artifact\n');
+    expect(git(root, 'worktree', 'list').trim().split('\n')).toHaveLength(1);
+  });
+
   it('says unknown, with exit 0, when the base commit cannot be checked out', () => {
     const { root } = compare('good', 'bad');
     for (const base of ['', 'deadbeef'.repeat(5)]) {
       expect(sh(`base=${base}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'unknown' });
     }
+  });
+});
+
+describe('FLOW_FREE_DISK_COMMAND (agentrelay.com#155)', () => {
+  const TAG = 'Signature: 8a477f597d28d172789f06886806bc55\n';
+  /** A repository with an ignored, cache-tagged build directory and a tracked directory that carries a tag too. */
+  function built() {
+    const { root } = history([{ '.gitignore': 'target/\n', 'vendor/CACHEDIR.TAG': TAG, 'vendor/lib.rs': 'tracked\n' }]);
+    mkdirSync(path.join(root, 'crates/core/target/debug'), { recursive: true });
+    writeFileSync(path.join(root, 'crates/core/target/CACHEDIR.TAG'), TAG);
+    writeFileSync(path.join(root, 'crates/core/target/debug/big'), 'build\n');
+    return root;
+  }
+
+  it('removes the builds of trees the run is done with, and only ignored ones', () => {
+    const spent = built();
+    const root = built();
+    const result = sh(`dirs=${spent}; ${FLOW_FREE_DISK_COMMAND}`, root);
+    expect(result).toMatchObject({ code: 0, token: 'done' });
+    expect(existsSync(path.join(spent, 'crates/core/target'))).toBe(false);
+    // Tracked content is never touched, even with a cache tag.
+    expect(read(spent, 'vendor/lib.rs')).toBe('tracked\n');
+    // The branch's own build is what the next check reuses: kept while there is room.
+    expect(read(root, 'crates/core/target/debug/big')).toBe('build\n');
+  });
+
+  it('removes the branch build too when the disk is nearly full, rather than fail the next check', () => {
+    const root = built();
+    const result = sh(FLOW_FREE_DISK_COMMAND, root, { RELAYFLOW_MIN_FREE_MB: String(1024 * 1024 * 1024) });
+    expect(result).toMatchObject({ code: 0, token: 'done' });
+    expect(existsSync(path.join(root, 'crates/core/target'))).toBe(false);
+    expect(read(root, 'vendor/lib.rs')).toBe('tracked\n');
+    expect(result.stderr).toContain('low on disk');
+  });
+
+  it('exits 0 with its token outside a repository and with nothing to free', () => {
+    const root = fixture({ 'README.md': 'x\n' });
+    expect(sh(`dirs=${path.join(root, 'missing')}; ${FLOW_FREE_DISK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'done' });
   });
 });
 
@@ -639,11 +694,39 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     expect(regression.body).not.toContain('FAIL src/other.test.ts');
 
     expect(report('timeout', 'unknown').body).toContain('could not be checked for comparison');
-    expect(report('fail', 'revision').report).toContain('latest revision breaks checks that passed before it');
     const introduced = report('fail', 'new');
     expect(introduced.body).toContain('The checks this change adds fail');
     expect(introduced.body).not.toContain('FAIL src/other.test.ts');
     expect(report('fail', 'fail', { '.relayflow/repair-notes.md': 'cargo is not installed.\n' }).body).toContain('cargo is not installed.');
+  });
+
+  it('says when the checks, or the base commit, were skipped for time (agentrelay.com#155)', () => {
+    const skipped = report('skipped', '');
+    expect(skipped.code).toBe(0);
+    expect(skipped.body).toContain('ran out of time before it could run');
+    expect(skipped.body).toContain('npm test');
+    expect(skipped.body).not.toContain('FAIL src/login.test.ts');
+    const unchecked = report('fail', 'skipped');
+    expect(unchecked.body).toContain('base not checked');
+    expect(unchecked.body).toContain('FAIL src/login.test.ts');
+    expect(unchecked.body).not.toContain('FAIL src/other.test.ts');
+    expect(unchecked.body).not.toContain('could not be checked for comparison');
+  });
+
+  it('keeps the base commit\'s output when its verdict is unknown, such as a base check that ran out of time', () => {
+    const unknown = report('fail', 'unknown');
+    expect(unknown.body).toContain('could not be checked for comparison');
+    expect(unknown.body).toContain('FAIL src/other.test.ts');
+    // No base run, no log: nothing is shown.
+    expect(report('fail', 'unknown', { '.relayflow/base-check.log': '' }).body).not.toContain('Output on the base commit');
+  });
+
+  it('says when the implementer was stopped at its time limit', () => {
+    const root = fixture({ 'summary.md': 'Fixed it.\n' });
+    expect(sh(`check=pass; baseline=; implementer_timeout=yes; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
+    expect(read(root, '.relayflow/pr-body.md')).toContain('implementer was stopped at its time limit');
+    expect(sh(`check=pass; baseline=; implementer_timeout=no; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
+    expect(read(root, '.relayflow/pr-body.md')).not.toContain('implementer was stopped');
   });
 
   it('says plainly when nothing could be checked', () => {
@@ -704,7 +787,6 @@ describe('change request follow-ups (draft and comment)', () => {
     return { root, env: { PATH: `${bin}:/usr/bin:/bin` } };
   }
   const followUps = [
-    ['FLOW_CHECK_BLOCKED_COMMAND', FLOW_CHECK_BLOCKED_COMMAND, '.relayflow/check-report.md'],
     ['FLOW_TIME_STOP_COMMAND', FLOW_TIME_STOP_COMMAND, '.relayflow/time-stop.md'],
     ['FLOW_REVIEW_BLOCKED_COMMAND', FLOW_REVIEW_BLOCKED_COMMAND, 'review-blocked.md'],
   ] as const;
@@ -748,7 +830,7 @@ describe('change request follow-ups (draft and comment)', () => {
   });
 
   it('never calls gh pr ready or gh pr comment except as the local fallback', () => {
-    for (const command of [FLOW_CHECK_BLOCKED_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_PUSH_COMMAND]) {
+    for (const command of [FLOW_TIME_STOP_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_PUSH_COMMAND]) {
       const bare = command.match(/gh pr (ready|comment)/g) ?? [];
       const fallback = command.match(/else gh pr (ready|comment)/g) ?? [];
       expect(bare.length).toBe(fallback.length);
@@ -912,21 +994,20 @@ describe('agent step time limits (agentrelay.com#138)', () => {
     return steps;
   }
 
-  // The allowance each agent step is stopped at; undefined stays unbounded.
-  const LIMITS: Record<string, number | undefined> = {
-    'check-repair': FLOW_TIME.repairMinutes,
-    'adversary': FLOW_TIME.reviewMinutes,
-    'fixer': FLOW_TIME.fixerMinutes,
-    'check-discovery': FLOW_TIME.discoveryMinutes,
-    'planner': undefined,
-    'plan-reviewer': undefined,
-    'implementer': undefined,
-    'prototype': undefined,
-    'comparator': undefined,
+  // How each agent step is stopped on the cloud target. Discovery runs first
+  // and gets its fixed allowance; every later agent gets what is left of the
+  // run after the steps behind it (agentrelay.com#155), computed when it starts.
+  const LIMITS: Record<string, RegExp> = {
+    'check-discovery': new RegExp(`^${FLOW_TIME.discoveryMinutes}m$`),
+    'prototype': /^<not a string literal: timeout: prototypeLimit \+ "m">$/,
+    'comparator': /^<not a string literal: timeout: comparatorLimit \+ "m">$/,
+    'implementer': /^<not a string literal: timeout: implementerLimit \+ "m">$/,
+    'check-repair': /^<not a string literal: timeout: repairLimit \+ "m">$/,
+    'adversary': /^<not a string literal: timeout: reviewLimit \+ "m">$/,
   };
 
   it('keeps every allowance within the runtime\'s 60m ceiling', () => {
-    for (const minutes of Object.values(LIMITS)) if (minutes !== undefined) {
+    for (const minutes of [FLOW_TIME.discoveryMinutes, FLOW_TIME.prototypeMinutes, FLOW_TIME.comparatorMinutes, FLOW_TIME.repairMinutes, FLOW_TIME.reviewMinutes]) {
       expect(minutes).toBeGreaterThan(0);
       expect(minutes).toBeLessThanOrEqual(FLOW_TIME.agentLimitMaxMinutes);
     }
@@ -934,39 +1015,35 @@ describe('agent step time limits (agentrelay.com#138)', () => {
   });
 
   for (const { id } of WORKFLOWS) {
-    it(`stops each long agent step in the ${id} cloud flow at its FLOW_TIME allowance`, () => {
+    it(`stops every agent step in the ${id} cloud flow at a limit`, () => {
       const steps = agentSteps(factorySource(draft(id)));
       expect(steps.length).toBeGreaterThan(0);
       for (const step of steps) {
         expect(Object.keys(LIMITS), step.source).toContain(step.name);
-        const minutes = LIMITS[step.name];
-        expect(step.timeout, step.source).toBe(minutes === undefined ? undefined : `${minutes}m`);
+        expect(step.timeout, step.source).toMatch(LIMITS[step.name]!);
       }
-      // Never vacuous: the repair agent is in every workflow, the reviewer and
-      // fixer where the workflow has them.
       const names = steps.map(step => step.name);
-      expect(names).toContain('check-repair');
-      expect(names).toContain('check-discovery');
-      if (id !== 'simple') expect(names).toContain('adversary');
-      if (id === 'traditional') expect(names).toContain('fixer');
+      // The planner, plan reviewer and fixer are gone (agentrelay.com#155).
+      expect(names).toEqual(id === 'traditional' ? ['check-discovery', 'implementer', 'check-repair', 'adversary']
+        : id === 'prototype' ? ['check-discovery', 'prototype', 'comparator', 'implementer', 'check-repair', 'adversary']
+          : ['check-discovery', 'implementer', 'check-repair']);
     });
 
     it(`handles every timed-out agent in the ${id} flow, and never as success`, () => {
       const source = factorySource(draft(id));
       // The results are read, not dropped, and each branch says what happened.
-      expect(source).toMatch(/const repair = await f\.agent\("check-repair-"/);
+      expect(source).toMatch(/const repair = await f\.agent\("check-repair"/);
       expect(source).toMatch(/if \(timedOut\(repair\)\)/);
       expect(source).toMatch(/const discovery = await f\.agent\("check-discovery"/);
       expect(source).toMatch(/if \(timedOut\(discovery\)\)/);
+      expect(source).toMatch(/const implementation = await f\.agent\("implementer"/);
+      expect(source).toMatch(/implementerTimedOut = timedOut\(implementation\)/);
       if (id !== 'simple') {
-        expect(source).toMatch(/const review = await f\.agent\("adversary-"/);
+        expect(source).toMatch(/const review = await f\.agent\("adversary"/);
         expect(source).toMatch(/reviewTimedOut = timedOut\(review\)/);
         expect(source).toContain('clean = !reviewTimedOut && ');
       }
-      if (id === 'traditional') {
-        expect(source).toMatch(/const fix = await f\.agent\("fixer"/);
-        expect(source).toMatch(/if \(timedOut\(fix\)\)/);
-      }
+      if (id === 'prototype') expect(source).toMatch(/if \(timedOut\(comparison\)\)/);
     });
 
     it(`states no agent time limit in the ${id} local flow, whose pinned runtime predates them`, () => {
@@ -991,12 +1068,12 @@ describe('FLOW_REVIEW_BLOCKED_COMMAND after a timed-out review (agentrelay.com#1
     mkdirSync(bin, { recursive: true });
     writeFileSync(path.join(bin, 'gh'), '#!/bin/sh\necho "$@" >> gh-calls.txt\nexit 0\n', { mode: 0o755 });
     const run = (timedOut: string) => {
-      const result = spawnSync('/bin/sh', ['-c', `review_timeout=${timedOut}; ${FLOW_REVIEW_BLOCKED_COMMAND}`], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+      const result = spawnSync('/bin/sh', ['-c', `review_timeout=${timedOut}; review_limit=12; ${FLOW_REVIEW_BLOCKED_COMMAND}`], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
       return { code: result.status, blocked: read(root, 'review-blocked.md') };
     };
     const stopped = run('yes');
     expect(stopped.code).toBe(0);
-    expect(stopped.blocked).toContain(`stopped at its ${FLOW_TIME.reviewMinutes}-minute limit`);
+    expect(stopped.blocked).toContain('stopped at its 12-minute limit');
     expect(stopped.blocked).toContain('The retry loop still drops the last error.');
     const finished = run('no');
     expect(finished.blocked).not.toContain('stopped at its');
