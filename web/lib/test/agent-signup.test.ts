@@ -5,10 +5,13 @@ import { agentSignupPrompt } from '../agent-signup';
 import { SETUP_SKILLS, SETUP_SKILLS_SOURCE } from '../generated/setup-skills';
 import { getRecommendedFlow } from '../recommended-flow-catalog';
 // @ts-expect-error -- plain .mjs build script without type declarations
-import { renderModule, stripFrontmatter } from '../../scripts/sync-setup-skills.mjs';
+import { readInstalledSkills, renderModule, SETUP_SKILL_NAMES, stripFrontmatter } from '../../scripts/generate-setup-skills.mjs';
 
-const vendored = (name: string) => readFileSync(new URL(`../../content/setup-skills/${name}.md`, import.meta.url), 'utf8');
-const pin = JSON.parse(readFileSync(new URL('../../content/setup-skills/SOURCE.json', import.meta.url), 'utf8'));
+const repoRoot = new URL('../../../', import.meta.url);
+const lockText = readFileSync(new URL('prpm.lock', repoRoot), 'utf8');
+const lock = JSON.parse(lockText);
+const entry = (name: string) => lock.packages[`@agent-relay/${name}#claude`];
+const installed = (name: string) => stripFrontmatter(readFileSync(new URL(entry(name).installedPath, repoRoot), 'utf8'));
 const guide = async (product: string, url = `https://agentrelay.com/signup/agent/${product}`) =>
   (await GET(new Request(url), { params: Promise.resolve({ product }) })).text();
 
@@ -45,19 +48,20 @@ describe('agent signup instructions', () => {
     }
   });
 
-  it('vendors exactly the pinned skills, with frontmatter stripped', () => {
-    expect(pin.repository).toBe('AgentWorkforce/skills');
-    expect(pin.commit).toMatch(/^[0-9a-f]{40}$/);
-    expect(SETUP_SKILLS_SOURCE).toEqual({ repository: pin.repository, commit: pin.commit });
-    expect(Object.keys(SETUP_SKILLS)).toEqual(pin.skills);
-    for (const name of pin.skills) {
-      expect(SETUP_SKILLS[name]).toBe(vendored(name));
+  it('bundles exactly the prpm-installed skills pinned in prpm.lock, with frontmatter stripped', async () => {
+    const versions = Object.fromEntries(SETUP_SKILL_NAMES.map((name: string) => [name, entry(name).version]));
+    expect(SETUP_SKILLS_SOURCE).toEqual({ registry: 'prpm', packages: versions });
+    expect(Object.keys(SETUP_SKILLS)).toEqual(SETUP_SKILL_NAMES);
+    for (const name of SETUP_SKILL_NAMES) {
+      expect(entry(name).resolved).toMatch(/^https:\/\/registry\.prpm\.dev\//);
+      expect(SETUP_SKILLS[name]).toBe(installed(name));
       expect(SETUP_SKILLS[name].startsWith('# ')).toBe(true);
       expect(SETUP_SKILLS[name]).not.toMatch(/^---\nname:/);
     }
-    // The generated module is exactly what the sync script renders from the copies.
+    // The generated module is exactly what the generator renders from the installed files.
     const generated = readFileSync(new URL('../generated/setup-skills.ts', import.meta.url), 'utf8');
-    expect(generated).toBe(renderModule(pin, Object.fromEntries(pin.skills.map((name: string) => [name, vendored(name)]))));
+    expect(generated).toBe(renderModule(versions, Object.fromEntries(SETUP_SKILL_NAMES.map((name: string) => [name, installed(name)]))));
+    await expect(readInstalledSkills('{"packages":{}}', async () => '')).rejects.toThrow('is not in prpm.lock');
     expect(stripFrontmatter('---\nname: x\ndescription: y\n---\n\n# X\n')).toBe('# X\n');
     expect(() => stripFrontmatter('# X\n')).toThrow('frontmatter');
   });
@@ -67,7 +71,7 @@ describe('agent signup instructions', () => {
     ['flows', ['signing-in-to-agent-relay-cloud', 'setting-up-agent-relay-flows', 'writing-relayflows'], ['Cloud account', 'Flows', 'Custom flow authoring']],
   ])('renders %s as the signup header followed by the skills verbatim, in order', async (product, skills, labels) => {
     const content = await guide(product);
-    expect(content).toContain(`verbatim at commit ${pin.commit}`);
+    expect(content).toContain('verbatim as published to the prpm registry');
     let cursor = 0;
     skills.forEach((name, index) => {
       const part = content.indexOf(`# Part ${index + 1}: ${labels[index]}\n\n${SETUP_SKILLS[name].trim()}\n`, cursor);

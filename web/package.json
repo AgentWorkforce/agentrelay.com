@@ -8,10 +8,12 @@
   },
   "scripts": {
     "dev": "next dev --webpack",
+    "prebuild": "node scripts/generate-setup-skills.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "precf:build": "node scripts/generate-setup-skills.mjs",
     "cf:build": "opennextjs-cloudflare build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },

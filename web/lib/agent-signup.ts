@@ -53,9 +53,9 @@ HTTP status, never the body.
 
 This header holds only what is specific to signup. The setup steps are the
 canonical Agent Relay skills from https://github.com/AgentWorkforce/skills,
-included below verbatim at commit ${SETUP_SKILLS_SOURCE.commit}:
+included below verbatim as published to the prpm registry:
 
-${parts.map((part, index) => `- Part ${index + 1}: ${part.label} (${part.skill})`).join('\n')}
+${parts.map((part, index) => `- Part ${index + 1}: ${part.label} (@agent-relay/${part.skill}@${(SETUP_SKILLS_SOURCE.packages as Readonly<Record<string, string>>)[part.skill]})`).join('\n')}
 
 Follow the parts in order${product === 'flows' ? ' (Part 3 is a reference, read only for a custom flow)' : ''}. Where a part says to ask the human, ask the user
 ${product === 'flows' ? 'through the web-input protocol below, not in chat' : 'in your conversation with them'}.

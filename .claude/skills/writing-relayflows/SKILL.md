@@ -1,3 +1,8 @@
+---
+name: writing-relayflows
+description: Use when authoring a Relayflows flow (@relayflows/surface / @relayflows/sdk, the journal-based v2 engine — the CLI is `flows`, package versions 2.0.x) in TypeScript or YAML/JSON. Covers the run/llm/agent ladder, direct child flows with use/dispatch, verification gates, cli/model selection, flows.json, parallel agents, Cloud dashboard mirroring, and `flows check`/`run`/`deploy`/`schedule` refusal shapes. Not for the older, unrelated `@relayflows/core` WorkflowBuilder engine (`.pattern('dag')`/.agent()/.step() chains) covered by `writing-agent-relay-workflows` and `migrating-persona-to-relayflow`.
+---
+
 # Writing Relayflows
 
 ## Overview

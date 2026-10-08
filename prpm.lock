@@ -1,0 +1,37 @@
+{
+  "version": "1.0.0",
+  "lockfileVersion": 1,
+  "packages": {
+    "@agent-relay/setting-up-agent-relay-desktop#claude": {
+      "version": "1.1.4",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-desktop/1.1.4.tar.gz",
+      "integrity": "sha256-de1fa4fb20e2a3d02e4cd86bd32a2f3bc3a6a5276a81e0bbc5c114325f5385bf",
+      "format": "claude",
+      "subtype": "skill",
+      "sourceFormat": "claude",
+      "sourceSubtype": "skill",
+      "installedPath": ".claude/skills/setting-up-agent-relay-desktop/SKILL.md"
+    },
+    "@agent-relay/setting-up-agent-relay-sessions#claude": {
+      "version": "0.2.4",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.2.4.tar.gz",
+      "integrity": "sha256-58021adb458e33c571c92fcf91032466b9653f236323bbf283044b68ba9a3a6e",
+      "format": "claude",
+      "subtype": "skill",
+      "sourceFormat": "claude",
+      "sourceSubtype": "skill",
+      "installedPath": ".claude/skills/setting-up-agent-relay-sessions/SKILL.md"
+    },
+    "@agent-relay/writing-relayflows#claude": {
+      "version": "1.6.0",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fwriting-relayflows/1.6.0.tar.gz",
+      "integrity": "sha256-437a96cbc7fba1e9d0640d08dcedd5182fd83905a859417bea4e46f622a58639",
+      "format": "claude",
+      "subtype": "skill",
+      "sourceFormat": "claude",
+      "sourceSubtype": "skill",
+      "installedPath": ".claude/skills/writing-relayflows/SKILL.md"
+    }
+  },
+  "generated": "2026-10-08T06:50:15.717Z"
+}
