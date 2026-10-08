@@ -266,11 +266,23 @@ export const FLOW_WITHHELD_NOTICE_RESERVE = 2048;
  * the end of its input, or nothing, so a truncated agent text cannot hide
  * the report appended after it. A fence of three or more backticks or tildes
  * indented at most three spaces opens a block (more, or a tab, is an indented
- * code line), and a bare fence of the same character, at least as long,
- * closes it; outside a block, `<!--` opens a comment and `-->` closes it.
+ * code line; a backtick fence whose info string holds a backtick is no
+ * fence), and a bare fence of the same character, at least as long, closes
+ * it. Outside a block and outside inline code, `<!--` opens a comment and
+ * `-->` closes it.
  */
-const BACKTICK = '`';
-const OPEN_FENCE_AWK = String.raw`{ line = $0; if (incomment) { k = index(line, "-->"); if (k == 0) next; incomment = 0; line = substr(line, k + 3); } else if (match($0, /^(   |  | )?(` + BACKTICK.repeat(3) + String.raw`+|~~~+)/)) { f = substr($0, RSTART, RLENGTH); sub(/^ */, "", f); if (open == "") open = f; else if (substr(f, 1, 1) == substr(open, 1, 1) && length(f) >= length(open)) { rest = $0; sub(substr(f, 1, 1) == "~" ? "^(   |  | )?~+[ \t]*$" : "^(   |  | )?` + BACKTICK + String.raw`+[ \t]*$", "", rest); if (rest == "") open = ""; } next; } if (open != "") next; while ((k = index(line, "<!--")) > 0) { line = substr(line, k + 4); k = index(line, "-->"); if (k == 0) { incomment = 1; break; } line = substr(line, k + 3); } } END { if (incomment) print "-->"; if (open != "") print open }`;
+const BT = '`';
+const OPEN_FENCE_AWK = [
+  '{ line = $0',
+  'if (incomment) { k = index(line, "-->"); if (k == 0) next; incomment = 0; line = substr(line, k + 3) } '
+    + `else if (match($0, /^(   |  | )?(${BT.repeat(3)}+|~~~+)/)) { f = substr($0, RSTART, RLENGTH); sub(/^ */, "", f); tail = substr($0, RSTART + RLENGTH); `
+    + `if (open == "") { if (substr(f, 1, 1) == "~" || tail !~ /${BT}/) { open = f; next } } `
+    + 'else { if (substr(f, 1, 1) == substr(open, 1, 1) && length(f) >= length(open) && tail ~ /^[ \t]*$/) open = ""; next } }',
+  'if (open != "") next',
+  `gsub(/${BT}+[^${BT}]*${BT}+/, "", line)`,
+  'while ((k = index(line, "<!--")) > 0) { line = substr(line, k + 4); k = index(line, "-->"); if (k == 0) { incomment = 1; break } line = substr(line, k + 3) } }',
+  'END { if (incomment) print "-->"; if (open != "") print open }',
+].join('; ');
 
 /**
  * `relayflow_cap <file> <bytes> <head|tail> <where>` cuts `file` to at most

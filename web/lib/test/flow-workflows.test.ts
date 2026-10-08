@@ -1031,6 +1031,14 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(body.split('\n')).toContain('```');
   });
 
+  it('ignores a comment marker in inline code and a backtick fence with a backtick in its info string', () => {
+    const inline = publishBody({ 'summary.md': 'Strips `<!--` markers.\n\n```ts\n' + longLines('code', 400, 60) }, 'pass', '').body.split('\n');
+    expect(inline).toContain('```');
+    expect(inline).not.toContain('-->');
+    const info = publishBody({ 'summary.md': '```not `a` fence\n' + longLines('code', 400, 60) }, 'pass', '').body.split('\n');
+    expect(info).not.toContain('```');
+  });
+
   it('puts back a closing reference that truncation cut from the summary', () => {
     const { verdict, body } = publishBody({ 'summary.md': 'x'.repeat(80000) + '\n\nFixes #160\n' }, 'pass', '');
     expect(verdict).toBe('valid');
