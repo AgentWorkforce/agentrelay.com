@@ -3,9 +3,9 @@
   "lockfileVersion": 1,
   "packages": {
     "@agent-relay/setting-up-agent-relay-desktop#claude": {
-      "version": "1.1.5",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-desktop/1.1.5.tar.gz",
-      "integrity": "sha256-977560daebe00574ab9af8964f0004e0535f62f94a65f53a7f9cbb5de592fd35",
+      "version": "1.1.7",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-desktop/1.1.7.tar.gz",
+      "integrity": "sha256-8dacdacdd3aeafb004b434a5786d2b0803c2d0f951ecc0575d61999a1fc4d572",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
@@ -13,9 +13,9 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-desktop/SKILL.md"
     },
     "@agent-relay/setting-up-agent-relay-sessions#claude": {
-      "version": "0.2.5",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.2.5.tar.gz",
-      "integrity": "sha256-4e6234a7f970d6d653ca3cb50381a0959c5dd49171d64a81e743dff56613e1df",
+      "version": "0.2.6",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.2.6.tar.gz",
+      "integrity": "sha256-9488abb24d2f52f39db1700c24cc3f00b2ee4873902fdfc4546400ee957862f7",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
@@ -23,9 +23,9 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-sessions/SKILL.md"
     },
     "@agent-relay/writing-relayflows#claude": {
-      "version": "1.6.0",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fwriting-relayflows/1.6.0.tar.gz",
-      "integrity": "sha256-437a96cbc7fba1e9d0640d08dcedd5182fd83905a859417bea4e46f622a58639",
+      "version": "1.6.1",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fwriting-relayflows/1.6.1.tar.gz",
+      "integrity": "sha256-0c2153565fd024181bc0eaf9e2295878a105e4de8a90278f22aa3a93cbd32e58",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
@@ -53,5 +53,5 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-flows/SKILL.md"
     }
   },
-  "generated": "2026-10-08T07:02:02.207Z"
+  "generated": "2026-10-08T13:31:17.561Z"
 }
