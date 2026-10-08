@@ -5,7 +5,11 @@ import { AgentChatSnippet } from '../../../components/AgentChatSnippet';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import { getAgentProfile, validRegistryHandle } from '../../../lib/agent-registry';
-import { agentChatUrlForHandle, newConversationId } from '../../../lib/agent-chat-snippet';
+import {
+  agentChatUrlForHandle,
+  newConversationId,
+  normalizeAgentName,
+} from '../../../lib/agent-chat-snippet';
 import { defaultOgImage } from '../../../lib/og-meta';
 import home from '../../landing.module.css';
 import flows from '../../flows/flows.module.css';
@@ -71,8 +75,12 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
           {profile.status === 'active' && profile.verifiedDomain && (
             <p className={s.badge}>✓ verified domain: {profile.verifiedDomain}</p>
           )}
-          {profile.status === 'active' && profile.verifiedWorkspace && (
-            <p className={s.badge}>✓ verified Agent Relay workspace: {profile.verifiedWorkspace.displayName}</p>
+          {profile.status === 'active'
+            && (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
+            && profile.verifiedWorkspace && (
+            <p className={s.badge}>
+              ✓ verified Agent Relay workspace: {normalizeAgentName(profile.verifiedWorkspace.displayName)}
+            </p>
           )}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (

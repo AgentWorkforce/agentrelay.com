@@ -26,12 +26,21 @@ describe('public agent registry profiles', () => {
     const accountProfile = {
       ...PROFILE,
       verifiedDomain: null,
-      verifiedWorkspace: { displayName: 'Acme Workspace' },
+      verifiedWorkspace: {
+        displayName: 'Acme Workspace',
+        accountId: 'private-account-id-sentinel',
+      },
       verificationMethod: 'account',
+      accountId: 'private-account-id-sentinel',
     };
     const accountFetcher = vi.fn(async () => Response.json(accountProfile));
+    const { accountId: _accountId, ...accountProfileWithoutTopLevelId } = accountProfile;
+    const expectedAccountProfile = {
+      ...accountProfileWithoutTopLevelId,
+      verifiedWorkspace: { displayName: 'Acme Workspace' },
+    };
     await expect(fetchAgentProfile('acme-support', accountFetcher as typeof fetch))
-      .resolves.toEqual(accountProfile);
+      .resolves.toEqual(expectedAccountProfile);
 
     const bothProfile = {
       ...PROFILE,
@@ -52,6 +61,16 @@ describe('public agent registry profiles', () => {
     }));
     await expect(fetchAgentProfile('acme-support', fetcher as typeof fetch))
       .rejects.toThrow('invalid profile');
+
+    for (const verificationMethod of [undefined, 'domain']) {
+      const domainWithWorkspace = vi.fn(async () => Response.json({
+        ...PROFILE,
+        verifiedWorkspace: { displayName: 'Impersonated Workspace' },
+        ...(verificationMethod ? { verificationMethod } : {}),
+      }));
+      await expect(fetchAgentProfile('acme-support', domainWithWorkspace as typeof fetch))
+        .rejects.toThrow('invalid profile');
+    }
   });
 
   it('maps only a registry 404 to an unknown handle', async () => {

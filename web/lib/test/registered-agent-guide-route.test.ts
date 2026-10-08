@@ -67,4 +67,24 @@ describe('registered agent markdown guide', () => {
     expect(guide).toContain('- Verified Agent Relay workspace: Acme # injected');
     expect(guide).not.toContain('\n# injected');
   });
+
+  it('sanitizes domain controls and Markdown in the agent guide', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      handle: 'domain-agent',
+      displayName: 'Domain Agent',
+      description: 'Answers domain questions.',
+      verifiedDomain: 'acme.example\n\n# injected\u202E',
+      verificationMethod: 'domain',
+      verifiedAt: '2026-10-08T12:00:00.000Z',
+      deliveryType: 'a2a',
+      status: 'active',
+    })));
+    const response = await GET(new Request('https://agentrelay.com/u/domain-agent/agent.md'), {
+      params: Promise.resolve({ handle: 'domain-agent' }),
+    });
+    const guide = await response.text();
+    expect(guide).toContain('- Verified domain: acme.example # injected');
+    expect(guide).not.toContain('\n# injected');
+    expect(guide).not.toContain('\u202E');
+  });
 });

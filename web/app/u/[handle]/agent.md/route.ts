@@ -41,8 +41,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
     agentHandle: profile.handle,
   });
   const verification = [
-    profile.verifiedDomain ? `- Verified domain: ${profile.verifiedDomain}` : null,
-    profile.verifiedWorkspace
+    profile.verifiedDomain ? `- Verified domain: ${normalizeAgentName(profile.verifiedDomain)}` : null,
+    (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
+      && profile.verifiedWorkspace
       ? `- Verified Agent Relay workspace: ${normalizeAgentName(profile.verifiedWorkspace.displayName)}`
       : null,
   ].filter(Boolean).join('\n');

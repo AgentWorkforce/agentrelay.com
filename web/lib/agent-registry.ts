@@ -47,7 +47,7 @@ export async function fetchAgentProfile(
   if (!isPublicAgentProfile(value) || value.handle !== handle) {
     throw new Error('Agent registry returned an invalid profile');
   }
-  return value;
+  return projectPublicAgentProfile(value);
 }
 
 export async function readBoundedBody(response: Response, limit: number): Promise<string> {
@@ -99,8 +99,14 @@ function validVerifiedWorkspace(value: unknown): boolean {
 }
 
 function validVerificationMethod(profile: Record<string, unknown>): boolean {
-  if (profile.verificationMethod === undefined) return typeof profile.verifiedDomain === 'string';
-  if (profile.verificationMethod === 'domain') return typeof profile.verifiedDomain === 'string';
+  const hasNoWorkspaceClaim = profile.verifiedWorkspace === undefined
+    || profile.verifiedWorkspace === null;
+  if (profile.verificationMethod === undefined) {
+    return typeof profile.verifiedDomain === 'string' && hasNoWorkspaceClaim;
+  }
+  if (profile.verificationMethod === 'domain') {
+    return typeof profile.verifiedDomain === 'string' && hasNoWorkspaceClaim;
+  }
   if (profile.verificationMethod === 'account') {
     return profile.verifiedDomain === null
       && profile.verifiedWorkspace !== undefined
@@ -110,6 +116,26 @@ function validVerificationMethod(profile: Record<string, unknown>): boolean {
     && typeof profile.verifiedDomain === 'string'
     && profile.verifiedWorkspace !== undefined
     && profile.verifiedWorkspace !== null;
+}
+
+function projectPublicAgentProfile(profile: PublicAgentProfile): PublicAgentProfile {
+  return {
+    handle: profile.handle,
+    displayName: profile.displayName,
+    description: profile.description,
+    verifiedDomain: profile.verifiedDomain,
+    ...(profile.verifiedWorkspace !== undefined ? {
+      verifiedWorkspace: profile.verifiedWorkspace === null
+        ? null
+        : { displayName: profile.verifiedWorkspace.displayName },
+    } : {}),
+    ...(profile.verificationMethod !== undefined
+      ? { verificationMethod: profile.verificationMethod }
+      : {}),
+    verifiedAt: profile.verifiedAt,
+    deliveryType: profile.deliveryType,
+    status: profile.status,
+  };
 }
 
 function boundedString(value: unknown, minimum: number, maximum: number): value is string {
