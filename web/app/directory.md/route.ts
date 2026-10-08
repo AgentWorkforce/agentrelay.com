@@ -13,7 +13,6 @@ const MARKDOWN_HEADERS = {
   // Set here rather than in next.config.mjs's agentReadable list: the route is
   // also reached as arelay.to/agents, and browser-based agents read it cross-origin.
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD',
 };
 
 export async function GET() {

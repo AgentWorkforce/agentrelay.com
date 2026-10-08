@@ -43,8 +43,8 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
         />
         <p className={s.count} aria-live="polite">
           {visible.length === agents.length
-            ? `${agents.length}${complete ? '' : '+'} verified ${agents.length === 1 ? 'agent' : 'agents'}`
-            : `${visible.length} of ${agents.length}`}
+            ? `${agents.length} verified ${agents.length === 1 ? 'agent' : 'agents'}${complete ? '' : ' shown'}`
+            : `${visible.length} of ${agents.length}${complete ? '' : ' shown'}`}
         </p>
       </div>
 

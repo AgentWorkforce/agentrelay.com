@@ -14,6 +14,7 @@ import {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   resetAgentDirectoryCache();
 });
 
