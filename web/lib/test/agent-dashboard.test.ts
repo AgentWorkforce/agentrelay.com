@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { GET } from '../../app/u/[handle]/dashboard/exchange/route';
+import { GET, POST } from '../../app/u/[handle]/dashboard/exchange/route';
 import {
   DASHBOARD_PAGE_HEADERS,
   DASHBOARD_SESSION_COOKIE,
+  dashboardConfirmPage,
   fetchDashboardStats,
   handleDashboardExchange,
   parseDashboardWindow,
@@ -30,8 +31,20 @@ const STATS = {
   outcomes: [{ name: 'ok', count: 8 }, { name: 'timeout', count: 1 }],
 };
 
-function exchangeRequest(handle = 'acme-support', grant = GRANT) {
-  return new Request(`https://agentrelay.com/u/${handle}/dashboard?grant=${encodeURIComponent(grant)}`);
+function linkRequest(handle = 'acme-support', grant = GRANT, method = 'GET') {
+  return new Request(`https://agentrelay.com/u/${handle}/dashboard?grant=${encodeURIComponent(grant)}`, { method });
+}
+
+function exchangeRequest(handle = 'acme-support', grant = GRANT, origin: string | null = 'https://agentrelay.com') {
+  const body = new URLSearchParams({ grant });
+  return new Request(`https://agentrelay.com/u/${handle}/dashboard/exchange`, {
+    method: 'POST',
+    body,
+    headers: {
+      'content-type': 'application/x-www-form-urlencoded',
+      ...(origin ? { origin } : {}),
+    },
+  });
 }
 
 function allHeaderText(response: Response): string {
@@ -95,22 +108,27 @@ describe('dashboard grant exchange', () => {
     ['a registry outage', async () => { throw new Error('network down'); }],
     ['an already-expired session', async () => Response.json({ session: SESSION, expiresAt: '2000-01-01T00:00:00Z' })],
     ['a malformed session', async () => Response.json({ session: 'bad; Path=/', expiresAt: EXPIRES_AT })],
-  ])('redirects without a cookie on %s', async (_label, impl) => {
+  ])('clears any older session on %s', async (_label, impl) => {
     const fetcher = vi.fn(impl);
     const response = await handleDashboardExchange(exchangeRequest(), 'acme-support', fetcher as typeof fetch);
     expect(response.status).toBe(303);
     expect(response.headers.get('location')).toBe('/u/acme-support/dashboard');
-    expect(response.headers.get('set-cookie')).toBeNull();
+    const cookie = response.headers.get('set-cookie') ?? '';
+    expect(cookie).toMatch(new RegExp(`^${DASHBOARD_SESSION_COOKIE}=;`));
+    expect(cookie).toContain('Path=/u/acme-support/dashboard');
+    expect(cookie).toContain('Expires=Thu, 01 Jan 1970 00:00:00 GMT');
     expect(response.headers.get('cache-control')).toBe('private, no-store');
   });
 
-  it('redirects without calling the registry when there is no grant', async () => {
+  it('refuses cross-origin or origin-less exchanges without calling the registry', async () => {
     const fetcher = vi.fn();
-    const response = await handleDashboardExchange(
-      new Request('https://agentrelay.com/u/acme-support/dashboard'), 'acme-support', fetcher as typeof fetch,
-    );
-    expect(response.status).toBe(303);
-    expect(response.headers.get('set-cookie')).toBeNull();
+    for (const origin of ['https://evil.example', null, 'null']) {
+      const response = await handleDashboardExchange(
+        exchangeRequest('acme-support', GRANT, origin), 'acme-support', fetcher as typeof fetch,
+      );
+      expect(response.status).toBe(303);
+      expect(response.headers.get('set-cookie')).toContain('Expires=Thu, 01 Jan 1970');
+    }
     expect(fetcher).not.toHaveBeenCalled();
   });
 
@@ -126,13 +144,43 @@ describe('dashboard grant exchange', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
-  it('is wired as a GET route handler using the global fetch', async () => {
+  it('never redeems the grant on GET or HEAD, so scanners and prefetchers cannot burn it', async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal('fetch', fetcher);
+    for (const method of ['GET', 'HEAD']) {
+      const response = await GET(linkRequest('acme-support', GRANT, method), {
+        params: Promise.resolve({ handle: 'acme-support' }),
+      });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('set-cookie')).toBeNull();
+      expect(response.headers.get('cache-control')).toBe('private, no-store');
+      expect(response.headers.get('referrer-policy')).toBe('no-referrer');
+      const csp = response.headers.get('content-security-policy') ?? '';
+      expect(csp).toContain("default-src 'none'");
+      expect(csp).toContain("form-action 'self'");
+      expect(csp).not.toContain('script-src');
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it('renders a script-free confirmation that posts the grant to the exchange', async () => {
+    const response = dashboardConfirmPage(linkRequest(), 'acme-support');
+    const html = await response.text();
+    expect(html).not.toMatch(/<script/i);
+    expect(html).toContain('<form method="post" action="/u/acme-support/dashboard/exchange">');
+    expect(html).toContain('name="grant"');
+    const injected = dashboardConfirmPage(linkRequest('acme-support', '"><img src=x>'), 'acme-support');
+    expect(injected.status).toBe(303);
+    expect(dashboardConfirmPage(linkRequest(), 'NOPE').status).toBe(404);
+  });
+
+  it('is wired as a POST route handler using the global fetch', async () => {
     const fetcher = vi.fn(async () => Response.json({ session: SESSION, expiresAt: EXPIRES_AT }));
     vi.stubGlobal('fetch', fetcher);
-    const response = await GET(exchangeRequest(), { params: Promise.resolve({ handle: 'acme-support' }) });
+    const response = await POST(exchangeRequest(), { params: Promise.resolve({ handle: 'acme-support' }) });
     expect(response.status).toBe(303);
     expect(response.headers.get('set-cookie')).toContain(`${DASHBOARD_SESSION_COOKIE}=${SESSION}`);
-    const invalid = await GET(exchangeRequest(), { params: Promise.resolve({ handle: 'NOPE' }) });
+    const invalid = await POST(exchangeRequest(), { params: Promise.resolve({ handle: 'NOPE' }) });
     expect(invalid.status).toBe(404);
   });
 });

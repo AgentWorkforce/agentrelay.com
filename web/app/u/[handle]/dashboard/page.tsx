@@ -88,7 +88,8 @@ function Shell({ handle, children }: { handle: string; children: ReactNode }) {
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
       <SiteNav />
-      <main id="main" className={s.main}>
+      {/* ph-sensitive/ph-no-capture: session replay must never record dashboard data. */}
+      <main id="main" className={`${s.main} ph-sensitive ph-no-capture`}>
         <header className={s.header}>
           <h1 className={s.headline}>Agent dashboard</h1>
           <p className={s.handle}>{handle}</p>
@@ -167,8 +168,11 @@ function Comparison({ week, month }: { week: HandleStats; month: HandleStats }) 
 
 function WindowView({ stats }: { stats: HandleStats }) {
   const { totals } = stats;
-  const empty = totals.conversations === 0 && totals.visitorMessages === 0 && totals.guideFetches === 0
-    && stats.daily.every((day) => day.conversations === 0 && day.dailyUniqueVisitors === 0);
+  const empty = Object.values(totals).every((value) => value === 0)
+    && stats.latencyMs === null
+    && stats.daily.every((day) => day.conversations === 0 && day.visitorMessages === 0
+      && day.repliesDelivered === 0 && day.dailyUniqueVisitors === 0)
+    && [...stats.clients, ...stats.countries, ...stats.outcomes].every((row) => row.count === 0);
   return (
     <section className={s.section} aria-labelledby="window-heading">
       <h2 id="window-heading" className={s.sectionHeading}>

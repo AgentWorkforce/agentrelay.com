@@ -30,6 +30,18 @@ export const DASHBOARD_EXCHANGE_HEADERS: Readonly<Record<string, string>> = {
   'X-Content-Type-Options': 'nosniff',
 };
 
+/**
+ * Headers for the confirmation interstitial: inline styles only, no scripts,
+ * and its one form may post only to this origin.
+ */
+export const DASHBOARD_CONFIRM_HEADERS: Readonly<Record<string, string>> = {
+  'Cache-Control': 'private, no-store',
+  'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  'X-Content-Type-Options': 'nosniff',
+  'X-Robots-Tag': 'noindex, nofollow',
+};
+
 /** Headers for the rendered dashboard page (applied in next.config.mjs). */
 export const DASHBOARD_PAGE_HEADERS: Readonly<Record<string, string>> = {
   'Cache-Control': 'private, no-store',
@@ -97,29 +109,97 @@ export function dashboardSessionCookie(handle: string, { session, expiresAt }: D
   ].join('; ');
 }
 
+/** Clears the handle-scoped session so a failed link never shows an older session's data. */
+export function clearDashboardSessionCookie(handle: string): string {
+  return [
+    `${DASHBOARD_SESSION_COOKIE}=`,
+    `Path=${dashboardPath(handle)}`,
+    'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+    'HttpOnly',
+    'Secure',
+    'SameSite=Lax',
+  ].join('; ');
+}
+
+function notFound(): Response {
+  return new Response('Not found\n', {
+    status: 404,
+    headers: { ...DASHBOARD_EXCHANGE_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+}
+
 /**
- * Handle `/u/<handle>/dashboard?grant=...`: exchange, then 303 to the bare URL.
- * Success sets the session cookie; failure sets nothing, so the page shows the
- * expired-link state. The grant is never reflected in the response.
+ * GET (and HEAD) `/u/<handle>/dashboard?grant=...` never redeems the grant: link
+ * scanners, unfurlers and prefetchers would otherwise burn the single-use link.
+ * It returns a static, script-free page whose button POSTs the grant to the
+ * exchange. No React page, layout, or analytics code runs for it.
+ */
+export function dashboardConfirmPage(request: Request, handle: string): Response {
+  if (!validRegistryHandle(handle)) return notFound();
+  const grant = new URL(request.url).searchParams.get('grant');
+  if (!grant || grant.length > MAX_GRANT_LENGTH || !GRANT_PATTERN.test(grant)) {
+    const headers = new Headers(DASHBOARD_EXCHANGE_HEADERS);
+    headers.set('Location', dashboardPath(handle));
+    return new Response(null, { status: 303, headers });
+  }
+  const body = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow"><meta name="referrer" content="no-referrer"><title>Open agent dashboard</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#0b0d10;color:#e8eaed}main{max-width:28rem;padding:2rem;text-align:center}button{font:inherit;padding:.75rem 1.5rem;border-radius:.5rem;border:0;background:#4f8cff;color:#fff;cursor:pointer}p{color:#aab1bb}</style>
+</head><body><main><h1>Agent dashboard</h1><p>Open the analytics dashboard for <strong>${escapeHtml(handle)}</strong>. This link works once and expires 15 minutes after it was created.</p>
+<form method="post" action="${escapeHtml(dashboardPath(handle))}/exchange"><input type="hidden" name="grant" value="${escapeHtml(grant)}"><button type="submit">Open dashboard</button></form></main></body></html>
+`;
+  return new Response(request.method === 'HEAD' ? null : body, {
+    status: 200,
+    headers: { ...DASHBOARD_CONFIRM_HEADERS, 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
+function sameOrigin(request: Request): boolean {
+  const origin = request.headers.get('origin');
+  if (!origin || origin === 'null') return false;
+  const requestUrl = new URL(request.url);
+  const forwardedHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host');
+  try {
+    const parsed = new URL(origin);
+    return parsed.host === requestUrl.host || (!!forwardedHost && parsed.host === forwardedHost);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * POST `/u/<handle>/dashboard/exchange` from the confirmation page: redeem the
+ * grant server-to-server, then 303 to the bare URL. Success sets the session
+ * cookie; failure clears any older session so the page shows the expired-link
+ * state. The grant is never reflected in the response.
  */
 export async function handleDashboardExchange(
   request: Request,
   handle: string,
   fetcher: typeof globalThis.fetch = globalThis.fetch,
 ): Promise<Response> {
-  if (!validRegistryHandle(handle)) {
-    return new Response('Not found\n', {
-      status: 404,
-      headers: { ...DASHBOARD_EXCHANGE_HEADERS, 'Content-Type': 'text/plain; charset=utf-8' },
-    });
-  }
+  if (!validRegistryHandle(handle)) return notFound();
   const headers = new Headers(DASHBOARD_EXCHANGE_HEADERS);
   headers.set('Location', dashboardPath(handle));
-  const grant = new URL(request.url).searchParams.get('grant');
-  if (grant) {
-    const session = await exchangeDashboardGrant(handle, grant, fetcher);
-    if (session) headers.append('Set-Cookie', dashboardSessionCookie(handle, session));
+  let grant: string | null = null;
+  if (sameOrigin(request)) {
+    try {
+      const value = (await request.formData()).get('grant');
+      grant = typeof value === 'string' ? value : null;
+    } catch {
+      grant = null;
+    }
   }
+  const session = grant ? await exchangeDashboardGrant(handle, grant, fetcher) : null;
+  headers.append(
+    'Set-Cookie',
+    session ? dashboardSessionCookie(handle, session) : clearDashboardSessionCookie(handle),
+  );
   return new Response(null, { status: 303, headers });
 }
 
