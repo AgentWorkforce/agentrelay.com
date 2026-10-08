@@ -902,8 +902,9 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
    * reader sees before the check report, or null when the report is hidden:
    * inside a code block, an HTML comment, or a collapsed <details>.
    */
+  const render = (body: string) => micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()], allowDangerousHtml: true });
   const beforeReport = (body: string) => {
-    const html = micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()], allowDangerousHtml: true })
+    const html = render(body)
       .replace(/<!--[\s\S]*?(-->|$)/g, '');
     const at = html.indexOf('<h2>Checks</h2>');
     if (at < 0) return null;
@@ -951,7 +952,11 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(body).toContain('.relayflow/check.log in the run workspace');
     // The summary's open code fence cannot swallow the report or the reference.
     expect(beforeReport(body)).toContain('Fixed the login bug.');
-    expect(micromark(body)).toContain('<p>Fixes #160</p>');
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    // A cut script is fenced inside the report's own block, which still ends
+    // where it should: the logs after it render as their own sections.
+    expect(render(body)).toMatch(/<summary>Output on this branch \(last 80 lines\)<\/summary>/);
+    expect(render(body)).toMatch(/<summary>Output on the base commit \(last 80 lines\)<\/summary>/);
     // The step says what it cut, but never prints the text: a log can hold credentials.
     expect(body).not.toContain('FAIL src/login.test.ts 120 ');
     expect(report.stderr).toContain('so it was cut; the full text is .relayflow/check.log in the run workspace');
@@ -1013,7 +1018,7 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(verdict).toBe('valid');
     expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
     expect(beforeReport(body)).toContain('## What changed');
-    const html = micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()] });
+    const html = render(body);
     expect(html).toContain('<p>Fixes #160</p>');
     expect(html).toMatch(/<em>…truncated to fit GitHub's limit/);
   });
@@ -1028,6 +1033,25 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(sh(`reference='${reference}'; title='Fix login'; title_length=9; source='linear'; identifier='ENG-1'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, fixture({ '.relayflow/pr-body.md': 'Fixed it.\n' })).token).toBe('reference-too-long');
     const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
     expect(source).toContain('f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle)');
+  });
+
+  it('moves a closing reference out of a cut summary, where it would be code', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\nFixes #160\n\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    // So does the last-resort cap of a whole body.
+    const root = fixture({ '.relayflow/pr-body.md': 'Fixes #160\n\n' + longLines('line', 400, 100) });
+    sh(`reference='Fixes #160'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
+    const capped = read(root, '.relayflow/pr-body.md');
+    expect(capped.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    expect(render(capped)).toContain('<p>Fixes #160</p>');
+  });
+
+  it('fences check output that holds a fence of its own', () => {
+    const { body } = publishBody({ 'summary.md': 'Fixed it.\n', '.relayflow/check.log': 'FAIL\n```\nnot the end\n' }, 'fail', 'pass');
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    expect(body).toContain('````\nFAIL\n```\nnot the end\n````\n');
   });
 
   it('puts back a closing reference that truncation cut from the summary', () => {

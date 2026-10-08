@@ -281,7 +281,18 @@ const LONGEST_BACKTICK_RUN_AWK = '{ s = $0; while (match(s, /`+/)) { if (RLENGTH
  * `bytes` is left as it is. Always returns 0.
  */
 const CAP_RESERVE = 512;
-const CAP_FUNCTION = 'relayflow_cap() { ' + [
+
+/**
+ * `relayflow_block <file> <info>` prints `file` as a fenced code block whose
+ * fence is longer than any run of backticks in it, so nothing inside, not
+ * even another fence, can end the block early.
+ */
+const BLOCK_FUNCTION = 'relayflow_block() { '
+  + `block_run=$(LC_ALL=C awk '${LONGEST_BACKTICK_RUN_AWK}' "$1"); if [ "\${block_run:-0}" -lt 3 ]; then block_run=2; fi; `
+  + 'block_fence=$(printf "%$((block_run + 1))s" "" | tr " " \'`\'); '
+  + 'printf "%s%s\\n" "$block_fence" "$2"; cat "$1"; if [ -s "$1" ] && [ "$(LC_ALL=C tail -c 1 "$1" | wc -l | tr -d " ")" -eq 0 ]; then echo; fi; printf "%s\\n" "$block_fence"; }';
+
+const CAP_FUNCTION = BLOCK_FUNCTION + '; relayflow_cap() { ' + [
   'cap_size=$(LC_ALL=C wc -c < "$1" | tr -d " ")',
   'if [ "$cap_size" -le "$2" ]; then return 0; fi',
   'echo "relayflow: $1 is $cap_size bytes, more than the $2 it may hold, so it was cut; the full text is $4." >&2',
@@ -300,9 +311,7 @@ const CAP_FUNCTION = 'relayflow_cap() { ' + [
     + '{ printf \'%s\\n\\n\' "$cap_note"; if [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed 1d "$1.cut"; else LC_ALL=C sed "s/^$cap_cont*//" "$1.cut"; fi; } > "$1.cap"; '
     + 'else '
     + '{ if [ "$(LC_ALL=C tail -c 1 "$1.cut" | wc -l | tr -d " ")" -eq 1 ]; then cat "$1.cut"; elif [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed \'$d\' "$1.cut"; else LC_ALL=C sed "s/$cap_lead$cap_cont*\\$//" "$1.cut"; echo; fi; } > "$1.cap"; '
-    + `cap_run=$(LC_ALL=C awk '${LONGEST_BACKTICK_RUN_AWK}' "$1.cap"); if [ "\${cap_run:-0}" -lt 3 ]; then cap_run=2; fi; `
-    + 'cap_fence=$(printf "%$((cap_run + 1))s" "" | tr " " \'`\'); '
-    + '{ printf "%stext\\n" "$cap_fence"; cat "$1.cap"; printf "%s\\n\\n%s\\n" "$cap_fence" "$cap_note"; } > "$1.cut"; mv -f "$1.cut" "$1.cap"; fi; '
+    + '{ relayflow_block "$1.cap" text; printf "\\n%s\\n" "$cap_note"; } > "$1.cut"; mv -f "$1.cut" "$1.cap"; fi; '
     + 'cap_out=$(LC_ALL=C wc -c < "$1.cap" | tr -d " "); '
     + 'if [ "$cap_out" -le "$2" ]; then break; fi; '
     + 'cap_keep=$((cap_keep - cap_out + $2)); done',
@@ -354,15 +363,20 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + ` *) printf '%s\\n' "**The checks failed**, and the base commit could not be checked for comparison, so it is not known whether this change caused them. This pull request is a draft until someone looks." ;;`
     + ' esac ;;'
     + ' esac'
-    + `; if [ -s "$parts/script" ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n\`\`\`sh\\n'; cat "$parts/script"; printf '\`\`\`\\n</details>\\n'; fi`
-    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n\`\`\`\\n'; cat "$parts/check"; printf '\`\`\`\\n</details>\\n'; fi`
-    + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s "$parts/base" ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n\`\`\`\\n'; cat "$parts/base"; printf '\`\`\`\\n</details>\\n'; fi; fi`
+    + `; if [ -s "$parts/script" ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n'; relayflow_block "$parts/script" sh; printf '</details>\\n'; fi`
+    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/check" ''; printf '</details>\\n'; fi`
+    + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s "$parts/base" ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/base" ''; printf '</details>\\n'; fi; fi`
     + `; if [ -s "$parts/repair" ]; then printf '\\n### What the repair agent found\\n\\n'; cat "$parts/repair"; fi`
     + '; } > "$report"',
   // The summary gets what the report leaves, less room for the closing
   // reference (\`reference\`, set by the caller) that
   // FLOW_PREPARE_CHANGE_METADATA_COMMAND appends.
-  `if [ -s summary.md ]; then cp summary.md "$parts/summary"; relayflow_cap "$parts/summary" $((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE - REFERENCE_MARGIN} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - $(printf %s "\${reference:-}" | LC_ALL=C wc -c | tr -d " "))) head "summary.md in the run workspace"; fi`,
+  // A summary that is cut is shown as code, where a closing reference does
+  // nothing, so its own copy of the reference is dropped first and the next
+  // step appends it after the report.
+  `if [ -s summary.md ]; then room=$((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE - REFERENCE_MARGIN} - $(LC_ALL=C wc -c < "$report" | tr -d " ") - $(printf %s "\${reference:-}" | LC_ALL=C wc -c | tr -d " "))); `
+    + `if [ -n "\${reference:-}" ] && [ "$(LC_ALL=C wc -c < summary.md | tr -d " ")" -gt "$room" ]; then grep -vxF -- "$reference" summary.md > "$parts/summary" || :; else cp summary.md "$parts/summary"; fi; `
+    + 'relayflow_cap "$parts/summary" "$room" head "summary.md in the run workspace"; fi',
   '{ if [ -s "$parts/summary" ]; then cat "$parts/summary"; printf \'\\n\\n\'; fi; cat "$report"; } > .relayflow/pr-body.md',
   'rm -rf "$parts"',
   'echo "relayflow: wrote the check report to $report." >&2',
@@ -709,15 +723,16 @@ export const FLOW_PUSH_COMMAND = 'relayflow_push() { ' + [
  * is retained rather than duplicated.
  *
  * A body over FLOW_BODY_LIMIT, less FLOW_WITHHELD_NOTICE_RESERVE, is cut to
- * fit (agentrelay.com#160), and a reference the cut removed is put back at the
- * end: a closing reference is never lost to truncation.
+ * fit (agentrelay.com#160), and its reference is moved to the end, after the
+ * cut (which is shown as code, where a reference does nothing): a closing
+ * reference is never lost to truncation.
  */
 export const FLOW_PREPARE_CHANGE_METADATA_COMMAND = [
   'if [ ! -s .relayflow/pr-body.md ]; then echo missing-body; exit 0; fi',
   CAP_FUNCTION,
   `relayflow_reference() { if [ -n "$reference" ] && [ "$(printf %s "$reference" | LC_ALL=C wc -c | tr -d " ")" -le ${FLOW_REFERENCE_LIMIT} ] && ! grep -qxF "$reference" .relayflow/pr-body.md; then printf "\\n%s\\n" "$reference" >> .relayflow/pr-body.md; fi; }`,
   'relayflow_reference',
-  `if [ "$(LC_ALL=C wc -c < .relayflow/pr-body.md | tr -d " ")" -gt ${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} ]; then relayflow_cap .relayflow/pr-body.md $((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} - 2 - $(printf %s "$reference" | LC_ALL=C wc -c | tr -d " "))) head "the run journal"; relayflow_reference; fi`,
+  `if [ "$(LC_ALL=C wc -c < .relayflow/pr-body.md | tr -d " ")" -gt ${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} ]; then if [ -n "$reference" ]; then grep -vxF -- "$reference" .relayflow/pr-body.md > .relayflow/pr-body.md.tmp || :; mv -f .relayflow/pr-body.md.tmp .relayflow/pr-body.md; fi; relayflow_cap .relayflow/pr-body.md $((${FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE} - 2 - $(printf %s "$reference" | LC_ALL=C wc -c | tr -d " "))) head "the run journal"; relayflow_reference; fi`,
   'echo prepared',
 ].join('; ');
 
