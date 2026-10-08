@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import worker, {
+  getInsecureShortHostResponse,
   getAgentChatCloudPath,
   getAgentPagePath,
   getLegacyAgentPageRedirect,
@@ -335,5 +336,45 @@ describe("router agent chat", () => {
     const response = await worker.fetch(new Request("https://agentrelay.com/agent-relay"), buildEnv({ fetch: vi.fn() }), ctx);
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe("https://agentrelay.com/u/agent-relay");
+  });
+});
+
+describe("arelay.to over plain HTTP", () => {
+  it("redirects pages permanently to HTTPS, keeping the path and query", () => {
+    const response = getInsecureShortHostResponse(new URL("http://arelay.to/agent-relay?x=1"), "GET");
+    expect(response?.status).toBe(301);
+    expect(response?.headers.get("location")).toBe("https://arelay.to/agent-relay?x=1");
+    expect(getInsecureShortHostResponse(new URL("http://www.arelay.to/register"), "HEAD")?.status).toBe(301);
+  });
+
+  it("refuses chat over HTTP with a 308 that names the HTTPS URL", async () => {
+    const id = "0".repeat(32);
+    const response = getInsecureShortHostResponse(new URL(`http://arelay.to/agent-relay/${id}`), "POST");
+    expect(response?.status).toBe(308);
+    expect(response?.headers.get("location")).toBe(`https://arelay.to/agent-relay/${id}`);
+    expect(await response?.text()).toBe(`agent-relay: use HTTPS: https://arelay.to/agent-relay/${id}\n`);
+  });
+
+  it("also catches a fully qualified host with a trailing dot", () => {
+    const response = getInsecureShortHostResponse(new URL("http://arelay.to./agent-relay"), "GET");
+    expect(response?.status).toBe(301);
+    expect(response?.headers.get("location")).toBe("https://arelay.to/agent-relay");
+    expect(getInsecureShortHostResponse(new URL(`http://www.arelay.to./agent-relay/${"0".repeat(32)}`), "POST")?.status).toBe(308);
+  });
+
+  it("leaves HTTPS and other hosts alone", () => {
+    expect(getInsecureShortHostResponse(new URL("https://arelay.to/agent-relay"), "GET")).toBeUndefined();
+    expect(getInsecureShortHostResponse(new URL("http://agentrelay.com/u/agent-relay"), "GET")).toBeUndefined();
+  });
+
+  it("never forwards an HTTP chat message upstream", async () => {
+    const fetchMock = vi.fn();
+    const response = await worker.fetch(
+      new Request(`http://arelay.to/agent-relay/${"0".repeat(32)}`, { method: "POST", body: "hi" }),
+      buildEnv({ fetch: fetchMock }),
+      ctx,
+    );
+    expect(response.status).toBe(308);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
