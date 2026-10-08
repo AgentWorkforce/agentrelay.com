@@ -249,8 +249,8 @@ describe('software factory onboarding', () => {
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
     for (const agents of [['claude', 'codex'], ['codex'], ['claude']] as FactoryDraft['agents'][]) {
       const source = factorySource({ ...completed, agents });
-      // Cloud's cap on a hosted run (AgentWorkforce/cloud#4235).
-      expect(source).toContain('{ budget: { wallclock: "1h" } }');
+      // An hour under Cloud's 180-minute cap on a hosted run (AgentWorkforce/cloud#4270).
+      expect(source).toContain('{ budget: { wallclock: "2h" } }');
       expect(source).not.toMatch(/budget: "\$\d/);
     }
   });
@@ -532,8 +532,9 @@ describe('software factory onboarding', () => {
     it('opens a draft and keeps reviewing when the base commit fails the same checks', async () => {
       // 139d1a46's shape: the failure is the environment's, not the change's.
       const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'fail', 'fail'], 'fail');
-      // One repair round, then the base commit (agentrelay.com#155).
-      expect(calls.filter(call => call.startsWith('check-repair'))).toHaveLength(1);
+      // Two repair rounds, the second only because the re-check still fails,
+      // then the base commit (agentrelay.com#155).
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual(['check-repair:claude', 'check-repair-2:claude']);
       expect(calls.find(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe('base=abc123; ' + FLOW_BASE_CHECK_COMMAND);
       expect(reportCall(calls)).toMatch(/^check=fail; baseline=fail; /);
       expect(createCall(calls)).toContain('--draft');

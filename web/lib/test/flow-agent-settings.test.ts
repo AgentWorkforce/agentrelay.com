@@ -95,7 +95,8 @@ describe('per-step agent settings', () => {
 
   it('pins every Claude step in the simple prebuilt flow to a probeable model', async () => {
     const calls = await execute({ ...draft, agents: ['claude'], workflow: 'simple' });
-    expect(Object.keys(calls)).toEqual(['check-discovery', 'implementer', 'check-repair']);
+    // Checks that still fail after the first repair get a second round.
+    expect(Object.keys(calls)).toEqual(['check-discovery', 'implementer', 'check-repair', 'check-repair-2']);
     for (const options of Object.values(calls)) {
       expect(options).toMatchObject({ cli: 'claude', model: 'claude-sonnet-5' });
     }

@@ -413,12 +413,17 @@ export function flowCommentChangeCommand(file: string): string {
  * it only what is left once the steps behind it fit: every long step has a
  * limit, and every limit leaves room to publish.
  *
- * Cloud caps a hosted run at 60 minutes, the verified lifetime of an E2B
- * sandbox (AgentWorkforce/cloud#4235), and that budget also pays for the
- * sandbox setup. Measured Garden runs took 1.5-2h under the old 3h plan
- * (agentrelay.com#155), so the plan is cut to fit: no separate planner or plan
- * reviewer (the implementer plans), one repair round, one review and no fix
- * round. A typical run takes 30-45 minutes and the worst case fits in 60.
+ * Cloud capped a hosted run at 60 minutes (AgentWorkforce/cloud#4235), and
+ * measured Garden runs took 1.5-2h under the old 3h plan (agentrelay.com#155),
+ * so the plan was cut to fit: no separate planner or plan reviewer (the
+ * implementer plans), one review and no fix round. Cloud now honours a header
+ * of up to 180 minutes (AgentWorkforce/cloud#4270), and the plan stays the
+ * same size: the extra time is margin, not a longer plan. The implementer is
+ * done by the minute the 60-minute plan ended it (buildByMinutes), and what
+ * follows goes to recovery: a second repair round only when the checks still
+ * fail, longer limits on the steps seen to hit theirs, and room for a slow run
+ * to publish and report instead of stopping for time. A typical run still
+ * takes 30-45 minutes; only a run that goes wrong uses more.
  *
  * Since relayflows 2.0.40 (AgentWorkforce/flows#606) an agent step takes a
  * hard `timeout`, at most agentLimitMaxMinutes; the cloud flow states one for
@@ -427,7 +432,7 @@ export function flowCommentChangeCommand(file: string): string {
  * sandbox lifetime, and an unbounded agent needs the slack. See workflowCode.
  */
 export const FLOW_TIME = (() => {
-  const headerMinutes = 60; // Cloud's cap on a hosted run (AgentWorkforce/cloud#4235).
+  const headerMinutes = 120; // An hour under Cloud's 180-minute cap on a hosted run (AgentWorkforce/cloud#4270).
   const localHeaderMinutes = 180;
   // Cloud's run budget also counts the setup before the body: an E2B cold
   // start (about 3 minutes for the full template), the clone, and the agent
@@ -441,18 +446,28 @@ export const FLOW_TIME = (() => {
   const checkFloorMinutes = 5;
   const repairFloorMinutes = 5;
   const reviewFloorMinutes = 8;
-  const repairMinutes = 15;
+  // Repairs took 19m27s and 37m18s in bda21b91; a 15m limit would have
+  // stopped the first just short of done.
+  const repairMinutes = 20;
+  // A second round runs only when the re-check still fails and the first
+  // repair finished, and only when it leaves the review its floor.
+  const repairRounds = 2;
   const reviewMinutes = 20;
   // Check discovery reads CI configuration and writes one script; it took
-  // 6m and 9m24s in bda21b91. A discovery stopped at its limit falls back to
-  // the ecosystem default, so a hard stop costs little.
-  const discoveryMinutes = 10;
+  // 6m and 9m24s in bda21b91, against a 10m limit. A discovery stopped at its
+  // limit falls back to the ecosystem default, so a hard stop costs little.
+  // It runs inside buildByMinutes, so this never lengthens the plan.
+  const discoveryMinutes = 15;
   // The prototype workflow's parallel agents are each charged in full, so
   // three of them cost three times their wall clock.
   const prototypeMinutes = 10;
   const comparatorMinutes = 5;
   // What the steps before the implementer always leave it.
   const implementerFloorMinutes = 10;
+  // The minute of the body by which discovery, the prototypes and the
+  // implementer are done: where the 60-minute plan ended them (its 52m body
+  // less its 18m publishing reserve), so the build is no longer than before.
+  const buildByMinutes = 34;
   // relayflows refuses an agent timeout above 60m (AgentWorkforce/flows#606).
   const agentLimitMaxMinutes = 60;
   // A step with no timeout of its own gets the kernel's 30s default, and a
@@ -463,29 +478,34 @@ export const FLOW_TIME = (() => {
   // forgeMinutes; the draft-and-comment follow-ups get followUpMinutes; a push
   // gets pushMinutes, because when GitHub refuses workflow edits
   // FLOW_PUSH_COMMAND rebuilds the commits, pushes a second time and appends
-  // the withheld patch, all in the same step.
-  const forgeMinutes = 3;
+  // the withheld patch, all in the same step. A push to a large repository
+  // outran its limit in ccbc27c8; 5m (was 3m) leaves a slow one room.
+  const forgeMinutes = 5;
   const followUpMinutes = 1;
   const pushMinutes = 2 * forgeMinutes + followUpMinutes;
   const defaultStepMinutes = 0.5;
   // What can follow the review: one draft-and-comment follow-up (time stop
   // or review blocked: 1m) and the review-findings report (0.5m).
   const closeMinutes = followUpMinutes + defaultStepMinutes;
-  // Publishing at the longest each step may take: dropping working files (3m),
-  // the push (7m) and opening the change request (3m), the four local steps
+  // Publishing at the longest each step may take: dropping working files (5m),
+  // the push (11m) and opening the change request (5m), the four local steps
   // between them at the default (publish check, check report, metadata,
-  // validation: 4 x 0.5m), then closing (1.5m). 16.5m, rounded up to 17m.
+  // validation: 4 x 0.5m), then closing (1.5m). 24.5m, rounded up to 25m.
   const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + closeMinutes);
   return Object.freeze({
     headerMinutes, localHeaderMinutes, setupMinutes,
-    checkMinutes, checkLimitMinutes, checkFloorMinutes, repairMinutes, repairFloorMinutes, reviewMinutes, reviewFloorMinutes,
-    discoveryMinutes, prototypeMinutes, comparatorMinutes, implementerFloorMinutes, agentLimitMaxMinutes,
+    checkMinutes, checkLimitMinutes, checkFloorMinutes, repairMinutes, repairRounds, repairFloorMinutes, reviewMinutes, reviewFloorMinutes,
+    discoveryMinutes, prototypeMinutes, comparatorMinutes, implementerFloorMinutes, buildByMinutes, agentLimitMaxMinutes,
     forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, closeMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
     localBodyMinutes: localHeaderMinutes - setupMinutes,
     // What a long step before the pull request leaves behind it: publishing,
     // and the clock read and check resolution between them.
     publishReserveMinutes: publishMinutes + 2 * defaultStepMinutes,
+    // What the steps up to the implementer leave behind them: everything after
+    // buildByMinutes, which always holds the checks, a repair at its floor,
+    // its re-check and publishing.
+    buildReserveMinutes: headerMinutes - setupMinutes - buildByMinutes,
     // What the review leaves behind it once the pull request is open: clearing
     // the last review's files, reading review.clean, and closing.
     reviewReserveMinutes: 2 * defaultStepMinutes + closeMinutes,
@@ -888,7 +908,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // limit: check-discovery at its fixed allowance, because it runs first; every
   // later agent at what is left of the run once the steps behind it fit, read
   // from the clock when it starts. That is what keeps the worst case inside
-  // Cloud's 60 minutes: no step can take the time publishing needs.
+  // the header's wallclock: no step can take the time publishing needs.
   //
   // Only the cloud target states limits. Cloud runs relayflows 2.0.40 or
   // later; the local kit pins RELAYFLOWS_VERSION (2.0.26), whose runtime and
@@ -955,6 +975,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const allowance = async (cap: number, after: number) => Math.min(cap, Math.floor(await minutesLeft() - after));
   // Publishing, and the steps between a long step and it.
   const publishing = ${t.publishReserveMinutes};
+  // What the steps up to the implementer leave: on Cloud, everything after
+  // minute ${t.buildByMinutes}, so the build takes no longer than it did in 60 minutes.
+  const building = ${cloud ? t.buildReserveMinutes : t.publishReserveMinutes};
   // A long agent step may be stopped at its time limit. Its step then resolves
   // with completionReason "timeout" instead of throwing, and what the agent
   // committed stays. That is never success: each caller says what it means.
@@ -1000,8 +1023,8 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // The budget charges each step's own time, so three prototypes in parallel
   // cost up to three times the wall clock they take: count the extra two. Each
   // gets a third of what is left once the comparator, the implementer's floor
-  // and publishing fit.
-  const prototypeLimit = Math.max(1, Math.floor(await allowance(${3 * t.prototypeMinutes}, ${t.comparatorMinutes + t.implementerFloorMinutes} + publishing) / 3));
+  // and what follows the build fit.
+  const prototypeLimit = Math.max(1, Math.floor(await allowance(${3 * t.prototypeMinutes}, ${t.comparatorMinutes + t.implementerFloorMinutes} + building) / 3));
   const prototypesStartedAt = await clock();
   const prototypes = await Promise.all(paths.map((cwd, index) => f.agent("prototype-" + (index + 1), {
     cli: prototypeAgents[index],
@@ -1012,7 +1035,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   parallelMinutes += 2 * (await clock() - prototypesStartedAt) / 60;
   if (prototypes.some(timedOut)) console.error("A prototype was stopped at its " + prototypeLimit + "m limit; its committed work is compared as it is.");
   // All three implementations are finished before comparison begins.
-  const comparatorLimit = Math.max(1, await allowance(${t.comparatorMinutes}, ${t.implementerFloorMinutes} + publishing));
+  const comparatorLimit = Math.max(1, await allowance(${t.comparatorMinutes}, ${t.implementerFloorMinutes} + building));
   const comparison = await f.agent("comparator", {
     ${options('comparator', 'reviewer', ' + " Prototype worktrees: " + paths.join(", ")', 'comparatorLimit')}
   });
@@ -1028,10 +1051,10 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Where this branch started, so the publish step below can tell whether the
   // agents actually committed anything.
   const baseCommit = (await f.run("git rev-parse HEAD")).trim();
-  // The implementer may use what is left once publishing fits. Stopped there,
-  // its committed work is still checked if there is time, and published as a
+  // The implementer may use what is left once what follows the build fits.
+  // Stopped there, its committed work is still checked, and published as a
   // draft that says so.
-  const implementerLimit = Math.max(1, await allowance(${t.agentLimitMaxMinutes}, publishing));
+  const implementerLimit = Math.max(1, await allowance(${t.agentLimitMaxMinutes}, building));
   const implementation = await f.agent("implementer", {
     ${options('implementer', 'builder', '', 'implementerLimit')}
   });
@@ -1044,7 +1067,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   if (checkPlan === "none") await f.run(resolveChecks);` });
   sections.push({ id: 'checks', code: `  // Run the checks. A failure is not the end of the run: the tests are
   // how this flow learns what is wrong, so the repair agent reads the output
-  // and fixes what it can, once, and whatever still fails is compared against
+  // and fixes what it can, at most twice, and whatever still fails is compared against
   // the commit this branch started from when there is time. Every check step
   // prints one word and exits 0; the full output stays in .relayflow/ for the
   // report. Each check gets what is left once publishing fits, and stops there.
@@ -1073,26 +1096,34 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   } else {
     check = verdict(await timedCheck("", runChecks, checkLimit));
   }
-  if (broken(check)) {
-    // One repair round: the repair, freeing disk, the re-check and publishing
-    // must fit in what is left.
+  // A second repair round runs only for checks that still fail after the
+  // first, and leaves the review, where there is one, its floor: it is
+  // recovery, never a longer plan.
+  const reviewing = ${workflow === 'simple' ? 0 : t.reviewFloorMinutes + t.reviewReserveMinutes};
+  for (let round = 1; round <= ${t.repairRounds} && broken(check); round++) {
+    // Each round: the repair, freeing disk, the re-check and publishing must
+    // fit in what is left.
     const recheck = Math.min(${t.checkLimitMinutes}, Math.ceil(checkTook) + 1);
-    const repairLimit = await allowance(${t.repairMinutes}, recheck + 3 + publishing);
+    const repairLimit = await allowance(${t.repairMinutes}, recheck + 3 + publishing + (round > 1 ? reviewing : 0));
     if (repairLimit < ${floor(t.repairFloorMinutes, t.repairMinutes)}) {
-      console.error("Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are.");
-    } else {
-      const repair = await f.agent("check-repair", {
-        ${options('check-repair', 'builder', '', 'repairLimit')}
-      });
-      await f.run(freeDisk);
-      const recheckLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
-      if (recheckLimit >= 1) check = verdict(await timedCheck("", runChecks, recheckLimit));
-      else console.error("No time was left to check the repair again; the checks stand as they were before it.");
-      if (timedOut(repair)) {
-        // A failed attempt: what it committed was checked again above, and
-        // whatever still fails takes the draft-and-report path below.
-        console.error("check-repair was stopped at its " + repairLimit + "m limit, so it counts as a failed repair attempt. Its committed work is kept and was checked again (" + check + ").");
-      }
+      console.error(round === 1
+        ? "Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are."
+        : "Skipped the second repair: too little of the flow's time budget is left to repair again and still publish and review. The checks stand as they are.");
+      break;
+    }
+    const repair = await f.agent("check-repair" + (round === 1 ? "" : "-" + round), {
+      ${options('check-repair', 'builder', '', 'repairLimit')}
+    });
+    await f.run(freeDisk);
+    const recheckLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
+    if (recheckLimit >= 1) check = verdict(await timedCheck("", runChecks, recheckLimit));
+    else console.error("No time was left to check the repair again; the checks stand as they were before it.");
+    if (timedOut(repair)) {
+      // A failed attempt: what it committed was checked again above, and
+      // another repair of the same failures would most likely run out too,
+      // so whatever still fails takes the draft-and-report path below.
+      console.error("check-repair was stopped at its " + repairLimit + "m limit, so it counts as a failed repair attempt. Its committed work is kept and was checked again (" + check + "); no further repair is tried.");
+      break;
     }
   }
   // Only a failure pays for the comparison: pass, fail, timeout or unknown.
