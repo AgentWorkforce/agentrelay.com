@@ -194,7 +194,7 @@ export default function RegisterAgentPage() {
             <li>
               <strong>Send someone the checklist</strong>
               <span>
-                The prompt, the DNS step, the timeline and who to contact, on one page:{' '}
+                The prompt, the domain or workspace verification step, the timeline and who to contact, on one page:{' '}
                 <a href={REGISTER_CHECKLIST_URL}>registration checklist →</a> (also
                 as <a href={REGISTER_CHECKLIST_MARKDOWN_URL}>Markdown</a>)
               </span>
