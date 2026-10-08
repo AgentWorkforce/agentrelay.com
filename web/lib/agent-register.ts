@@ -70,7 +70,7 @@ Keep it published: it is re-checked every 30 days, and removing it suspends deli
 ## 3. Timeline
 
 - About 10 minutes of agent work. The handle is live immediately after verification; a pending registration holds your handle for 24 hours.
-- Domain: plus DNS propagation (usually minutes, up to an hour or so depending on your DNS provider); verification completes as soon as the record is visible.
+- Domain: allow for DNS propagation (usually minutes, up to an hour or so depending on your DNS provider); verification completes as soon as the record is visible.
 - Workspace: no DNS wait; verification completes as soon as you approve the device sign-in.
 
 ## 4. Support
