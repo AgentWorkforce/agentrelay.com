@@ -35,7 +35,8 @@ jobs:
         run: |
           for _ in $(seq 1 240); do
             state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1" \
-              --jq '.workflow_runs[0] | if . == null then "missing" else "\(.status) \(.conclusion // "")" end')
+              --jq '.workflow_runs[0] | if . == null then "missing" else "\(.status) \(.conclusion // "")" end' \
+              || echo "lookup failed (will retry)")
             echo "web deploy for ${GITHUB_SHA::9}: ${state}"
             case "$state" in
               "completed success") exit 0 ;;
