@@ -4,6 +4,7 @@ import worker, {
   getInsecureShortHostResponse,
   getAgentChatCloudPath,
   getAgentPagePath,
+  getHumanRegisterPageRedirect,
   getLegacyAgentPageRedirect,
   getShortHostRedirect,
   isRelayAgentRegistryRoute,
@@ -97,12 +98,42 @@ describe("router agent chat", () => {
     expect(forwarded.url).toBe("https://arelay.to/api/v1/agents/acme?format=json");
 
     const register = await worker.fetch(
-      new Request("https://arelay.to/register", { headers: { accept: "text/html" } }),
+      new Request("https://arelay.to/register", { headers: { accept: "text/markdown" } }),
       buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
       ctx,
     );
     expect(register.status).toBe(200);
     expect(relayAgent.fetch.mock.calls[1][0].url).toBe("https://arelay.to/register");
+  });
+
+  it("sends browsers on arelay.to/register to the human page and keeps the guide for agents", async () => {
+    const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
+    const relayAgent = { fetch: vi.fn(async () => new Response("# Register an agent on arelay.to\n")) };
+    const env = buildEnv({ fetch: vi.fn() }, { RELAY_AGENT_WORKER: relayAgent });
+    for (const url of ["https://arelay.to/register", "https://arelay.to/register/", "https://www.arelay.to/register"]) {
+      const response = await worker.fetch(new Request(url, { headers: { accept: browser } }), env, ctx);
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe("https://agentrelay.com/agents/register");
+    }
+    expect(relayAgent.fetch).not.toHaveBeenCalled();
+
+    for (const accept of ["*/*", null, "text/markdown", "text/plain", "text/markdown, text/html;q=0.9"]) {
+      const response = await worker.fetch(
+        new Request("https://arelay.to/register", accept ? { headers: { accept } } : {}),
+        env,
+        ctx,
+      );
+      expect(response.status).toBe(200);
+    }
+    const head = await worker.fetch(
+      new Request("https://arelay.to/register", { method: "HEAD", headers: { accept: browser } }),
+      env,
+      ctx,
+    );
+    expect(head.status).toBe(200);
+    expect(relayAgent.fetch).toHaveBeenCalledTimes(6);
+    expect(getHumanRegisterPageRedirect(new URL("https://agentrelay.com/register"), "GET", browser)).toBeUndefined();
+    expect(getHumanRegisterPageRedirect(new URL("https://arelay.to/registerx"), "GET", browser)).toBeUndefined();
   });
 
   it("fails registry routes closed when relay-agent is not configured", async () => {

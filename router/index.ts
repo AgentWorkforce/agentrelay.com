@@ -290,6 +290,22 @@ export function getLegacyAgentPageRedirect(url: URL): string | undefined {
 // Registration and management are served directly by relay-agent. The public
 // API matcher is prefix-bounded so lookalikes such as /registrations-legacy do
 // not escape the marketing site.
+// Browsers opening arelay.to/register get the human page on agentrelay.com.
+// Agents (curl's */*, no Accept, text/markdown, ties) and HEAD keep getting
+// relay-agent's Markdown registration guide from isRelayAgentRegistryRoute.
+export const HUMAN_REGISTER_PAGE_URL = `https://${PRIMARY_HOST}/agents/register`;
+
+export function getHumanRegisterPageRedirect(
+  url: URL,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (url.hostname !== SHORT_HOST && url.hostname !== SHORT_HOST_WWW) return undefined;
+  if (url.pathname !== "/register" && url.pathname !== "/register/") return undefined;
+  if (method !== "GET" || !prefersHtmlOverMarkdown(accept)) return undefined;
+  return HUMAN_REGISTER_PAGE_URL;
+}
+
 export function isRelayAgentRegistryRoute(
   hostname: string,
   pathname: string,
@@ -658,6 +674,15 @@ export default {
       url.pathname,
       request.method,
     );
+    const humanRegisterPage = getHumanRegisterPageRedirect(
+      url,
+      request.method,
+      request.headers.get("accept"),
+    );
+    if (humanRegisterPage) {
+      return Response.redirect(humanRegisterPage, 302);
+    }
+
     // Agents fetching the www alias get the guide directly: plain curl does
     // not follow the canonicalizing redirect.
     const agentPagePath = getAgentPagePath(
