@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import worker, { getGuideAnalyticsHandle, isAgentPageRequestPath } from "../index.js";
+import worker, {
+  carriesDashboardGrant,
+  getGuideAnalyticsHandle,
+  isAgentPageRequestPath,
+} from "../index.js";
 import {
   classifyClient,
   guideFetchedDataPoint,
@@ -133,18 +137,26 @@ describe("router dashboard recorder exclusion", () => {
     await fetch(`https://agentrelay.com/u/acme-support/dashboard?grant=${grant}`, { headers: AGENT });
     await fetch("https://agentrelay.com/u/acme-support/dashboard", { headers: AGENT });
     await fetch("https://agentrelay.com/u/acme-support/dashboard/", { headers: AGENT });
-    expect(upstream).toHaveBeenCalledTimes(3);
+    await fetch(`https://agentrelay.com/u/acme-support/dashboard.json?grant=${grant}`, { headers: AGENT });
+    await fetch(`https://agentrelay.com/U/acme-support/Dashboard?grant=${grant}`, { headers: AGENT });
+    await fetch(`https://agentrelay.com/pricing?GRANT=${grant}`, { headers: AGENT });
+    expect(upstream).toHaveBeenCalledTimes(6);
     expect(put).not.toHaveBeenCalled();
     expect(JSON.stringify(put.mock.calls)).not.toContain(grant);
     expect(points).toEqual([]);
   });
 
-  it("treats dashboard paths as agent page paths", () => {
+  it("excludes the whole /u/ namespace and any grant-bearing URL", () => {
     expect(isAgentPageRequestPath("/u/acme/dashboard")).toBe(true);
     expect(isAgentPageRequestPath("/u/acme/dashboard/")).toBe(true);
     expect(isAgentPageRequestPath("/u/acme/dashboard/data")).toBe(true);
     expect(isAgentPageRequestPath("/u/acme/agent.md")).toBe(true);
-    expect(isAgentPageRequestPath("/u/acme/other")).toBe(false);
+    expect(isAgentPageRequestPath("/u/acme/dashboard.json")).toBe(true);
+    expect(isAgentPageRequestPath("/U/acme/Dashboard")).toBe(true);
+    expect(isAgentPageRequestPath("/pricing")).toBe(false);
+    expect(isAgentPageRequestPath("/user")).toBe(false);
+    expect(carriesDashboardGrant(new URL("https://agentrelay.com/x?Grant=1"))).toBe(true);
+    expect(carriesDashboardGrant(new URL("https://agentrelay.com/x?granted=1"))).toBe(false);
   });
 });
 

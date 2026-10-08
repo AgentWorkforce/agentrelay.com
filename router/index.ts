@@ -216,10 +216,20 @@ export function prefersHtmlOverMarkdown(accept: string | null): boolean {
 }
 
 // Any /u/<handle> page, guide, or owner dashboard, on any host, after the
-// rewrite above. Dashboard requests can carry a single-use ?grant=..., so
-// neither the exchange nor the bare dashboard URL may reach the recorder.
+// rewrite above. The whole /u/ namespace is excluded, not a list of known
+// suffixes, so no dashboard variant can slip past the recorder.
 export function isAgentPageRequestPath(pathname: string): boolean {
-  return /^\/u\/[^/]+(?:\/agent\.md|\/dashboard(?:\/.*)?)?\/?$/i.test(pathname);
+  return /^\/u(?:\/|$)/i.test(pathname);
+}
+
+// Dashboard grants are single-use bearer credentials. Any request carrying a
+// grant parameter, on any path, stays out of the replay corpus.
+export function carriesDashboardGrant(url: URL): boolean {
+  let found = false;
+  url.searchParams.forEach((_value, key) => {
+    if (key.toLowerCase() === "grant") found = true;
+  });
+  return found;
 }
 
 // The handle whose agent guide this request negotiated, when it is an external
@@ -673,7 +683,10 @@ export default {
     // content, so neither the new route nor the existing Cloud fallback belongs
     // in the replay corpus. Agent pages and guides mint a conversation URL in
     // every response, so they stay out too, however they were reached.
-    const recorderRequestClone = recorderEnv && !relayAgentRoute && !isAgentPageRequestPath(url.pathname)
+    const recorderRequestClone = recorderEnv
+      && !relayAgentRoute
+      && !isAgentPageRequestPath(url.pathname)
+      && !carriesDashboardGrant(url)
       ? (request.clone() as unknown as Request)
       : null;
 
