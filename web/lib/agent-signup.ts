@@ -177,6 +177,7 @@ function forEnvironment(skill: string | undefined, site: string, cloud: string):
     .replaceAll(DESKTOP_RELEASES, `${site}/cloud/desktop-downloads`)
     .replaceAll('AgentRelay-macOS-', 'AgentRelay-Dev-macOS-')
     .replaceAll('Agent Relay.app', 'Agent Relay Dev.app')
+    .replaceAll('"Agent Relay"', '"Agent Relay Dev"')
     .replace(/com\.agentrelay\.desktop(?!\.dev)/g, 'com.agentrelay.desktop.dev')
     .replace(/\.agentworkforce\/desktop\/relay-socket(?!\.dev)/g, '.agentworkforce/desktop/relay-socket.dev') : skill;
   return local

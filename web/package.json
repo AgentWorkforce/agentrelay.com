@@ -15,6 +15,7 @@
     "test:e2e": "playwright test",
     "precf:build": "node scripts/generate-setup-skills.mjs",
     "cf:build": "opennextjs-cloudflare build",
+    "prepreview": "node scripts/generate-setup-skills.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {

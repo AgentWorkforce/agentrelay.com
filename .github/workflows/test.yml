@@ -47,7 +47,8 @@ jobs:
       - name: Verify setup skills are current
         run: |
           npx --yes prpm@2.1.40 install --frozen-lockfile -y
-          git diff --exit-code -I '"generated"' -- prpm.lock .claude/skills
+          git diff --exit-code -- .claude/skills
+          git diff --exit-code -I '"generated"' -- prpm.lock
           npm run verify:setup-skills
 
       # Root script fans out to every workspace (web + router), so a new

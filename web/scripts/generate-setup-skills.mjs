@@ -29,7 +29,7 @@ export const SETUP_SKILL_NAMES = [
 ];
 
 export function stripFrontmatter(text) {
-  const match = /^---\n[\s\S]*?\n---\n+/.exec(text);
+  const match = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n)+/.exec(text);
   if (!match) throw new Error('SKILL.md is missing YAML frontmatter');
   return text.slice(match[0].length);
 }

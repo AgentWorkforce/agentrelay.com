@@ -64,6 +64,7 @@ describe('agent signup instructions', () => {
     await expect(readInstalledSkills('{"packages":{}}', async () => '')).rejects.toThrow('is not in prpm.lock');
     expect(stripFrontmatter('---\nname: x\ndescription: y\n---\n\n# X\n')).toBe('# X\n');
     expect(() => stripFrontmatter('# X\n')).toThrow('frontmatter');
+    expect(stripFrontmatter('---\r\nname: x\r\n---\r\n\r\n# X\r\n')).toBe('# X\r\n');
   });
 
   it.each([
@@ -153,6 +154,8 @@ describe('agent signup instructions', () => {
     expect(content).not.toMatch(/com\.agentrelay\.desktop(?!\.dev)/);
     expect(content).not.toMatch(/relay-socket(?!\.dev)"/);
     expect(content).not.toContain('Agent Relay.app');
+    expect(content).not.toContain('"Agent Relay"');
+    expect(content).toContain('open -a "Agent Relay Dev"');
     expect(content).toContain('"$release/AgentRelay-Dev-macOS-$relay_arch.dmg"');
     expect(content).toContain('http://127.0.0.1:3199/cloud/api/v1/mcp/shared-sessions');
     expect(content).not.toContain('https://agentrelay.com/cloud');
