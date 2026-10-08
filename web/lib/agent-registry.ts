@@ -3,7 +3,7 @@ import { cache } from 'react';
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])$/;
 const MAX_PROFILE_BYTES = 16_000;
 const PROFILE_TIMEOUT_MS = 5_000;
-const REGISTRY_ORIGIN = 'https://arelay.to';
+export const REGISTRY_ORIGIN = 'https://arelay.to';
 
 export type PublicAgentProfile = {
   handle: string;
@@ -48,7 +48,7 @@ export async function fetchAgentProfile(
   return value;
 }
 
-async function readBoundedBody(response: Response, limit: number): Promise<string> {
+export async function readBoundedBody(response: Response, limit: number): Promise<string> {
   if (!response.body) return '';
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];

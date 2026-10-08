@@ -85,6 +85,24 @@ const nextConfig = {
         source: '/well-known/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
       },
+      {
+        // The owner analytics dashboard: private, never cached, never framed,
+        // never leaks its URL. The grant-bearing first request is rewritten to
+        // the exchange route below and sets its own stricter headers, so it is
+        // excluded here. Kept in sync with DASHBOARD_PAGE_HEADERS in
+        // lib/agent-dashboard.ts (asserted by lib/test/agent-dashboard.test.ts).
+        source: '/u/:handle/dashboard',
+        missing: [{ type: 'query', key: 'grant', value: '.+' }],
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'none'",
+          },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
     ];
   },
   async rewrites() {
@@ -100,7 +118,19 @@ const nextConfig = {
       cloudProxy.push({ source: '/cloud/:path*', destination: `${origin.origin}/cloud/:path*` });
     }
     return {
-      beforeFiles: cloudProxy,
+      beforeFiles: [
+        ...cloudProxy,
+        // A dashboard link carries a single-use grant. Exchange it in a route
+        // handler before any page, layout, or PostHog code can run; the handler
+        // sets the session cookie and 303s to the bare dashboard URL. `value`
+        // is explicit because OpenNext treats a valueless query `has` as
+        // always matching.
+        {
+          source: '/u/:handle/dashboard',
+          has: [{ type: 'query', key: 'grant', value: '.+' }],
+          destination: '/u/:handle/dashboard/exchange',
+        },
+      ],
       afterFiles: [
         // Conventional llms.txt path under /docs resolves to the root route.
         { source: '/docs/llms.txt', destination: '/llms.txt' },
