@@ -574,6 +574,9 @@ export default {
       url.pathname,
       request.method,
     );
+    const registryOwnedChatRoute = Boolean(
+      agentChatCloudPath && AGENT_CHAT_PATH.exec(url.pathname)?.[1] !== "agent-relay",
+    );
     const relayAgentRoute = Boolean(agentChatCloudPath || registryRoute);
     const shortHostRedirect = relayAgentRoute || agentPagePath
       ? undefined
@@ -645,7 +648,7 @@ export default {
     // Unlike the legacy agent-relay chat route, registry endpoints have no
     // Cloud fallback. Keep them off the marketing origin when the dedicated
     // Worker is absent during a rollback or unavailable environment.
-    if (registryRoute) {
+    if (registryRoute || registryOwnedChatRoute) {
       return new Response("The agent registry is unavailable. Retry shortly.\n", {
         status: 503,
         headers: {

@@ -97,13 +97,20 @@ describe("router agent chat", () => {
 
   it("fails registry routes closed when relay-agent is not configured", async () => {
     const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
-    const response = await worker.fetch(
+    const registryResponse = await worker.fetch(
       new Request("https://arelay.to/register"),
       buildEnv(cloud),
       ctx,
     );
-    expect(response.status).toBe(503);
-    expect(response.headers.get("cache-control")).toBe("no-store");
+    const companyChatResponse = await worker.fetch(
+      new Request(`https://arelay.to/acme-support/${ID}`, { method: "POST", body: "hello" }),
+      buildEnv(cloud),
+      ctx,
+    );
+    expect(registryResponse.status).toBe(503);
+    expect(registryResponse.headers.get("cache-control")).toBe("no-store");
+    expect(companyChatResponse.status).toBe(503);
+    expect(companyChatResponse.headers.get("cache-control")).toBe("no-store");
     expect(cloud.fetch).not.toHaveBeenCalled();
   });
 
