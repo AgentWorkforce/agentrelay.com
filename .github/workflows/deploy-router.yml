@@ -15,12 +15,37 @@ concurrency:
 
 permissions:
   contents: read
+  # Read the web deploy's run for this commit (see "Wait for the web deploy").
+  actions: read
 
 jobs:
   deploy-router:
     name: Deploy router
     runs-on: ubuntu-latest
     steps:
+      # The router rewrites public paths onto web pages (arelay.to/<handle> ->
+      # /u/<handle>), so a router that ships before the web deploy of the same
+      # commit routes to pages that don't exist yet. That took
+      # arelay.to/agent-relay down for ~10 minutes when #150 merged. Wait for
+      # this commit's web deploy and refuse to ship if it failed.
+      - name: Wait for the web deploy of this commit
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for _ in $(seq 1 80); do
+            state=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy.yml/runs?head_sha=${GITHUB_SHA}&event=push&per_page=1" \
+              --jq '.workflow_runs[0] | if . == null then "missing" else "\(.status) \(.conclusion // "")" end')
+            echo "web deploy for ${GITHUB_SHA::9}: ${state}"
+            case "$state" in
+              "completed success") exit 0 ;;
+              completed*) echo "::error::Deploy Web (Cloudflare) did not succeed for this commit; not deploying the router."; exit 1 ;;
+            esac
+            sleep 30
+          done
+          echo "::error::Timed out after 40 minutes waiting for Deploy Web (Cloudflare) for this commit."
+          exit 1
+
       - name: Checkout code
         uses: actions/checkout@v4
 
