@@ -699,7 +699,8 @@ export default {
       url.pathname = agentPagePath;
       request = new Request(url.toString(), request);
     }
-    if (agentDirectoryPath && agentDirectoryPath !== url.pathname.replace(/\/$/, "")) {
+    // Compared with the raw path so /directory/ is normalized to /directory too.
+    if (agentDirectoryPath && agentDirectoryPath !== url.pathname) {
       url.pathname = agentDirectoryPath;
       request = new Request(url.toString(), request);
     }

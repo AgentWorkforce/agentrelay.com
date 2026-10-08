@@ -13,6 +13,9 @@ const PAGE_LIMIT = 100;
 const MAX_PAGES = 10;
 const MAX_PAGE_BYTES = 512_000;
 const PAGE_TIMEOUT_MS = 5_000;
+// The whole walk must finish within this budget, however many pages it spans.
+const TOTAL_BUDGET_MS = 8_000;
+const CACHE_TTL_MS = 60_000;
 
 export type DirectoryAgent = {
   handle: string;
@@ -25,25 +28,54 @@ export type DirectoryAgent = {
   chatUrl: string;
 };
 
+let cached: { at: number; agents: Promise<DirectoryAgent[]> } | null = null;
+
+/**
+ * The directory for page renders, shared for 60 seconds per server instance
+ * (the API's own edge TTL), so visitors do not each walk every page. A failed
+ * walk is not cached.
+ */
+export function getAgentDirectory(now = Date.now()): Promise<DirectoryAgent[]> {
+  if (cached && now - cached.at < CACHE_TTL_MS) return cached.agents;
+  const entry = { at: now, agents: fetchAgentDirectory() };
+  cached = entry;
+  entry.agents.catch(() => {
+    if (cached === entry) cached = null;
+  });
+  return entry.agents;
+}
+
+/** Test hook: forget the shared directory. */
+export function resetAgentDirectoryCache(): void {
+  cached = null;
+}
+
 /**
  * Reads every directory page from relay-agent's public API. Each entry is
  * validated and every registry string is sanitized here, so pages and the
- * Markdown route only ever see display-safe values.
+ * Markdown route only ever see display-safe values. Anything that would make
+ * the result incomplete or misleading throws, so callers show "unavailable"
+ * rather than a truncated list or a false empty state.
  */
 export async function fetchAgentDirectory(
   fetcher: typeof globalThis.fetch = globalThis.fetch,
+  now: () => number = Date.now,
 ): Promise<DirectoryAgent[]> {
   const agents: DirectoryAgent[] = [];
   const seen = new Set<string>();
+  const deadline = now() + TOTAL_BUDGET_MS;
+  let received = 0;
   let cursor: string | null = null;
   for (let page = 0; page < MAX_PAGES; page += 1) {
+    const remaining = deadline - now();
+    if (remaining <= 0) throw new Error('Agent directory exceeded its time budget');
     const url = new URL('/api/v1/agents', REGISTRY_ORIGIN);
     url.searchParams.set('limit', String(PAGE_LIMIT));
     if (cursor) url.searchParams.set('cursor', cursor);
     const response = await fetcher(url.toString(), {
       cache: 'no-store',
       headers: { accept: 'application/json' },
-      signal: AbortSignal.timeout(PAGE_TIMEOUT_MS),
+      signal: AbortSignal.timeout(Math.min(PAGE_TIMEOUT_MS, remaining)),
     });
     if (!response.ok) throw new Error(`Agent directory returned ${response.status}`);
     let body: unknown;
@@ -56,6 +88,7 @@ export async function fetchAgentDirectory(
       throw new Error('Agent directory returned an invalid page');
     }
     for (const entry of (body as { agents: unknown[] }).agents) {
+      received += 1;
       const agent = toDirectoryAgent(entry);
       if (agent && !seen.has(agent.handle)) {
         seen.add(agent.handle);
@@ -63,9 +96,14 @@ export async function fetchAgentDirectory(
       }
     }
     const next = (body as { nextCursor?: unknown }).nextCursor;
-    if (typeof next !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(next) || next === cursor) break;
+    if (next === null || next === undefined) break;
+    if (typeof next !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(next) || next === cursor) {
+      throw new Error('Agent directory returned an invalid cursor');
+    }
     cursor = next;
   }
+  // A populated registry whose every entry failed validation is a fault, not an empty directory.
+  if (received > 0 && agents.length === 0) throw new Error('Agent directory entries were all invalid');
   return agents;
 }
 
@@ -74,6 +112,8 @@ export function toDirectoryAgent(value: unknown): DirectoryAgent | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const entry = value as Record<string, unknown>;
   if (typeof entry.handle !== 'string' || !validRegistryHandle(entry.handle)) return null;
+  // The API lists active agents only and omits status; refuse anything else defensively.
+  if (entry.status !== undefined && entry.status !== 'active') return null;
   if (!boundedString(entry.displayName, 100) || !boundedString(entry.description, 1_000)) return null;
   if (entry.deliveryType !== 'a2a' && entry.deliveryType !== 'relay') return null;
   const method = entry.verificationMethod ?? 'domain';

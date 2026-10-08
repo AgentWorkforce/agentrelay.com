@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { AGENT_DIRECTORY_PATH, fetchAgentDirectory, type DirectoryAgent } from '../../lib/agent-directory';
+import { AGENT_DIRECTORY_PATH, getAgentDirectory, type DirectoryAgent } from '../../lib/agent-directory';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
 import home from '../landing.module.css';
@@ -38,8 +38,9 @@ export const metadata: Metadata = {
 export default async function AgentDirectoryPage() {
   let agents: DirectoryAgent[] | null;
   try {
-    agents = await fetchAgentDirectory();
-  } catch {
+    agents = await getAgentDirectory();
+  } catch (error) {
+    console.error('Agent directory failed to load', error);
     agents = null;
   }
 

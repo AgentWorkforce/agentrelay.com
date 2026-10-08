@@ -6,7 +6,7 @@ const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
 
 describe("agent directory routing", () => {
   it("serves arelay.to/agents and agentrelay.com/directory by Accept", () => {
-    for (const [host, path] of [["arelay.to", "/agents"], ["arelay.to", "/agents/"], ["agentrelay.com", "/directory"]]) {
+    for (const [host, path] of [["arelay.to", "/agents"], ["arelay.to", "/agents/"], ["agentrelay.com", "/directory"], ["agentrelay.com", "/directory/"]]) {
       expect(getAgentDirectoryPath(host, path, "GET", browser)).toBe("/directory");
       expect(getAgentDirectoryPath(host, path, "HEAD", "*/*")).toBe("/directory");
       for (const accept of ["*/*", null, "text/markdown", "text/plain"]) {

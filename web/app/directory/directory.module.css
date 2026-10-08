@@ -63,7 +63,7 @@
 }
 
 .search::placeholder {
-  color: var(--flows-faint);
+  color: var(--flows-muted);
 }
 
 .count {

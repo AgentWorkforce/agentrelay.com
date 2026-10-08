@@ -6,12 +6,20 @@ import {
   escapeMarkdown,
   fetchAgentDirectory,
   filterDirectoryAgents,
+  getAgentDirectory,
+  resetAgentDirectoryCache,
   toDirectoryAgent,
 } from '../agent-directory';
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  resetAgentDirectoryCache();
 });
+
+function pages(...bodies: unknown[]) {
+  let index = 0;
+  return vi.fn(async () => Response.json(bodies[Math.min(index++, bodies.length - 1)])) as unknown as typeof fetch;
+}
 
 const acme = {
   handle: 'acme-support',
@@ -38,6 +46,39 @@ describe('agent directory', () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it('fails instead of returning a truncated or falsely empty directory', async () => {
+    await expect(fetchAgentDirectory(pages({ agents: [acme], nextCursor: 'bad cursor!' }))).rejects.toThrow('invalid cursor');
+    await expect(fetchAgentDirectory(pages(
+      { agents: [acme], nextCursor: 'YWJj' },
+      { agents: [], nextCursor: 'YWJj' },
+    ))).rejects.toThrow('invalid cursor');
+    await expect(fetchAgentDirectory(pages({ agents: [{ ...acme, handle: 'Bad Handle' }], nextCursor: null })))
+      .rejects.toThrow('all invalid');
+    await expect(fetchAgentDirectory(pages({ agents: [], nextCursor: null }))).resolves.toEqual([]);
+    let clock = 0;
+    const slow = vi.fn(async () => {
+      clock += 9_000;
+      return Response.json({ agents: [acme], nextCursor: 'YWJj' });
+    }) as unknown as typeof fetch;
+    await expect(fetchAgentDirectory(slow, () => clock)).rejects.toThrow('time budget');
+  });
+
+  it('shares one directory walk for 60 seconds and does not cache failures', async () => {
+    const fetcher = vi.fn(async () => Response.json({ agents: [acme], nextCursor: null }));
+    vi.stubGlobal('fetch', fetcher);
+    await getAgentDirectory(0);
+    await getAgentDirectory(59_000);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    await getAgentDirectory(61_000);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+
+    resetAgentDirectoryCache();
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })));
+    await expect(getAgentDirectory(0)).rejects.toThrow();
+    vi.stubGlobal('fetch', fetcher);
+    await expect(getAgentDirectory(1)).resolves.toHaveLength(1);
+  });
+
   it('strips bidi, control and line characters from every registry string', () => {
     const agent = toDirectoryAgent({
       ...acme,
@@ -57,6 +98,8 @@ describe('agent directory', () => {
   it('drops entries that are malformed or claim verification they do not show', () => {
     expect(toDirectoryAgent({ ...acme, handle: 'Bad Handle' })).toBeNull();
     expect(toDirectoryAgent({ ...acme, deliveryType: 'internal' })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, status: 'suspended' })).toBeNull();
+    expect(toDirectoryAgent({ ...acme, status: 'active' })).not.toBeNull();
     expect(toDirectoryAgent({ ...acme, verifiedDomain: null })).toBeNull();
     expect(toDirectoryAgent({ ...acme, verificationMethod: 'account' })).toBeNull();
     expect(toDirectoryAgent({ ...acme, description: 'x'.repeat(1_001) })).toBeNull();
@@ -106,11 +149,15 @@ describe('agent directory', () => {
     const empty = await GET();
     expect(empty.headers.get('content-type')).toBe('text/markdown; charset=utf-8');
     expect(empty.headers.get('vary')).toBe('Accept');
+    expect(empty.headers.get('access-control-allow-origin')).toBe('*');
     expect(await empty.text()).toContain('Be the first: register your agent at https://arelay.to/register');
 
+    resetAgentDirectoryCache();
     vi.stubGlobal('fetch', vi.fn(async () => new Response('down', { status: 503 })));
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const down = await GET();
     expect(down.status).toBe(503);
     expect(down.headers.get('cache-control')).toBe('no-store');
+    expect(down.headers.get('access-control-allow-origin')).toBe('*');
   });
 });
