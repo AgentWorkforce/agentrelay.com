@@ -4,6 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ts from 'typescript';
+import { micromark } from 'micromark';
+import { gfm, gfmHtml } from 'micromark-extension-gfm';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
@@ -895,7 +897,19 @@ describe('change metadata contract', () => {
  */
 describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.com#160)', () => {
   const chars = (text: string) => Array.from(text).length;
-  const fences = (text: string) => text.split('\n').filter(line => /^\s*```/.test(line)).length;
+  /**
+   * Renders a body as GitHub does (GFM, raw HTML allowed) and returns what a
+   * reader sees before the check report, or null when the report is hidden:
+   * inside a code block, an HTML comment, or a collapsed <details>.
+   */
+  const beforeReport = (body: string) => {
+    const html = micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()], allowDangerousHtml: true })
+      .replace(/<!--[\s\S]*?(-->|$)/g, '');
+    const at = html.indexOf('<h2>Checks</h2>');
+    if (at < 0) return null;
+    const before = html.slice(0, at);
+    return (before.match(/<details/g) ?? []).length === (before.match(/<\/details>/g) ?? []).length ? before : null;
+  };
   const longLines = (prefix: string, count: number, width: number) =>
     Array.from({ length: count }, (_, i) => `${prefix} ${i} ${'修'.repeat(width)}`).join('\n') + '\n';
 
@@ -926,7 +940,7 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(FLOW_BODY_LIMIT).toBeLessThan(65536);
     // Valid UTF-8: no multibyte character was split.
     expect(body).not.toContain('\uFFFD');
-    expect(body.startsWith('## What changed\n\nFixed the login bug.')).toBe(true);
+    expect(body.startsWith('````text\n## What changed\n\nFixed the login bug.')).toBe(true);
     expect(body).toContain('**The checks fail on the base commit too**');
     expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
     // The newest output is what a reviewer needs, so the logs keep their tail.
@@ -935,8 +949,9 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(body).toMatch(/truncated to fit GitHub's limit/);
     expect(body).toContain('summary.md in the run workspace');
     expect(body).toContain('.relayflow/check.log in the run workspace');
-    // The summary's open code fence is closed, so the report is not swallowed by it.
-    expect(fences(body) % 2).toBe(0);
+    // The summary's open code fence cannot swallow the report or the reference.
+    expect(beforeReport(body)).toContain('Fixed the login bug.');
+    expect(micromark(body)).toContain('<p>Fixes #160</p>');
     // The step says what it cut, but never prints the text: a log can hold credentials.
     expect(body).not.toContain('FAIL src/login.test.ts 120 ');
     expect(report.stderr).toContain('so it was cut; the full text is .relayflow/check.log in the run workspace');
@@ -948,7 +963,7 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(verdict).toBe('valid');
     expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
     expect(body).not.toContain('\uFFFD');
-    expect(body.split('\n')[0]).toMatch(/^修{15000,}$/);
+    expect(body.split('\n')[1]).toMatch(/^修{15000,}$/);
     expect(body).toMatch(/truncated to fit GitHub's limit/);
   });
 
@@ -976,37 +991,31 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     const { verdict, body } = publishBody({ 'summary.md': fence + '\n' + longLines('code', 400, 60) }, 'pass', '');
     expect(verdict).toBe('valid');
     expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
-    expect(body.split('\n').filter(line => line === fence)).toHaveLength(2);
+    expect(beforeReport(body)).not.toBeNull();
     expect(body).toContain('Relayflow ran this repository\'s checks');
   });
 
-  it('closes a tilde fence the summary leaves open, so the report renders outside it', () => {
-    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n~~~~text\n' + longLines('code', 400, 60) + '~~~\n' }, 'pass', '');
+  // Review on #161: a cut can leave any construct open. The kept text is
+  // shown as plain text, so none of them can hide the report or Fixes.
+  it.each([
+    ['a backtick fence', '```ts\n'],
+    ['a tilde fence', '~~~~text\n'],
+    ['an indented fence', '   ```\n'],
+    ['an HTML comment', '<!--\n'],
+    ['an HTML comment after inline code', 'Strips `<!--` markers.\n\n<!--\n'],
+    ['a comment marker in uneven backticks', 'See ``<!--```.\n\n```\n'],
+    ['a multi-line code span', 'A `<!--\nspan` then\n\n```\n'],
+    ['a collapsed <details>', '<details>\n<summary>More</summary>\n\n'],
+    ['CRLF line endings', 'Done.\r\n\r\n```\r\nx\r\n```\r\n\r\n```\r\n'],
+    ['an invalid backtick fence', '```not `a` fence\n'],
+  ])('keeps the report and Fixes visible when the cut leaves %s open', (_name, opening) => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n' + opening + longLines('code', 400, 60) }, 'pass', '');
     expect(verdict).toBe('valid');
-    const lines = body.split('\n');
-    const closer = lines.indexOf('~~~~');
-    expect(closer).toBeGreaterThan(0);
-    expect(lines.indexOf('## Checks')).toBeGreaterThan(closer);
-    expect(lines.filter(line => /^~~~/.test(line))).toHaveLength(2);
-  });
-
-  it('does not close a fence with one of the other character', () => {
-    const root = fixture({ 'summary.md': '```\n~~~\n' + longLines('code', 400, 60) });
-    sh(`check=pass; baseline=; ${FLOW_CHECK_REPORT_COMMAND}`, root);
-    const lines = read(root, '.relayflow/pr-body.md').split('\n');
-    expect(lines.filter(line => line === '```')).toHaveLength(2);
-  });
-
-  it('closes an HTML comment the cut leaves open, so the report is not hidden in it', () => {
-    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n<!-- note: done -->\n<!--\n' + longLines('hidden', 400, 60) + '-->\n' }, 'pass', '');
-    expect(verdict).toBe('valid');
-    const lines = body.split('\n');
-    const closer = lines.lastIndexOf('-->');
-    expect(closer).toBeGreaterThan(0);
-    expect(lines.indexOf('## Checks')).toBeGreaterThan(closer);
-    // A comment opened inside a code block is code, not a comment.
-    const fenced = publishBody({ 'summary.md': '```\n<!--\n' + longLines('code', 400, 60) }, 'pass', '').body.split('\n');
-    expect(fenced).not.toContain('-->');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(beforeReport(body)).toContain('## What changed');
+    const html = micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()] });
+    expect(html).toContain('<p>Fixes #160</p>');
+    expect(html).toMatch(/<em>…truncated to fit GitHub's limit/);
   });
 
   it('refuses a reference longer than FLOW_REFERENCE_LIMIT before anything is pushed', () => {
@@ -1019,24 +1028,6 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(sh(`reference='${reference}'; title='Fix login'; title_length=9; source='linear'; identifier='ENG-1'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, fixture({ '.relayflow/pr-body.md': 'Fixed it.\n' })).token).toBe('reference-too-long');
     const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
     expect(source).toContain('f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle)');
-  });
-
-  it('treats only fences indented at most three spaces as fences', () => {
-    // Four spaces (or a tab) make an indented code line, not a fence: no closer.
-    for (const indent of ['    ', '\t']) {
-      const { body } = publishBody({ 'summary.md': '## What changed\n\n' + indent + '```\n' + longLines('code', 400, 60) }, 'pass', '');
-      expect(body.split('\n')).not.toContain('```');
-    }
-    const { body } = publishBody({ 'summary.md': '## What changed\n\n   ```\n' + longLines('code', 400, 60) }, 'pass', '');
-    expect(body.split('\n')).toContain('```');
-  });
-
-  it('ignores a comment marker in inline code and a backtick fence with a backtick in its info string', () => {
-    const inline = publishBody({ 'summary.md': 'Strips `<!--` markers.\n\n```ts\n' + longLines('code', 400, 60) }, 'pass', '').body.split('\n');
-    expect(inline).toContain('```');
-    expect(inline).not.toContain('-->');
-    const info = publishBody({ 'summary.md': '```not `a` fence\n' + longLines('code', 400, 60) }, 'pass', '').body.split('\n');
-    expect(info).not.toContain('```');
   });
 
   it('puts back a closing reference that truncation cut from the summary', () => {

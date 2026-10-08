@@ -261,28 +261,8 @@ export const FLOW_REFERENCE_LIMIT = 1024;
  */
 export const FLOW_WITHHELD_NOTICE_RESERVE = 2048;
 
-/**
- * Prints what closes a Markdown code block or an HTML comment still open at
- * the end of its input, or nothing, so a truncated agent text cannot hide
- * the report appended after it. A fence of three or more backticks or tildes
- * indented at most three spaces opens a block (more, or a tab, is an indented
- * code line; a backtick fence whose info string holds a backtick is no
- * fence), and a bare fence of the same character, at least as long, closes
- * it. Outside a block and outside inline code, `<!--` opens a comment and
- * `-->` closes it.
- */
-const BT = '`';
-const OPEN_FENCE_AWK = [
-  '{ line = $0',
-  'if (incomment) { k = index(line, "-->"); if (k == 0) next; incomment = 0; line = substr(line, k + 3) } '
-    + `else if (match($0, /^(   |  | )?(${BT.repeat(3)}+|~~~+)/)) { f = substr($0, RSTART, RLENGTH); sub(/^ */, "", f); tail = substr($0, RSTART + RLENGTH); `
-    + `if (open == "") { if (substr(f, 1, 1) == "~" || tail !~ /${BT}/) { open = f; next } } `
-    + 'else { if (substr(f, 1, 1) == substr(open, 1, 1) && length(f) >= length(open) && tail ~ /^[ \t]*$/) open = ""; next } }',
-  'if (open != "") next',
-  `gsub(/${BT}+[^${BT}]*${BT}+/, "", line)`,
-  'while ((k = index(line, "<!--")) > 0) { line = substr(line, k + 4); k = index(line, "-->"); if (k == 0) { incomment = 1; break } line = substr(line, k + 3) } }',
-  'END { if (incomment) print "-->"; if (open != "") print open }',
-].join('; ');
+/** Prints the length of the longest run of backticks in its input (0 for none). */
+const LONGEST_BACKTICK_RUN_AWK = '{ s = $0; while (match(s, /`+/)) { if (RLENGTH > m) m = RLENGTH; s = substr(s, RSTART + RLENGTH) } } END { print m + 0 }';
 
 /**
  * `relayflow_cap <file> <bytes> <head|tail> <where>` cuts `file` to at most
@@ -290,8 +270,11 @@ const OPEN_FENCE_AWK = [
  * boundary, and inside a line only when the kept part has no line break at
  * all, then at a character boundary, so no multibyte character is split and a
  * one-line file keeps what fits. The cut is marked in the file, naming
- * `where` the full text is. A code fence the kept start leaves open is
- * closed, so whatever follows is not swallowed by it. The text cut is never
+ * `where` the full text is. The kept start of a cut is shown as plain text in
+ * a code block whose fence is longer than any run of backticks in it: a cut
+ * can leave any Markdown or HTML construct open (a fence, a comment, a
+ * `<details>`), and none of them can then hide what follows, such as the
+ * check verdict and the closing reference. The text cut is never
  * printed: a log or review can hold credentials the run journal must not
  * show. The result never exceeds `bytes`: with less than CAP_RESERVE bytes
  * to keep, or no fit after three tries, the file is emptied. A file within
@@ -305,7 +288,7 @@ const CAP_FUNCTION = 'relayflow_cap() { ' + [
   `cap_note="_…truncated to fit GitHub's limit: $cap_size bytes were cut to under $2. The full text is $4._"`,
   // The bytes that start a multibyte character, and those that continue one.
   "cap_lead=$(printf '[\\300-\\377]'); cap_cont=$(printf '[\\200-\\277]')",
-  // A closing fence as long as an agent's opening one can outgrow the
+  // A fence as long as an agent's longest backtick run can outgrow the
   // reserve; each further try keeps less by what the last one ran over.
   `cap_keep=$(($2 - ${CAP_RESERVE})); cap_tries=0`,
   'while :; do '
@@ -317,8 +300,9 @@ const CAP_FUNCTION = 'relayflow_cap() { ' + [
     + '{ printf \'%s\\n\\n\' "$cap_note"; if [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed 1d "$1.cut"; else LC_ALL=C sed "s/^$cap_cont*//" "$1.cut"; fi; } > "$1.cap"; '
     + 'else '
     + '{ if [ "$(LC_ALL=C tail -c 1 "$1.cut" | wc -l | tr -d " ")" -eq 1 ]; then cat "$1.cut"; elif [ "$cap_lines" -gt 0 ]; then LC_ALL=C sed \'$d\' "$1.cut"; else LC_ALL=C sed "s/$cap_lead$cap_cont*\\$//" "$1.cut"; echo; fi; } > "$1.cap"; '
-    + `LC_ALL=C awk '${OPEN_FENCE_AWK}' "$1.cap" > "$1.cut"; cat "$1.cut" >> "$1.cap"; `
-    + 'printf \'\\n%s\\n\' "$cap_note" >> "$1.cap"; fi; '
+    + `cap_run=$(LC_ALL=C awk '${LONGEST_BACKTICK_RUN_AWK}' "$1.cap"); if [ "\${cap_run:-0}" -lt 3 ]; then cap_run=2; fi; `
+    + 'cap_fence=$(printf "%$((cap_run + 1))s" "" | tr " " \'`\'); '
+    + '{ printf "%stext\\n" "$cap_fence"; cat "$1.cap"; printf "%s\\n\\n%s\\n" "$cap_fence" "$cap_note"; } > "$1.cut"; mv -f "$1.cut" "$1.cap"; fi; '
     + 'cap_out=$(LC_ALL=C wc -c < "$1.cap" | tr -d " "); '
     + 'if [ "$cap_out" -le "$2" ]; then break; fi; '
     + 'cap_keep=$((cap_keep - cap_out + $2)); done',
