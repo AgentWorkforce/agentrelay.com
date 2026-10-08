@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 79,
+  "count": 82,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/agents",
@@ -14,6 +14,9 @@
     "https://agentrelay.com/agents/linear",
     "https://agentrelay.com/agents/linear-slack",
     "https://agentrelay.com/agents/neon-monitor",
+    "https://agentrelay.com/agents/register",
+    "https://agentrelay.com/agents/register/checklist",
+    "https://agentrelay.com/agents/register/checklist.md",
     "https://agentrelay.com/agents/repo-hygiene",
     "https://agentrelay.com/agents/review",
     "https://agentrelay.com/agents/spotify-releases",
