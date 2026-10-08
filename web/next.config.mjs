@@ -65,6 +65,7 @@ const nextConfig = {
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
       '/u/:handle/agent.md',
+      '/agents/register/checklist.md',
     ];
 
     return [
