@@ -977,6 +977,23 @@ describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.
     expect(body).toContain('Relayflow ran this repository\'s checks');
   });
 
+  it('closes a tilde fence the summary leaves open, so the report renders outside it', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n~~~~text\n' + longLines('code', 400, 60) + '~~~\n' }, 'pass', '');
+    expect(verdict).toBe('valid');
+    const lines = body.split('\n');
+    const closer = lines.indexOf('~~~~');
+    expect(closer).toBeGreaterThan(0);
+    expect(lines.indexOf('## Checks')).toBeGreaterThan(closer);
+    expect(lines.filter(line => /^~~~/.test(line))).toHaveLength(2);
+  });
+
+  it('does not close a fence with one of the other character', () => {
+    const root = fixture({ 'summary.md': '```\n~~~\n' + longLines('code', 400, 60) });
+    sh(`check=pass; baseline=; ${FLOW_CHECK_REPORT_COMMAND}`, root);
+    const lines = read(root, '.relayflow/pr-body.md').split('\n');
+    expect(lines.filter(line => line === '```')).toHaveLength(2);
+  });
+
   it('puts back a closing reference that truncation cut from the summary', () => {
     const { verdict, body } = publishBody({ 'summary.md': 'x'.repeat(80000) + '\n\nFixes #160\n' }, 'pass', '');
     expect(verdict).toBe('valid');

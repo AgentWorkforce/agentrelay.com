@@ -256,10 +256,11 @@ export const FLOW_WITHHELD_NOTICE_RESERVE = 2048;
 
 /**
  * Prints the fence that closes a Markdown code block still open at the end of
- * its input, or nothing: a fence of three or more backticks opens a block,
- * and a bare fence at least as long closes it.
+ * its input, or nothing: a fence of three or more backticks or tildes opens a
+ * block, and a bare fence of the same character, at least as long, closes it.
  */
-const OPEN_FENCE_AWK = String.raw`{ if (match($0, /^[ \t]*` + '```' + String.raw`+/)) { f = substr($0, RSTART, RLENGTH); sub(/^[ \t]*/, "", f); if (open == "") open = f; else { rest = $0; sub(/^[ \t]*` + '`' + String.raw`+[ \t]*$/, "", rest); if (rest == "" && length(f) >= length(open)) open = ""; } } } END { if (open != "") print open }`;
+const BACKTICK = '`';
+const OPEN_FENCE_AWK = String.raw`{ if (match($0, /^[ \t]*(` + BACKTICK.repeat(3) + String.raw`+|~~~+)/)) { f = substr($0, RSTART, RLENGTH); sub(/^[ \t]*/, "", f); if (open == "") open = f; else if (substr(f, 1, 1) == substr(open, 1, 1) && length(f) >= length(open)) { rest = $0; sub(substr(f, 1, 1) == "~" ? "^[ \t]*~+[ \t]*$" : "^[ \t]*` + BACKTICK + String.raw`+[ \t]*$", "", rest); if (rest == "") open = ""; } } } END { if (open != "") print open }`;
 
 /**
  * `relayflow_cap <file> <bytes> <head|tail> <where>` cuts `file` to at most
