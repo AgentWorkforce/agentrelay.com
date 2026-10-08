@@ -355,6 +355,13 @@ describe("arelay.to over plain HTTP", () => {
     expect(await response?.text()).toBe(`agent-relay: use HTTPS: https://arelay.to/agent-relay/${id}\n`);
   });
 
+  it("also catches a fully qualified host with a trailing dot", () => {
+    const response = getInsecureShortHostResponse(new URL("http://arelay.to./agent-relay"), "GET");
+    expect(response?.status).toBe(301);
+    expect(response?.headers.get("location")).toBe("https://arelay.to/agent-relay");
+    expect(getInsecureShortHostResponse(new URL(`http://www.arelay.to./agent-relay/${"0".repeat(32)}`), "POST")?.status).toBe(308);
+  });
+
   it("leaves HTTPS and other hosts alone", () => {
     expect(getInsecureShortHostResponse(new URL("https://arelay.to/agent-relay"), "GET")).toBeUndefined();
     expect(getInsecureShortHostResponse(new URL("http://agentrelay.com/u/agent-relay"), "GET")).toBeUndefined();

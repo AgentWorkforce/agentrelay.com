@@ -512,11 +512,14 @@ function relayAgentOrigin(env: Env): string | undefined {
 // agent's curl (which does not follow redirects) prints what to use instead,
 // and the message is never processed over plain HTTP.
 export function getInsecureShortHostResponse(url: URL, method: string): Response | undefined {
-  if (url.protocol !== "http:" || (url.hostname !== SHORT_HOST && url.hostname !== SHORT_HOST_WWW)) {
+  // A fully qualified Host ("arelay.to.") names the same site; match it too.
+  const hostname = url.hostname.replace(/\.$/, "");
+  if (url.protocol !== "http:" || (hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW)) {
     return undefined;
   }
   const secure = new URL(url);
   secure.protocol = "https:";
+  secure.hostname = hostname;
   secure.port = "";
   if (method === "GET" || method === "HEAD") {
     return Response.redirect(secure.toString(), 301);
