@@ -897,12 +897,12 @@ describe('change metadata contract', () => {
  */
 describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.com#160)', () => {
   const chars = (text: string) => Array.from(text).length;
-  /**
-   * Renders a body as GitHub does (GFM, raw HTML allowed) and returns what a
-   * reader sees before the check report, or null when the report is hidden:
-   * inside a code block, an HTML comment, or a collapsed <details>.
-   */
+  /** Renders a body as GitHub does: GFM, raw HTML allowed. */
   const render = (body: string) => micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()], allowDangerousHtml: true });
+  /**
+   * What a reader sees before the check report, or null when the report is
+   * hidden: inside a code block, an HTML comment, or a collapsed <details>.
+   */
   const beforeReport = (body: string) => {
     const html = render(body)
       .replace(/<!--[\s\S]*?(-->|$)/g, '');
