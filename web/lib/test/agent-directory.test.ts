@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { GET } from '../../app/directory.md/route';
 import {
   agentDirectoryMarkdown,
+  chatUrlLabel,
   escapeMarkdown,
   fetchAgentDirectory,
   filterDirectoryAgents,
@@ -43,6 +44,7 @@ describe('agent directory', () => {
     const agents = await fetchAgentDirectory(fetcher as unknown as typeof fetch);
     expect(agents.map((agent) => agent.handle)).toEqual(['acme-support', 'zeta-bot']);
     expect(agents[0]?.chatUrl).toBe('https://arelay.to/acme-support');
+    expect(chatUrlLabel(agents[0]!)).toBe('arelay.to/acme-support');
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 

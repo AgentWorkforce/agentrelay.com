@@ -5,7 +5,6 @@ import { readBoundedBody, REGISTRY_ORIGIN, validRegistryHandle } from './agent-r
 // in router/index.ts (AGENT_DIRECTORY_PAGE_PATH); keep the two in step.
 export const AGENT_DIRECTORY_PATH = '/directory';
 export const AGENT_DIRECTORY_MARKDOWN_PATH = `${AGENT_DIRECTORY_PATH}.md`;
-export const AGENT_DIRECTORY_SHORT_URL = 'https://arelay.to/agents';
 export const AGENT_REGISTER_URL = 'https://arelay.to/register';
 
 const PAGE_LIMIT = 100;
@@ -152,20 +151,37 @@ export function sanitizeRegistryText(value: string): string {
   return /[^\p{C}\s]/u.test(value) ? normalizeAgentName(value) : '';
 }
 
-/** Case-insensitive match across everything a visitor can see on a card. */
-export function filterDirectoryAgents(agents: readonly DirectoryAgent[], query: string): DirectoryAgent[] {
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (terms.length === 0) return [...agents];
-  return agents.filter((agent) => {
-    const haystack = [
+export type DirectoryIndex = ReadonlyArray<{ agent: DirectoryAgent; text: string }>;
+
+/** Lower-cased search text for each agent, built once per agent list. */
+export function buildDirectoryIndex(agents: readonly DirectoryAgent[]): DirectoryIndex {
+  return agents.map((agent) => ({
+    agent,
+    text: [
       agent.handle,
       agent.displayName,
       agent.description,
       agent.verifiedDomain ?? '',
       agent.verifiedWorkspace ?? '',
-    ].join(' ').toLowerCase();
-    return terms.every((term) => haystack.includes(term));
-  });
+    ].join(' ').toLowerCase(),
+  }));
+}
+
+/** Case-insensitive match across everything a visitor can see on a card. */
+export function searchDirectoryIndex(index: DirectoryIndex, query: string): DirectoryAgent[] {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return index
+    .filter(({ text }) => terms.every((term) => text.includes(term)))
+    .map(({ agent }) => agent);
+}
+
+export function filterDirectoryAgents(agents: readonly DirectoryAgent[], query: string): DirectoryAgent[] {
+  return searchDirectoryIndex(buildDirectoryIndex(agents), query);
+}
+
+/** The chat link as shown on a card: the link itself, without its scheme. */
+export function chatUrlLabel(agent: DirectoryAgent): string {
+  return agent.chatUrl.replace(/^https?:\/\//, '');
 }
 
 export function verificationBadges(agent: DirectoryAgent): string[] {

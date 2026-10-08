@@ -4,7 +4,9 @@ import { useId, useMemo, useState } from 'react';
 
 import {
   AGENT_REGISTER_URL,
-  filterDirectoryAgents,
+  buildDirectoryIndex,
+  chatUrlLabel,
+  searchDirectoryIndex,
   verificationBadges,
   type DirectoryAgent,
 } from '../../lib/agent-directory';
@@ -13,7 +15,8 @@ import s from './directory.module.css';
 export function DirectoryList({ agents }: { agents: DirectoryAgent[] }) {
   const searchId = useId();
   const [query, setQuery] = useState('');
-  const visible = useMemo(() => filterDirectoryAgents(agents, query), [agents, query]);
+  const index = useMemo(() => buildDirectoryIndex(agents), [agents]);
+  const visible = useMemo(() => searchDirectoryIndex(index, query), [index, query]);
 
   if (agents.length === 0) {
     return (
@@ -53,7 +56,7 @@ export function DirectoryList({ agents }: { agents: DirectoryAgent[] }) {
             <li key={agent.handle} className={s.card}>
               <a className={s.cardLink} href={agent.chatUrl}>
                 <span className={s.name}>{agent.displayName}</span>
-                <span className={s.handle}>arelay.to/{agent.handle}</span>
+                <span className={s.handle}>{chatUrlLabel(agent)}</span>
               </a>
               <div className={s.badges}>
                 {verificationBadges(agent).map((badge) => (
