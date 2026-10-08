@@ -920,9 +920,11 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // its build, and the base commit's check runs the same recipe, so each is
   // budgeted like it.
   let checkTook = 0;
-  const timedCheck = async (prefix: string, command: string, minutes: number) => {
+  // The f.run lease is longer than the check's own limit, so the check stops
+  // itself and reports "timeout" first.
+  const timedCheck = async (prefix: string, command: string, minutes: number, lease = minutes + 1) => {
     const from = await clock();
-    const result = (await f.run(prefix + "RELAYFLOW_CHECK_TIMEOUT=" + minutes * 60 + "; " + command, { timeout: (minutes + 1) + "m" })).trim();
+    const result = (await f.run(prefix + "RELAYFLOW_CHECK_TIMEOUT=" + minutes * 60 + "; " + command, { timeout: lease + "m" })).trim();
     checkTook = (await clock() - from) / 60;
     return result;
   };
@@ -964,10 +966,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const compareWithBase = async () => {
     if (!broken(check)) return "";
     if (checkPlan === "none") return "new";
-    const baseLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
-    if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.min(${t.checkLimitMinutes}, Math.ceil(checkTook) + 1))) return "skipped";
+    // Checking out the base commit and returning to the branch share the
+    // check's lease, so it gets two minutes beyond the limit, within f.run's 15.
+    const baseLimit = await allowance(${t.checkMinutes - 2}, 3 + publishing);
+    if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.min(${t.checkMinutes - 2}, Math.ceil(checkTook) + 1))) return "skipped";
     await f.run(freeDisk);
-    return timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit);
+    return timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit, baseLimit + 2);
   };
   const baseline = await compareWithBase();` });
   sections.push({ id: 'pull-request', code: `  // Publish the branch and open the pull request without an agent.

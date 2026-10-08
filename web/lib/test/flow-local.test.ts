@@ -331,17 +331,25 @@ describe('local flow starter kit', () => {
 
   it('runs one review and no fix round: an unresolved review drafts the pull request with its findings', async () => {
     const calls: string[] = [];
+    const agents: string[] = [];
     let finish = '';
     await compile(factorySource(draft, 'local'))({
-      agent: async (name: string) => { calls.push(name); },
+      agent: async (name: string) => { calls.push(name); agents.push(name); },
       run: async (command: string) => { calls.push(plain(command)); return answer(command, { clean: 'no' }); },
       done: (reason: string) => { finish = reason; },
     }, localRunInput());
-    expect(calls.filter(call => call.startsWith('adversary'))).toEqual(['adversary']);
-    expect(calls).not.toContain('fixer');
+    // Every agent the run started, in order: one review, and nothing after it.
+    expect(agents).toEqual(['check-discovery', 'implementer', 'adversary']);
     expect(calls.filter(call => call === PUSH)).toHaveLength(1);
     expect(calls.findIndex(call => call.endsWith(FLOW_REVIEW_BLOCKED_COMMAND))).toBeGreaterThan(calls.indexOf('adversary'));
     expect(finish).toBe('step_failed');
+  });
+
+  it('tells the person the same wall-clock budget the local flow declares', () => {
+    const files = localKitFiles(draft);
+    expect(files['software-factory.flow.mts']).toContain('wallclock: "3h"');
+    expect(files['START-HERE.txt']).toContain('three-hour wall-clock budget');
+    expect(files['START-HERE.txt']).not.toContain('two-hour');
   });
 
   it('generates valid local source for every preset with an explicit runtime limit', () => {

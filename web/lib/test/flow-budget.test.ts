@@ -90,6 +90,7 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
   let checkIndex = 0;
   const calls: { name: string; atMinute: number; minutes: number; command?: string; timedOut?: boolean; limit?: number }[] = [];
   const errors: string[] = [];
+  const leases: { name: string; limit: number; lease?: number }[] = [];
   let finish = '';
   let refused: string | null = null;
   const step = (name: string, ms: number, parallel = false, command?: string) => {
@@ -113,8 +114,9 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
     const key = Object.keys(timing.agents).find(prefix => name.startsWith(prefix));
     return key === undefined ? 5 : timing.agents[key]!;
   };
-  const checked = (name: string, command: string, run: { minutes: number; verdict: string }) => {
+  const checked = (name: string, command: string, run: { minutes: number; verdict: string }, lease?: string) => {
     const limit = checkLimitMinutes(command);
+    leases.push({ name, limit, lease: durationMs(lease) === undefined ? undefined : durationMs(lease)! / MINUTE });
     const stopped = run.minutes > limit;
     step(name, (stopped ? limit : run.minutes) * MINUTE, false, command);
     calls[calls.length - 1]!.limit = limit;
@@ -137,10 +139,10 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
       },
       run: async (command: string, runOptions?: { timeout?: string }) => {
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) {
-          return checked('base-check', command, timing.baseline ?? { minutes: FLOW_TIME.checkLimitMinutes, verdict: 'fail' });
+          return checked('base-check', command, timing.baseline ?? { minutes: FLOW_TIME.checkLimitMinutes, verdict: 'fail' }, runOptions?.timeout);
         }
         if (command.endsWith(FLOW_CHECK_RUN_COMMAND)) {
-          return checked('check', command, timing.checks[Math.min(checkIndex++, timing.checks.length - 1)]!);
+          return checked('check', command, timing.checks[Math.min(checkIndex++, timing.checks.length - 1)]!, runOptions?.timeout);
         }
         const ms = !timing.fullTimeouts ? 5000 : durationMs(runOptions?.timeout) ?? FLOW_TIME.defaultStepMinutes * MINUTE;
         step(command.startsWith(FLOW_OPEN_CHANGE_COMMAND) ? 'open-change'
@@ -170,7 +172,7 @@ async function runTimed(timing: Timing, workflow: FactoryDraft['workflow'] = 'tr
   }
   const opened = calls.find(call => call.name === 'open-change');
   const names = calls.map(call => call.name);
-  return { calls, names, errors, finish, refused, budgetMs, chargedMinutes: charged / MINUTE, opened };
+  return { calls, names, errors, leases, finish, refused, budgetMs, chargedMinutes: charged / MINUTE, opened };
 }
 
 type Run = Awaited<ReturnType<typeof runTimed>>;
@@ -384,6 +386,24 @@ describe('Garden flow time plan (cloud#4235, agentrelay.com#155)', () => {
     // Nothing was checked, so the run must not claim the base commit fails too.
     expect(errorsOf(run)).toMatch(/base not checked/);
     expect(errorsOf(run)).not.toMatch(/as far as the base commit shows/);
+  });
+
+  it('leases the base check enough beyond its limit to check out the base commit and come back', async () => {
+    // The limit stops only the check script; the checkout, the worktree and the
+    // way back to the branch run inside the same f.run lease, and a lease that
+    // runs out throws and takes the run down.
+    for (const minutes of [2, FLOW_TIME.checkLimitMinutes]) {
+      const run = await runTimed({
+        agents: { 'check-discovery': 1, 'implementer': 1, 'check-repair': 1 },
+        checks: [{ minutes, verdict: 'fail' }],
+        baseline: { minutes, verdict: 'fail' },
+      }, 'simple');
+      const base = run.leases.find(lease => lease.name === 'base-check');
+      expect(base, `${minutes}m checks`).toBeDefined();
+      expect(base!.lease! - base!.limit).toBeGreaterThanOrEqual(2);
+      // f.run refuses a lease above 15 minutes.
+      for (const lease of run.leases) expect(lease.lease!).toBeLessThanOrEqual(FLOW_TIME.checkMinutes);
+    }
   });
 
   it('fails fast to a draft when there is no time left to run the checks', async () => {

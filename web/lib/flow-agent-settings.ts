@@ -45,6 +45,16 @@ export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): strin
   }
 }
 
+/**
+ * Defaults an editor may have saved verbatim that no longer fit the workflow:
+ * the traditional implementer followed the plan reviewer's reviewed-plan.md,
+ * which is no longer written (agentrelay.com#155). A saved copy of one
+ * resolves to the current default; a prompt the person wrote is kept.
+ */
+const RETIRED_DEFAULT_PROMPTS: Partial<Record<`${WorkflowId}:${AgentRole}`, readonly string[]>> = {
+  'traditional:implementer': ['Follow reviewed-plan.md. Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.'],
+};
+
 export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
   const available = [...new Set(selected.filter(isCodingAgent))];
   const builder = available[0] ?? 'claude';
@@ -55,7 +65,8 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
   const model = compatible ? saved?.model?.trim() || '' : '';
-  return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
+  const retired = saved?.prompt !== undefined && RETIRED_DEFAULT_PROMPTS[`${workflow}:${role}`]?.includes(saved.prompt);
+  return { agent, model, prompt: saved?.prompt !== undefined && !retired ? saved.prompt : defaultAgentPrompt(workflow, role) };
 }
 
 /** Resolve the explicit pair emitted by a first-party generated flow. */

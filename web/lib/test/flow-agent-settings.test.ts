@@ -74,6 +74,17 @@ describe('per-step agent settings', () => {
     expect(resolveGeneratedAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-5', prompt: 'Custom work' });
   });
 
+  it('gives a saved copy of the old traditional implementer default the new one, which plans instead of reading reviewed-plan.md', () => {
+    const old = 'Follow reviewed-plan.md. Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.';
+    const saved = { 'traditional:implementer': { agent: 'codex' as const, model: 'm', prompt: old } };
+    const resolved = resolveAgentSettings('traditional', 'implementer', ['claude', 'codex'], saved);
+    expect(resolved.prompt).not.toContain('reviewed-plan.md');
+    expect(resolved).toMatchObject({ agent: 'codex', model: 'm', prompt: resolveAgentSettings('traditional', 'implementer', ['claude', 'codex']).prompt });
+    // A prompt the person wrote themselves is kept, even if it names the file.
+    const custom = { 'traditional:implementer': { prompt: 'Follow reviewed-plan.md carefully.' } };
+    expect(resolveAgentSettings('traditional', 'implementer', ['claude'], custom).prompt).toBe('Follow reviewed-plan.md carefully.');
+  });
+
   it('does not turn a prompt-only editor change into a model override', () => {
     const current = resolveAgentSettings('simple', 'implementer', ['claude']);
     expect(current.model).toBe('');
