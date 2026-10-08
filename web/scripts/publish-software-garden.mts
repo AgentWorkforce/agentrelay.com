@@ -10,7 +10,7 @@
  * Output that returns to an earlier version's bytes is still a new version.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -28,6 +28,13 @@ const manifestPath = path.join(web, SOFTWARE_GARDEN_ARTIFACT_DIR, 'manifest.json
 const previous: Manifest | null = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
 const versions = previous?.versions ?? [];
 const digest = (bytes: string | Buffer) => createHash('sha256').update(bytes).digest('hex');
+// Written beside the target and renamed over it, so an interrupted publish
+// never leaves a truncated manifest or version file behind.
+const writeAtomically = (target: string, text: string) => {
+  const staged = `${target}.${process.pid}.tmp`;
+  writeFileSync(staged, text);
+  renameSync(staged, target);
+};
 
 // Every published file must still be what the manifest recorded before
 // anything new is cut; a missing or edited version is an error, not current.
@@ -50,11 +57,11 @@ if (!unchanged) {
     throw new Error(`${softwareGardenArtifactPath(version)} exists with other bytes and no manifest entry; remove it and publish again.`);
   }
   mkdirSync(path.dirname(file), { recursive: true });
-  writeFileSync(file, source);
+  writeAtomically(file, source);
 }
 // Rewritten even when the bytes are unchanged, so a draft change the source
 // does not serialize (such as filters Cloud applies) is still recorded.
-writeFileSync(manifestPath, JSON.stringify({
+writeAtomically(manifestPath, JSON.stringify({
   name: 'Software Garden',
   catalogId: 'software-factory',
   version,
