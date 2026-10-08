@@ -94,6 +94,9 @@ describe('published Software Garden artifact', () => {
 
   it('keeps the ticket-title and exact closing-reference contract the catalog requires', () => {
     const entry = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    // Both what the catalog serves and what the generator would publish next.
+    const pinned = readFileSync(path.join(web, entry.source.path.replace(/^web\//, '')), 'utf8');
+    expect(() => assertRecommendedFlowSourceContract(entry, pinned)).not.toThrow();
     expect(() => assertRecommendedFlowSourceContract(entry, softwareGardenSource())).not.toThrow();
   });
 

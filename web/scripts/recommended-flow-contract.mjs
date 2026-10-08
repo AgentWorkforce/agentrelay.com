@@ -8,6 +8,7 @@ export const SOFTWARE_FACTORY_METADATA_SNIPPETS = Object.freeze([
   '? "Fixes " + issueIdentifier',
   'expected=\\"Fixes $identifier\\"',
   'count=$(grep -xcF \\"$expected\\"',
+  'if [ \\"$count\\" -eq 0 ]; then echo missing-github-closing-reference',
   'elif [ \\"$count\\" -ne 1 ]',
   '" --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md"',
 ]);
