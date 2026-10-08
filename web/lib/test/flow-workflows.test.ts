@@ -299,17 +299,33 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
       expect(next.token).toBe('running');
       expect(next.stderr).toContain('stopped a check an earlier attempt left running');
       expect(gone(-first)).toBe(true);
+      // Where there is no ps to identify it, a live group with no status is
+      // stopped anyway rather than left writing the same files.
+      const noPs = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'setsid', 'perl']);
+      const other = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 60\n' });
+      expect(sh(FLOW_CHECK_RUN_COMMAND, other, { PATH: noPs, RELAYFLOW_CHECK_ID: 'j-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' }).token).toBe('running');
+      const left = Number(read(other, '.relayflow/check.log.group').trim());
+      const after = sh(FLOW_CHECK_RUN_COMMAND, other, { PATH: noPs, RELAYFLOW_CHECK_ID: 'j-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(after.stderr).toContain('no ps here to identify it');
+      expect(gone(-left)).toBe(true);
+      try { process.kill(-Number(read(other, '.relayflow/check.log.group').trim()), 'SIGKILL'); } catch { /* already gone */ }
       // Clean up the second check.
       const second = Number(read(root, '.relayflow/check.log.group').trim());
       try { process.kill(-second, 'SIGKILL'); } catch { /* already gone */ }
     }, 30_000);
 
-    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v perl']).status !== 0)('puts the check in a group of its own where there is no setsid, as on macOS', () => {
+    /** A PATH with only `tools` on it, so a missing one is genuinely missing. */
+    function onlyTools(tools: string[]) {
       const bin = fixture({});
-      for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv']) {
+      for (const tool of tools) {
         const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
         if (found) symlinkSync(found, path.join(bin, tool));
       }
+      return bin;
+    }
+
+    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v perl']).status !== 0)('puts the check in a group of its own where there is no setsid, as on macOS', () => {
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv', 'ps', 'grep']);
       expect(sh('command -v setsid || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
       const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 60 &\necho $! > .relayflow/child.pid\nwait\n' });
       let result = { token: 'running', code: 0 as number | null, stdout: '', stderr: '' };
@@ -322,6 +338,23 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
       expect(group).not.toBe(process.pid);
       expect(gone(-group)).toBe(true);
       expect(gone(Number(read(root, '.relayflow/child.pid').trim()))).toBe(true);
+    }, 30_000);
+
+    it('runs the check in the step itself where nothing can put it in a group of its own', () => {
+      // Without setsid and perl nothing could stop a detached check's
+      // descendants, so it is never detached: it runs here, within the wait.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'timeout']);
+      expect(sh('command -v setsid || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran\n' });
+      const passing = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '5' });
+      expect(passing.token).toBe('pass');
+      expect(passing.stderr).toContain('neither setsid nor perl');
+      // Nothing was detached, so there is no group to wait on, and the step
+      // cannot hold its lease longer than the wait it was given.
+      expect(read(root, '.relayflow/check.log.group')).toBe('');
+      expect(read(root, '.relayflow/check.log')).toContain('suite-ran');
+      const timedOut = sh(FLOW_CHECK_RUN_COMMAND, fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' }), { PATH: bin, RELAYFLOW_CHECK_ID: 'i-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' });
+      expect(timedOut.token).toBe('timeout');
     }, 30_000);
 
     it('waits for the check an ID already started instead of starting another, so a resumed run picks it up', () => {
