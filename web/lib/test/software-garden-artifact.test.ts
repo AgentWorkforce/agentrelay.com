@@ -126,7 +126,8 @@ describe('published Software Garden artifact', () => {
       5: 'e3f5442652edd7651225fd1f5435f0e65378ec4b:b89a36e2cf9054036a7fc53fba20011a42ef0275ffbaaa907b080738ab46ad27',
     };
     const { source } = catalog.flows.find(flow => flow.id === 'software-factory')!;
-    expect(new Set(Object.values(SOURCE_BY_CATALOG_VERSION)).size).toBe(Object.keys(SOURCE_BY_CATALOG_VERSION).length);
+    // A catalog-wide bump may keep this source, so a row may repeat the one
+    // before it; what it may not do is change the source without a new row.
     expect(Math.max(...Object.keys(SOURCE_BY_CATALOG_VERSION).map(Number)), 'record the new source here').toBe(catalog.catalogVersion);
     expect(SOURCE_BY_CATALOG_VERSION[catalog.catalogVersion], 'the pinned source changed: advance catalogVersion and record it').toBe(`${source.ref}:${source.sha256}`);
   });
