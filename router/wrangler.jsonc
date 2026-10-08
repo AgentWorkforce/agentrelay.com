@@ -39,6 +39,13 @@
     { "binding": "TRAFFIC_RECORDER", "bucket_name": "traffic-recorder" }
   ],
 
+  // Server-side arelay.to analytics (relay-agent docs/ANALYTICS_BRIEF.md). Same
+  // dataset relay-agent writes. agent_guide_fetched also needs the
+  // ANALYTICS_VISITOR_HASH_SECRET Worker secret; without it nothing is written.
+  "analytics_engine_datasets": [
+    { "binding": "ARELAY_ANALYTICS", "dataset": "arelay_agent_analytics" }
+  ],
+
   "vars": {
     "CLOUD_APP_ORIGIN": "https://origin.agentrelay.cloud",
     "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",

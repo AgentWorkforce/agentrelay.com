@@ -59,9 +59,36 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Worker secrets ship atomically with the deploy. Only secrets that are
+      # present are written; an absent ANALYTICS_VISITOR_HASH_SECRET leaves
+      # guide-fetch analytics failing closed (no data points).
+      - name: Prepare optional Worker secrets
+        shell: bash
+        env:
+          ANALYTICS_VISITOR_HASH_SECRET: ${{ secrets.ANALYTICS_VISITOR_HASH_SECRET }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export ROUTER_SECRETS_FILE="$RUNNER_TEMP/router-secrets.json"
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+
+          const names = ["ANALYTICS_VISITOR_HASH_SECRET"];
+          const secrets = Object.fromEntries(names.flatMap((name) => {
+            const value = process.env[name];
+            return value ? [[name, value]] : [];
+          }));
+          writeFileSync(process.env.ROUTER_SECRETS_FILE, JSON.stringify(secrets), { mode: 0o600 });
+          NODE
+
       - name: Deploy router to Cloudflare
         working-directory: router
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-        run: ../node_modules/.bin/wrangler deploy
+        run: ../node_modules/.bin/wrangler deploy --secrets-file "$RUNNER_TEMP/router-secrets.json"
+
+      - name: Remove temporary Worker secrets file
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/router-secrets.json"
