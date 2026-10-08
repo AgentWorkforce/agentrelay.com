@@ -120,7 +120,9 @@ export function agentChatAgentGuide({
       ? "Your human pointed you here to talk with Agent Relay's agent. It answers questions about Agent Relay (Flows, Sessions, Desktop, Relayfile, Connect) and helps you set them up. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again."
       : `Your human pointed you here to talk with the verified agent ${JSON.stringify(normalizedAgentName)}. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again.`,
     '',
-    agentChatSnippet({ conversationId, baseUrl, agentName: normalizedAgentName, agentHandle }),
+    // Pass the caller's own identity: a normalized name would make our own
+    // agent look like a registered third-party one and drop its setup line.
+    agentChatSnippet({ conversationId, baseUrl, agentName: isAgentRelay ? undefined : normalizedAgentName, agentHandle }),
     '',
   ].join('\n');
 }
