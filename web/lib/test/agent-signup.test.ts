@@ -25,6 +25,8 @@ describe('agent signup instructions', () => {
     expect(content).toContain('Send a User-Agent naming your tool');
     expect(content).toContain('Python-urllib');
     expect(agentSignupPrompt(product as 'teams' | 'flows', 'https://agentrelay.com')).toContain('Do NOT use computer use, browser automation');
+    // The prompt must carry it too: a blocked client never reads the guide.
+    expect(agentSignupPrompt(product as 'teams' | 'flows', 'https://agentrelay.com')).toContain('sending a User-Agent that names your tool');
     if (product === 'teams') {
       expect(content).toContain('--selected-sessions-only --json');
       expect(content).toContain('releases/latest/download/AgentRelay-macOS-<arch>.dmg');
