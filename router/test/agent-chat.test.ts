@@ -253,9 +253,12 @@ describe("router agent chat", () => {
     const browser = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", browser)).toBe("/u/agent-relay");
     expect(getAgentPagePath("agentrelay.com", "/u/agent-relay", "GET", browser)).toBe("/u/agent-relay");
+    expect(getAgentPagePath("arelay.to", "/acme-support", "GET", browser)).toBe("/u/acme-support");
+    expect(getAgentPagePath("agentrelay.com", "/u/acme-support", "GET", browser)).toBe("/u/acme-support");
     for (const accept of ["*/*", null, "text/markdown", "text/markdown, text/html;q=0.9, */*;q=0.8", "text/plain"]) {
       expect(getAgentPagePath("arelay.to", "/agent-relay", "GET", accept)).toBe("/u/agent-relay/agent.md");
       expect(getAgentPagePath("agentrelay.com", "/u/agent-relay/", "GET", accept)).toBe("/u/agent-relay/agent.md");
+      expect(getAgentPagePath("arelay.to", "/acme-support", "GET", accept)).toBe("/u/acme-support/agent.md");
     }
   });
 
@@ -304,9 +307,10 @@ describe("router agent chat", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("leaves other paths, unknown agents, POSTs and other hosts alone", () => {
+  it("leaves other paths, invalid handles, POSTs and other hosts alone", () => {
     expect(getAgentPagePath("arelay.to", "/agent-relay/bridge.sh", "GET", "*/*")).toBeUndefined();
-    expect(getAgentPagePath("arelay.to", "/someone-else", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("arelay.to", "/-invalid", "GET", "*/*")).toBeUndefined();
+    expect(getAgentPagePath("arelay.to", "/x", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("arelay.to", "/agent-relay", "POST", "*/*")).toBeUndefined();
     expect(getAgentPagePath("agentrelay.com", "/agent-relay", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("example.com", "/u/agent-relay", "GET", "*/*")).toBeUndefined();

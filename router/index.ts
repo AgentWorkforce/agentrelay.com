@@ -43,10 +43,11 @@ const CONNECT_INVITE_PATH = /^(\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?
 // site, but its bare root and the signed-in cloud app send people to agentrelay.com.
 const SHORT_HOST = "arelay.to";
 const SHORT_HOST_WWW = "www.arelay.to";
+const HANDLE_SEGMENT = "[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])";
 // A visitor's coding agent chats through /<handle>/<32 hex id>. arelay.to
 // accepts every handle-shaped slug and lets relay-agent's registry decide
 // whether it exists. agentrelay.com retains its established agent-relay route.
-const AGENT_CHAT_PATH = /^\/([a-z0-9-]+)\/([0-9a-f]{32})\/?$/;
+const AGENT_CHAT_PATH = new RegExp(`^/(${HANDLE_SEGMENT})/([0-9a-f]{32})/?$`);
 const REGISTRY_API_PATH = /^\/api\/v1\/(?:registrations|agents)(?:\/|$)/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
@@ -159,9 +160,9 @@ export function getAgentPagePath(
   }
   let agent: string | undefined;
   if (hostname === SHORT_HOST || hostname === SHORT_HOST_WWW) {
-    agent = /^\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
+    agent = new RegExp(`^/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
   } else if (hostname === PRIMARY_HOST) {
-    agent = /^\/u\/([a-z0-9-]+)\/?$/.exec(pathname)?.[1];
+    agent = new RegExp(`^/u/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
   }
   if (!agent) {
     return undefined;
@@ -220,6 +221,7 @@ export function getLegacyAgentPageRedirect(url: URL): string | undefined {
   return agent === "agent-relay"
     ? `https://${PRIMARY_HOST}/u/${agent}${url.search}`
     : undefined;
+}
 
 // Registration and management are served directly by relay-agent. The public
 // API matcher is prefix-bounded so lookalikes such as /registrations-legacy do
