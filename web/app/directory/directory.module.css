@@ -138,6 +138,30 @@
   overflow-wrap: anywhere;
 }
 
+.cardOfficial {
+  border-color: #c9a227;
+}
+
+.cardOfficial:hover {
+  border-color: #e6c14a;
+}
+
+.badgeOfficial {
+  border: 1px solid #c9a227;
+  border-radius: 999px;
+  padding: 4px 10px;
+  background: #2b2610;
+  color: #f3dc8a;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.firstCompany {
+  margin-top: 32px;
+}
+
 .description {
   margin: 0;
   color: var(--flows-muted);
