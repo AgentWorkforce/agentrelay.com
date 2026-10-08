@@ -5,9 +5,10 @@ Route precedence:
 - `GET`/`HEAD /connect/<id>` (Relay Connect invite links) is served by the Cloud app's `/cloud/connect/<id>` route.
 - `/observer/file*` routes to the RelayFile observer app, expected to be built with `basePath: "/observer/file"`.
 - `/observer*` routes to the Relaycast observer app.
-- On `arelay.to`, `POST /<handle>/<32hex>`, `GET /register`, and
-  `/api/v1/(registrations|agents)/**` route to the `relay-agent` Worker. The
-  Worker owns registry lookup and its 404/410 decisions.
+- On `arelay.to`, `GET`/`HEAD /register` and
+  `/api/v1/(registrations|agents)/**` route to the `relay-agent` Worker;
+  `POST /<handle>/<32hex>` routes there on both `arelay.to` and
+  `www.arelay.to`. The Worker owns registry lookup and its 404/410 decisions.
 - everything else falls back to the legacy proxy target.
 
 RelayFile observer deployment is wired from the production job in

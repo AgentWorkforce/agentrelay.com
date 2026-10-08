@@ -71,6 +71,7 @@ describe("router agent chat", () => {
 
   it("forwards the guide and bounded registry API paths only on arelay.to", async () => {
     expect(isRelayAgentRegistryRoute("arelay.to", "/register", "GET")).toBe(true);
+    expect(isRelayAgentRegistryRoute("arelay.to", "/register", "HEAD")).toBe(true);
     expect(isRelayAgentRegistryRoute("arelay.to", "/register/", "GET")).toBe(true);
     expect(isRelayAgentRegistryRoute("arelay.to", "/register", "POST")).toBe(false);
     expect(isRelayAgentRegistryRoute("arelay.to", "/api/v1/registrations", "POST")).toBe(true);
@@ -109,8 +110,10 @@ describe("router agent chat", () => {
     );
     expect(registryResponse.status).toBe(503);
     expect(registryResponse.headers.get("cache-control")).toBe("no-store");
+    expect(await registryResponse.text()).toContain("agent registry is unavailable");
     expect(companyChatResponse.status).toBe(503);
     expect(companyChatResponse.headers.get("cache-control")).toBe("no-store");
+    expect(await companyChatResponse.text()).toContain("agent chat is unavailable");
     expect(cloud.fetch).not.toHaveBeenCalled();
   });
 
@@ -221,6 +224,21 @@ describe("router agent chat", () => {
     expect(await response.text()).toContain("Retry the same command shortly");
     expect(cloud.fetch).not.toHaveBeenCalled();
     expect(logged).toHaveBeenCalledWith(expect.stringContaining("relay_agent_upstream_failed"));
+  });
+
+  it("uses registry-specific wording when the registry upstream fails", async () => {
+    const cloud = { fetch: vi.fn(async () => new Response("wrong upstream")) };
+    const relayAgent = { fetch: vi.fn(async () => { throw new Error("down"); }) };
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const response = await worker.fetch(
+      new Request("https://arelay.to/api/v1/agents/acme"),
+      buildEnv(cloud, { RELAY_AGENT_WORKER: relayAgent }),
+      ctx,
+    );
+
+    expect(response.status).toBe(503);
+    expect(await response.text()).toContain("agent registry is unavailable");
+    expect(cloud.fetch).not.toHaveBeenCalled();
   });
 
   it("sends the short host's root, www and cloud app to agentrelay.com", () => {

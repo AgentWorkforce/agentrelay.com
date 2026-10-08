@@ -230,7 +230,8 @@ export function isRelayAgentRegistryRoute(
   method: string,
 ): boolean {
   if (hostname !== SHORT_HOST) return false;
-  if ((pathname === "/register" || pathname === "/register/") && method === "GET") {
+  if ((pathname === "/register" || pathname === "/register/")
+    && (method === "GET" || method === "HEAD")) {
     return true;
   }
   return REGISTRY_API_PATH.test(pathname);
@@ -633,7 +634,10 @@ export default {
             : "relay_agent_upstream_failed",
           message: error instanceof Error ? error.message : "unknown error",
         }));
-        return new Response("The agent chat is unavailable. Retry the same command shortly.\n", {
+        const unavailableMessage = registryRoute
+          ? "The agent registry is unavailable. Retry shortly.\n"
+          : "The agent chat is unavailable. Retry the same command shortly.\n";
+        return new Response(unavailableMessage, {
           status: 503,
           headers: {
             "content-type": "text/plain; charset=utf-8",
@@ -649,7 +653,10 @@ export default {
     // Cloud fallback. Keep them off the marketing origin when the dedicated
     // Worker is absent during a rollback or unavailable environment.
     if (registryRoute || registryOwnedChatRoute) {
-      return new Response("The agent registry is unavailable. Retry shortly.\n", {
+      const unavailableMessage = registryRoute
+        ? "The agent registry is unavailable. Retry shortly.\n"
+        : "The agent chat is unavailable. Retry the same command shortly.\n";
+      return new Response(unavailableMessage, {
         status: 503,
         headers: {
           "content-type": "text/plain; charset=utf-8",
