@@ -10,14 +10,16 @@ import s from './agent-chat-snippet.module.css';
 export function AgentChatSnippet({
   initialConversationId,
   baseUrl,
+  agentName,
 }: {
   initialConversationId: string;
   baseUrl?: string;
+  agentName?: string;
 }) {
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [status, setStatus] = useState<'' | 'copied' | 'copy-failed' | 'new'>('');
 
-  const snippet = agentChatSnippet({ conversationId, baseUrl });
+  const snippet = agentChatSnippet({ conversationId, baseUrl, agentName });
 
   async function handleCopy() {
     try {

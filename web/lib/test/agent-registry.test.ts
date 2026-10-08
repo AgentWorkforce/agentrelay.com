@@ -42,8 +42,21 @@ describe('public agent registry profiles', () => {
   });
 
   it('caps profile bodies', async () => {
-    const fetcher = vi.fn(async () => new Response('x'.repeat(16_001)));
+    let pulls = 0;
+    let canceled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        controller.enqueue(new TextEncoder().encode('x'.repeat(8_001)));
+        if (pulls === 3) controller.close();
+      },
+      cancel() {
+        canceled = true;
+      },
+    });
+    const fetcher = vi.fn(async () => new Response(body));
     await expect(fetchAgentProfile('acme-support', fetcher as typeof fetch))
       .rejects.toThrow('size limit');
+    expect(canceled).toBe(true);
   });
 });

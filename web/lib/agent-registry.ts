@@ -35,10 +35,7 @@ export async function fetchAgentProfile(
   if (Number.isFinite(declaredLength) && declaredLength > MAX_PROFILE_BYTES) {
     throw new Error('Agent registry profile exceeded the size limit');
   }
-  const body = await response.text();
-  if (new TextEncoder().encode(body).byteLength > MAX_PROFILE_BYTES) {
-    throw new Error('Agent registry profile exceeded the size limit');
-  }
+  const body = await readBoundedBody(response, MAX_PROFILE_BYTES);
   let value: unknown;
   try {
     value = JSON.parse(body);
@@ -49,6 +46,30 @@ export async function fetchAgentProfile(
     throw new Error('Agent registry returned an invalid profile');
   }
   return value;
+}
+
+async function readBoundedBody(response: Response, limit: number): Promise<string> {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > limit) {
+      await reader.cancel();
+      throw new Error('Agent registry profile exceeded the size limit');
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
 }
 
 export const getAgentProfile = cache((handle: string) => fetchAgentProfile(handle));

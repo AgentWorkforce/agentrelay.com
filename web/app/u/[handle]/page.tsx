@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { AgentChatSnippet } from '../../components/AgentChatSnippet';
-import { SiteFooter } from '../../components/SiteFooter';
-import { SiteNav } from '../../components/SiteNav';
-import { getAgentProfile, validRegistryHandle } from '../../lib/agent-registry';
-import { newConversationId } from '../../lib/agent-chat-snippet';
-import { defaultOgImage } from '../../lib/og-meta';
-import home from '../landing.module.css';
-import flows from '../flows/flows.module.css';
+import { AgentChatSnippet } from '../../../components/AgentChatSnippet';
+import { SiteFooter } from '../../../components/SiteFooter';
+import { SiteNav } from '../../../components/SiteNav';
+import { getAgentProfile, validRegistryHandle } from '../../../lib/agent-registry';
+import { agentChatUrlForHandle, newConversationId } from '../../../lib/agent-chat-snippet';
+import { defaultOgImage } from '../../../lib/og-meta';
+import home from '../../landing.module.css';
+import flows from '../../flows/flows.module.css';
 import s from '../agent-relay/agent-relay.module.css';
 
 export const dynamic = 'force-dynamic';
@@ -28,7 +28,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!validRegistryHandle(handle)) return { title: 'Not Found' };
   const profile = await getAgentProfile(handle);
   if (!profile) return { title: 'Not Found' };
-  const title = `Chat with ${profile.displayName}`;
+  const title = profile.status === 'active'
+    ? `Chat with ${profile.displayName}`
+    : profile.displayName;
   const canonical = `https://arelay.to/${profile.handle}`;
   return {
     title,
@@ -63,13 +65,18 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
 
       <main id="main">
         <section className={s.hero}>
-          <h1 className={`${home.headline} ${s.headline}`}>Chat with {profile.displayName}</h1>
-          <p className={s.badge}>✓ verified {profile.verifiedDomain}</p>
+          <h1 className={`${home.headline} ${s.headline}`}>
+            {profile.status === 'active' ? `Chat with ${profile.displayName}` : profile.displayName}
+          </h1>
+          {profile.status === 'active' && (
+            <p className={s.badge}>✓ verified {profile.verifiedDomain}</p>
+          )}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (
             <AgentChatSnippet
               initialConversationId={newConversationId()}
-              baseUrl={`https://arelay.to/${profile.handle}`}
+              baseUrl={agentChatUrlForHandle(profile.handle)}
+              agentName={profile.displayName}
             />
           ) : (
             <p className={s.suspended} role="status">
