@@ -14,7 +14,7 @@ describe('signup progress handoff', () => {
     expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered' }})).toBe(false);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'select', status: 'pending' }})).toBe(false);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'workflow', label: 'Which workflow?', type: 'select', options: [], status: 'pending' }})).toBe(false);
-    expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'workflow', label: 'Which workflow?', type: 'select', options: ['software-factory', 'code-review'], status: 'pending', step: 0 }})).toBe(true);
+    expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'flow_kind', label: 'Prebuilt or custom?', type: 'select', options: ['prebuilt', 'custom'], status: 'pending', step: 0 }})).toBe(true);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'repository', label: 'Which repository?', type: 'text', status: 'answered', answer: 'private/repo' }})).toBe(false);
     expect(isSignupProgress({...progress, product: 'flows', inputRequest: { id, key: 'draft_saved', label: 'Preview saved.', type: 'notice', status: 'pending', actionHref: `/dashboard/workflows/listeners/${id}`, step: 0 }})).toBe(true);
     expect(isSignupProgress({...progress, inputRequest: { id, key: 'draft_saved', label: 'Preview saved.', type: 'notice', status: 'pending', actionHref: 'https://evil.test' }})).toBe(false);
@@ -40,15 +40,17 @@ describe('signup progress handoff', () => {
     expect(guide).toContain('Do NOT use computer use, browser automation');
     expect(guide).toContain('Verify approval by polling the API');
     expect(guide).toContain('A missing binary is a blocker, not a build task.');
-    expect(guide).toContain('POST http://localhost:3100/cloud/api/v1/auth/device/start');
+    expect(guide).toContain('Cloud API base: http://localhost:3100/cloud');
+    expect(guide).toContain('`POST /api/v1/auth/device/start`');
+    expect(guide).not.toContain('https://agentrelay.com/cloud');
     if (product === 'teams') {
-      expect(guide).toContain('there is no public HTTP endpoint that installs an app');
+      expect(guide).toContain('# Set Up Agent Relay Desktop');
       expect(guide).toContain('Do not build it, run the development launcher to produce it');
       expect(guide).not.toContain('the local stack must be built');
-      expect(guide).toContain("Do not inspect the app's");
-      expect(guide).toContain("attachment as unverified and keep progress waiting at step 5");
+      expect(guide).toContain('# Set Up Agent Relay Session Handoff');
+      expect(guide).toContain('only then PATCH step: 5, state: complete');
     } else {
-      expect(guide).toContain('POST http://localhost:3100/cloud/api/v1/flows/deploy');
+      expect(guide).toContain('POST /api/v1/flows/deploy');
       expect(guide).toContain('GET http://localhost:3100/api/v1/flows/catalog');
       expect(guide).toContain('POST the exact Progress API URL');
       expect(guide).toContain('authenticated GET includes inputRequest.answer');

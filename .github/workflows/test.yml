@@ -40,6 +40,17 @@ jobs:
       - name: Verify recommended-flow release pins
         run: npm run verify:recommended-flows
 
+      # The setup skills the signup guides render come from prpm, pinned in
+      # prpm.lock. Reinstalling from the lock must not change the committed
+      # copies (the lock's own "generated" timestamp aside), and the bundled
+      # module must match them.
+      - name: Verify setup skills are current
+        run: |
+          npx --yes prpm@2.1.40 install --frozen-lockfile -y
+          git diff --exit-code -- .claude/skills
+          git diff --exit-code -I '"generated"' -- prpm.lock
+          npm run verify:setup-skills
+
       # Root script fans out to every workspace (web + router), so a new
       # workspace is covered automatically.
       - name: Run tests

@@ -1,6 +1,8 @@
 import { resolveGeneratedAgentSettings, type AgentRole, type FlowAgentSettings } from './flow-agent-settings';
 import { isCodingAgent } from './flow-agents';
 
+// TODO: match these step lists to the step names the cloud /flows/deploy wizard
+// reports once it is aligned with the agent-led guide (same surfaces).
 export const WORKFLOWS = [
   { id: 'traditional', label: 'Traditional', description: 'Build and check the change, challenge it, and keep the final say.', steps: ['Implement', 'Run checks', 'Open PR', 'Adversarial review', 'Human gate'] },
   { id: 'prototype', label: 'Prototype and build', description: 'Explore three approaches, then build from the best of each.', steps: ['3 implementations', 'Compare', 'Build', 'Run checks', 'Open PR', 'Review', 'Human gate'] },
