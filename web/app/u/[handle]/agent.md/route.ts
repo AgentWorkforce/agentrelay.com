@@ -37,5 +37,6 @@ export async function GET(_request: Request, { params }: RouteContext) {
     conversationId: newConversationId(),
     baseUrl: agentChatUrlForHandle(profile.handle),
     agentName: profile.displayName,
+    agentHandle: profile.handle,
   }), { headers: MARKDOWN_HEADERS });
 }

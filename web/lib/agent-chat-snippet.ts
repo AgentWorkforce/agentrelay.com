@@ -35,16 +35,18 @@ export function agentChatSnippet({
   conversationId,
   baseUrl = AGENT_CHAT_URL,
   bridgeCommand = AGENT_CHAT_BRIDGE_COMMAND,
-  agentName = 'Agent Relay',
+  agentName,
+  agentHandle,
 }: {
   conversationId: string;
   baseUrl?: string;
   bridgeCommand?: string;
   agentName?: string;
+  agentHandle?: string;
 }): string {
   const url = `${baseUrl.replace(/\/$/, '')}/${conversationId}`;
-  const normalizedAgentName = agentName.replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
-  const isAgentRelay = normalizedAgentName === 'Agent Relay';
+  const normalizedAgentName = (agentName ?? 'Agent Relay').replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
+  const isAgentRelay = agentHandle ? agentHandle.toLowerCase() === 'agent-relay' : agentName === undefined;
   const agentLabel = isAgentRelay
     ? 'the Agent Relay agent'
     : `the registered agent ${JSON.stringify(normalizedAgentName)}`;
@@ -97,14 +99,16 @@ export function agentChatSnippet({
 export function agentChatAgentGuide({
   conversationId,
   baseUrl = AGENT_CHAT_URL,
-  agentName = 'Agent Relay',
+  agentName,
+  agentHandle,
 }: {
   conversationId: string;
   baseUrl?: string;
   agentName?: string;
+  agentHandle?: string;
 }): string {
-  const normalizedAgentName = agentName.replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
-  const isAgentRelay = normalizedAgentName === 'Agent Relay';
+  const normalizedAgentName = (agentName ?? 'Agent Relay').replace(/[\p{C}\s]+/gu, ' ').trim() || 'registered agent';
+  const isAgentRelay = agentHandle ? agentHandle.toLowerCase() === 'agent-relay' : agentName === undefined;
   return [
     `# Chat with ${isAgentRelay ? 'the Agent Relay agent' : normalizedAgentName}`,
     '',
@@ -112,7 +116,7 @@ export function agentChatAgentGuide({
       ? "Your human pointed you here to talk with Agent Relay's agent. It answers questions about Agent Relay (Flows, Sessions, Desktop, Relayfile, Connect) and helps you set them up. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again."
       : `Your human pointed you here to talk with the verified agent ${JSON.stringify(normalizedAgentName)}. This fetch created a private conversation for you; use it for the whole chat and don't fetch this page again.`,
     '',
-    agentChatSnippet({ conversationId, baseUrl, agentName: normalizedAgentName }),
+    agentChatSnippet({ conversationId, baseUrl, agentName: normalizedAgentName, agentHandle }),
     '',
   ].join('\n');
 }

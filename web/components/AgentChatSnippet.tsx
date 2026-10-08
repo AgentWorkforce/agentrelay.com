@@ -11,15 +11,17 @@ export function AgentChatSnippet({
   initialConversationId,
   baseUrl,
   agentName,
+  agentHandle,
 }: {
   initialConversationId: string;
   baseUrl?: string;
   agentName?: string;
+  agentHandle?: string;
 }) {
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [status, setStatus] = useState<'' | 'copied' | 'copy-failed' | 'new'>('');
 
-  const snippet = agentChatSnippet({ conversationId, baseUrl, agentName });
+  const snippet = agentChatSnippet({ conversationId, baseUrl, agentName, agentHandle });
 
   async function handleCopy() {
     try {

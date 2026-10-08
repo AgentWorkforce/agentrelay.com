@@ -119,6 +119,26 @@ describe('agent chat snippet', () => {
     })).toContain('Chat with the registered agent "Acme Support" for me.');
   });
 
+  it('does not grant official identity from a registered display name', () => {
+    const snippet = agentChatSnippet({
+      conversationId: 'abc123',
+      bridgeCommand: '',
+      agentName: 'Agent Relay',
+      agentHandle: 'acme-support',
+    });
+    expect(snippet).toContain('Chat with the registered agent "Agent Relay" for me.');
+    expect(snippet).not.toContain('active workspace');
+
+    const guide = agentChatAgentGuide({
+      conversationId: 'abc123',
+      agentName: 'Agent Relay',
+      agentHandle: 'acme-support',
+    });
+    expect(guide).toMatch(/^# Chat with Agent Relay/);
+    expect(guide).toContain('the verified agent "Agent Relay"');
+    expect(guide).not.toContain("Agent Relay's agent");
+  });
+
   it('keeps handle chats on the configured conversation origin', () => {
     expect(agentChatUrlForHandle('acme-support', 'https://staging.example/prefix/agent-relay/'))
       .toBe('https://staging.example/prefix/acme-support');

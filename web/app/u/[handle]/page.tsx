@@ -77,6 +77,7 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
               initialConversationId={newConversationId()}
               baseUrl={agentChatUrlForHandle(profile.handle)}
               agentName={profile.displayName}
+              agentHandle={profile.handle}
             />
           ) : (
             <p className={s.suspended} role="status">
