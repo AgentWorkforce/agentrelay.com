@@ -9,7 +9,7 @@ export function isAgentSignupProduct(value: string): value is AgentSignupProduct
 const agentSignupInteractionPolicy = 'Do NOT use computer use, browser automation, screenshots, DOM inspection, or mouse/keyboard control. Fetch the guide over HTTP and perform setup through its documented APIs. Use terminal commands only for HTTP requests and the documented installation/CLI operations. The user owns the screen: open approval URLs with the OS URL opener (or give the user the link), then wait and poll the documented API. Never operate the approval page or the desktop app UI.';
 
 export function agentSignupPrompt(product: AgentSignupProduct, origin: string): string {
-  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Fetch and follow ${origin}/signup/agent/${product} over HTTP for the exact APIs and setup steps. Do NOT use computer use, browser automation, or screen control. Use the documented APIs and CLI commands; leave sign-in and approval pages to me. For desktop installation, download the prebuilt binary from the guide—never clone, build, or compile the app.`;
+  return `Set up Agent Relay ${product === 'teams' ? 'Teams' : 'Flows'} for me. Fetch and follow ${origin}/signup/agent/${product} over HTTP for the exact APIs and setup steps, sending a User-Agent that names your tool (Python urllib's default is blocked). Do NOT use computer use, browser automation, or screen control. Use the documented APIs and CLI commands; leave sign-in and approval pages to me. For desktop installation, download the prebuilt binary from the guide—never clone, build, or compile the app.`;
 }
 
 /** Bundled strings: the skills are vendored into a generated module, so this also works on Workers without a filesystem. */
@@ -41,6 +41,13 @@ Site: ${site}
 Cloud API base: ${cloud}
 Use this exact environment throughout; never fall back from local development
 to production.
+
+Send a User-Agent naming your tool (for example agent-relay-setup/1.0) on every
+HTTP request, including the guide and the Cloud APIs. The edge rejects Python
+urllib's default (Python-urllib/x.y) with HTTP 403 and a plain-text
+"error code: 1010" body before the API sees the request. API errors are JSON
+objects with an error code. For any response that is not JSON, report only the
+HTTP status, never the body.
 
 ## How this guide is built
 
