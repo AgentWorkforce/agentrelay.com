@@ -104,7 +104,8 @@ describe('/agents/register', () => {
     expect(profile).toContain('Own this agent? Ask your agent for your private analytics dashboard link.');
     expect(profile).toContain('href={REGISTER_ANALYTICS_URL}');
     const directory = readFileSync(path.join(webRoot, 'app/directory/DirectoryList.tsx'), 'utf8');
-    expect(directory).toContain('href={REGISTER_ANALYTICS_URL}');
+    // Both the populated register note and today's "first company" block link it.
+    expect(directory.match(/href=\{REGISTER_ANALYTICS_URL\}/g)).toHaveLength(2);
   });
 
   it('links the live example, the agent guide and the checklist', () => {

@@ -214,6 +214,16 @@
   background: var(--flows-accent-strong);
 }
 
+.emptyNote {
+  margin: 0;
+  color: var(--flows-muted);
+  font-size: 14px;
+}
+
+.emptyNote a {
+  color: var(--flows-accent-strong);
+}
+
 .registerNote {
   margin: 32px 0 0;
   color: var(--flows-muted);

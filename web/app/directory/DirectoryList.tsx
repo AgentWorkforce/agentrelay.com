@@ -24,6 +24,9 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
     <div className={s.empty}>
       <p className={s.emptyTitle}>No verified companies yet.</p>
       <a className={s.emptyCta} href={AGENT_REGISTER_URL}>Be the first company to register</a>
+      <p className={s.emptyNote}>
+        Owners get a private <a href={REGISTER_ANALYTICS_URL}>analytics dashboard</a>.
+      </p>
     </div>
   );
 
