@@ -117,11 +117,13 @@
     box-shadow 0.2s;
 }
 
-.pill:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .pill:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
 }
 
 .capabilities {
@@ -287,8 +289,10 @@
   text-decoration: none;
 }
 
-.source:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .source:hover {
+    color: var(--primary);
+  }
 }
 
 .snippet {

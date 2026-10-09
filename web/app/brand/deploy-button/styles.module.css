@@ -211,6 +211,8 @@
   text-decoration: none;
 }
 
-.backLink:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .backLink:hover {
+    color: var(--primary);
+  }
 }

@@ -549,8 +549,10 @@
     border-color 0.2s ease;
 }
 
-.tab:hover {
-  color: var(--terminal-fg);
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--terminal-fg);
+  }
 }
 
 .tabActive {

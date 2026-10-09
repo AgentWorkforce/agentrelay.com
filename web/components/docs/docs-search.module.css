@@ -18,9 +18,11 @@
     background 0.2s;
 }
 
-.trigger:hover {
-  border-color: var(--nav-border-strong);
-  background: var(--nav-surface-hover);
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover {
+    border-color: var(--nav-border-strong);
+    background: var(--nav-surface-hover);
+  }
 }
 
 .triggerText {
@@ -143,8 +145,10 @@
   background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
-.result:hover {
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .result:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+  }
 }
 
 .resultTitle {

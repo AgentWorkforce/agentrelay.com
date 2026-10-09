@@ -3814,15 +3814,17 @@
   z-index: 4;
 }
 
-.installVisual:hover .installAgentLogo,
-.installAgentLogo:hover {
-  opacity: 1;
-  transform: var(--logo-hover);
-}
+@media (hover: hover) and (pointer: fine) {
+  .installVisual:hover .installAgentLogo,
+  .installAgentLogo:hover {
+    opacity: 1;
+    transform: var(--logo-hover);
+  }
 
-.installVisual:hover .installConnectionLayer {
-  opacity: 1;
-  transform: scale(1);
+  .installVisual:hover .installConnectionLayer {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .installAgentLogoIcon {
@@ -4884,10 +4886,16 @@
     transform 0.18s ease;
 }
 
-.actionToolBadge:hover,
 .actionToolBadge:focus-visible {
   color: #ffffff;
   transform: translateY(-1px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actionToolBadge:hover {
+    color: #ffffff;
+    transform: translateY(-1px);
+  }
 }
 
 .actionToolBadge:focus-visible {
@@ -4932,10 +4940,16 @@
   text-transform: uppercase;
 }
 
-.actionToolBadge:hover .actionToolTooltip,
 .actionToolBadge:focus-visible .actionToolTooltip {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actionToolBadge:hover .actionToolTooltip {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .featureList {
@@ -6580,10 +6594,12 @@
   min-width: 100px;
 }
 
-.logoCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .logoCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
 }
 
 .byohLogo {
@@ -6689,12 +6705,14 @@
   backdrop-filter: blur(18px);
 }
 
-:global(html[data-theme='dark']) .logoCard:hover {
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-  box-shadow:
-    0 22px 56px rgba(0, 0, 0, 0.28),
-    0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
-  transform: translateY(-4px);
+@media (hover: hover) and (pointer: fine) {
+  :global(html[data-theme='dark']) .logoCard:hover {
+    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    box-shadow:
+      0 22px 56px rgba(0, 0, 0, 0.28),
+      0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+    transform: translateY(-4px);
+  }
 }
 
 :global(html[data-theme='dark']) .byohLogo {
@@ -6767,10 +6785,12 @@
     transform 0.2s;
 }
 
-.deployCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .deployCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
 }
 
 .deployCard:focus-visible {
@@ -6904,9 +6924,14 @@
     max-width: 560px;
   }
 
-  .installAgentLogo,
-  .installAgentLogos:hover .installAgentLogo {
+  .installAgentLogo {
     margin-right: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .installAgentLogos:hover .installAgentLogo {
+      margin-right: 0;
+    }
   }
 
   .installActions {

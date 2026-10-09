@@ -92,8 +92,10 @@
   background: var(--flows-surface);
 }
 
-.card:hover {
-  border-color: var(--flows-line-strong);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--flows-line-strong);
+  }
 }
 
 .cardLink {
@@ -111,8 +113,10 @@
   overflow-wrap: anywhere;
 }
 
-.cardLink:hover .name {
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  .cardLink:hover .name {
+    text-decoration: underline;
+  }
 }
 
 .handle {
@@ -142,8 +146,10 @@
   border-color: #c9a227;
 }
 
-.cardOfficial:hover {
-  border-color: #e6c14a;
+@media (hover: hover) and (pointer: fine) {
+  .cardOfficial:hover {
+    border-color: #e6c14a;
+  }
 }
 
 .badgeOfficial {
@@ -210,8 +216,10 @@
   text-decoration: none;
 }
 
-.emptyCta:hover {
-  background: var(--flows-accent-strong);
+@media (hover: hover) and (pointer: fine) {
+  .emptyCta:hover {
+    background: var(--flows-accent-strong);
+  }
 }
 
 .registerNote {

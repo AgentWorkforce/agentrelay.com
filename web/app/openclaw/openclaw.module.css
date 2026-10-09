@@ -89,8 +89,10 @@
   transition: background 0.2s;
 }
 
-.stripButton:hover {
-  background: var(--primary-hover);
+@media (hover: hover) and (pointer: fine) {
+  .stripButton:hover {
+    background: var(--primary-hover);
+  }
 }
 
 .stripButton svg {
@@ -125,9 +127,11 @@
     box-shadow 0.2s;
 }
 
-.featureCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--primary) 6%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .featureCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--primary) 6%, transparent);
+  }
 }
 
 .featureIcon {

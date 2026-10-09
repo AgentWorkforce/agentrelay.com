@@ -130,11 +130,13 @@
     box-shadow 0.2s;
 }
 
-.pill:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .pill:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
 }
 
 /* ── Primitive sections ── */
@@ -231,10 +233,12 @@
     transform 0.2s;
 }
 
-.featureCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .featureCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
 }
 
 .featureTitle {

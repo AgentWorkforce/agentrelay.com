@@ -107,9 +107,11 @@ a {
   border: 1.5px solid var(--primary-800);
 }
 
-.btn-primary:hover {
-  background: var(--primary-500);
-  border-color: var(--primary-800);
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover {
+    background: var(--primary-500);
+    border-color: var(--primary-800);
+  }
 }
 
 .btn-secondary {
@@ -118,9 +120,11 @@ a {
   border: 1.5px solid var(--line);
 }
 
-.btn-secondary:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .btn-secondary:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
 }
 
 /* Lift on hover only where a real pointer exists — touch devices fire :hover

@@ -463,9 +463,11 @@
     background 0.2s;
 }
 
-.tabButton:hover {
-  transform: translateY(-1px);
-  border-color: var(--card-hover-border);
+@media (hover: hover) and (pointer: fine) {
+  .tabButton:hover {
+    transform: translateY(-1px);
+    border-color: var(--card-hover-border);
+  }
 }
 
 .tabButtonActive {
@@ -589,10 +591,12 @@
     transform 0.2s;
 }
 
-.deployCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .deployCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
 }
 
 .deployIcon {
@@ -704,9 +708,11 @@
   transition: all 0.15s;
 }
 
-.pricingCta:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .pricingCta:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
 }
 
 .pricingCtaPrimary {
@@ -715,8 +721,10 @@
   border-color: var(--btn-bg);
 }
 
-.pricingCtaPrimary:hover {
-  background: var(--btn-hover);
+@media (hover: hover) and (pointer: fine) {
+  .pricingCtaPrimary:hover {
+    background: var(--btn-hover);
+  }
 }
 
 /* FAQ */
@@ -757,8 +765,10 @@
   line-height: 1.5;
 }
 
-.faqQuestion:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .faqQuestion:hover {
+    color: var(--primary);
+  }
 }
 
 .faqQuestion span:first-child {
