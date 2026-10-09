@@ -96,8 +96,10 @@
   height: 13px;
   transition: transform 160ms ease;
 }
-.learnMore:hover svg {
-  transform: translate(2px, -2px);
+@media (hover: hover) and (pointer: fine) {
+  .learnMore:hover svg {
+    transform: translate(2px, -2px);
+  }
 }
 
 .form {
@@ -159,11 +161,13 @@
     box-shadow 200ms ease,
     transform 160ms ease;
 }
-.google:hover {
-  background: #eef4f9;
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent),
-    0 12px 28px -12px rgba(0, 0, 0, 0.45);
+@media (hover: hover) and (pointer: fine) {
+  .google:hover {
+    background: #eef4f9;
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent),
+      0 12px 28px -12px rgba(0, 0, 0, 0.45);
+  }
 }
 .google:active {
   transform: scale(0.99);
@@ -193,8 +197,10 @@
 .legal a {
   color: var(--fg-faint);
 }
-.legal a:hover {
-  color: var(--fg);
+@media (hover: hover) and (pointer: fine) {
+  .legal a:hover {
+    color: var(--fg);
+  }
 }
 
 /* Works with: the harness logos from the home page. */
@@ -228,9 +234,11 @@
     opacity 160ms ease,
     transform 160ms ease;
 }
-.worksWith li:hover {
-  opacity: 1;
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .worksWith li:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
 }
 .worksWithLogo {
   width: 22px;
