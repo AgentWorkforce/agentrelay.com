@@ -204,6 +204,144 @@
   color: var(--fg);
 }
 
+/* Waiting room: home-page agent terminals, each waiting on the visitor. */
+.waitingRoom {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: none;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
+}
+@media (min-width: 960px) {
+  .waitingRoom {
+    display: grid;
+  }
+}
+.waitingStage {
+  position: relative;
+  flex: none;
+  width: 760px;
+  height: 800px;
+  translate: -4% 0;
+}
+/* Ordered loosest first, so the tightest matching fit wins. */
+@container (max-height: 820px) {
+  .waitingStage {
+    scale: 0.86;
+  }
+}
+@container (max-width: 760px) {
+  .waitingStage {
+    scale: 0.8;
+  }
+}
+@container (max-width: 640px) {
+  .waitingStage {
+    scale: 0.7;
+  }
+}
+.waiting {
+  position: absolute;
+  rotate: var(--tilt);
+  animation: waiting-float 9s ease-in-out var(--float-delay) infinite alternate;
+}
+.waiting > article {
+  margin: 0;
+  box-shadow:
+    0 0 0 1px rgba(116, 184, 226, 0.06),
+    0 24px 60px rgba(0, 0, 0, 0.5);
+}
+.waitingTag {
+  position: absolute;
+  bottom: 100%;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 9px;
+  padding: 5px 9px;
+  border: 1px dashed rgba(240, 179, 159, 0.45);
+  border-radius: 999px;
+  background: rgba(52, 23, 22, 0.6);
+  color: #f0b39f;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    color 300ms ease,
+    background 300ms ease,
+    border-color 300ms ease;
+}
+.waitingTag::after {
+  width: 6px;
+  height: 11px;
+  background: currentColor;
+  content: '';
+  animation: waiting-caret 1s steps(2, end) infinite;
+}
+.waiting[data-joined] .waitingTag {
+  border-color: rgba(52, 211, 153, 0.5);
+  border-style: solid;
+  background: rgba(10, 46, 34, 0.7);
+  color: #6ee7b7;
+}
+.waiting[data-joined] .waitingTag::after {
+  display: none;
+}
+
+/* Works with: the harness logos from the home page. */
+.worksWith {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px dashed color-mix(in srgb, var(--fg-faint) 35%, transparent);
+}
+.worksWith p {
+  margin: 0;
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.worksWith ul {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.worksWith li {
+  display: grid;
+  place-items: center;
+  opacity: 0.72;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+.worksWith li:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+.worksWithLogo {
+  width: 22px;
+  height: 22px;
+}
+
+@keyframes waiting-float {
+  to {
+    translate: 0 -10px;
+  }
+}
+@keyframes waiting-caret {
+  50% {
+    opacity: 0;
+  }
+}
+
 @keyframes rise {
   from {
     opacity: 0;
@@ -232,7 +370,9 @@
   .google {
     transition: none;
   }
-  .form {
+  .form,
+  .waiting,
+  .waitingTag::after {
     animation: none;
   }
   .spin {

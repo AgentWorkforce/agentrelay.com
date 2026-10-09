@@ -27,6 +27,15 @@ describe('login page', () => {
     expect(await render({ authError: '<script>' })).not.toContain('role="alert"');
   });
 
+  it('shows the agents it works with and the sessions waiting on the visitor', async () => {
+    const html = await render({});
+    expect(html).toContain('Works with your agents');
+    for (const label of ['Claude Code', 'Codex', 'OpenCode', 'Gemini', 'Copilot']) {
+      expect(html).toContain(label);
+    }
+    expect(html).toContain('needs a human');
+  });
+
   it('links legal pages and the marketing home', async () => {
     const html = await render({});
     expect(html).toContain('href="/terms"');
