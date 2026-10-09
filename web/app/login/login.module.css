@@ -197,52 +197,6 @@
   color: var(--fg);
 }
 
-/* Waiting room: home-page agent terminals drifting in and getting pulled into
-   the relay at the seam (100% x, 50% y), one after another. */
-.waitingRoom {
-  --pull: 16s;
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  display: none;
-  overflow: hidden;
-  pointer-events: none;
-  container-type: size;
-}
-@media (min-width: 960px) {
-  .waitingRoom {
-    display: block;
-  }
-}
-/* A zero-size anchor at the entry point, so scale shrinks toward the path. */
-.waiting {
-  position: absolute;
-  left: calc(var(--x) * 1%);
-  top: calc(var(--y) * 1%);
-  transform-origin: 0 0;
-  animation: pull var(--pull) var(--pull-delay) infinite;
-  opacity: 0;
-}
-.waitingCard {
-  position: absolute;
-  translate: -50% -50%;
-}
-@container (max-width: 760px) {
-  .waitingCard {
-    scale: 0.82;
-  }
-}
-@container (max-width: 640px) {
-  .waitingCard {
-    scale: 0.7;
-  }
-}
-.waitingCard > article {
-  margin: 0;
-  box-shadow:
-    0 0 0 1px rgba(116, 184, 226, 0.06),
-    0 24px 60px rgba(0, 0, 0, 0.5);
-}
 /* Works with: the harness logos from the home page. */
 .worksWith {
   margin-top: 40px;
@@ -283,40 +237,6 @@
   height: 22px;
 }
 
-@keyframes pull {
-  0% {
-    translate: -4cqw 0;
-    scale: 0.94;
-    rotate: 0deg;
-    opacity: 0;
-    filter: blur(3px);
-    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
-  }
-  10% {
-    translate: 0 0;
-    scale: 1;
-    opacity: 1;
-    filter: blur(0);
-    animation-timing-function: linear;
-  }
-  50% {
-    translate: calc((100 - var(--x)) * 0.16cqw) calc((50 - var(--y)) * 0.14cqh);
-    scale: 0.94;
-    rotate: calc(var(--spin) * 0.15);
-    opacity: 1;
-    filter: brightness(1);
-    /* The pull: slow to let go, then sucked in fast. */
-    animation-timing-function: cubic-bezier(0.7, 0, 0.95, 0.35);
-  }
-  100% {
-    translate: calc((100 - var(--x)) * 1cqw) calc((50 - var(--y)) * 1cqh);
-    scale: 0.02;
-    rotate: var(--spin);
-    opacity: 0.2;
-    filter: brightness(2.2);
-  }
-}
-
 @keyframes rise {
   from {
     opacity: 0;
@@ -347,11 +267,6 @@
   }
   .form {
     animation: none;
-  }
-  /* A still waiting room: cards rest at their entry points. */
-  .waiting {
-    animation: none;
-    opacity: 1;
   }
   .spin {
     animation: none;
