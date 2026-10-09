@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { RELAY_RUSH_EVENT } from './relay-events';
+import { RELAY_RUSH_EVENT, type RelayRushEvent } from './relay-events';
 import s from './login.module.css';
 
 const VERTEX = `
@@ -65,7 +65,7 @@ void main() {
 
     float d = abs(uv.y - y);
     float width = (0.0011 + 0.0009 * fract(fi * 0.618)) * (1.0 + 0.7 * uRush);
-    float core = smoothstep(width * 2.2, 0.0, d);
+    float core = 1.0 - smoothstep(0.0, width * 2.2, d);
     float halo = 0.0016 / (d + 0.004);
 
     vec3 c = mix(vec3(0.20, 0.50, 0.78), vec3(0.02, 0.80, 0.96), fract(fi * 0.37));
@@ -163,8 +163,10 @@ export function RelayField() {
     let time = STILL_TIME;
     let flow = STILL_TIME;
     let last = 0;
+    let lost = false;
 
     const draw = () => {
+      if (lost) return;
       gl.uniform2f(uRes, canvas.width, canvas.height);
       gl.uniform1f(uTime, time);
       gl.uniform1f(uFlow, flow);
@@ -189,7 +191,7 @@ export function RelayField() {
       frame = requestAnimationFrame(loop);
     };
     const start = () => {
-      if (still || frame || !visible || document.hidden) return;
+      if (still || lost || frame || !visible || document.hidden) return;
       frame = requestAnimationFrame(loop);
     };
     const stop = () => {
@@ -238,18 +240,15 @@ export function RelayField() {
       canvas.parentElement?.addEventListener('pointerleave', onLeave);
     }
 
-    const onRush = () => {
-      rush.target = 1;
-    };
-    // Back-navigation restores the page from bfcache mid-rush.
-    const onPageShow = (event: PageTransitionEvent) => {
-      if (event.persisted) rush.target = rush.value = 0;
+    const onRush = (event: Event) => {
+      rush.target = (event as RelayRushEvent).detail ? 1 : 0;
     };
     if (!still) window.addEventListener(RELAY_RUSH_EVENT, onRush);
-    window.addEventListener('pageshow', onPageShow);
 
-    const onLost = (event: Event) => {
-      event.preventDefault();
+    // A lost context stays lost: the CSS gradient underneath takes over, and
+    // no restore is requested because nothing here could rebuild the program.
+    const onLost = () => {
+      lost = true;
       stop();
       delete canvas.dataset.ready;
     };
@@ -266,7 +265,6 @@ export function RelayField() {
       canvas.parentElement?.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('webglcontextlost', onLost);
       window.removeEventListener(RELAY_RUSH_EVENT, onRush);
-      window.removeEventListener('pageshow', onPageShow);
     };
   }, []);
 
