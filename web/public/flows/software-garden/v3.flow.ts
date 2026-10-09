@@ -39,9 +39,12 @@ export default flow<Input>("software-factory",
   const changeTitleLength = Array.from(changeTitle).length;
   const placeholderTitle = ["software factory change", "replace with your ticket title"]
     .includes(changeTitle.toLowerCase());
-  const issueSource = issue.source.trim().toLowerCase();
-  const issueIdentifier = issue.identifier?.trim() ?? "";
-  const issueUrl = issue.url?.trim() ?? "";
+  // A local input may leave ticket metadata out or give it another type: it
+  // reads as blank, where calling .trim() on it would throw.
+  const field = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const issueSource = field(issue.source).toLowerCase();
+  const issueIdentifier = field(issue.identifier);
+  const issueUrl = field(issue.url);
   if (!changeTitle || placeholderTitle) {
     console.error("Stopped: the pull-request title is empty or still a placeholder. No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
@@ -151,11 +154,22 @@ export default flow<Input>("software-factory",
   // what the ticket meant, or found nothing to do) leaves nothing to check,
   // repair or compare: stop now and relay its question (run 91c1a5cd spent 17
   // minutes on an unchanged branch). Only a definite "unchanged" stops here.
-  if (!implementerTimedOut && (await f.run("base=" + baseCommit + "; " + "paths='summary.md plan.md reviewed-plan.md review.md review.clean review-blocked.md comparison.md prototype-notes.md .relayflow START-HERE.txt flow-input.json relay-preflight.mjs software-factory.flow.mts'; if [ -z \"$base\" ] || ! git rev-parse --verify --quiet \"$base^{commit}\" >/dev/null 2>&1 || ! names=$(git diff --name-only \"$base\" HEAD -- 2>/dev/null) || ! pending=$(git status --porcelain 2>/dev/null); then echo \"relayflow: could not tell whether the implementer changed anything; carrying on.\" >&2; echo unknown; exit 0; fi; committed=$(printf '%s\\n' \"$names\" | while IFS= read -r p; do [ -n \"$p\" ] || continue; keep=yes; for w in $paths; do case \"$p\" in (\"$w\"|\"$w\"/*) git cat-file -e \"$base:$p\" 2>/dev/null || keep=no ;; esac; done; if [ \"$keep\" = yes ]; then printf '%s\\n' \"$p\"; fi; done); if [ -n \"$committed\" ] || [ -n \"$pending\" ]; then echo changed; else echo \"relayflow: the implementer made no commits and left no changes.\" >&2; echo unchanged; fi")).trim() === "unchanged") {
+  if (!implementerTimedOut && (await f.run("base=" + baseCommit + "; " + "paths='summary.md plan.md reviewed-plan.md review.md review.clean review-blocked.md comparison.md prototype-notes.md .relayflow START-HERE.txt flow-input.json relay-preflight.mjs software-factory.flow.mts'; if [ -z \"$base\" ] || ! git rev-parse --verify --quiet \"$base^{commit}\" >/dev/null 2>&1 || ! names=$(git diff --no-ext-diff --no-renames --name-only \"$base\" -- 2>/dev/null); then echo \"relayflow: could not tell whether the implementer changed anything; carrying on.\" >&2; echo unknown; exit 0; fi; changes=$(printf '%s\\n' \"$names\" | while IFS= read -r p; do [ -n \"$p\" ] || continue; keep=yes; for w in $paths; do case \"$p\" in (\"$w\"|\"$w\"/*) if [ \"$w\" = .relayflow ] || ! git cat-file -e \"$base:$p\" 2>/dev/null; then keep=no; fi ;; esac; done; if [ \"$keep\" = yes ]; then printf '%s\\n' \"$p\"; fi; done); if [ -n \"$changes\" ]; then echo changed; exit 0; fi; loose=$(git ls-files --others --exclude-standard 2>/dev/null | head -n 5 | tr '\\n' ' '); if [ -n \"$loose\" ]; then echo \"relayflow: untracked files were never added or committed, so they are not a change: $loose\" >&2; fi; echo \"relayflow: the implementer changed nothing in the repository.\" >&2; echo unchanged")).trim() === "unchanged") {
     // Its own last message stands in when it wrote no .relayflow/needs-input.md.
+    // The question is at its end, so the relay gets the end: from a line
+    // start, with the whole message's size in bytes when it was cut.
     const said = (implementation as unknown as { summary?: unknown } | undefined)?.summary;
-    const agentSummary = typeof said === "string" ? said.slice(-4000) : "";
-    const needsInput = (await f.run("agent_summary=" + shellQuote(agentSummary) + "; " + "export LC_ALL=C; mkdir -p .relayflow; out=.relayflow/needs-input.out; relayflow_clean() { sed \"s/$(printf '\\033')\\[[0-9;?]*[A-Za-z]//g\" | tr -d '\\000-\\010\\013-\\037\\177' | tr '\\t' ' ' | awk 'NF { sub(/^ +/, \"\"); sub(/ +$/, \"\"); print }'; }; src=none; if [ -s .relayflow/needs-input.md ] && [ -n \"$(relayflow_clean < .relayflow/needs-input.md)\" ]; then src=needs-input.md; relayflow_clean < .relayflow/needs-input.md > \"$out\"; elif [ -n \"$(printf '%s\\n' \"${agent_summary:-}\" | relayflow_clean)\" ]; then src=implementer-summary; printf '%s\\n' \"$agent_summary\" | relayflow_clean > \"$out\"; else : > \"$out\"; fi; echo \"relayflow needs-input-source: $src\"; total=$(wc -c < \"$out\" | tr -d \" \"); if [ \"$total\" -gt 4000 ]; then head -c 4000 \"$out\" > \"$out.cut\"; if [ \"$(tail -c 1 \"$out.cut\" | wc -l | tr -d \" \")\" -eq 1 ]; then cp \"$out.cut\" \"$out.kept\"; elif [ \"$(tr -cd \"\\n\" < \"$out.cut\" | wc -c | tr -d \" \")\" -gt 0 ]; then sed '$d' \"$out.cut\" > \"$out.kept\"; else sed \"s/$(printf '[\\300-\\377]')$(printf '[\\200-\\277]')*\\$//\" \"$out.cut\" | awk 'NF { print }' > \"$out.kept\"; fi; mv -f \"$out.kept\" \"$out\"; rm -f \"$out.cut\"; fi; head -n 60 \"$out\" > \"$out.kept\"; mv -f \"$out.kept\" \"$out\"; kept=$(wc -c < \"$out\" | tr -d \" \"); sed \"s/^/relayflow needs-input: /\" \"$out\"; if [ \"$kept\" -lt \"$total\" ]; then echo \"relayflow needs-input-truncated: $kept of $total bytes\"; fi; rm -f \"$out\"; exit 0")).trim();
+    const message = typeof said === "string" ? said : "";
+    let agentSummary = message.slice(-16000);
+    let summaryBytes = "";
+    if (agentSummary.length < message.length) {
+      agentSummary = agentSummary.includes("\n") ? agentSummary.slice(agentSummary.indexOf("\n") + 1) : agentSummary.replace(/^[\uDC00-\uDFFF]/, "");
+      summaryBytes = String(Array.from(message).reduce((bytes, character) => {
+        const point = character.codePointAt(0) ?? 0;
+        return bytes + (point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4);
+      }, 0));
+    }
+    const needsInput = (await f.run("agent_summary=" + shellQuote(agentSummary) + "; agent_summary_bytes=" + summaryBytes + "; " + "export LC_ALL=C; mkdir -p .relayflow; out=.relayflow/needs-input.out; relayflow_clean() { sed \"s/$(printf '\\033')\\[[0-9;?]*[A-Za-z]//g\" | tr -d '\\000-\\010\\013-\\037\\177' | tr '\\t' ' ' | awk 'NF { sub(/^ +/, \"\"); sub(/ +$/, \"\"); print }'; }; src=none; if [ -s .relayflow/needs-input.md ] && [ -n \"$(relayflow_clean < .relayflow/needs-input.md)\" ]; then src=needs-input.md; relayflow_clean < .relayflow/needs-input.md > \"$out\"; elif [ -n \"$(printf '%s\\n' \"${agent_summary:-}\" | relayflow_clean)\" ]; then src=implementer-summary; printf '%s\\n' \"$agent_summary\" | relayflow_clean > \"$out\"; else : > \"$out\"; fi; echo \"relayflow needs-input-source: $src\"; size=$(wc -c < \"$out\" | tr -d \" \"); total=$size; case \"${agent_summary_bytes:-}\" in (\"\"|*[!0-9]*) ;; (*) if [ \"$src\" = implementer-summary ] && [ \"$agent_summary_bytes\" -gt \"$total\" ]; then total=$agent_summary_bytes; fi ;; esac; if [ \"$size\" -gt 4000 ] && [ \"$src\" = implementer-summary ]; then tail -c 4000 \"$out\" > \"$out.cut\"; if [ \"$(tail -c $((4000 + 1)) \"$out\" | head -c 1 | wc -l | tr -d \" \")\" -eq 1 ]; then cp \"$out.cut\" \"$out.kept\"; elif [ \"$(tr -cd \"\\n\" < \"$out.cut\" | wc -c | tr -d \" \")\" -gt 1 ]; then sed 1d \"$out.cut\" > \"$out.kept\"; else sed \"s/^$(printf '[\\200-\\277]')*//\" \"$out.cut\" | awk 'NF { sub(/^ +/, \"\"); print }' > \"$out.kept\"; fi; mv -f \"$out.kept\" \"$out\"; rm -f \"$out.cut\"; elif [ \"$size\" -gt 4000 ]; then head -c 4000 \"$out\" > \"$out.cut\"; if [ \"$(tail -c 1 \"$out.cut\" | wc -l | tr -d \" \")\" -eq 1 ]; then cp \"$out.cut\" \"$out.kept\"; elif [ \"$(tr -cd \"\\n\" < \"$out.cut\" | wc -c | tr -d \" \")\" -gt 0 ]; then sed '$d' \"$out.cut\" > \"$out.kept\"; else sed \"s/$(printf '[\\300-\\377]')$(printf '[\\200-\\277]')*\\$//\" \"$out.cut\" | awk 'NF { print }' > \"$out.kept\"; fi; mv -f \"$out.kept\" \"$out\"; rm -f \"$out.cut\"; fi; if [ \"$src\" = implementer-summary ]; then tail -n 60 \"$out\" > \"$out.kept\"; else head -n 60 \"$out\" > \"$out.kept\"; fi; mv -f \"$out.kept\" \"$out\"; kept=$(wc -c < \"$out\" | tr -d \" \"); sed \"s/^/relayflow needs-input: /\" \"$out\"; if [ \"$kept\" -lt \"$total\" ]; then echo \"relayflow needs-input-truncated: $kept of $total bytes\"; fi; rm -f \"$out\"; exit 0")).trim();
     console.error("Stopped: the implementer made no changes, so there was nothing to check or publish. No checks ran, no branch was pushed and no pull request was opened. Its question or reason follows, when it gave one: answer it on the ticket and run again.\n" + needsInput);
     return f.done("needs_human");
   }
@@ -163,7 +177,8 @@ export default flow<Input>("software-factory",
   // change (a first package.json with a test script). Resolving only before
   // the change reported "no checks ran" on a pull request that added tests
   // (cloud-e2e-sandbox#31), so a "none" is looked at again.
-  if (checkPlan === "none") await f.run(resolveChecks);
+  // A script written now is the ecosystem default, so the report says so.
+  if (checkPlan === "none" && (await f.run(resolveChecks)).trim() === "default") checkSetup = "default";
 
   // Run the checks. A failure is not the end of the run: the tests are
   // how this flow learns what is wrong, so the repair agent reads the output

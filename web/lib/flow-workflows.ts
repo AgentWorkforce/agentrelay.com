@@ -962,40 +962,66 @@ export const FLOW_NEEDS_INPUT_FILE = '.relayflow/needs-input.md';
 export const FLOW_NEEDS_INPUT_HINT = `If the ticket is ambiguous, or you cannot identify what it refers to (a file, document, feature or component you cannot find), do not guess and do not commit. Instead write ${FLOW_NEEDS_INPUT_FILE}: the specific question or questions the ticket's author must answer, and the candidates you found, each with its path (for example "Did you mean docs/native-gamification-plan.md?"). Keep it short and plain; it is posted back to the ticket.`;
 
 /**
- * Says whether the implementer changed anything, right after it finishes, so a
- * run with nothing to check stops before the checks, the repairs and the
- * base-commit comparison (run 91c1a5cd spent 17 minutes and $1.63 on them for
- * a branch with no commits). The caller prefixes `base=<commit>`.
+ * Says whether the implementer changed the repository's content, right after
+ * it finishes, so a run with nothing to check stops before the checks, the
+ * repairs and the base-commit comparison (run 91c1a5cd spent 17 minutes and
+ * $1.63 on them for a branch with no commits). The caller prefixes
+ * `base=<commit>`.
  *
- *   unchanged  no commits since the base, and nothing uncommitted
- *   changed    commits, or uncommitted edits (the checks run on the tree)
+ *   unchanged  the tracked files hold what the base commit holds
+ *   changed    commits, or edits to tracked files (the checks run on the tree)
  *   unknown    the base commit or the tree could not be read
  *
+ * It compares the base commit with the working tree, so committed, staged and
+ * unstaged edits all count, an edit undone before the end does not, and a
+ * rename (compared with --no-renames) counts its source's deletion as well as
+ * its destination. These do not count, whether committed, staged or edited:
+ *
+ *  - working files the base commit does not have, the same rule
+ *    FLOW_DROP_WORKING_FILES_COMMAND uses to take them out of the branch;
+ *    untracked ones are hidden by the clone's exclude file
+ *    (FLOW_EXCLUDE_WORKING_FILES_COMMAND). A repository's own summary.md
+ *    is published, so an edit to it is a change;
+ *  - anything under `.relayflow/`, even when the repository commits it: the
+ *    flow writes `.relayflow/check.sh` there itself before the implementer
+ *    starts (a run's checkCommand), so a difference there is not its work;
+ *  - untracked files: nothing in the flow adds them to a commit, so they
+ *    could never be published, and an agent's scratch notes must not hide
+ *    its question. Up to five are named on stderr.
+ *
  * Only `unchanged` stops the run, so anything this cannot vouch for carries on
- * as before. Working files an agent committed that the base commit does not
- * have (FLOW_DROP_WORKING_FILES_COMMAND removes them before publishing) do not
- * count as a change; untracked working files are hidden by the clone's
- * exclude file (FLOW_EXCLUDE_WORKING_FILES_COMMAND). One token on stdout, exit
- * 0 on every path.
+ * as before. One token on stdout, exit 0 on every path.
  */
 export const FLOW_CHANGE_CHECK_COMMAND = [
   `paths=${shq(FLOW_WORKING_FILES.join(' '))}`,
-  'if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1 || ! names=$(git diff --name-only "$base" HEAD -- 2>/dev/null) || ! pending=$(git status --porcelain 2>/dev/null); then echo "relayflow: could not tell whether the implementer changed anything; carrying on." >&2; echo unknown; exit 0; fi',
-  'committed=$(printf \'%s\\n\' "$names" | while IFS= read -r p; do [ -n "$p" ] || continue; keep=yes; for w in $paths; do case "$p" in ("$w"|"$w"/*) git cat-file -e "$base:$p" 2>/dev/null || keep=no ;; esac; done; if [ "$keep" = yes ]; then printf \'%s\\n\' "$p"; fi; done)',
-  'if [ -n "$committed" ] || [ -n "$pending" ]; then echo changed; else echo "relayflow: the implementer made no commits and left no changes." >&2; echo unchanged; fi',
+  'if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1 || ! names=$(git diff --no-ext-diff --no-renames --name-only "$base" -- 2>/dev/null); then echo "relayflow: could not tell whether the implementer changed anything; carrying on." >&2; echo unknown; exit 0; fi',
+  'changes=$(printf \'%s\\n\' "$names" | while IFS= read -r p; do [ -n "$p" ] || continue; keep=yes; for w in $paths; do case "$p" in ("$w"|"$w"/*) if [ "$w" = .relayflow ] || ! git cat-file -e "$base:$p" 2>/dev/null; then keep=no; fi ;; esac; done; if [ "$keep" = yes ]; then printf \'%s\\n\' "$p"; fi; done)',
+  'if [ -n "$changes" ]; then echo changed; exit 0; fi',
+  'loose=$(git ls-files --others --exclude-standard 2>/dev/null | head -n 5 | tr \'\\n\' \' \')',
+  'if [ -n "$loose" ]; then echo "relayflow: untracked files were never added or committed, so they are not a change: $loose" >&2; fi',
+  'echo "relayflow: the implementer changed nothing in the repository." >&2; echo unchanged',
 ].join('; ');
 
 /** The most, in bytes, of the implementer's question FLOW_NEEDS_INPUT_COMMAND prints. */
 export const FLOW_NEEDS_INPUT_LIMIT = 4000;
 /** The most lines of it FLOW_NEEDS_INPUT_COMMAND prints. */
 const NEEDS_INPUT_LINES = 60;
+/**
+ * How much of the implementer's last message, in UTF-16 code units, the flow
+ * hands FLOW_NEEDS_INPUT_COMMAND: enough to fill FLOW_NEEDS_INPUT_LIMIT bytes
+ * after sanitizing, and small enough (at most 64 KB once quoted) for one
+ * shell argument.
+ */
+export const NEEDS_INPUT_SUMMARY_WINDOW = FLOW_NEEDS_INPUT_LIMIT * 4;
 
 /**
  * Relays why the implementer made no change, when it made none
  * (FLOW_CHANGE_CHECK_COMMAND said `unchanged`), in a form Cloud can parse and
  * post back to the ticket. The text is FLOW_NEEDS_INPUT_FILE when the
  * implementer wrote one, otherwise `agent_summary` (the caller sets it to the
- * end of the implementer's own last message, bounded), otherwise nothing.
+ * end of the implementer's own last message, NEEDS_INPUT_SUMMARY_WINDOW
+ * characters from a line start, and `agent_summary_bytes` to the whole
+ * message's UTF-8 size when it had to cut it), otherwise nothing.
  *
  * The output contract, on stdout, one record per line:
  *
@@ -1009,8 +1035,12 @@ const NEEDS_INPUT_LINES = 60;
  * returns included) are removed, tabs become spaces, each line is trimmed and blank
  * lines are dropped. It is then cut to FLOW_NEEDS_INPUT_LIMIT bytes, at a line
  * boundary (or a character boundary when one line is all there is), and to
- * NEEDS_INPUT_LINES lines. Every printed line carries a prefix, so nothing in
- * the text can forge a record. Exit 0 on every path.
+ * NEEDS_INPUT_LINES lines. A needs-input.md keeps its start, where the
+ * question was written to go; the implementer's summary keeps its end, where
+ * an agent's last message asks it. `<total>` is the size before any cut,
+ * the whole message's for a summary the caller cut. Every printed line
+ * carries a prefix, so nothing in the text can forge a record. Exit 0 on
+ * every path.
  */
 export const FLOW_NEEDS_INPUT_COMMAND = [
   'export LC_ALL=C',
@@ -1018,9 +1048,13 @@ export const FLOW_NEEDS_INPUT_COMMAND = [
   `relayflow_clean() { sed "s/$(printf '\\033')\\[[0-9;?]*[A-Za-z]//g" | tr -d '\\000-\\010\\013-\\037\\177' | tr '\\t' ' ' | awk 'NF { sub(/^ +/, ""); sub(/ +$/, ""); print }'; }`,
   `src=none; if [ -s ${FLOW_NEEDS_INPUT_FILE} ] && [ -n "$(relayflow_clean < ${FLOW_NEEDS_INPUT_FILE})" ]; then src=needs-input.md; relayflow_clean < ${FLOW_NEEDS_INPUT_FILE} > "$out"; elif [ -n "$(printf '%s\\n' "\${agent_summary:-}" | relayflow_clean)" ]; then src=implementer-summary; printf '%s\\n' "$agent_summary" | relayflow_clean > "$out"; else : > "$out"; fi`,
   'echo "relayflow needs-input-source: $src"',
-  'total=$(wc -c < "$out" | tr -d " ")',
-  `if [ "$total" -gt ${FLOW_NEEDS_INPUT_LIMIT} ]; then head -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c 1 "$out.cut" | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 0 ]; then sed '$d' "$out.cut" > "$out.kept"; else sed "s/$(printf '[\\300-\\377]')$(printf '[\\200-\\277]')*\\$//" "$out.cut" | awk 'NF { print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"; fi`,
-  `head -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; mv -f "$out.kept" "$out"; kept=$(wc -c < "$out" | tr -d " ")`,
+  'size=$(wc -c < "$out" | tr -d " "); total=$size',
+  'case "${agent_summary_bytes:-}" in (""|*[!0-9]*) ;; (*) if [ "$src" = implementer-summary ] && [ "$agent_summary_bytes" -gt "$total" ]; then total=$agent_summary_bytes; fi ;; esac',
+  // A summary keeps its end: the whole lines that fit, or the tail of its only
+  // line from a character boundary. Anything else keeps its start the same way.
+  `if [ "$size" -gt ${FLOW_NEEDS_INPUT_LIMIT} ] && [ "$src" = implementer-summary ]; then tail -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c $((${FLOW_NEEDS_INPUT_LIMIT} + 1)) "$out" | head -c 1 | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 1 ]; then sed 1d "$out.cut" > "$out.kept"; else sed "s/^$(printf '[\\200-\\277]')*//" "$out.cut" | awk 'NF { sub(/^ +/, ""); print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"`
+    + `; elif [ "$size" -gt ${FLOW_NEEDS_INPUT_LIMIT} ]; then head -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c 1 "$out.cut" | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 0 ]; then sed '$d' "$out.cut" > "$out.kept"; else sed "s/$(printf '[\\300-\\377]')$(printf '[\\200-\\277]')*\\$//" "$out.cut" | awk 'NF { print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"; fi`,
+  `if [ "$src" = implementer-summary ]; then tail -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; else head -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; fi; mv -f "$out.kept" "$out"; kept=$(wc -c < "$out" | tr -d " ")`,
   'sed "s/^/relayflow needs-input: /" "$out"',
   'if [ "$kept" -lt "$total" ]; then echo "relayflow needs-input-truncated: $kept of $total bytes"; fi',
   'rm -f "$out"',
@@ -1143,9 +1177,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const changeTitleLength = Array.from(changeTitle).length;
   const placeholderTitle = ["software factory change", "replace with your ticket title"]
     .includes(changeTitle.toLowerCase());
-  const issueSource = issue.source.trim().toLowerCase();
-  const issueIdentifier = issue.identifier?.trim() ?? "";
-  const issueUrl = issue.url?.trim() ?? "";
+  // A local input may leave ticket metadata out or give it another type: it
+  // reads as blank, where calling .trim() on it would throw.
+  const field = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const issueSource = field(issue.source).toLowerCase();
+  const issueIdentifier = field(issue.identifier);
+  const issueUrl = field(issue.url);
   if (!changeTitle || placeholderTitle) {
     console.error("Stopped: the pull-request title is empty or still a placeholder. No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
@@ -1287,9 +1324,20 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // minutes on an unchanged branch). Only a definite "unchanged" stops here.
   if (!implementerTimedOut && (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_CHANGE_CHECK_COMMAND)})).trim() === "unchanged") {
     // Its own last message stands in when it wrote no ${FLOW_NEEDS_INPUT_FILE}.
+    // The question is at its end, so the relay gets the end: from a line
+    // start, with the whole message's size in bytes when it was cut.
     const said = (implementation as unknown as { summary?: unknown } | undefined)?.summary;
-    const agentSummary = typeof said === "string" ? said.slice(-${FLOW_NEEDS_INPUT_LIMIT}) : "";
-    const needsInput = (await f.run("agent_summary=" + shellQuote(agentSummary) + "; " + ${JSON.stringify(FLOW_NEEDS_INPUT_COMMAND)})).trim();
+    const message = typeof said === "string" ? said : "";
+    let agentSummary = message.slice(-${NEEDS_INPUT_SUMMARY_WINDOW});
+    let summaryBytes = "";
+    if (agentSummary.length < message.length) {
+      agentSummary = agentSummary.includes("\\n") ? agentSummary.slice(agentSummary.indexOf("\\n") + 1) : agentSummary.replace(/^[\\uDC00-\\uDFFF]/, "");
+      summaryBytes = String(Array.from(message).reduce((bytes, character) => {
+        const point = character.codePointAt(0) ?? 0;
+        return bytes + (point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4);
+      }, 0));
+    }
+    const needsInput = (await f.run("agent_summary=" + shellQuote(agentSummary) + "; agent_summary_bytes=" + summaryBytes + "; " + ${JSON.stringify(FLOW_NEEDS_INPUT_COMMAND)})).trim();
     console.error("Stopped: the implementer made no changes, so there was nothing to check or publish. No checks ran, no branch was pushed and no pull request was opened. Its question or reason follows, when it gave one: answer it on the ticket and run again.\\n" + needsInput);
     return f.done("needs_human");
   }
@@ -1297,7 +1345,8 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // change (a first package.json with a test script). Resolving only before
   // the change reported "no checks ran" on a pull request that added tests
   // (cloud-e2e-sandbox#31), so a "none" is looked at again.
-  if (checkPlan === "none") await f.run(resolveChecks);` });
+  // A script written now is the ecosystem default, so the report says so.
+  if (checkPlan === "none" && (await f.run(resolveChecks)).trim() === "default") checkSetup = "default";` });
   sections.push({ id: 'checks', code: `  // Run the checks. A failure is not the end of the run: the tests are
   // how this flow learns what is wrong, so the repair agent reads the output
   // and fixes what it can, at most twice, and whatever still fails is compared against

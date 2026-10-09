@@ -5,9 +5,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ts from 'typescript';
 import {
-  FLOW_BASE_CHECK_COMMAND, FLOW_CHANGE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
+  FLOW_BASE_CHECK_COMMAND, FLOW_CHANGE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_NEEDS_INPUT_COMMAND, FLOW_NEEDS_INPUT_FILE, FLOW_NEEDS_INPUT_HINT, FLOW_NEEDS_INPUT_LIMIT,
-  FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_PUSH_COMMAND,
+  FLOW_OPEN_CHANGE_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_PUSH_COMMAND, NEEDS_INPUT_SUMMARY_WINDOW,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
 
@@ -61,7 +61,7 @@ describe('FLOW_CHANGE_CHECK_COMMAND', () => {
     expect(changeCheck(root, base)).toMatchObject({ code: 0, token: 'unchanged' });
   });
 
-  it('says changed for a commit, and for uncommitted or untracked work, which the checks still see', () => {
+  it('says changed for a commit, and for staged or unstaged edits to tracked files, which the checks still see', () => {
     const committed = repository();
     write(committed.root, 'app.txt', 'work\n');
     git(committed.root, 'commit', '-qam', 'work');
@@ -69,9 +69,13 @@ describe('FLOW_CHANGE_CHECK_COMMAND', () => {
     const edited = repository();
     write(edited.root, 'app.txt', 'work\n');
     expect(changeCheck(edited.root, edited.base).token).toBe('changed');
-    const added = repository();
-    write(added.root, 'src/new.ts', 'export {};\n');
-    expect(changeCheck(added.root, added.base).token).toBe('changed');
+    const staged = repository();
+    write(staged.root, 'src/new.ts', 'export {};\n');
+    git(staged.root, 'add', 'src/new.ts');
+    expect(changeCheck(staged.root, staged.base).token).toBe('changed');
+    const deleted = repository();
+    git(deleted.root, 'rm', '-q', 'app.txt');
+    expect(changeCheck(deleted.root, deleted.base).token).toBe('changed');
     // A repository's own summary.md is not a working file to ignore.
     const own = repository();
     write(own.root, 'summary.md', 'v1\n');
@@ -81,6 +85,66 @@ describe('FLOW_CHANGE_CHECK_COMMAND', () => {
     write(own.root, 'summary.md', 'v2\n');
     git(own.root, 'commit', '-qam', 'edit own summary');
     expect(changeCheck(own.root, ownBase).token).toBe('changed');
+  });
+
+  it('counts a rename onto a working-file path as the deletion of its source', () => {
+    // Rename detection would report only the destination, summary.md, which
+    // the base lacks and is ignored: the deleted app.txt must still count.
+    const { root, base } = repository();
+    git(root, 'mv', 'app.txt', 'summary.md');
+    git(root, 'commit', '-qm', 'rename');
+    expect(changeCheck(root, base).token).toBe('changed');
+    const unstaged = repository();
+    git(unstaged.root, 'mv', 'app.txt', 'plan.md');
+    expect(changeCheck(unstaged.root, unstaged.base).token).toBe('changed');
+  });
+
+  it('ignores a committed working file even when it is edited again afterwards', () => {
+    // Publishing removes the commit that adds summary.md, so neither it nor a
+    // later edit to it is a change, staged or not.
+    const { root, base } = repository();
+    write(root, 'summary.md', 'Nothing to do.\n');
+    git(root, 'add', '-f', 'summary.md');
+    git(root, 'commit', '-qm', 'summary');
+    write(root, 'summary.md', 'Nothing to do, and here is why.\n');
+    expect(changeCheck(root, base).token).toBe('unchanged');
+    git(root, 'add', '-f', 'summary.md');
+    expect(changeCheck(root, base).token).toBe('unchanged');
+  });
+
+  it('ignores .relayflow/, even when the repository commits its check script', () => {
+    // The flow writes the run's checkCommand over a committed check script
+    // before the implementer starts; that difference is not the implementer's.
+    const { root } = repository();
+    write(root, FLOW_CHECK_SCRIPT, 'set -e\nmake test\n');
+    git(root, 'add', '-f', FLOW_CHECK_SCRIPT);
+    git(root, 'commit', '-qm', 'check script');
+    const base = git(root, 'rev-parse', 'HEAD').trim();
+    write(root, FLOW_CHECK_SCRIPT, 'set -e\nnpm test\n');
+    expect(changeCheck(root, base).token).toBe('unchanged');
+    git(root, 'commit', '-qam', 'edit check script');
+    expect(changeCheck(root, base).token).toBe('unchanged');
+  });
+
+  it('does not count untracked files, which nothing publishes, but names them', () => {
+    const { root, base } = repository();
+    write(root, 'notes.txt', 'scratch\n');
+    write(root, 'src/new.ts', 'export {};\n');
+    const result = changeCheck(root, base);
+    expect(result).toMatchObject({ code: 0, token: 'unchanged' });
+    expect(result.stderr).toContain('notes.txt');
+    expect(result.stderr).toContain('src/new.ts');
+  });
+
+  it('says unchanged when an edit was undone, committed or not', () => {
+    const { root, base } = repository();
+    write(root, 'app.txt', 'work\n');
+    git(root, 'commit', '-qam', 'work');
+    git(root, 'revert', '--no-edit', 'HEAD');
+    expect(changeCheck(root, base).token).toBe('unchanged');
+    write(root, 'app.txt', 'work\n');
+    write(root, 'app.txt', 'base\n');
+    expect(changeCheck(root, base).token).toBe('unchanged');
   });
 
   it('says unknown, and never unchanged, when it cannot tell', () => {
@@ -156,6 +220,41 @@ describe('FLOW_NEEDS_INPUT_COMMAND', () => {
     expect(Buffer.from(one.stdout, 'utf8').toString('utf8')).not.toContain('�');
   });
 
+  it('keeps the end of a long implementer summary, where its question is, cut on byte boundaries', () => {
+    const { root } = repository();
+    // One line of multibyte text: its tail, from a character boundary.
+    const line = 'é'.repeat(3000) + ' Which document did you mean?';
+    const one = relay(root, line);
+    const parsed = records(one.stdout);
+    expect(parsed.source).toEqual(['implementer-summary']);
+    expect(parsed.question).toHaveLength(1);
+    expect(parsed.question[0]!.endsWith('Which document did you mean?')).toBe(true);
+    expect(Buffer.byteLength(parsed.question[0]!) + 1).toBeLessThanOrEqual(FLOW_NEEDS_INPUT_LIMIT);
+    expect(parsed.question[0]).toMatch(/^é+ Which/);
+    expect(parsed.truncated).toEqual([`relayflow needs-input-truncated: ${Buffer.byteLength(parsed.question[0]!) + 1} of ${Buffer.byteLength(line) + 1} bytes`]);
+    expect(one.stdout).not.toContain('\uFFFD');
+    // Many lines: the last whole lines that fit, never a partial first one.
+    const lines = Array.from({ length: 300 }, (_, i) => `${i} ${'ü'.repeat(20)}`).concat('Which file is the README?');
+    const many = records(relay(root, lines.join('\n')).stdout);
+    expect(many.question.at(-1)).toBe('Which file is the README?');
+    expect(many.question.length).toBeLessThanOrEqual(60);
+    expect(many.question).toEqual(lines.slice(-many.question.length));
+    expect(many.question.join('\n').length + many.question.length).toBeLessThanOrEqual(FLOW_NEEDS_INPUT_LIMIT);
+    // More than 60 short lines: the last 60.
+    const short = Array.from({ length: 100 }, (_, i) => `line ${i}`);
+    expect(records(relay(root, short.join('\n')).stdout).question).toEqual(short.slice(-60));
+  });
+
+  it('reports the whole summary\'s size when the caller had to cut it', () => {
+    const { root } = repository();
+    const result = sh(`agent_summary='Which file?'; agent_summary_bytes=90000; ${FLOW_NEEDS_INPUT_COMMAND}`, root);
+    expect(records(result.stdout)).toMatchObject({ question: ['Which file?'], truncated: ['relayflow needs-input-truncated: 12 of 90000 bytes'] });
+    // A size that is not a number, or one for a needs-input.md, changes nothing.
+    expect(records(sh(`agent_summary='Which file?'; agent_summary_bytes='1; x'; ${FLOW_NEEDS_INPUT_COMMAND}`, root).stdout).truncated).toEqual([]);
+    write(root, FLOW_NEEDS_INPUT_FILE, 'Which file?\n');
+    expect(records(sh(`agent_summary=''; agent_summary_bytes=90000; ${FLOW_NEEDS_INPUT_COMMAND}`, root).stdout).truncated).toEqual([]);
+  });
+
   it('leaves nothing behind but the question itself', () => {
     const { root } = repository();
     write(root, FLOW_NEEDS_INPUT_FILE, 'Which file?\n');
@@ -212,6 +311,8 @@ type Scenario = {
   implementerTimedOut?: boolean;
   summary?: string;
   checks?: string[];
+  /** What each FLOW_CHECK_RESOLVE_COMMAND prints, in order. */
+  resolves?: string[];
   input?: Record<string, unknown>;
   workflow?: FactoryDraft['workflow'];
   edit?: (source: string) => string;
@@ -228,6 +329,7 @@ async function runFlow(scenario: Scenario = {}) {
   const errors: string[] = [];
   let finish = '';
   let checkIndex = 0;
+  let resolveIndex = 0;
   const originalError = console.error;
   console.error = (message: string) => { errors.push(String(message)); };
   try {
@@ -250,6 +352,7 @@ async function runFlow(scenario: Scenario = {}) {
           return sh(command, root).stdout;
         }
         if (command.endsWith(FLOW_CHECK_RUN_COMMAND)) return scenario.checks?.[checkIndex++] ?? 'pass';
+        if (command === FLOW_CHECK_RESOLVE_COMMAND) return scenario.resolves?.[resolveIndex++] ?? 'script';
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return 'fail';
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return 'publish';
         if (command.includes('validate') || command.includes('missing-github-closing-reference')) return 'valid';
@@ -293,13 +396,28 @@ describe('the generated Garden flow', () => {
     expect(stop).toContain('\nrelayflow needs-input-source: needs-input.md\nrelayflow needs-input: Which file is the "gamification README"?\nrelayflow needs-input: Did you mean docs/native-gamification-plan.md?');
   });
 
-  it('hands the implementer\'s own last message to the relay, bounded', async () => {
-    const summary = 'x'.repeat(10_000) + 'I asked about the gamification README.';
+  it('hands the end of the implementer\'s own last message to the relay, from a line start (Cursor, cubic)', async () => {
+    // Multibyte text: a character limit and a byte limit are not the same, and
+    // the question at the end must survive both.
+    const summary = Array.from({ length: 2000 }, (_, i) => `${i} ${'é'.repeat(20)}`).join('\n') + '\nI asked about the gamification README.';
     const { calls } = await runFlow({ changed: 'unchanged', summary });
     const relayCall = calls.find(call => call.endsWith(FLOW_NEEDS_INPUT_COMMAND))!;
     const value = /^agent_summary='([^']*)'; /.exec(relayCall)![1]!;
-    expect(value.length).toBe(FLOW_NEEDS_INPUT_LIMIT);
-    expect(value.endsWith('I asked about the gamification README.')).toBe(true);
+    expect(value.length).toBeLessThanOrEqual(NEEDS_INPUT_SUMMARY_WINDOW);
+    expect(summary.endsWith(value)).toBe(true);
+    expect(summary[summary.length - value.length - 1]).toBe('\n');
+    expect(relayCall).toContain(`; agent_summary_bytes=${Buffer.byteLength(summary)}; `);
+    // The flow's own call, run for real where the implementer wrote no file.
+    const { root } = repository();
+    const parsed = records(sh(relayCall, root).stdout);
+    expect(parsed.source).toEqual(['implementer-summary']);
+    expect(parsed.question.at(-1)).toBe('I asked about the gamification README.');
+    expect(parsed.question[0]).toMatch(/^\d+ é{20}$/);
+    expect(parsed.truncated).toHaveLength(1);
+    expect(parsed.truncated[0]).toMatch(new RegExp(`^relayflow needs-input-truncated: \\d+ of ${Buffer.byteLength(summary)} bytes$`));
+    // A short message is passed whole, with no size.
+    const short = await runFlow({ changed: 'unchanged', summary: 'Which file?' });
+    expect(short.calls.find(call => call.endsWith(FLOW_NEEDS_INPUT_COMMAND))).toMatch(/^agent_summary='Which file\?'; agent_summary_bytes=; /);
   });
 
   it('carries on as before when there are changes, when it cannot tell, or when the implementer timed out', async () => {
@@ -349,6 +467,24 @@ describe('the generated Garden flow', () => {
     const clean = await runFlow();
     expect(clean.calls.some(call => call.startsWith('cksum < '))).toBe(false);
     expect(clean.calls.find(call => call.startsWith('check=pass; '))).toContain("check_digest=''; ");
+  });
+
+  it('says a script it wrote after the change is the default, so the report suggests keeping it (CodeRabbit, cubic)', async () => {
+    // Nothing to run before the change; the change added a project file, so the
+    // second resolve wrote the ecosystem default.
+    const added = await runFlow({ resolves: ['none', 'default'] });
+    expect(added.calls.filter(call => call === FLOW_CHECK_RESOLVE_COMMAND)).toHaveLength(2);
+    expect(added.calls.find(call => call.startsWith('check=pass; '))).toContain('check_setup=default; ');
+    const still = await runFlow({ resolves: ['none', 'none'] });
+    expect(still.calls.find(call => call.startsWith('check=skipped; ') || call.startsWith('check=none; ') || call.startsWith('check=pass; '))).toContain('check_setup=discovered; ');
+  });
+
+  it('treats missing or non-string ticket metadata as blank instead of throwing (CodeRabbit, cubic)', async () => {
+    for (const metadata of [{ source: undefined }, { source: 42, identifier: 7, url: null }]) {
+      const { finish, calls } = await runFlow({ input: { issue: { ...issue, ...metadata } } });
+      expect(finish, JSON.stringify(metadata)).toBe('needs_human');
+      expect(calls, JSON.stringify(metadata)).toContain('agent:implementer');
+    }
   });
 
   it('prints one progress line per phase change', async () => {
