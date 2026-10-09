@@ -1,10 +1,14 @@
-/** Scrub signup read capabilities from SDK-enriched URLs and replay metadata. */
+/**
+ * Scrub signup read capabilities and workspace invite tokens from SDK-enriched
+ * URLs, autocaptured attributes, and replay metadata.
+ */
 export function sanitizeSignupAnalytics<T>(event: T | null): T | null {
   const seen = new WeakMap<object, unknown>();
   function clean(value: unknown, key = ''): unknown {
-    if (/^(writeToken|write_token|progress_token|device_code|access_token|refresh_token|prompt)$/i.test(key)) return '[redacted]';
+    if (/^(writeToken|write_token|progress_token|device_code|access_token|refresh_token|prompt|invite_token|inviteToken)$/i.test(key)) return '[redacted]';
     if (typeof value === 'string') return value
       .replace(/([?&]session=)[^&#\s"']+/gi, '$1[redacted]')
+      .replace(/([?&](?:invite_token|inviteToken|invite)=)[^&#\s"']+/gi, '$1[redacted]')
       .replace(/(\/api\/v1\/signup\/agent\/sessions\/)[0-9a-f-]{36}/gi, '$1[redacted]');
     if (!value || typeof value !== 'object') return value;
     if (seen.has(value)) return seen.get(value);
