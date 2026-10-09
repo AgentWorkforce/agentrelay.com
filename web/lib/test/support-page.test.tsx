@@ -15,12 +15,14 @@ describe('support page', () => {
     expect(html).toContain('Agent Relay support');
     expect(html).toContain('mailto:hello@agentrelay.com');
     expect(html).toContain('Do not send workspace keys');
+    expect(html).toContain('href="https://github.com/AgentWorkforce"');
     expect(html).toContain('href="/privacy"');
     expect(html).toContain('href="/terms"');
   });
 
   it('uses a canonical URL and appears in the sitemap', () => {
     expect(metadata.alternates?.canonical).toBe('https://agentrelay.com/support');
+    expect(metadata.title).toBe('Support');
     expect(sitemap().map((entry) => entry.url)).toContain('https://agentrelay.com/support');
   });
 });

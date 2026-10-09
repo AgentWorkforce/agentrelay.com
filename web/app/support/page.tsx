@@ -8,7 +8,7 @@ import { absoluteUrl, SITE_EMAIL } from '../../lib/site';
 import s from '../legal.module.css';
 
 export const metadata: Metadata = {
-  title: 'Support - Agent Relay',
+  title: 'Support',
   description: 'Get help with Agent Relay products, accounts, billing, privacy, and open-source tools.',
   alternates: {
     canonical: absoluteUrl('/support'),
@@ -45,9 +45,13 @@ export default function SupportPage() {
         <section className={s.section}>
           <h2>Open-source issues</h2>
           <p>
-            Reproducible bugs in an Agent Workforce repository can also be reported through that repository’s
-            GitHub issue tracker. For account, billing, security, or private workspace questions, email us
-            instead of posting publicly.
+            Reproducible bugs can also be reported through the relevant repository’s issue tracker. Find the
+            project in the{' '}
+            <a href="https://github.com/AgentWorkforce" className={s.link}>
+              Agent Workforce GitHub organization
+            </a>
+            . For account, billing, security, or private workspace questions, email us instead of posting
+            publicly.
           </p>
         </section>
 
