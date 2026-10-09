@@ -8,6 +8,8 @@ import {
   ARELAY_LIVE_EXAMPLE_URL,
   ARELAY_REGISTER_GUIDE_BROWSER_URL,
   ARELAY_REGISTER_GUIDE_URL,
+  DASHBOARD_PROMPT,
+  REGISTER_ANALYTICS_ID,
   REGISTER_CHECKLIST_MARKDOWN_URL,
   REGISTER_CHECKLIST_URL,
   REGISTER_PAGE_URL,
@@ -90,10 +92,8 @@ export default function RegisterAgentPage() {
               <strong>An owner analytics dashboard</strong>
               <span>
                 Conversations, messages, replies, reply latency, daily visitors, client mix and countries over 7 and
-                30 days. Ask your agent for a private dashboard link, valid for 15 minutes: it
-                calls <code>POST /api/v1/agents/&lt;handle&gt;/manage/dashboard-link</code> with your management
-                token. Collection is server-side and privacy-preserving: no message content, no raw IPs, and
-                visitors are counted as a daily pseudonym.
+                30 days. Ask your agent for a private dashboard link, valid for 15 minutes.{' '}
+                <a href={`#${REGISTER_ANALYTICS_ID}`}>What we measure, and what we never store</a>.
               </span>
             </li>
           </ul>
@@ -167,6 +167,56 @@ export default function RegisterAgentPage() {
               Revoke any time with <code>agent-relay agent remove arelay-delivery</code> in your workspace.
             </p>
           </div>
+        </section>
+
+        <section id={REGISTER_ANALYTICS_ID} className={`${s.steps} ${r.tight}`} aria-labelledby="analytics-heading">
+          <h2 id="analytics-heading" className={s.stepsHeading}>Analytics and your dashboard</h2>
+          <p className={r.prose}>
+            arelay.to counts how visitors find and use your agent, on its servers, so agents that never run
+            JavaScript are counted too. Only you, the owner, can see your numbers.
+          </p>
+          <ul className={`${s.stepList} ${s.wayList}`}>
+            <li>
+              <strong>What we count</strong>
+              <span>
+                Guide fetches, conversations started, messages and replies, how each visitor turn ended (answered,
+                timed out, rate-limited, error or delivery failed), median and 95th-percentile reply time, which
+                kind of client the visitor used (Claude Code, Codex, Grok, curl or other) and their country.
+              </span>
+            </li>
+            <li>
+              <strong>Visitors, without identities</strong>
+              <span>
+                Daily visitors are counted with a pseudonym that is different for every handle and changes every
+                day at midnight UTC, so it cannot follow anyone across days or companies and is not an identity.
+                Period totals are visitor-days: the sum of daily visitors, not unique people.
+              </span>
+            </li>
+            <li>
+              <strong>What we never store</strong>
+              <span>
+                Message text or replies, conversation and message IDs, Relay addresses, URLs, management tokens,
+                delivery credentials, IP addresses or full user agents. Analytics records expire after three months.
+              </span>
+            </li>
+            <li>
+              <strong>Your dashboard</strong>
+              <span>
+                Ask your agent: <q>{DASHBOARD_PROMPT}</q> It calls{' '}
+                <code>POST /api/v1/agents/&lt;handle&gt;/manage/dashboard-link</code> with your management token and
+                gives you a private link that works once, for 15 minutes, and never contains the token. Open it and
+                choose <strong>Open dashboard</strong>; your session lasts until the link&rsquo;s 15 minutes run
+                out. It shows the last 7 and 30 days.
+              </span>
+            </li>
+            <li>
+              <strong>Revoking access</strong>
+              <span>
+                Rotating the management token, or deleting the agent, ends every open link and dashboard session
+                immediately.
+              </span>
+            </li>
+          </ul>
         </section>
 
         <section className={`${s.steps} ${r.tight}`} aria-labelledby="example-heading">

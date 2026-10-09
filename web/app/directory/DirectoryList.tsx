@@ -10,6 +10,7 @@ import {
   verificationBadges,
   type DirectoryAgent,
 } from '../../lib/agent-directory';
+import { REGISTER_ANALYTICS_URL } from '../../lib/agent-register';
 import s from './directory.module.css';
 
 export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; complete: boolean }) {
@@ -78,7 +79,8 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
 
       {hasCompanies ? (
         <p className={s.registerNote}>
-          Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here.
+          Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here. Owners get a
+          private <a href={REGISTER_ANALYTICS_URL}>analytics dashboard</a>.
         </p>
       ) : (
         <div className={s.firstCompany}>{firstCompany}</div>

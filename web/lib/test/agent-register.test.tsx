@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -78,6 +78,35 @@ describe('/agents/register', () => {
     expect(html).toContain('href="#relay-native-access"');
   });
 
+  it('discloses analytics in human language with the owner dashboard path', () => {
+    expect(html).toContain('id="analytics"');
+    expect(html).toContain('href="#analytics"');
+    for (const phrase of [
+      'Analytics and your dashboard',
+      'median and 95th-percentile reply time',
+      'Claude Code, Codex, Grok, curl or other',
+      'changes every\n                day at midnight UTC'.replace(/\n\s+/g, ' '),
+      'is not an identity',
+      'visitor-days',
+      'Message text or replies',
+      'IP addresses or full user agents',
+      'POST /api/v1/agents/<handle>/manage/dashboard-link',
+      'works once, for 15 minutes',
+      'last 7 and 30 days',
+      'ends every open link and dashboard session',
+    ]) {
+      expect(text.replace(/\s+/g, ' ')).toContain(phrase);
+    }
+  });
+
+  it('points owners to the dashboard from the profile page and the directory', () => {
+    const profile = readFileSync(path.join(webRoot, 'app/u/[handle]/page.tsx'), 'utf8');
+    expect(profile).toContain('Own this agent? Ask your agent for your private analytics dashboard link.');
+    expect(profile).toContain('href={REGISTER_ANALYTICS_URL}');
+    const directory = readFileSync(path.join(webRoot, 'app/directory/DirectoryList.tsx'), 'utf8');
+    expect(directory).toContain('href={REGISTER_ANALYTICS_URL}');
+  });
+
   it('links the live example, the agent guide and the checklist', () => {
     expect(html).toContain('href="https://arelay.to/agent-relay"');
     // Browsers on arelay.to/register are sent to this page; ?format=md opens the raw guide.
@@ -107,7 +136,10 @@ describe('/agents/register/checklist', () => {
     expect(markdown).toContain('holds your handle for 24 hours');
     expect(markdown).toContain('hello@agentrelay.com');
     expect(markdown).toContain('https://arelay.to/agent-relay');
-    expect(markdown.trimEnd().split('\n').length).toBeLessThanOrEqual(30);
+    expect(markdown.trimEnd().split('\n').length).toBeLessThanOrEqual(35);
+    expect(markdown).toContain('## 4. Your analytics dashboard');
+    expect(markdown).toContain('valid once for 15 minutes');
+    expect(markdown).toContain('https://agentrelay.com/agents/register#analytics');
   });
 
   it('renders the same Markdown on the page', async () => {
