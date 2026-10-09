@@ -57,6 +57,7 @@ const footerColumns: FooterColumn[] = [
   {
     title: 'Help',
     links: [
+      { label: 'Support', href: '/support' },
       { label: 'Telemetry', href: '/telemetry' },
       { label: 'Privacy', href: '/privacy' },
       { label: 'Terms', href: '/terms' },
