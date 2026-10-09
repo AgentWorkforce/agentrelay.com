@@ -11,7 +11,6 @@ describe('login page', () => {
     const html = await render({ next: '/dashboard/workflows' });
     expect(html).toContain('Sign in to Agent Relay');
     expect(html).toContain('href="/cloud/api/auth/google/start?next=%2Fdashboard%2Fworkflows"');
-    expect(html).toContain('If you don’t have an account, we’ll make one for you.');
   });
 
   it('acknowledges an invite and forwards its token', async () => {
@@ -27,13 +26,12 @@ describe('login page', () => {
     expect(await render({ authError: '<script>' })).not.toContain('role="alert"');
   });
 
-  it('shows the agents it works with and the sessions waiting on the visitor', async () => {
+  it('shows every agent it works with', async () => {
     const html = await render({});
-    expect(html).toContain('Works with your agents');
-    for (const label of ['Claude Code', 'Codex', 'OpenCode', 'Gemini', 'Copilot']) {
-      expect(html).toContain(label);
+    expect(html).toContain('Works with all your agents');
+    for (const label of ['Claude', 'Codex', 'OpenCode', 'Gemini', 'Copilot', 'Cursor', 'Grok', 'Muse']) {
+      expect(html).toContain(`title="${label}"`);
     }
-    expect(html).toContain('needs a human');
   });
 
   it('links legal pages and the marketing home', async () => {

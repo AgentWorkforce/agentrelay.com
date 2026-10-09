@@ -6,6 +6,7 @@ import {
   AGENT_TOOLS,
   AgentToolLogo,
 } from '../../components/AgentToolLogos';
+import { Cursor, Grok, MuseColor } from '../../components/brand-icons';
 import { LogoIcon, LogoWordmark } from '../../components/SiteNav';
 import { authErrorMessage, googleSignInHref } from '../../lib/login';
 import { GoogleSignInButton } from './google-sign-in-button';
@@ -24,6 +25,23 @@ type LoginProps = {
 };
 const first = (value: string | string[] | undefined) =>
   Array.isArray(value) ? value[0] : value;
+
+const WORKS_WITH = [
+  ...AGENT_TOOLS.map((tool) => ({
+    key: tool,
+    label: AGENT_TOOL_LABELS[tool],
+    logo: (
+      <AgentToolLogo
+        provider={tool}
+        className={s.worksWithLogo}
+        idPrefix={`login-works-${tool}`}
+      />
+    ),
+  })),
+  { key: 'cursor', label: 'Cursor', logo: <Cursor className={s.worksWithLogo} /> },
+  { key: 'grok', label: 'Grok', logo: <Grok className={s.worksWithLogo} /> },
+  { key: 'muse', label: 'Muse', logo: <MuseColor className={s.worksWithLogo} /> },
+];
 
 export default async function LoginPage({ searchParams }: LoginProps) {
   const params = await searchParams;
@@ -48,9 +66,6 @@ export default async function LoginPage({ searchParams }: LoginProps) {
             <LogoWordmark />
             <span className="sr-only">Sign in to Agent Relay</span>
           </h1>
-          <p className={s.subtitle}>
-            If you don’t have an account, we’ll make one for you.
-          </p>
 
           {invite && !error && (
             <p className={s.notice}>
@@ -68,16 +83,12 @@ export default async function LoginPage({ searchParams }: LoginProps) {
           />
 
           <div className={s.worksWith}>
-            <p>Works with your agents</p>
+            <p>Works with all your agents</p>
             <ul>
-              {AGENT_TOOLS.map((tool) => (
-                <li key={tool} title={AGENT_TOOL_LABELS[tool]}>
-                  <AgentToolLogo
-                    provider={tool}
-                    className={s.worksWithLogo}
-                    idPrefix={`login-works-${tool}`}
-                  />
-                  <span className="sr-only">{AGENT_TOOL_LABELS[tool]}</span>
+              {WORKS_WITH.map(({ key, label, logo }) => (
+                <li key={key} title={label}>
+                  {logo}
+                  <span className="sr-only">{label}</span>
                 </li>
               ))}
             </ul>

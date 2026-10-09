@@ -1,6 +1,4 @@
-'use client';
-
-import { useEffect, useState, type CSSProperties } from 'react';
+import type { CSSProperties } from 'react';
 
 import {
   AGENT_META,
@@ -8,26 +6,26 @@ import {
   type TerminalCard,
   type TerminalStyle,
 } from '../../components/home/HeroTerminalMarquee';
-import { RELAY_RUSH_EVENT, type RelayRushEvent } from './relay-events';
 import s from './login.module.css';
 
 type Waiting = {
   card: TerminalCard;
-  /** What the agent wants from you, worn as a tag above its terminal. */
-  tag: string;
-  /** Top-left corner on the stage, in px. */
+  /** Where the card's centre enters, in percent of the showcase. */
   x: number;
   y: number;
-  tilt: number;
+  /** Spin, in degrees, by the time the relay swallows it. */
+  spin: number;
 };
+
+/** One card's trip from entry to the relay; must match `--pull` in the CSS. */
+const PULL_SECONDS = 16;
 
 // Fictional sessions, purely decorative; never workspace activity.
 const WAITING: Waiting[] = [
   {
-    tag: 'needs a human · 2m',
-    x: 24,
-    y: 40,
-    tilt: -3,
+    x: 20,
+    y: 15,
+    spin: 14,
     card: {
       agent: 'claude',
       repo: 'agentrelay/web',
@@ -40,10 +38,9 @@ const WAITING: Waiting[] = [
     },
   },
   {
-    tag: 'pinged @you',
-    x: 360,
-    y: 196,
-    tilt: 2.5,
+    x: 24,
+    y: 84,
+    spin: -12,
     card: {
       agent: 'codex',
       repo: 'relay/router',
@@ -56,10 +53,9 @@ const WAITING: Waiting[] = [
     },
   },
   {
-    tag: 'saved you a seat',
-    x: 56,
-    y: 420,
-    tilt: 2,
+    x: 16,
+    y: 38,
+    spin: 8,
     card: {
       agent: 'opencode',
       repo: 'relay/sdk',
@@ -72,10 +68,9 @@ const WAITING: Waiting[] = [
     },
   },
   {
-    tag: 'standing by',
-    x: 392,
-    y: 600,
-    tilt: -2.5,
+    x: 28,
+    y: 63,
+    spin: -16,
     card: {
       agent: 'grok',
       repo: 'relay/docs',
@@ -90,50 +85,40 @@ const WAITING: Waiting[] = [
 ];
 
 /**
- * Agent sessions waiting on the person signing in. Once sign-in starts their
- * tags flip to show you've joined. Hidden from assistive tech.
+ * Agent sessions drifting in and getting pulled into the relay at the seam
+ * beside the form, one after another. Hidden from assistive tech.
  */
 export function WaitingRoom() {
-  const [joined, setJoined] = useState(false);
-
-  useEffect(() => {
-    const onRush = (event: Event) => setJoined((event as RelayRushEvent).detail);
-    window.addEventListener(RELAY_RUSH_EVENT, onRush);
-    return () => window.removeEventListener(RELAY_RUSH_EVENT, onRush);
-  }, []);
-
   return (
     <div className={s.waitingRoom} aria-hidden="true">
-      <div className={s.waitingStage}>
-        {WAITING.map(({ card, tag, x, y, tilt }, index) => {
-          const terminalStyle: TerminalStyle = {
-            '--term-cycle': AGENT_META[card.agent].cycle,
-            '--term-phase': `${-index * 1.7}s`,
-          };
-          return (
-            <div
-              key={card.repo}
-              className={s.waiting}
-              data-joined={joined || undefined}
-              style={
-                {
-                  left: x,
-                  top: y,
-                  '--tilt': `${tilt}deg`,
-                  '--float-delay': `${index * -1.9}s`,
-                } as CSSProperties
-              }
-            >
-              <span className={s.waitingTag}>{joined ? '✓ @you joined' : tag}</span>
+      {WAITING.map(({ card, x, y, spin }, index) => {
+        const terminalStyle: TerminalStyle = {
+          '--term-cycle': AGENT_META[card.agent].cycle,
+          '--term-phase': `${-index * 1.7}s`,
+        };
+        return (
+          <div
+            key={card.repo}
+            className={s.waiting}
+            style={
+              {
+                '--x': x,
+                '--y': y,
+                '--spin': `${spin}deg`,
+                '--pull-delay': `${(index * -PULL_SECONDS) / WAITING.length}s`,
+              } as CSSProperties
+            }
+          >
+            <div className={s.waitingCard}>
               <HeroTerminalCard
                 card={card}
                 idPrefix={`login-waiting-${index}`}
                 style={terminalStyle}
               />
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

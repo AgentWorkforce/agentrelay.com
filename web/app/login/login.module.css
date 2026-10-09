@@ -120,13 +120,6 @@
   width: auto;
   height: 28px;
 }
-.subtitle {
-  margin: 20px 0 0;
-  text-wrap: balance;
-  color: var(--fg-muted);
-  font-size: 15px;
-  line-height: 1.6;
-}
 
 .notice,
 .error {
@@ -204,95 +197,52 @@
   color: var(--fg);
 }
 
-/* Waiting room: home-page agent terminals, each waiting on the visitor. */
+/* Waiting room: home-page agent terminals drifting in and getting pulled into
+   the relay at the seam (100% x, 50% y), one after another. */
 .waitingRoom {
+  --pull: 16s;
   position: absolute;
   inset: 0;
   z-index: 0;
   display: none;
-  place-items: center;
   overflow: hidden;
   pointer-events: none;
   container-type: size;
 }
 @media (min-width: 960px) {
   .waitingRoom {
-    display: grid;
+    display: block;
   }
 }
-.waitingStage {
-  position: relative;
-  flex: none;
-  width: 760px;
-  height: 800px;
-  translate: -4% 0;
+/* A zero-size anchor at the entry point, so scale shrinks toward the path. */
+.waiting {
+  position: absolute;
+  left: calc(var(--x) * 1%);
+  top: calc(var(--y) * 1%);
+  transform-origin: 0 0;
+  animation: pull var(--pull) var(--pull-delay) infinite;
+  opacity: 0;
 }
-/* Ordered loosest first, so the tightest matching fit wins. */
-@container (max-height: 820px) {
-  .waitingStage {
-    scale: 0.86;
-  }
+.waitingCard {
+  position: absolute;
+  translate: -50% -50%;
 }
 @container (max-width: 760px) {
-  .waitingStage {
-    scale: 0.8;
+  .waitingCard {
+    scale: 0.82;
   }
 }
 @container (max-width: 640px) {
-  .waitingStage {
+  .waitingCard {
     scale: 0.7;
   }
 }
-.waiting {
-  position: absolute;
-  rotate: var(--tilt);
-  animation: waiting-float 9s ease-in-out var(--float-delay) infinite alternate;
-}
-.waiting > article {
+.waitingCard > article {
   margin: 0;
   box-shadow:
     0 0 0 1px rgba(116, 184, 226, 0.06),
     0 24px 60px rgba(0, 0, 0, 0.5);
 }
-.waitingTag {
-  position: absolute;
-  bottom: 100%;
-  left: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 9px;
-  padding: 5px 9px;
-  border: 1px dashed rgba(240, 179, 159, 0.45);
-  border-radius: 999px;
-  background: rgba(52, 23, 22, 0.6);
-  color: #f0b39f;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.66rem;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-  transition:
-    color 300ms ease,
-    background 300ms ease,
-    border-color 300ms ease;
-}
-.waitingTag::after {
-  width: 6px;
-  height: 11px;
-  background: currentColor;
-  content: '';
-  animation: waiting-caret 1s steps(2, end) infinite;
-}
-.waiting[data-joined] .waitingTag {
-  border-color: rgba(52, 211, 153, 0.5);
-  border-style: solid;
-  background: rgba(10, 46, 34, 0.7);
-  color: #6ee7b7;
-}
-.waiting[data-joined] .waitingTag::after {
-  display: none;
-}
-
 /* Works with: the harness logos from the home page. */
 .worksWith {
   margin-top: 40px;
@@ -307,7 +257,9 @@
   letter-spacing: 0.04em;
 }
 .worksWith ul {
+  color: var(--fg);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 18px;
   margin: 14px 0 0;
@@ -331,14 +283,37 @@
   height: 22px;
 }
 
-@keyframes waiting-float {
-  to {
-    translate: 0 -10px;
-  }
-}
-@keyframes waiting-caret {
-  50% {
+@keyframes pull {
+  0% {
+    translate: -4cqw 0;
+    scale: 0.94;
+    rotate: 0deg;
     opacity: 0;
+    filter: blur(3px);
+    animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1);
+  }
+  10% {
+    translate: 0 0;
+    scale: 1;
+    opacity: 1;
+    filter: blur(0);
+    animation-timing-function: linear;
+  }
+  50% {
+    translate: calc((100 - var(--x)) * 0.16cqw) calc((50 - var(--y)) * 0.14cqh);
+    scale: 0.94;
+    rotate: calc(var(--spin) * 0.15);
+    opacity: 1;
+    filter: brightness(1);
+    /* The pull: slow to let go, then sucked in fast. */
+    animation-timing-function: cubic-bezier(0.7, 0, 0.95, 0.35);
+  }
+  100% {
+    translate: calc((100 - var(--x)) * 1cqw) calc((50 - var(--y)) * 1cqh);
+    scale: 0.02;
+    rotate: var(--spin);
+    opacity: 0.2;
+    filter: brightness(2.2);
   }
 }
 
@@ -370,10 +345,13 @@
   .google {
     transition: none;
   }
-  .form,
-  .waiting,
-  .waitingTag::after {
+  .form {
     animation: none;
+  }
+  /* A still waiting room: cards rest at their entry points. */
+  .waiting {
+    animation: none;
+    opacity: 1;
   }
   .spin {
     animation: none;
