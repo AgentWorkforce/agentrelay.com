@@ -130,7 +130,6 @@
   font-weight: 560;
   letter-spacing: -0.04em;
   line-height: 1.04;
-  text-wrap: balance;
 }
 
 .homeHeadlineLine {
@@ -160,7 +159,6 @@
   color: rgba(207, 225, 240, 0.78);
   font-size: clamp(1rem, 1.35vw, 1.18rem);
   line-height: 1.68;
-  text-wrap: pretty;
 }
 
 .homeCtas {
@@ -1003,7 +1001,6 @@
   color: rgba(239, 247, 255, 0.9);
   font-size: clamp(1rem, 1.55vw, 1.22rem);
   line-height: 1.7;
-  text-wrap: pretty;
 }
 
 .careersEmailButton {
@@ -1043,7 +1040,6 @@
   font-weight: 560;
   letter-spacing: -0.048em;
   line-height: 1;
-  text-wrap: balance;
 }
 
 .homeSectionText {
@@ -1052,7 +1048,6 @@
   color: rgba(195, 212, 228, 0.76);
   font-size: 1.05rem;
   line-height: 1.68;
-  text-wrap: pretty;
 }
 
 .homeCardGrid {
@@ -1509,7 +1504,6 @@
   font-weight: 620;
   letter-spacing: -0.06em;
   line-height: 0.92;
-  text-wrap: balance;
 }
 
 .aboutNoBreak {
@@ -1522,7 +1516,6 @@
   color: rgba(204, 221, 236, 0.84);
   font-size: clamp(1.05rem, 1.7vw, 1.24rem);
   line-height: 1.6;
-  text-wrap: pretty;
 }
 
 .aboutStory {
@@ -1612,7 +1605,6 @@
   font-weight: 620;
   letter-spacing: -0.036em;
   line-height: 1.02;
-  text-wrap: balance;
 }
 
 .aboutStoryItem p {
@@ -2014,13 +2006,11 @@
 .heroCenterColumn .heroCenterHeadline {
   font-size: clamp(2.6rem, 5.4vw, 4.5rem);
   max-width: 20ch;
-  text-wrap: balance;
 }
 
 .heroCenterColumn .heroCenterSubtitle {
   max-width: 52ch;
   margin: -4px auto 0;
-  text-wrap: pretty;
 }
 
 .heroCenterCtas {

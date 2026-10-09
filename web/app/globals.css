@@ -12,6 +12,17 @@ html {
   --nav-clearance: 88px;
   scroll-padding-block-start: calc(var(--nav-clearance) + 16px);
 
+  /* Reserve the scrollbar track so layout doesn't shift when a page
+     starts or stops scrolling. */
+  scrollbar-gutter: stable;
+
+  /* Text defaults: avoid orphans, break long URLs instead of overflowing,
+     and never fake bold. Style synthesis stays on because Inter and Sora
+     load without italic faces — <em> in docs and posts needs the oblique. */
+  text-wrap: pretty;
+  overflow-wrap: break-word;
+  font-synthesis: style;
+
   background: var(--bg);
   color-scheme: dark;
   transition: background 0.3s ease;
@@ -19,6 +30,13 @@ html {
 
 html[data-theme='dark'] {
   color-scheme: dark;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  text-wrap: balance;
 }
 
 body {
