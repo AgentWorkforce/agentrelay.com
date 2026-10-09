@@ -29,8 +29,8 @@
 
 .sidebarCol {
   position: sticky;
-  top: 88px;
-  height: calc(100vh - 88px);
+  top: var(--nav-clearance);
+  height: calc(100vh - var(--nav-clearance));
   overflow-y: auto;
   padding: var(--docs-rail-top-padding) 1.25rem 2rem;
   border-right: 1px solid var(--line);
@@ -161,12 +161,6 @@
   box-shadow: none;
 }
 
-.tocSelect:focus-visible {
-  outline: none;
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-
 .tocNav {
   margin-top: 1.3rem;
 }
@@ -268,12 +262,6 @@
 
 .versionSelect:hover {
   color: var(--fg-muted);
-}
-
-.versionSelect:focus-visible {
-  outline: none;
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 .versionChevron {

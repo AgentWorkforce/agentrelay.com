@@ -7,8 +7,6 @@
 .workspace { position: relative; z-index: 1; margin-top: calc(-1 * var(--setup-card-overlap)); display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); border: 1px solid #74b8e22e; border-radius: 16px 16px 16px 3px; background: linear-gradient(145deg, #122b3f 0%, #10273a 48%, #0d2031 100%); box-shadow: 0 24px 64px #030b1440, 0 4px 12px #030b1433, inset 0 1px 0 #c8e4ff12; overflow: clip; }
 .builder { min-width: 0; padding: 32px; }
 .question h2, .ready h2 { font-family: var(--font-heading), sans-serif; font-size: 26px; line-height: 1.35; letter-spacing: -.7px; font-weight: 500; }
-.question h2, .ready h2 { scroll-margin-top: 144px; }
-.question h2:focus, .ready h2:focus { outline: none; }
 .question { animation: enter .25s ease-out; }
 .description { margin: 16px 0 28px; color: var(--muted); font-size: 14px; line-height: 1.75; }
 .agentGroup { border: 0; padding: 0; margin: 0 0 20px; min-width: 0; }

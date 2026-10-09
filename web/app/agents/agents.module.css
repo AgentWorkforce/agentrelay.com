@@ -696,7 +696,6 @@
 .band {
   border-top: 1px solid var(--line);
   background: var(--bg);
-  scroll-margin-top: 80px;
 }
 
 .bandAlt {

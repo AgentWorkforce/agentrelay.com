@@ -142,7 +142,6 @@
 .primitiveSection {
   background: var(--bg);
   border-top: 1px solid var(--line);
-  scroll-margin-top: 80px;
 }
 
 .primitiveSectionAlt {

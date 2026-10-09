@@ -7,6 +7,11 @@ html {
   --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
+  /* Height the sticky site nav occupies (12px offset + bar). Hash links and
+     scrollIntoView land below it, and sticky rails sit beneath it. */
+  --nav-clearance: 88px;
+  scroll-padding-block-start: calc(var(--nav-clearance) + 16px);
+
   background: var(--bg);
   color-scheme: dark;
   transition: background 0.3s ease;
