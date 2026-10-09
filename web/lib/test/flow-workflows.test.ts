@@ -342,9 +342,15 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
 
     it('runs the check in the step itself where nothing can put it in a group of its own', () => {
       // Without setsid and perl nothing could stop a detached check's
-      // descendants, so it is never detached: it runs here, within the wait.
-      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'timeout']);
+      // descendants, so it is never detached: it runs here, within the wait,
+      // where the limiter stops it. macOS has no timeout or gtimeout, and perl
+      // is excluded here on purpose, so the fixture brings its own limiter:
+      // without one the command refuses to run the checks at all (below), and
+      // the timeout case would never exercise the timeout path.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv']);
+      writeFileSync(path.join(bin, 'timeout'), '#!/bin/sh\nsecs=$1; shift\n"$@" & c=$!\n( sleep "$secs"; kill -TERM "$c" 2>/dev/null ) & w=$!\nwait "$c"; status=$?\nkill -TERM "$w" 2>/dev/null\nif [ "$status" -ge 128 ]; then exit 124; fi\nexit "$status"\n', { mode: 0o755 });
       expect(sh('command -v setsid || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      expect(sh('command -v timeout', fixture({}), { PATH: bin }).stdout.trim()).toBe(path.join(bin, 'timeout'));
       const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran\n' });
       const passing = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '5' });
       expect(passing.token).toBe('pass');
@@ -353,8 +359,41 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
       // cannot hold its lease longer than the wait it was given.
       expect(read(root, '.relayflow/check.log.group')).toBe('');
       expect(read(root, '.relayflow/check.log')).toContain('suite-ran');
-      const timedOut = sh(FLOW_CHECK_RUN_COMMAND, fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' }), { PATH: bin, RELAYFLOW_CHECK_ID: 'i-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' });
+      // The wait, not the total, is what bounds this step: a 30s suite with a
+      // 60s total and a 2s wait is stopped at 2s and reported as a timeout.
+      const slow = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      const started = Date.now();
+      const timedOut = sh(FLOW_CHECK_RUN_COMMAND, slow, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' });
       expect(timedOut.token).toBe('timeout');
+      expect(Date.now() - started).toBeLessThan(20_000);
+      // The limit it was held to, and reports, is the wait, not the total.
+      expect(read(slow, '.relayflow/check.log.limit').trim()).toBe('2');
+    }, 30_000);
+
+    it('refuses to start the checks where nothing can stop them at a time limit', () => {
+      // No timeout, no gtimeout, no perl: a suite started here could not be
+      // stopped, would hold the step's lease until the runner killed it, and
+      // the run would end with no verdict. Cloud's image always has coreutils
+      // `timeout`, so only a local run can reach this.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'setsid']);
+      expect(sh('command -v timeout || command -v gtimeout || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran > ran.txt\nsleep 30\n' });
+      // Both paths refuse: a branch check waited on across leases, and the
+      // single-call check the base-commit comparison uses.
+      const cases: Record<string, string>[] = [{ RELAYFLOW_CHECK_ID: 'k-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' }, { RELAYFLOW_CHECK_TIMEOUT: '60' }];
+      for (const env of cases) {
+        const started = Date.now();
+        const result = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, ...env });
+        // Bounded, explicit, and exit 0 like every other verdict.
+        expect(result).toMatchObject({ code: 0, token: 'unrunnable' });
+        expect(Date.now() - started).toBeLessThan(10_000);
+        expect(result.stderr).toContain('no timeout, gtimeout or perl');
+        expect(result.stderr).toContain('Install coreutils (timeout) or perl');
+        expect(read(root, '.relayflow/check.log')).toContain('they were not run');
+        // The suite never started, so nothing was detached and nothing ran.
+        expect(read(root, 'ran.txt')).toBe('');
+        expect(read(root, '.relayflow/check.log.group')).toBe('');
+      }
     }, 30_000);
 
     it('waits for the check an ID already started instead of starting another, so a resumed run picks it up', () => {
@@ -920,6 +959,20 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     expect(read(root, '.relayflow/pr-body.md')).toContain('implementer was stopped at its time limit');
     expect(sh(`check=pass; baseline=; implementer_timeout=no; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
     expect(read(root, '.relayflow/pr-body.md')).not.toContain('implementer was stopped');
+  });
+
+  it('says the checks could not be run, not that they failed, when nothing could bound them', () => {
+    const { body, code } = report('unrunnable', '', { '.relayflow/check.log': 'relayflow: this machine has no timeout, gtimeout or perl, so there is no way to stop the checks at a time limit and they were not run.\n' });
+    expect(code).toBe(0);
+    expect(body).toContain("**Relayflow could not run this repository's checks**");
+    expect(body).toContain('no `timeout`, `gtimeout` or `perl`');
+    expect(body).toContain('This is not a test failure');
+    expect(body).toContain('Install coreutils');
+    expect(body).not.toContain('The checks failed');
+    expect(body).not.toContain('timed out');
+    // What ran is still shown; there is no suite output to show.
+    expect(body).toContain('npm test');
+    expect(body).not.toContain('Output on this branch');
   });
 
   it('says plainly when nothing could be checked', () => {

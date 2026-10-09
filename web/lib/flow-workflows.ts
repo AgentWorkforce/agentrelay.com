@@ -156,7 +156,15 @@ const PERL_LIMITER =
  * `RELAYFLOW_CHECK_TIMEOUT` as its total, and each call waits at most
  * `RELAYFLOW_CHECK_WAIT` for it: `running` means call again. Where neither
  * exists nothing could stop the check's descendants, so it is not detached at
- * all: it runs in this call under the limiter, within the wait. The waiting call enforces the total: at it, it sends the check's
+ * all: it runs in this call under the limiter, within the wait.
+ *
+ * With no limiter at all — no `timeout`, no `gtimeout`, no `perl` — nothing
+ * could bound the suite: it would hold the step's lease until the runner
+ * killed it, and the run would end with no verdict at all, which is the
+ * failure this plan exists to prevent. So the check is not started: the
+ * command reports `unrunnable`, which the report reads as "could not run the
+ * checks", and names what to install. Cloud's image always has coreutils
+ * `timeout`, so only a local run can reach this. The waiting call enforces the total: at it, it sends the check's
  * whole group SIGTERM, then SIGKILL after a 5s grace, and reports `timeout`.
  * The group is the detached shell's own (it records `$$`), so the signal
  * reaches the suite and everything it started, not just a wrapper.
@@ -210,10 +218,16 @@ export const FLOW_CHECK_RUN_COMMAND = [
     // limiter's, in this call, or the total's. A suite's own 124 is a failure.
     + '; elif [ "$1" -eq 124 ] && { { [ "$relayflow_inline" = yes ] && [ -n "$limiter" ]; } || [ "${3:-}" = stopped ]; }; then echo "relayflow: the checks did not finish within ${limit}s (they ran $2s)." >&2; echo timeout'
     + '; else echo "relayflow: the checks failed with exit $1; the full output is in $check_out." >&2; echo fail; fi; }'
-    + '; if [ -z "${RELAYFLOW_CHECK_WAIT:-}" ] || [ -z "$grouper" ]; then relayflow_inline=yes'
+    // No limiter, so nothing could stop the suite at any limit: it would hold
+    // this step's lease until the runner killed the step, and the run would
+    // end with no verdict. The checks are not started at all.
+    + `; if [ -z "$limiter" ]; then relayflow_unrunnable="relayflow: this machine has no timeout, gtimeout or perl, so there is no way to stop the checks at a time limit and they were not run. Install coreutils (timeout) or perl, then run again."`
+    + '; printf \'%s\\n\' "$relayflow_unrunnable" > "$check_out"; echo "$relayflow_unrunnable" >&2; echo unrunnable'
+    + '; elif [ -z "${RELAYFLOW_CHECK_WAIT:-}" ] || [ -z "$grouper" ]; then relayflow_inline=yes'
     // Nothing here could stop a detached check's descendants, so the check
-    // runs in this call instead, within the wait this step may hold its lease.
-    + '; if [ -n "${RELAYFLOW_CHECK_WAIT:-}" ]; then if [ "$RELAYFLOW_CHECK_WAIT" -lt "$limit" ]; then limit="$RELAYFLOW_CHECK_WAIT"; fi; echo "relayflow: neither setsid nor perl is installed, so the checks run in this step, limited to ${limit}s." >&2; fi'
+    // runs in this call instead, within the wait this step may hold its lease,
+    // where the limiter above stops it.
+    + '; if [ -n "${RELAYFLOW_CHECK_WAIT:-}" ]; then if [ "$RELAYFLOW_CHECK_WAIT" -lt "$limit" ]; then limit="$RELAYFLOW_CHECK_WAIT"; fi; echo "relayflow: neither setsid nor perl is installed, so the checks cannot be detached; they run in this step under $limiter, limited to ${limit}s." >&2; fi'
     + '; echo "relayflow: running $script in $check_dir" >&2; since=$(date +%s)'
     + `; ( ${CHECK_RUNNER} ); relayflow_check_done "$(cat "$check_out.status" 2>/dev/null || echo 125)" "$(( $(date +%s) - since ))"; rm -f "$check_out.status"`
     + '; else id="${RELAYFLOW_CHECK_ID:-1}"'
@@ -405,10 +419,10 @@ const CAP_FUNCTION = BLOCK_FUNCTION + '; relayflow_cap() { ' + [
  * Writes what the checks found to `.relayflow/check-report.md`, and the pull
  * request body — summary.md followed by that report — to `.relayflow/pr-body.md`.
  *
- * The caller sets `check` (the branch's token, or `skipped` when there was no
- * time to run the checks: failed, timed out and not run each say so, a
- * failure with its exit status, a timeout with how long it ran against its
- * budget), `baseline` (the base commit's token, empty when it
+ * The caller sets `check` (the branch's token, `skipped` when there was no
+ * time to run the checks, or `unrunnable` when there was no way to bound
+ * them: failed, timed out, not run and could-not-run each say so, a failure
+ * with its exit status, a timeout with how long it ran against its budget), `baseline` (the base commit's token, empty when it
  * was not needed, or `skipped` when there was no time to check it), and
  * `implementer_timeout=yes` when the implementer was stopped at its time
  * limit, and `reference` to the closing reference line the next step adds. The base commit's output is shown whenever it ran, including when
@@ -444,6 +458,7 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + '; case "$check" in'
     + ` pass) printf '%s\\n' "Relayflow ran this repository's checks (${FLOW_CHECK_SCRIPT}) and they passed." ;;`
     + ` skipped) printf '%s\\n' "**Relayflow ran out of time before it could run this repository's checks** (${FLOW_CHECK_SCRIPT}), so no checks ran on this change. The pull request is a draft; run the checks before merging." ;;`
+    + ` unrunnable) printf '%s\\n' "**Relayflow could not run this repository's checks** (${FLOW_CHECK_SCRIPT}): the machine it ran on has no \\\`timeout\\\`, \\\`gtimeout\\\` or \\\`perl\\\`, so there was no way to stop the suite at a time limit, and starting it could have ended the run with no verdict at all. This is not a test failure, and nothing here says the change is broken. Install coreutils (for \\\`timeout\\\`) or perl and run the flow again, or run ${FLOW_CHECK_SCRIPT} by hand. The pull request is a draft; run the checks before merging." ;;`
     + ` none) printf '%s\\n' "Relayflow found no way to run this repository's tests — no check command, no CI test job it could follow, no test target and no recognised project file — so no checks ran. Review the change with that in mind." ;;`
     + ' *) if [ "$check" = timeout ]; then'
     + `  if [ -n "$ck_elapsed" ] && [ -n "$ck_limit" ]; then printf '%s\\n\\n' "**The checks timed out**: they ran for $(relayflow_duration "$ck_elapsed") of their $(relayflow_duration "$ck_limit") budget and were stopped before they finished, so this is a time limit, not a test failure. Run them locally (\\\`sh ${FLOW_CHECK_SCRIPT}\\\`) to see how long they take, or raise the check budget (\\\`checkTotal\\\` in the flow) and run the flow again."`
@@ -458,7 +473,7 @@ export const FLOW_CHECK_REPORT_COMMAND = [
     + ' esac ;;'
     + ' esac'
     + `; if [ -s "$parts/script" ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n'; relayflow_block "$parts/script" sh; printf '</details>\\n'; fi`
-    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/check" ''; printf '</details>\\n'; fi`
+    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ "$check" != unrunnable ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/check" ''; printf '</details>\\n'; fi`
     + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s "$parts/base" ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/base" ''; printf '</details>\\n'; fi; fi`
     + `; if [ -s "$parts/repair" ]; then printf '\\n### What the repair agent found\\n\\n'; cat "$parts/repair"; fi`
     + '; } > "$report"',
@@ -1174,7 +1189,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // prints one word and exits 0; the full output stays in .relayflow/ for the
   // report. Each branch check gets up to checkTotal minutes, what is left once
   // publishing and the review's floor fit, and stops there.
-  const verdict = (value: string) => ["pass", "fail", "timeout", "none"].includes(value.trim()) ? value.trim() : "fail";
+  const verdict = (value: string) => ["pass", "fail", "timeout", "none", "unrunnable"].includes(value.trim()) ? value.trim() : "fail";
   const verdictOf = (value: string) => /^[a-z]*$/.test(value) ? value : "unknown";
   const broken = (value: string) => value === "fail" || value === "timeout";
   const runChecks = ${JSON.stringify(FLOW_CHECK_RUN_COMMAND)};
@@ -1221,6 +1236,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     console.error("Skipped the checks: too little of the flow's time budget is left to run them and still publish. The pull request opens as a draft that says no checks ran.");
   } else {
     check = verdict(await spannedCheck(checkLimit));
+    // No way to bound the suite, so it was never started: not a verdict on
+    // this change, and nothing to repair or compare. The draft says so.
+    if (check === "unrunnable") console.error("The checks could not be run: this machine has no timeout, gtimeout or perl to stop them at a time limit, so starting them could have ended the run with no verdict. The pull request opens as a draft that says so.");
   }
   // A second repair round runs only for checks that still fail after the
   // first, and leaves the review, where there is one, its floor: it is
@@ -1318,7 +1336,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
-  const draft = broken(check) || check === "skipped" || implementerTimedOut;
+  const draft = broken(check) || check === "skipped" || check === "unrunnable" || implementerTimedOut;
   await f.run(openChange + " --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md" + (draft ? " --draft" : ""), { timeout: "${t.forgeMinutes}m" });
   if (broken(check) && (baseline === "pass" || baseline === "new")) {
     // The base commit passes and this branch does not, or the checks are the

@@ -343,6 +343,25 @@ describe('Garden flow time plan (cloud#4235, cloud#4270, agentrelay.com#155)', (
     expect(FLOW_TIME.localRepairRounds).toBe(1);
   });
 
+  it('drafts, reviews and repairs nothing when the checks could not be run at all', async () => {
+    // No limiter on the machine, so the command refuses to start the suite
+    // (unrunnable). That is not a verdict on the change: nothing to repair,
+    // no base commit to compare with, and the review still runs.
+    const run = await runTimed({
+      agents: { 'check-discovery': 6, 'implementer': 10, 'adversary': 8 },
+      checks: [{ minutes: 1, verdict: 'unrunnable' }],
+      reviewClean: true,
+    });
+    expect(named(run, 'check-repair')).toHaveLength(0);
+    expect(run.names).not.toContain('base-check');
+    expect(run.calls.find(call => call.command?.includes('.relayflow/check-report.md'))?.command).toMatch(/^check=unrunnable; baseline=; /);
+    expect(run.opened?.command).toContain(' --draft');
+    expect(errorsOf(run)).toMatch(/The checks could not be run/);
+    expect(run.names).toContain('adversary');
+    expect(run.finish).toBe('needs_human');
+    expect(run.refused).toBeNull();
+  });
+
   it('reports a check that runs past its whole budget as a timeout, not a failure', async () => {
     const run = await runTimed({
       agents: { 'check-discovery': 6, 'implementer': 10, 'check-repair': 100 },
