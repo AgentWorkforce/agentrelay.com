@@ -9,8 +9,12 @@ import s from './login.module.css';
 /**
  * A plain link to the OAuth start route, so sign-in works before hydration.
  * Once hydrated it shows progress and swallows repeat clicks, which would
- * otherwise start competing OAuth states and fail the first callback.
+ * otherwise start competing OAuth states and fail the first callback. Browsers
+ * report no event for a cancelled navigation, so the guard releases after
+ * `HANDOFF_MS` and the button can be retried.
  */
+const HANDOFF_MS = 8000;
+
 export function GoogleSignInButton({ href }: { href: string }) {
   const [pending, setPending] = useState(false);
 
@@ -22,6 +26,13 @@ export function GoogleSignInButton({ href }: { href: string }) {
     window.addEventListener('pageshow', reset);
     return () => window.removeEventListener('pageshow', reset);
   }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(RELAY_RUSH_EVENT, { detail: pending }));
+    if (!pending) return;
+    const release = setTimeout(() => setPending(false), HANDOFF_MS);
+    return () => clearTimeout(release);
+  }, [pending]);
 
   return (
     <a
@@ -37,7 +48,6 @@ export function GoogleSignInButton({ href }: { href: string }) {
           return;
         }
         setPending(true);
-        window.dispatchEvent(new Event(RELAY_RUSH_EVENT));
       }}
     >
       {pending ? <LoaderCircle className={s.spin} aria-hidden="true" /> : <GoogleIcon />}
