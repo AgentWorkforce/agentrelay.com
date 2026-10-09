@@ -9,7 +9,7 @@ Recommended flows are maintained starting points. The catalog is public, version
 
 Software Garden is the display name of the first recommended flow. Its stable catalog and authored flow ID is `software-factory`: a GitHub issue starts implementation, deterministic repository checks, adversarial review, and a pull request for a human decision.
 
-The released source uses Claude Code for implementation and review, so the Software Garden entry allows and defaults only that harness. A future catalog version can point at a new released source with a different requirement; clients do not rewrite the authored flow.
+Its source is the one the [/flows](/flows) onboarding generates for GitHub issues, Claude Code and the Traditional workflow, published by agentrelay.com as a versioned, SHA-256-pinned file (`web/public/flows/software-garden/v<N>.flow.ts`, recorded in its `manifest.json`). Everything that deploys Software Garden from this catalog (Cloud's deploy wizard and dashboard, and clients of the API below) deploys those same bytes whenever the catalog and GitHub are reachable. The one exception is Cloud's bundled recovery copy, used only when they are not: until AgentWorkforce/cloud#4308 ships, that copy is still the earlier `AgentWorkforce/flows` example, and that change pins it to this same file. That source uses Claude Code for implementation and review, so the entry allows and defaults only that harness. A future catalog version can point at a newer published version with a different requirement; clients do not rewrite the flow.
 
 Software Garden currently supports GitHub repositories. Deploy one listener per repository using the direct-source API below.
 
@@ -29,15 +29,15 @@ GET https://agentrelay.com/api/v1/flows/catalog/software-factory
 GET https://agentrelay.com/api/v1/flows/catalog/babysitter
 ```
 
-The list response starts with `schemaVersion: 1` and `catalogVersion: 4`. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
+The list response starts with `schemaVersion: 1` and `catalogVersion: 5`. The catalog version advances whenever an entry's source changes, because Cloud upgrades an activation onto a different source only from an older catalog version. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
 
-The catalog does not copy or generate the flow body. `source` names the canonical `AgentWorkforce/flows` owner, repository, path, release tag, full commit SHA, GitHub blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch:
+The catalog does not copy the flow body. `source` names the GitHub owner, repository, path, release, full commit SHA, blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch. For Software Garden the release is the published version (`software-garden-v1`) and the path is that version's file in `AgentWorkforce/agentrelay.com`:
 
 ```text
-https://github.com/AgentWorkforce/flows/blob/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts
+https://github.com/AgentWorkforce/agentrelay.com/blob/<commit>/web/public/flows/software-garden/v1.flow.ts
 ```
 
-CI and the production release workflow resolve the release tag, fetch the pinned raw file with a size bound, and verify the digest. A broken, moved, mutable, or drifted source therefore fails before the catalog can ship. For the direct-source deploy API, the client downloads `source.rawUrl`, verifies the bytes against `source.sha256`, and submits that source text; Cloud stores it as the deployment's source snapshot.
+CI and the production release workflow resolve the release (a tag for an `AgentWorkforce/flows` source, the manifest entry for a published Software Garden version), fetch the pinned raw file with a size bound, and verify the digest. A broken, moved, mutable, or drifted source therefore fails before the catalog can ship. For the direct-source deploy API, the client downloads `source.rawUrl`, verifies the bytes against `source.sha256`, and submits that source text; Cloud stores it as the deployment's source snapshot.
 
 ## Activation contract
 
