@@ -22,7 +22,7 @@ html[data-theme='dark'] {
 }
 
 body {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -191,7 +191,7 @@ html[data-theme='dark'] .shiki span {
   max-width: 1040px;
   margin: 0 auto;
   padding: 40px 16px 56px;
-  min-height: 100vh;
+  min-height: 100svh;
   color: var(--fg);
 }
 

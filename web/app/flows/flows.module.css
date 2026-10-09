@@ -15,7 +15,7 @@
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
   --flows-band-dark: #0b1c2a;
   --flows-band-deep: #081723;
-  min-height: 100vh;
+  min-height: 100svh;
   /* Clip decoration without creating a scroll container for the sticky nav. */
   overflow-x: clip;
   background: linear-gradient(180deg, #0b1e2d 0%, #0d2638 38%, #0b1c2a 100%);

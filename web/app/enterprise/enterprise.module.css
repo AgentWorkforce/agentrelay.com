@@ -8,7 +8,7 @@
   --enterprise-muted: #a8b8c8;
   --enterprise-faint: #77879a;
   --enterprise-accent: #74b8e2;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: clip;
   background:
     linear-gradient(180deg, #14344a 0%, #102b3e 54rem, #0d2638 72rem)

@@ -124,7 +124,7 @@
 /* ── Results ── */
 
 .results {
-  max-height: 50vh;
+  max-height: 50dvh;
   overflow-y: auto;
   padding: 6px;
 }

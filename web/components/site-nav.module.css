@@ -198,7 +198,7 @@
   flex-direction: column;
   padding: 4px 10px 14px;
   gap: 4px;
-  max-height: min(72vh, calc(100vh - 88px));
+  max-height: min(72dvh, calc(100dvh - 88px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }

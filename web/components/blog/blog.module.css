@@ -7,7 +7,7 @@
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
   --blog-shell-bg: #0b1c2a;
   --blog-post-hero-bg: #0b1c2a;
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--blog-band-bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;

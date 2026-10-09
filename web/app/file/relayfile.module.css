@@ -1,6 +1,6 @@
 /* Relayfile page */
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       ellipse 36% 28% at 10% 8%,
