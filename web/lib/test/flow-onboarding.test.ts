@@ -11,8 +11,12 @@ import { FLOW_PUSH_COMMAND, FLOW_REFERENCE_LIMIT } from '../flow-workflows';
 
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=abc123; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
-/** A check command without the limit the flow gives it (RELAYFLOW_CHECK_TIMEOUT), so it compares as written. */
-const plain = (command: string) => command.replace(/RELAYFLOW_CHECK_TIMEOUT=\d+; /, '');
+/**
+ * A check command without what the flow gives it, so it compares as written:
+ * a branch check's ID, total and wait, in that order, or the base check's
+ * limit alone. A branch check missing any of the three no longer matches.
+ */
+const plain = (command: string) => command.replace(/^RELAYFLOW_CHECK_ID=\d+-\d+; RELAYFLOW_CHECK_TIMEOUT=\d+; RELAYFLOW_CHECK_WAIT=\d+; /, '').replace(/^(base=[^;]*; )RELAYFLOW_CHECK_TIMEOUT=\d+; /, '$1');
 
 const matchingIssue = { source: 'github', title: '  Fix   login  ', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 
@@ -101,7 +105,7 @@ describe('software factory onboarding', () => {
       const again = source.indexOf('if (checkPlan === "none") await f.run(resolveChecks);');
       expect(implementer, workflow).toBeGreaterThan(-1);
       expect(again, workflow).toBeGreaterThan(implementer);
-      expect(source.indexOf('await timedCheck("", runChecks'), workflow).toBeGreaterThan(again);
+      expect(source.indexOf('await spannedCheck(checkLimit)'), workflow).toBeGreaterThan(again);
     }
   });
 
@@ -249,8 +253,8 @@ describe('software factory onboarding', () => {
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
     for (const agents of [['claude', 'codex'], ['codex'], ['claude']] as FactoryDraft['agents'][]) {
       const source = factorySource({ ...completed, agents });
-      // Cloud's cap on a hosted run (AgentWorkforce/cloud#4235).
-      expect(source).toContain('{ budget: { wallclock: "1h" } }');
+      // An hour under Cloud's 180-minute cap on a hosted run (AgentWorkforce/cloud#4270).
+      expect(source).toContain('{ budget: { wallclock: "2h" } }');
       expect(source).not.toMatch(/budget: "\$\d/);
     }
   });
@@ -532,8 +536,9 @@ describe('software factory onboarding', () => {
     it('opens a draft and keeps reviewing when the base commit fails the same checks', async () => {
       // 139d1a46's shape: the failure is the environment's, not the change's.
       const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'fail', 'fail'], 'fail');
-      // One repair round, then the base commit (agentrelay.com#155).
-      expect(calls.filter(call => call.startsWith('check-repair'))).toHaveLength(1);
+      // Two repair rounds, the second only because the re-check still fails,
+      // then the base commit (agentrelay.com#155).
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual(['check-repair:claude', 'check-repair-2:claude']);
       expect(calls.find(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe('base=abc123; ' + FLOW_BASE_CHECK_COMMAND);
       expect(reportCall(calls)).toMatch(/^check=fail; baseline=fail; /);
       expect(createCall(calls)).toContain('--draft');
