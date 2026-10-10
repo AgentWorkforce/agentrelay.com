@@ -1,6 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants.js';
+
+import { fetchDocsPackageVersions } from './lib/docs-packages.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -57,10 +61,8 @@ const nextConfig = {
       '/docs/llms.txt',
       '/docs/markdown.md',
       '/docs/markdown/:path*',
-      '/docs/agents/markdown/:path*',
-      '/docs/factory/markdown/:path*',
       '/docs/file/markdown/:path*',
-      '/docs/loop/markdown/:path*',
+      '/docs/relayhistory/markdown/:path*',
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
@@ -195,13 +197,28 @@ const nextConfig = {
       { source: '/relaycast/:path*', destination: '/primitives#message', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
-      // The agents docs lost these two pages: 'Deploy and operate' became the
-      // CLI reference, and 'Agent patterns' was dropped without a successor
-      // (the build guide is the nearest thing that still covers agent shape).
-      { source: '/docs/agents/deploy', destination: '/docs/agents/cli', permanent: true },
-      { source: '/docs/agents/patterns', destination: '/docs/agents/build', permanent: true },
+      // The Reflex docs described the relayhistory repository; Relayhistory's docs replace them.
+      { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
+      { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
     ];
   },
 };
 
-export default nextConfig;
+/**
+ * The docs show the latest published version of each product (see
+ * lib/docs-packages.mjs), looked up from npm once per build and inlined. A
+ * production build fails rather than guess; the dev server starts without
+ * versions when npm is unreachable, so offline development still works.
+ */
+export default async function config(phase) {
+  let versions = {};
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    versions = await fetchDocsPackageVersions();
+  } else if (phase === PHASE_DEVELOPMENT_SERVER) {
+    versions = await fetchDocsPackageVersions().catch((error) => {
+      console.warn(`Docs package versions unavailable: ${error.message}`);
+      return {};
+    });
+  }
+  return { ...nextConfig, env: { DOCS_PACKAGE_VERSIONS: JSON.stringify(versions) } };
+}

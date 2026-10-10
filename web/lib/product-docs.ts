@@ -13,10 +13,8 @@ import { absoluteUrl } from './site';
 // avoid pulling the server-only loaders below into the browser bundle.
 export type { NavItem, NavGroup, ProductDocSection } from './product-docs-nav';
 export {
-  agentsSection,
-  factorySection,
   fileSection,
-  loopSection,
+  relayhistorySection,
   relayflowsSection,
   productSections,
   getProductSection,

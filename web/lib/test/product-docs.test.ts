@@ -1,31 +1,39 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  factorySection,
   fileSection,
   getProductDocSlugs,
   getProductSearchIndex,
+  productSections,
   relayflowsSection,
+  relayhistorySection,
 } from '../product-docs';
+import { getDoc } from '../docs';
 
-describe('Factory product docs', () => {
-  it('publishes issue routing in navigation and scoped search', () => {
-    const navItems = factorySection.nav.flatMap((group) => group.items);
+describe('Product docs sections', () => {
+  it('are Relayfile, Relayhistory and Flows', () => {
+    expect(productSections.map((section) => section.id)).toEqual(['file', 'relayhistory', 'relayflows']);
+  });
 
-    expect(navItems).toContainEqual({
-      title: 'Issue labels & routing',
-      slug: 'issue-routing',
-    });
+  it('have content for every navigation slug', () => {
+    for (const section of productSections) {
+      for (const slug of getProductDocSlugs(section)) {
+        expect(getDoc(`${section.id}/${slug}`), `${section.id}/${slug}`).not.toBeNull();
+      }
+    }
+  });
+});
 
-    const searchEntry = getProductSearchIndex(factorySection).find(
-      (entry) => entry.slug === 'issue-routing'
-    );
+describe('Relayhistory product docs', () => {
+  it('shows the ai-hist package version', () => {
+    expect(relayhistorySection.npmPackage).toBe('ai-hist');
+  });
 
-    expect(searchEntry).toMatchObject({
-      title: 'Issue labels and repository routing',
-    });
-    expect(searchEntry?.headings).toContain('Execution-shape labels');
-    expect(searchEntry?.body).toContain('safety.requireLabel');
+  it('indexes the handoff guide in scoped search', () => {
+    const searchEntry = getProductSearchIndex(relayhistorySection).find((entry) => entry.slug === 'handoffs');
+
+    expect(searchEntry).toMatchObject({ title: 'Handoffs' });
+    expect(searchEntry?.headings).toEqual(expect.arrayContaining(['Send', 'Receive', 'Scope']));
   });
 });
 
