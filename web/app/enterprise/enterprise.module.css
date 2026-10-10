@@ -429,7 +429,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 70px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--enterprise-line-strong);
   border-radius: 16px;
   background: #0d1724;

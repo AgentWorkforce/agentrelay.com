@@ -23,7 +23,7 @@
 
 .heroSection {
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   margin-top: 0;
   padding-top: 60px;
 }
@@ -184,7 +184,7 @@
   width: min(100%, 680px);
   min-height: 500px;
   border-radius: 28px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid color-mix(in srgb, var(--primary) 16%, transparent);
   background: linear-gradient(
     180deg,
@@ -229,7 +229,7 @@
   position: relative;
   min-height: 438px;
   padding: 24px;
-  overflow: hidden;
+  overflow: clip;
   background:
     linear-gradient(to right, color-mix(in srgb, var(--line) 55%, transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--line) 45%, transparent) 1px, transparent 1px),
@@ -552,7 +552,7 @@
 .byohWrapper {
   background: var(--showcase-bg);
   position: relative;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .byohWrapper::before {
@@ -723,7 +723,7 @@
 }
 
 .codePanel {
-  overflow: hidden;
+  overflow: clip;
   border-radius: 18px;
   border: 1px solid var(--terminal-line);
   background: var(--terminal-bg);
@@ -850,7 +850,7 @@
 .stepCard {
   height: 100%;
   border-radius: 18px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--line);
   background: var(--surface-strong);
   box-shadow: 0 10px 32px color-mix(in srgb, var(--primary) 5%, transparent);

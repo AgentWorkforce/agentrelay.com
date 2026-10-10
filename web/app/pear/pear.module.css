@@ -229,7 +229,7 @@
   margin-inline: calc(50% - 50vw);
   height: 70px;
   margin-block: 1rem;
-  overflow: hidden;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -387,7 +387,8 @@
   border: 1px solid var(--line);
   background: var(--card-bg);
   box-shadow: 0 24px 60px -40px rgba(22, 40, 59, 0.4);
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
 }
 
 .visualBar {
@@ -599,7 +600,7 @@
   color: var(--fg);
   font-family: var(--font-geist-mono), monospace;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -635,7 +636,7 @@
   height: 0.5rem;
   border-radius: 999px;
   background: color-mix(in srgb, var(--fg) 8%, transparent);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .usageFill {

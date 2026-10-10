@@ -15,7 +15,7 @@
   position: relative;
   isolation: isolate;
   min-height: 320px;
-  overflow: hidden;
+  overflow: clip;
   color: #f3f8fc;
   background:
     radial-gradient(60% 40% at 100% 50%, rgba(74, 144, 194, 0.45), transparent 70%),
