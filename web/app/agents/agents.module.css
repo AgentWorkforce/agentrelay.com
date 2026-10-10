@@ -1,6 +1,5 @@
-/* Shared styles for the /agents gallery, detail pages, and use-cases page.
-   Mirrors the design language of app/primitives (token-driven, Sora headings,
-   radial hero gradients, global .btn CTAs). */
+/* Shared styles for the /agents gallery, detail pages, and use-cases page:
+   token-driven, Sora headings, radial hero gradients, global .btn CTAs. */
 
 .page {
   min-height: 100svh;
