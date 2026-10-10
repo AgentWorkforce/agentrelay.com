@@ -124,6 +124,21 @@
   overflow-y: auto;
 }
 
+/* Rail scrollbars stay invisible until the pointer or keyboard focus is in
+   the rail. Wheel, trackpad and keyboard scrolling are unaffected. */
+.sidebarCol,
+.toc {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* Ungated :hover on purpose: a stuck hover after a tap only reveals the
+   thumb, and any attached mouse (not just a primary one) should reveal it. */
+.sidebarCol:is(:hover, :focus-within),
+.toc:is(:hover, :focus-within) {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
 .tocControl {
   margin-bottom: 0.95rem;
 }
@@ -993,6 +1008,8 @@
   background: var(--code-bg);
   border: 1px solid var(--line);
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   line-height: 1.5;
 }
 
