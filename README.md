@@ -16,7 +16,7 @@ web/      Next.js marketing + docs site (OpenNext → Cloudflare Workers)
 
 ```bash
 npm install         # workspace root
-npm run dev         # next dev
+npm run dev         # next dev on http://localhost:24368
 npm run build       # next build
 npm test            # vitest
 npm run preview     # build + run the OpenNext worker locally (wrangler dev)
