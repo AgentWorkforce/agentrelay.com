@@ -132,4 +132,13 @@ describe('published Software Garden artifact', () => {
     expect(Math.max(...Object.keys(SOURCE_BY_CATALOG_VERSION).map(Number)), 'record the new source here').toBe(catalog.catalogVersion);
     expect(SOURCE_BY_CATALOG_VERSION[catalog.catalogVersion], 'the pinned source changed: advance catalogVersion and record it').toBe(`${source.ref}:${source.sha256}`);
   });
+
+  it('advances the Software Garden entry version with catalogVersion', () => {
+    // The two have moved together since the catalog first served the
+    // generated Software Garden (#185), and the pin-move script advances both.
+    // This holds the entry's version to an independent value: the API test
+    // derives it from the same catalog, so it cannot catch a forgotten bump.
+    const entry = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    expect(entry.version, 'advance the software-factory entry version with catalogVersion').toBe(catalog.catalogVersion);
+  });
 });

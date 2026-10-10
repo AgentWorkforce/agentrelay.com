@@ -326,6 +326,8 @@ async function main() {
   });
   const root = path.resolve(values.root ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '../..'));
   const gitDir = path.resolve(values.git ?? root);
+  // --open-pr commits gitDir's working tree, so that must be the tree it edits.
+  if (values['open-pr'] && gitDir !== root) throw new Error('--open-pr needs --git to be the same directory as --root');
   const read = file => readFileSync(path.join(root, file), 'utf8');
   const plan = planCatalogBump({
     catalogText: read(CATALOG_PATH),
