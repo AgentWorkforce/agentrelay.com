@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { DocsLanguageProvider } from '../../components/docs/DocsLanguageContext';
 import { DocsNav } from '../../components/docs/DocsNav';
 import { DocsSearch } from '../../components/docs/DocsSearch';
-import { DocsGitHubStarsBadgeServer } from '../../components/GitHubStars';
+import { DocsGitHubStarsBadgeServer } from '../../components/DocsGitHubStarsBadgeServer';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import styles from '../../components/docs/docs.module.css';

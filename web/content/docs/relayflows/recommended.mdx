@@ -1,0 +1,73 @@
+---
+title: 'Recommended flows'
+description: 'Discover versioned, maintained flows and activate the same canonical source from Cloud or the CLI.'
+---
+
+Recommended flows are maintained starting points. The catalog is public, versioned JSON, so the Cloud dashboard and the `flows` CLI discover the same identifiers, defaults, requirements, and source instead of keeping separate copies.
+
+## Software Garden
+
+Software Garden is the display name of the first recommended flow. Its stable catalog and authored flow ID is `software-factory`: a GitHub issue starts implementation, deterministic repository checks, adversarial review, and a pull request for a human decision.
+
+Its source is the one the [/flows](/flows) onboarding generates for GitHub issues, Claude Code and the Traditional workflow, published by agentrelay.com as a versioned, SHA-256-pinned file (`web/public/flows/software-garden/v<N>.flow.ts`, recorded in its `manifest.json`). Everything that deploys Software Garden from this catalog (Cloud's deploy wizard and dashboard, and clients of the API below) deploys those same bytes whenever the catalog and GitHub are reachable. The one exception is Cloud's bundled recovery copy, used only when they are not: until AgentWorkforce/cloud#4308 ships, that copy is still the earlier `AgentWorkforce/flows` example, and that change pins it to this same file. That source uses Claude Code for implementation and review, so the entry allows and defaults only that harness. A future catalog version can point at a newer published version with a different requirement; clients do not rewrite the flow.
+
+Software Garden currently supports GitHub repositories. Deploy one listener per repository using the direct-source API below.
+
+## Babysitter
+
+Babysitter is a first-class Recommended entry so its purpose and readiness are visible. It is a [flow plugin](/docs/relayflows/plugins) that extends Software Garden, not a standalone listener: its `kind` is `extension` and its `baseFlowId` is `software-factory`.
+
+The Babysitter detail response carries the exact reviewed extension bundle, immutable artifact digest, manifest digest, and Relayflows SDK 2.0.31 runtime provenance. Discovery does not imply availability. Activation remains blocked, and no activation link is advertised, until the Cloud production host and Relay native existing-session delivery carry exact merge and deployment evidence and the integrated label-to-turn-to-receipt path has an immutable, digest-addressed `liveProof` record.
+
+## Catalog API
+
+The stable endpoints are:
+
+```text
+GET https://agentrelay.com/api/v1/flows/catalog
+GET https://agentrelay.com/api/v1/flows/catalog/software-factory
+GET https://agentrelay.com/api/v1/flows/catalog/babysitter
+```
+
+The list response starts with `schemaVersion: 1` and `catalogVersion: 6`. `catalogVersion` is a positive integer that advances whenever an entry's source changes, because Cloud upgrades an activation onto a different source only from an older catalog version. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
+
+The catalog does not copy the flow body. `source` names the GitHub owner, repository, path, release, full commit SHA, blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch. For Software Garden the release is the published version (currently `software-garden-v3`), the path is that version's file in `AgentWorkforce/agentrelay.com`, and the commit is the one where that file first landed on `main`:
+
+```text
+https://github.com/AgentWorkforce/agentrelay.com/blob/<commit>/web/public/flows/software-garden/v3.flow.ts
+```
+
+CI and the production release workflow resolve the release (a tag for an `AgentWorkforce/flows` source, the manifest entry for a published Software Garden version), fetch the pinned raw file with a size bound, and verify the digest. A broken, moved, mutable, or drifted source therefore fails before the catalog can ship. For the direct-source deploy API, the client downloads `source.rawUrl`, verifies the bytes against `source.sha256`, and submits that source text; Cloud stores it as the deployment's source snapshot.
+
+### Moving the Software Garden pin
+
+Publishing a new Software Garden version (`publish-software-garden.mts`) does not change what the catalog serves. When a push to `main` changes `web/public/flows/software-garden/manifest.json`, the *Propose Software Garden catalog bump* workflow runs `web/scripts/propose-software-garden-catalog-bump.mjs`. If the manifest's latest version is newer than the pinned one, the script pins the commit where that version's file first landed on `main` and the file's SHA-256 there, advances `catalogVersion` and the entry's `version`, records the new source in `SOURCE_BY_CATALOG_VERSION` (`web/lib/test/software-garden-artifact.test.ts`), and updates the catalog version, release and path this page names. A job with a read-only token runs `verify:recommended-flows`, the tests and the typecheck on that edit. Only then does a second job, which installs no dependencies, open a pull request from `automation/software-garden-catalog-bump` or update the one already open. If the pin is current, it does nothing. It never merges; the pull request is reviewed like any other.
+
+That second job alone holds the workflow's `GITHUB_TOKEN` with `contents: write` and `pull-requests: write`. GitHub does not start other workflows for pull requests that token opens, so a maintainer starts CI on the bump pull request by running the *CI* workflow on that branch, or by closing and reopening the pull request. The same script previews the change locally: `node web/scripts/propose-software-garden-catalog-bump.mjs` reports the pending move, and `--write` applies it.
+
+## Activation contract
+
+The current `POST /cloud/api/v1/flows/deploy` endpoint accepts the same direct-source listener body as `flows deploy`. Authenticate with a Cloud bearer session, download and verify the catalog source, then submit:
+
+```json
+{
+  "workspaceId": "workspace-id",
+  "name": "Platform Garden",
+  "workflow": "software-factory",
+  "source": "<verified TypeScript source text>",
+  "handoffId": "<UUID generated for this deployment>",
+  "mode": "activate",
+  "repository": { "owner": "acme", "name": "api" },
+  "sources": [{ "provider": "github", "settings": { "repository": "acme/api" } }],
+  "inputs": {
+    "approver": "github:@octocat",
+    "agents": ["claude"]
+  }
+}
+```
+
+Replace the sample repository and approver with the user's choices. `approver` is required; for GitHub use `github:@handle`, not a Google email. Fill `agents` from the catalog defaults and supported harnesses. `workflow` labels the flow; it does not cause Cloud to fetch the source. The endpoint requires inline source text and one `repository`, not a `flowId`/`repositories` catalog request or the browser onboarding handoff.
+
+Set the GitHub trigger's `settings.repository` to the selected `owner/name`; Cloud does not derive that filter from `repository`, and an empty filter can wake the listener for other repositories in the workspace.
+
+For several repositories, submit one body per repository with its own trigger filter, distinct name, and `handoffId`; reuse that ID when retrying the same deployment. Connect required tools and coding agents before activation. Success is HTTP 201 with `agentId` and `status: "listening"`; verify the saved listener through `GET /cloud/api/v1/flows/listeners/<agentId>`. See the [complete agent signup instructions](/signup/agent/flows) for authentication, connections, and retry behavior.

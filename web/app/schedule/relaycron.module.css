@@ -1,7 +1,7 @@
 /* RelayCron page */
 
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       ellipse 36% 28% at 10% 8%,
@@ -170,7 +170,6 @@
 
 .secondHand {
   transform-origin: 100px 100px;
-  animation: tick 60s linear infinite;
 }
 
 @keyframes tick {
@@ -182,16 +181,22 @@
   }
 }
 
-.tick1 {
-  animation: tickFly 3s ease-out infinite;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .secondHand {
+    animation: tick 60s linear infinite;
+  }
 
-.tick2 {
-  animation: tickFly 3s ease-out infinite 0.8s;
-}
+  .tick1 {
+    animation: tickFly 3s ease-out infinite;
+  }
 
-.tick3 {
-  animation: tickFly 3s ease-out infinite 1.6s;
+  .tick2 {
+    animation: tickFly 3s ease-out infinite 0.8s;
+  }
+
+  .tick3 {
+    animation: tickFly 3s ease-out infinite 1.6s;
+  }
 }
 
 @keyframes tickFly {
@@ -463,9 +468,16 @@
     background 0.2s;
 }
 
-.tabButton:hover {
-  transform: translateY(-1px);
-  border-color: var(--card-hover-border);
+@media (hover: hover) and (pointer: fine) {
+  .tabButton:hover {
+    border-color: var(--card-hover-border);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .tabButton:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .tabButtonActive {
@@ -589,10 +601,17 @@
     transform 0.2s;
 }
 
-.deployCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .deployCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .deployCard:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .deployIcon {
@@ -701,12 +720,17 @@
   background: var(--card-bg);
   color: var(--fg);
   font-family: inherit;
-  transition: all 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
 }
 
-.pricingCta:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .pricingCta:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
 }
 
 .pricingCtaPrimary {
@@ -715,8 +739,10 @@
   border-color: var(--btn-bg);
 }
 
-.pricingCtaPrimary:hover {
-  background: var(--btn-hover);
+@media (hover: hover) and (pointer: fine) {
+  .pricingCtaPrimary:hover {
+    background: var(--btn-hover);
+  }
 }
 
 /* FAQ */
@@ -757,8 +783,10 @@
   line-height: 1.5;
 }
 
-.faqQuestion:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .faqQuestion:hover {
+    color: var(--primary);
+  }
 }
 
 .faqQuestion span:first-child {

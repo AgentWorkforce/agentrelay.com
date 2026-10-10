@@ -13,7 +13,7 @@ import {
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import home from '../landing.module.css';
 import s from './reflex.module.css';
 
@@ -25,6 +25,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/reflex'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Reflex by Agent Relay',
     description:
       'Capture what works across AI coding sessions, discover team patterns, and guide agents with knowledge from your own codebase.',

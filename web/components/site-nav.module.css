@@ -10,7 +10,8 @@
   margin: 0 auto;
   background: var(--nav-solid-bg);
   border: 1px solid var(--nav-border);
-  border-radius: 14px;
+  /* Same tail-corner shape as every other surface on the site. */
+  border-radius: var(--r-lg, 24px);
   transition:
     border-color 0.2s ease,
     box-shadow 0.2s ease;
@@ -20,12 +21,18 @@
     inset 0 1px 0 var(--nav-inset);
 }
 
+/* The gradient is translucent so the bar picks up whatever it floats over.
+   That only works where page and bar share a value range; a page that scrolls
+   dark bands under a light bar sets --nav-scrolled-base to an opaque ground,
+   which paints as the last background layer underneath the gradient. It
+   defaults to transparent, so every other route is unchanged. */
 .navBarScrolled {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--nav-bg) 78%, transparent) 0%,
-    color-mix(in srgb, var(--nav-bg) 88%, transparent) 100%
-  );
+      135deg,
+      color-mix(in srgb, var(--nav-bg) 78%, transparent) 0%,
+      color-mix(in srgb, var(--nav-bg) 88%, transparent) 100%
+    )
+    var(--nav-scrolled-base, transparent);
   backdrop-filter: blur(24px) saturate(2) brightness(1.05);
   -webkit-backdrop-filter: blur(24px) saturate(2) brightness(1.05);
   border-color: var(--nav-border);
@@ -38,7 +45,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 24px;
+  padding: 10px 20px;
+  min-height: 62px;
 }
 
 .navCenter {
@@ -67,6 +75,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-height: 44px;
+  padding-right: 6px;
 }
 
 .logoIcon {
@@ -89,35 +99,18 @@
   list-style: none;
 }
 
-.agentLink {
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: inherit;
-  text-decoration: none;
-  opacity: 0.85;
-  padding: 5px 12px;
-  border: 1px solid var(--nav-border);
-  border-radius: 6px;
-  transition:
-    opacity 0.2s,
-    border-color 0.2s;
-}
-
-.agentLink:hover {
-  opacity: 1;
-  border-color: var(--nav-border-strong);
-}
-
 .link {
   font-family: var(--font-geist-sans), sans-serif;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: inherit;
   text-decoration: none;
-  padding-bottom: 4px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-top: 4px;
   border-bottom: 2.5px solid transparent;
   transition:
     color 0.2s,
@@ -126,9 +119,11 @@
   opacity: 1;
 }
 
-.link:hover {
-  color: var(--nav-link-hover);
-  border-bottom-color: currentColor;
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    color: var(--nav-link-hover);
+    border-bottom-color: currentColor;
+  }
 }
 
 @media (max-width: 960px) {
@@ -138,11 +133,12 @@
   }
 
   .navBar {
-    border-radius: 10px;
+    border-radius: var(--r-md, 16px);
   }
 
   .nav {
-    padding: 8px 14px;
+    padding: 8px 12px;
+    min-height: 56px;
   }
 
   .logoIcon {
@@ -173,18 +169,20 @@
   display: none;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  border-radius: 8px;
+  border-radius: var(--r-sm, 12px);
   transition: background 0.15s;
 }
 
-.hamburger:hover {
-  background: var(--nav-surface);
+@media (hover: hover) and (pointer: fine) {
+  .hamburger:hover {
+    background: var(--nav-surface);
+  }
 }
 
 @media (max-width: 960px) {
@@ -198,17 +196,19 @@
 .mobileMenu {
   display: flex;
   flex-direction: column;
-  padding: 6px 14px 16px;
+  padding: 4px 10px 14px;
   gap: 4px;
-  max-height: min(72vh, calc(100vh - 88px));
+  max-height: min(72dvh, calc(100dvh - 88px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
 .mobileLink {
-  display: block;
+  display: flex;
+  align-items: center;
+  min-height: 52px;
   padding: 12px 14px;
-  border-radius: 8px;
+  border-radius: var(--r-sm, 12px);
   font-size: 1.0625rem;
   font-weight: 500;
   color: inherit;
@@ -219,135 +219,13 @@
     opacity 0.15s;
 }
 
-.mobileLink:hover {
-  background: var(--nav-surface);
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .mobileLink:hover {
+    background: var(--nav-surface);
+    opacity: 1;
+  }
 }
 
 /* ── Product dropdown (desktop hover) ── */
 
-.productDropdown {
-  position: relative;
-}
-
-.productDropdown .link {
-  cursor: pointer;
-}
-
-.chevron {
-  display: inline-block;
-  transition: transform 0.2s ease;
-  vertical-align: middle;
-  margin-top: -1px;
-}
-
-.chevronOpen {
-  transform: rotate(180deg);
-}
-
-.productDropdown:hover .chevron {
-  transform: rotate(180deg);
-}
-
-.dropdownMenu {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  padding-top: 10px;
-  z-index: 100;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.15s ease,
-    visibility 0.15s ease;
-}
-
-.productDropdown:hover .dropdownMenu {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-}
-
-.dropdownItem {
-  display: block;
-  padding: 10px 24px;
-  font-family: var(--font-geist-sans), sans-serif;
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: inherit;
-  text-decoration: none;
-  text-align: center;
-  white-space: nowrap;
-  background: var(--nav-solid-bg);
-  border: 1px solid var(--nav-border);
-  border-top: none;
-  transition: background 0.15s;
-  opacity: 1;
-}
-
-.dropdownMenu a:first-child {
-  border-top: 1px solid var(--nav-border);
-  border-radius: 8px 8px 0 0;
-}
-
-.dropdownMenu a:last-child {
-  border-radius: 0 0 8px 8px;
-}
-
-.dropdownItem:hover {
-  background: color-mix(in srgb, var(--nav-solid-bg) 88%, var(--primary) 12%);
-  opacity: 1;
-}
-
 /* ── Mobile product toggle ── */
-
-.mobileProductToggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: 8px;
-  font-size: 1.0625rem;
-  font-weight: 500;
-  color: inherit;
-  text-decoration: none;
-  opacity: 0.85;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    opacity 0.15s;
-  font-family: inherit;
-}
-
-.mobileProductToggle:hover {
-  background: var(--nav-surface);
-  opacity: 1;
-}
-
-.mobileProductItems {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-left: 0;
-}
-
-.mobileProductItems .mobileLink {
-  font-size: 1.0625rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  text-align: center;
-  opacity: 1;
-  background: color-mix(in srgb, var(--nav-solid-bg) 96%, var(--nav-fg) 4%);
-}
-
-.mobileProductItems .mobileLink:hover {
-  background: color-mix(in srgb, var(--nav-solid-bg) 88%, var(--primary) 12%);
-  opacity: 1;
-}

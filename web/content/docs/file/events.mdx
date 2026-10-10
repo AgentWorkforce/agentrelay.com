@@ -23,15 +23,23 @@ Every change — webhook, sync, or another agent's write — surfaces as the sam
 
 ```json
 {
-  "eventId": "evt_01HQ8K7M2YV3R0XW9F4ZB6T2QA",
-  "type": "file.updated",
-  "path": "/linear/issues/AGE-16__87389837-62b1-4e1a-a237-59218bab2974.json",
-  "revision": "rev_42",
-  "provider": "linear",
-  "origin": "provider_sync",
-  "timestamp": "2026-05-13T14:32:01Z"
+  "eventId": "evt_2507297",
+  "type": "file.created",
+  "path": "/runs/pr-59/findings/security.json",
+  "revision": "rev_2935117",
+  "provider": "runs",
+  "origin": "agent_write",
+  "contentType": "application/json",
+  "contentHash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "content": "{}",
+  "inlineContent": true,
+  "encoding": "utf-8",
+  "correlationId": "lt-1-1788520629",
+  "timestamp": "2026-09-04T11:17:09.694Z"
 }
 ```
+
+Small files arrive with their content inlined (`inlineContent: true`), so a handler often needs no follow-up read. `correlationId` carries through from the write that caused the event, which is how you tie an event back to the request that produced it.
 
 - **`type`** is one of `file.created`, `file.updated`, `file.deleted`.
 - **`path`** is the canonical file that changed. The path itself carries context — you know which provider and which record without parsing a payload.
@@ -49,13 +57,15 @@ relayfile listen \
   --run "claude --print 'Triage this: {{path}}'"
 ```
 
+`relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]` streams the workspace's event feed. `--run` substitutes `{{path}}`, `{{type}}`, `{{provider}}`, and `{{revision}}` as single values, plus `{{event}}` for the whole event as space-separated `key:value` pairs — quote that one, or its dozen-odd tokens splatter across the command's arguments. `--format json` prints one event object per line, for piping into anything that isn't a shell command. To fan events out to a channel instead of a local process, bind the glob to a webhook with `relayfile integration bind <provider> <glob> --channel … --webhook … --webhook-token …`.
+
 Or from the SDK with `onWrite`, which subscribes over the same WebSocket stream and dispatches by pattern:
 
 ```typescript
 import { onWrite } from '@relayfile/sdk';
 
 onWrite('/linear/issues/**', async (event) => {
-  if (event.source === 'agent') return; // ignore our own writes
+  if (event.origin === 'agent_write') return; // ignore our own writes
   await agent.handle(event);
 }, { client, workspaceId, operations: ['create', 'update'] });
 ```
@@ -67,6 +77,7 @@ See [Agents](/docs/file/agents) for the framework helpers built on this.
 - **At-least-once.** Events can repeat. Deduplicate on `eventId`; treat handlers as idempotent.
 - **Ordering.** Per file, `revision` is the source of truth — wall-clock `timestamp` can be close together under bursty traffic.
 - **Catch-up.** A subscriber that connects with a cursor receives the events it missed while disconnected, so a restart doesn't drop changes. If the WebSocket can't open, the SDK degrades to HTTP polling rather than going silent.
+- **Reconnect.** Long-lived subscribers do get dropped — a busy workspace can end a stream mid-message — and a reconnect storm is answered with `429` on the WebSocket handshake. Supervise the subscriber (`relayfile listen --background`, or `relayfile supervisor install`) and back off between reconnects rather than looping immediately.
 
 <CardGroup cols={2}>
   <Card title="Real-time sync" href="/docs/file/realtime-sync">

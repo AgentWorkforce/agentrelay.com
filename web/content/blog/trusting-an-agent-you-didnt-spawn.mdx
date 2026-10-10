@@ -1,0 +1,49 @@
+---
+title: "Trusting an agent you didn't spawn"
+description: "We built a demo with the Ratify Protocol team to see if an agent can prove what it's allowed to do when it shows up at someone else's system. Here's what worked, and the part we got wrong."
+date: '2026-08-05'
+author: 'Khaliq Gant'
+category: 'Engineering'
+tags:
+  - Agent Relay
+  - Trust and identity
+  - Delegation
+  - Ratify Protocol
+  - Multi-agent systems
+---
+
+## Agent Relay Thesis
+We're building the real-time communication layer with Agent Relay and the agents we're using and within our own domain. They are agents on our local computer, in our sandboxes
+and on our machines. We firmly believe that the future is multi-agent and the number of agents on the internet will far outweigh the number of humans. Naturally those
+agents will need a trusted way to communicate. My company's agent should be able to communicate with your company's agent. Not only should they be able to communicate, but they
+should be able to work together to accomplish a task.
+
+## Collaboration Opportunity - Not my bike?!
+When we came across the Ratify Protocol team we immediately saw an opportunity. The Ratify Protocol is a spec for delegated authority. The idea is that an agent carries proof of what it's allowed to do, and a stranger can verify that proof without calling anybody. Think about it this way.
+If a kid you never met walks up to you and says, "your mom said I'm allowed to borrow your bike", how can you trust this? You could call your mom and if you can't reach her then there is no good way to be sure. What if there was a permission slip
+that the kid had that you know is real just by looking at it and you know with absolute certainty that your mom gave this kid authority to use this bike because this permission slip is certifiable evidence of permission from your mom.
+
+This is part one of the spike that we set out to achieve with the Ratify Protocol team. We built two fake companies, each with their own agents, which were plain vanilla Claude and Codex instances. We then set up six separate scenarios, four of which were designed to
+make the agent get away with something it shouldn't have. What we were able to prove is that within milliseconds each attempt was rejected, and for a specific reason that we could point at and verify.
+
+## The Setup
+Getting the two systems to work in tandem took some groundwork. We had to line up our permissions and capabilities against theirs and figure out where they already
+matched and where we had to bend to agree. That exercise turned up a handful of changes the Ratify SDK needed, and their team was super quick about making them.
+
+## It Fell Short?
+We used Relay to put two agents in a shared workspace, and between our SDK and theirs we could prove an agent was allowed to write files. What we couldn't prove was
+that it was allowed to write files in that specific repo. The permission slip needed to name the folder and the file, not just the action.
+
+At first we just checked the folder ourselves, programmatically, on our side. Their team rightly caught that and pointed out it wasn't actually stopping writes from
+any other process on the machine, and that it missed edge cases besides. We proved it with a real test, agreed they were right, and moved the check down to the
+operating system where the kernel enforces it.
+
+## The Next Phase
+For the real world demo the Ratify team will adjust their SDK so the permission slip names the actual repo and file path, not just the action. We'll test the whole
+end to end flow again, then run it for real from two separate Relay deployments belonging to two different companies. That pushes real work across a network, with
+agents collaborating over Agent Relay and no trust between them, while the Ratify Protocol tells each side that the other is acting inside the permissions it was
+actually given.
+
+That demo is the one that is going to be 🔥. If you would like to read the technical note from the Ratify Protocol team check their [posting](https://ratifyprotocol.com/writing/agent-relay-phase1-technical-note).
+
+

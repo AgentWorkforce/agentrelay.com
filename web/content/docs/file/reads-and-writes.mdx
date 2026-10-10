@@ -56,13 +56,16 @@ Writes are durable: they're recorded in Relayfile's writeback queue and processe
 
 ## Discovering schemas in-tree
 
-You don't need an out-of-band schema registry. Per-resource schemas are discoverable in the tree itself at `<resource>/.schema.json`:
+You don't need an out-of-band schema registry. Every writable resource advertises a JSON Schema and a create example in the workspace's own `/discovery` tree, whose paths carry literal placeholder segments:
 
 ```bash
-cat mount/linear/issues/.schema.json
+cat mount/discovery/github/.adapter.md                        # operations + ID patterns
+cat mount/discovery/linear/issues/.schema.json                # full record schema
+cat mount/discovery/linear/issues/.create.example.json        # minimal create payload
+cat "mount/discovery/github/repos/{owner}/{repo}/pulls/{pullNumber}/reviews/.schema.json"
 ```
 
-An agent that wants to create or patch a record reads the adjacent schema file to learn the expected shape, then writes a conforming JSON file. This keeps the contract co-located with the data — the same self-describing principle as [`LAYOUT.md` and `.layout.md`](/docs/file/mount-layout).
+`.adapter.md` is the per-provider contract: which resources are writable, the ID pattern that decides whether a filename is a canonical record or a create draft, and which operations each resource supports. `.schema.json` is JSON Schema draft 2020-12 for the full synced record; fields marked `readOnly` are server-managed and are rejected on write. Read them before composing a payload — the same self-describing principle as [`LAYOUT.md`](/docs/file/mount-layout).
 
 The exact write semantics and field mapping per provider are defined by the [adapters](/docs/file/adapters-and-providers), which own webhook-to-path mapping and writeback behavior.
 

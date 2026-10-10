@@ -2,15 +2,15 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 6px 14px;
+  min-height: 40px;
+  padding: 8px 14px;
   background: var(--nav-surface);
   color: var(--nav-fg);
   border: 1px solid var(--nav-border);
-  border-radius: 100px;
+  border-radius: var(--r-sm, 12px);
   text-decoration: none;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   font-weight: 500;
-  animation: throb 3s ease-in-out infinite;
   transition:
     background 0.25s,
     border-color 0.25s,
@@ -23,12 +23,25 @@
   gap: 7px;
 }
 
-.badge:hover {
-  background: var(--nav-surface-hover);
-  border-color: var(--nav-border-strong);
-  color: var(--nav-link-hover);
-  animation: none;
-  transform: scale(1.04);
+@media (hover: hover) and (pointer: fine) {
+  .badge:hover {
+    background: var(--nav-surface-hover);
+    border-color: var(--nav-border-strong);
+    color: var(--nav-link-hover);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .badge {
+    animation: throb 3s ease-in-out infinite;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .badge:hover {
+    animation: none;
+    transform: scale(1.04);
+  }
 }
 
 @keyframes throb {

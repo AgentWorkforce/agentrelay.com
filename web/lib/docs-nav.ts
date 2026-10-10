@@ -19,6 +19,13 @@ export const docsNav: NavGroup[] = [
     ],
   },
   {
+    title: 'Guides',
+    items: [
+      { title: 'Relay Connect', slug: 'relay-connect' },
+      { title: 'Fleet setup', slug: 'fleet-setup' },
+    ],
+  },
+  {
     title: 'Messaging',
     items: [
       { title: 'Overview', slug: 'messaging' },
@@ -37,6 +44,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Events', slug: 'events' },
       { title: 'Event handlers', slug: 'event-handlers' },
       { title: 'Webhooks', slug: 'webhooks' },
+      { title: 'Provider subscriptions', slug: 'provider-subscriptions' },
     ],
   },
   {
@@ -56,6 +64,7 @@ export const docsNav: NavGroup[] = [
     items: [
       { title: 'TypeScript SDK', slug: 'typescript-sdk' },
       { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
+      { title: 'Observer', slug: 'observer' },
     ],
   },
   {

@@ -1,0 +1,71 @@
+---
+title: 'Memory & integrations'
+description: 'Relayhistory-backed memory and Relayfile-backed integrations — the two substrates a flow reaches without hand-rolling either.'
+---
+
+A flow doesn't carry its own database or its own Slack client. Two existing systems back it instead: [Relayhistory](/docs/relayhistory) for memory across runs, and [Relayfile](/docs/file) for everything a flow reads from or writes to outside itself.
+
+## Memory
+
+A step declares what it needs from prior runs, and whatever comes back is charged to that step's own budget, itemized in its own journal entry. There's no shared pool it draws from:
+
+```ts
+import { flow } from '@relayflows/surface';
+
+export default flow('triage', { memory: { script: true } }, async (f) => {
+  const priorArt = await f.memory.recall('similar bugs in the billing module');   // HistoryEntry[]
+  const why = await f.memory.why('fix the billing race condition');              // TrajectoryEntry[]
+
+  const fix = await f.agent('fixer', {
+    task: `Fix the race condition.\n\nRelevant history:\n${priorArt.map((e) => e.prompt).join('\n')}`,
+  });
+
+  // learn() is declared but refuses in 2.0.16, pending the journal-backed write.
+  f.done('success');
+});
+```
+
+Under the hood this is [Relayhistory](/docs/relayhistory)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
+
+<Note>
+  What this feature is judged on is retrieval quality, not the plumbing:
+  an agent visibly avoiding a mistake a prior run already made, citation
+  included. In 2.0.16, `recall` and `why` read the local `ai-hist` SQLite
+  database (`AI_HIST_DB` overrides the default path) with no journal step;
+  `learn` and `memory: { agent: true }` refuse until the journal-backed
+  write lands. The `memory: { script: true }` header makes the reachability
+  check happen — but verified for real, that check runs at `flows run` time,
+  not at `flows check`: a flow with an unreachable database passes `flows
+  check` cleanly and only fails when actually run, with `memory_unreachable:
+  Script memory requires the ai-hist Node SDK and a readable SQLite database
+  at AI_HIST_DB (or defaultDbPath()). Run ai-hist sync first.`
+</Note>
+
+## Integrations
+
+Reaching Slack, GitHub, or Linear from a flow doesn't mean writing a provider SDK call and hoping the token scope is right. [Relayfile](/docs/file) mounts each provider as a directory a flow reads and writes:
+
+```ts
+import { flow } from '@relayflows/surface';
+
+export default flow('release-note', { tools: { slack: true } }, async (f) => {
+  const diff = await f.run('git diff main');
+  const note = await f.llm`One-line release note for: ${diff}`;
+
+  const receipt = await f.slack.post('#releases', note);
+  f.done('success');
+});
+```
+
+`f.slack`, `f.github`, `f.linear`, and every other generated helper compile to a write against Relayfile's [adapter catalog](/docs/file/adapters-and-providers) — the same 50 providers Relayfile ships today, each turned into a flow-native verb. The receipt a helper returns *is* the journaled effect record, so if a step retries and posts the same Slack message twice, the second write gets deduped instead of double-sending. A helper needs a Relayfile mount for its provider (Cloud provides one for connected providers); locally, `flows check` refuses `helper_slack.mount_required` until one exists, and `RELAYFLOWS_SLACK_MOCK=1` records the effect instead of sending it.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Relayfile" href="/docs/file">
+    The full integration catalog a flow can reach.
+  </Card>
+  <Card title="Reliability" href="/docs/relayflows/reliability">
+    How an effect stays exactly-once across a crash.
+  </Card>
+</CardGroup>

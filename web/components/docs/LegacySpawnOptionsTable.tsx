@@ -155,7 +155,8 @@ function getDescription(row: SpawnOptionRow, language: SpawnOptionsLanguage): st
 }
 
 export function LegacySpawnOptionsTable({ variant }: { variant: SpawnOptionsTableVariant }) {
-  const { language } = useDocsLanguage();
+  const { language: docsLanguage } = useDocsLanguage();
+  const language: SpawnOptionsLanguage = docsLanguage === 'python' ? 'python' : 'typescript';
   const rows = getRows(variant).filter((row) => getOptionNames(row, language).length > 0);
 
   return (

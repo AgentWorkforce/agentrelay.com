@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 96" preserveAspectRatio="none" fill="none">
+  <path d="M0 40C150 58 210 12 410 30S710 94 940 74S1250 38 1440 52V96H0Z" fill="#0e2231"/>
+  <path d="M0 40C150 58 210 12 410 30S710 94 940 74S1250 38 1440 52" stroke="#74b8e2" stroke-opacity=".38" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+  <path d="M0 54C170 76 240 25 440 43S710 110 960 88S1270 54 1440 68" stroke="#74b8e2" stroke-opacity=".18" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+  <path d="M0 30C170 24 200 61 440 52S930 44 1440 62" stroke="#74b8e2" stroke-opacity=".12" stroke-width="1.2" vector-effect="non-scaling-stroke"/>
+</svg>

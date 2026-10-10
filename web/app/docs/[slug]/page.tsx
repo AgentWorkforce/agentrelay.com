@@ -14,7 +14,7 @@ import { getDocMarkdownUrl } from '../../../lib/docs-markdown';
 import { getAllDocSlugs, getAllLegacyDocSlugs } from '../../../lib/docs-nav';
 import { getDefaultDocsVersionForSlug } from '../../../lib/docs-versions';
 import { ogImage } from '../../../lib/og-meta';
-import { absoluteUrl } from '../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -54,6 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       types: { 'text/markdown': getDocMarkdownUrl(slug) },
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: seoTitle,
       description: doc.frontmatter.description,
       url: absoluteUrl(`/docs/${slug}`),

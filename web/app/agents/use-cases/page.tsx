@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
-import { absoluteUrl } from '../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 import { UseCasesContent } from './UseCasesContent';
 
 const title = 'Agent Use Cases — What proactive agents do for you';
@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/agents/use-cases'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title,
     description,
     url: absoluteUrl('/agents/use-cases'),

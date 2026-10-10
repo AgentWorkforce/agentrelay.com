@@ -1,0 +1,61 @@
+/* Shared landing structure, typography, bands, and buttons come from Flows. */
+.page :is(a, button):focus-visible {
+  outline: 2px solid var(--flows-accent-strong);
+  outline-offset: 5px;
+}
+
+.page {
+  --agent-tools-band-bg: var(--flows-band-blue);
+  background: #0d2638;
+}
+
+.page .integrationsSection,
+.page .activitySection { --section-bg: #193650; }
+
+.activitySection { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2.5rem, 5vw, 5rem); --section-pattern-opacity: 0; }
+.activityIntro { max-width: 440px; margin: 0; text-align: left; }
+.activityIntro h2 { margin: 0; font-family: var(--font-heading), sans-serif; color: var(--flows-text); font-size: clamp(2.25rem, 3.8vw, 3.2rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.035em; }
+.activityIntro p { max-width: 400px; margin: 1.5rem 0 0; color: var(--flows-muted); font-size: clamp(1rem, 1.5vw, 1.125rem); line-height: 1.75; }
+
+.productScreenshot { width: calc(100% + max(10rem, (100vw - 1140px) / 2)); min-width: 640px; margin: 0; }
+.productScreenshot > a { display: block; border: 1px solid #405c72; border-radius: 12px; overflow: clip; background: #0b1c2a; }
+.productScreenshot img { display: block; width: 100%; height: auto; }
+.productScreenshot figcaption { margin-top: 14px; color: #94b0c5; font-size: 13px; line-height: 1.6; }
+
+.page [data-marquee-band] {
+  margin-top: 16px;
+}
+
+@media (max-width: 960px) {
+  .activitySection { grid-template-columns: 1fr; gap: 2.5rem; }
+  .activityIntro { max-width: 640px; }
+  .activityIntro p { max-width: 560px; }
+  .productScreenshot { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 700px) {
+  .activityIntro h2 { font-size: clamp(1.7rem, 8.4vw, 2.2rem); }
+  .productScreenshot figcaption { font-size: 12px; }
+}
+
+/* Session detail follows the team-wide activity view. */
+.sessionSection { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: center; gap: clamp(2.5rem, 5vw, 5rem); --section-bg: #0d2638; --section-pattern-opacity: 0; }
+.sessionIntro { grid-column: 1; grid-row: 1; max-width: 440px; margin: 0; text-align: left; }
+.sessionIntro h2 { margin: 0; font-family: var(--font-heading), sans-serif; color: var(--flows-text); font-size: clamp(2rem, 3.8vw, 3.2rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.035em; }
+.sessionIntro p { max-width: 400px; margin: 1.5rem 0 0; color: var(--flows-muted); font-size: clamp(1rem, 1.5vw, 1.125rem); line-height: 1.75; }
+.sessionScreenshot { grid-column: 2; grid-row: 1; justify-self: start; width: calc(100% + max(10rem, (100vw - 1140px) / 2)); min-width: 640px; margin: 0; }
+.sessionScreenshot a { display: block; overflow: clip; border: 1px solid #405c72; border-radius: 12px; background: #0b1c2a; }
+.sessionScreenshot img { display: block; width: 100%; height: auto; }
+@media (max-width: 960px) {
+  .sessionSection { grid-template-columns: 1fr; gap: 2.5rem; }
+  .sessionIntro { grid-column: auto; grid-row: auto; max-width: 640px; }
+  .sessionIntro p { max-width: 560px; }
+  .sessionScreenshot { grid-column: auto; grid-row: auto; width: 100%; min-width: 0; }
+}
+@media (max-width: 700px) {
+  .sessionIntro h2 { font-size: clamp(1.7rem, 8.4vw, 2.2rem); }
+  .sessionScreenshot a { border-radius: 8px; }
+}
+
+.page .signupCtas { flex-direction: row; align-items: center; gap: 12px; }
+.signupNote { flex-basis: 100%; margin: 0; color: var(--flows-muted); font-size: 13px; line-height: 1.5; }

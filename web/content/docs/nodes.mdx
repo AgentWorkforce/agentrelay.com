@@ -7,6 +7,18 @@ A **node** is an enrolled context in a workspace — usually a project directory
 
 Every active agent still has a delivery route: a live SDK/MCP WebSocket, a node's agent runtime on another machine, or an HTTP endpoint.
 
+<Warning>
+  Agent Relay 11.3.0 and earlier print the active workspace key from `node up`
+  and `node status`. Upgrade to Agent Relay 11.3.1 or later — confirm with
+  `agent-relay --version`. Upgrading closes the key print in
+  `agent-relay node up` and `agent-relay node status`. It is not a guarantee
+  about credential output from every command in an Agent Relay install. Until
+  upgraded, run these commands only from a trusted, non-transcribed human
+  terminal; agents must not run them. To share a live view of a workspace, never
+  put a workspace key in a URL — use [`agent-relay observer`](/docs/observer),
+  available from 11.8.1.
+</Warning>
+
 ## Node Kinds
 
 | Kind | Use it for |
@@ -202,6 +214,8 @@ Node delivery hosts authenticate with `nt_live_*` node tokens. Use the workspace
 A node enrolls with `POST /v1/nodes` using the workspace key. The request carries the node `name` and, for a fleet host, its `capabilities`, `max_agents`, `tags`, and `version`; the response mints a node token (`nt_live_*`). A provider then connects to `/v1/node/ws` and sends a `node.register` frame with its identity and capabilities to take ownership of its attachment. The node's agent runtime mints and persists this node token at startup, scoped to the workspace and engine, so the node reuses the same identity across restarts; all of the node's providers share it.
 
 A node id supplied or pinned by an operator (`node_id` in the enroll request, used with its node token) is taken as-is. Otherwise the id derives from the machine identity, the working directory, and the workspace, so several nodes on one host — for example one per project directory — do not collide.
+
+The agent runtime also claims the enrolled id locally: a running broker records a claim, and a second broker for the same node on that host is refused instead of evicting the incumbent's delivery socket. See [Broker lifecycle → One broker per enrolled node](/docs/cli-broker-lifecycle#one-broker-per-enrolled-node).
 
 ## Presence And Context
 

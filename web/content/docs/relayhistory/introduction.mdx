@@ -1,0 +1,55 @@
+---
+title: 'Relayhistory'
+description: 'Search, resume, and hand off every coding-agent session on your machine, across every harness.'
+---
+
+Relayhistory indexes the sessions your coding agents already write to disk into one local SQLite database. Search them all at once, jump back into a session with its harness's own resume command, and hand a compact context pack to another agent — or to a teammate's agent — to continue the work.
+
+```bash
+ai-hist search "auth rewrite"
+# → matches across every Claude Code, Codex and Cursor session on this machine
+
+ai-hist resume "auth rewrite"
+# → codex resume 29284179-c09f-44f2-b9ec-16f678dc1832
+
+ai-hist pack "auth rewrite" --tokens 1500
+# → a token-budgeted context pack, ready to paste into another agent
+```
+
+## What it reads
+
+| Harness | Source id | Native resume |
+|---|---|---|
+| Claude Code | `claude` | Yes |
+| Codex | `codex` | Yes |
+| Cursor | `cursor` | Yes |
+| Grok | `grok` | Yes |
+| Muse Code | `muse` | Yes |
+| OpenCode | `opencode` | No — use `ai-hist pack` |
+| Devin CLI | `devin` | No — use `ai-hist pack` |
+| Agent Relay | `relay` | No — use `ai-hist pack` |
+
+Every source is indexed side by side: prompts, assistant turns, tool calls, file edits, token usage, and the parent/subagent tree, as far as each harness records them. Where a harness records less, the gap is named rather than papered over — see [Sessions](/docs/relayhistory/sessions).
+
+## Three ways in
+
+- **CLI** — `ai-hist`, for people: search, resume, pack, inspect. See [CLI](/docs/relayhistory/cli).
+- **MCP server** — `ai-hist-mcp` gives an agent its own memory mid-session and, with the workspace `cloud` connector configured, creates [handoffs](/docs/relayhistory/handoffs) another agent resumes. See [MCP server](/docs/relayhistory/mcp).
+- **TypeScript SDK** — the `ai-hist` package, the same engine the CLI and MCP server call. See [SDK](/docs/relayhistory/sdk).
+
+All three run one Rust engine through a prebuilt Node-API addon. There is no second implementation to fall back to: if the native engine can't load, the error says why.
+
+## Local by default
+
+History stays in `~/.local/share/ai-hist/ai-history.db` on your machine. Reads never contact a provider, [remote sources](/docs/relayhistory/remote-sources) run only when you install and configure a plugin, and [export](/docs/relayhistory/export) writes only the slice you select. Team upload is done by the Agent Relay desktop app, not by Relayhistory.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/docs/relayhistory/quickstart">
+    Install, index your sessions, and run your first search.
+  </Card>
+  <Card title="Handoffs" href="/docs/relayhistory/handoffs">
+    Pass a live session to another agent over Agent Relay.
+  </Card>
+</CardGroup>

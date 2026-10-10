@@ -8,7 +8,7 @@
   --enterprise-muted: #a8b8c8;
   --enterprise-faint: #77879a;
   --enterprise-accent: #74b8e2;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: clip;
   background:
     linear-gradient(180deg, #14344a 0%, #102b3e 54rem, #0d2638 72rem)
@@ -37,20 +37,6 @@
   max-width: 940px;
   margin: 0 auto;
   text-align: center;
-}
-
-.eyebrow {
-  width: fit-content;
-  margin: 0 0 22px;
-  padding: 8px 13px;
-  border: 1px solid var(--enterprise-line-strong);
-  border-radius: 8px;
-  color: var(--enterprise-accent);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.11em;
-  text-transform: uppercase;
 }
 
 .hero h1 {
@@ -125,18 +111,20 @@
   transition: transform 180ms var(--ease-out-quint);
 }
 
-.salesButton:hover,
-.salesButtonLight:hover {
-  transform: translateY(-1px);
-}
+@media (hover: hover) and (pointer: fine) {
+  .salesButton:hover,
+  .salesButtonLight:hover {
+    transform: translateY(-1px);
+  }
 
-.salesButton:hover {
-  background: #4a90c2;
-}
+  .salesButton:hover {
+    background: #4a90c2;
+  }
 
-.salesButton:hover svg,
-.salesButtonLight:hover svg {
-  transform: translateX(3px);
+  .salesButton:hover svg,
+  .salesButtonLight:hover svg {
+    transform: translateX(3px);
+  }
 }
 
 .salesButton:active,
@@ -312,10 +300,12 @@
     background 180ms ease;
 }
 
-.deploymentCard:hover {
-  transform: translateY(-3px);
-  border-color: var(--enterprise-line-strong);
-  background: #102e49;
+@media (hover: hover) and (pointer: fine) {
+  .deploymentCard:hover {
+    transform: translateY(-3px);
+    border-color: var(--enterprise-line-strong);
+    background: #102e49;
+  }
 }
 
 .deploymentCardHeader {
@@ -439,7 +429,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: 70px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--enterprise-line-strong);
   border-radius: 16px;
   background: #0d1724;
@@ -623,8 +613,10 @@
   background: #123d5b;
 }
 
-.ctaCard .salesButton:hover {
-  background: #1e5b83;
+@media (hover: hover) and (pointer: fine) {
+  .ctaCard .salesButton:hover {
+    background: #1e5b83;
+  }
 }
 
 .ctaFinePrint {

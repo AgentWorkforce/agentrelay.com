@@ -1,4 +1,4 @@
-import MCP from '@lobehub/icons/es/MCP';
+import { MCP } from '../brand-icons';
 import { SquareTerminal } from 'lucide-react';
 
 import { FadeIn } from '../FadeIn';

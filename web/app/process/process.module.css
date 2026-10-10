@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background: #0b1c2a;
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -20,7 +20,7 @@
   grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
   align-items: center;
   gap: clamp(44px, 7vw, 92px);
-  min-height: calc(100vh - 76px);
+  min-height: calc(100svh - 76px);
   padding-top: 92px;
   padding-bottom: 88px;
 }
@@ -108,7 +108,7 @@
 .workflowMap {
   position: relative;
   min-height: 520px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(156, 207, 255, 0.15);
   border-radius: 14px;
   background:
@@ -335,7 +335,7 @@
 .loopCode {
   max-width: 640px;
   margin-right: 40px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(156, 207, 255, 0.16);
   border-radius: 14px;
   background: #07111e;
@@ -381,7 +381,7 @@
 .loopCode pre {
   margin: 0;
   padding: 26px 24px 28px;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(248, 250, 252, 0.92);
 }
 
