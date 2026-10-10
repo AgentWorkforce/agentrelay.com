@@ -5,7 +5,11 @@ description: 'Hand a live session to another agent over Agent Relay: send a poin
 
 A handoff passes a session from one agent to another — Claude to Codex mid-task, or your agent to a teammate's. The message carries a **pointer**, never the transcript. The receiving agent uses the pointer to fetch the session's prompts, events, tool calls, and file edits itself.
 
-Both agents need the [ai-hist MCP server](/docs/relayhistory/mcp). The receiver needs nothing else — no skill to install.
+Both agents need the [ai-hist MCP server](/docs/relayhistory/mcp) with the workspace `cloud` source connector configured — no skill to install.
+
+<Warning>
+  `resume_handoff` acquires the session through the source connector named `cloud`, which the MCP server loads only from the plugin config named by `AI_HIST_PLUGIN_CONFIG`. A plain `npx -y ai-hist-mcp` has no such connector, and `resume_handoff` returns `HANDOFF_CONNECTOR_NOT_CONFIGURED` instead of resuming. Set up the sender and the receiver with the workspace's `cloud` connector before handing off.
+</Warning>
 
 ## Send
 
@@ -24,7 +28,7 @@ Both agents need the [ai-hist MCP server](/docs/relayhistory/mcp). The receiver 
 
 The `intent` field is a complete prompt for the receiver. Caller intent can be up to 4,000 characters; if it overflows, only the caller's part is truncated (ending in `…`) and the resume instruction stays intact.
 
-**2. Check it's ready.** Call `resume_handoff` once yourself with the new pointer. Team upload is done by the Agent Relay desktop app, so this confirms the workspace can already reach the session before anyone is told to fetch it.
+**2. Check it's ready.** Call `resume_handoff` once yourself with the new pointer. Team upload is done by the Agent Relay desktop app, so this confirms the workspace can already reach the session before anyone is told to fetch it. A `HANDOFF_CONNECTOR_NOT_CONFIGURED` error here means the `cloud` connector is missing; nothing has been sent yet.
 
 **3. Send it over Agent Relay.** DM the receiver with:
 

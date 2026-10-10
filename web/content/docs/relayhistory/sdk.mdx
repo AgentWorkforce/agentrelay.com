@@ -24,16 +24,18 @@ import {
 
 await discoverSessions({ scope: 'local', limit: 100 });
 
-const page = await listSessionCatalogPage({ scope: 'all', limit: 20 });
+const page = await listSessionCatalogPage({ scope: 'local', limit: 20 });
 const first = page.sessions[0];
 
 if (first) {
-  await hydrateSession({ source: first.source, sessionId: first.sessionId });
+  const { source, sessionId } = first;
+  await hydrateSession({ source, sessionId, scope: 'local' });
 
-  const prompts = await getSession(first.sessionId);
-  const events = await getSessionEventsPage(first.sessionId, { limit: 200 });
+  // Session ids collide across providers, so every read names the source too.
+  const prompts = await getSession(sessionId, { source });
+  const events = await getSessionEventsPage(sessionId, { source, limit: 200 });
 
-  for await (const event of sessionEvents(first.sessionId)) {
+  for await (const event of sessionEvents(sessionId, { source })) {
     // walks every page without holding the whole transcript in memory
   }
 }
@@ -82,7 +84,7 @@ See [Sessions](/docs/relayhistory/sessions#subagent-trees) for `observed` versus
 
 ## Scopes
 
-Collection calls take `scope: 'local' | 'remote' | 'all'`, defaulting to `'local'`. Results echo the requested `scope`, discovery reports `locationsRun` (what actually executed), and each session row lists the `locations` it was observed in. See [Remote sources](/docs/relayhistory/remote-sources) to register plugins.
+Collection and acquisition calls, including `hydrateSession`, take `scope: 'local' | 'remote' | 'all'`, defaulting to `'local'`. Hydrating a remote-only session needs `scope: 'remote'` or `'all'` and a registered plugin. Results echo the requested `scope`, discovery reports `locationsRun` (what actually executed), and each session row lists the `locations` it was observed in. See [Remote sources](/docs/relayhistory/remote-sources) to register plugins.
 
 ## Handoffs
 

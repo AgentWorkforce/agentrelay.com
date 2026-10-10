@@ -65,7 +65,7 @@ args = ["-y", "ai-hist-mcp"]
 | `hydrate_session` | Fully index one cataloged session. |
 | `sync` | Full ingestion. |
 
-**Handoffs** — see [Handoffs](/docs/relayhistory/handoffs)
+**Handoffs** — need the workspace `cloud` source connector; see [Handoffs](/docs/relayhistory/handoffs)
 
 | Tool | What it does |
 |---|---|
@@ -89,4 +89,4 @@ Every list tool is bounded. When a result has more, it returns a cursor; pass it
 
 ## Remote sources
 
-The server reads local history by default. To let it acquire from [remote sources](/docs/relayhistory/remote-sources), set `AI_HIST_PLUGIN_CONFIG` to a plugin config file. Loading a plugin adds no tools; it widens what `discover_sessions`, `hydrate_session`, and `sync` can reach.
+The server reads local history by default. To let it acquire from [remote sources](/docs/relayhistory/remote-sources), set `AI_HIST_PLUGIN_CONFIG` to a plugin config file. Loading a plugin adds no tools; it widens what `discover_sessions`, `hydrate_session`, and `sync` can reach. `resume_handoff` uses the same mechanism: it needs a configured source connector named `cloud`.

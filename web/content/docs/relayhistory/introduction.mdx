@@ -34,7 +34,7 @@ Every source is indexed side by side: prompts, assistant turns, tool calls, file
 ## Three ways in
 
 - **CLI** — `ai-hist`, for people: search, resume, pack, inspect. See [CLI](/docs/relayhistory/cli).
-- **MCP server** — `ai-hist-mcp` gives an agent its own memory mid-session and creates [handoffs](/docs/relayhistory/handoffs) another agent resumes. See [MCP server](/docs/relayhistory/mcp).
+- **MCP server** — `ai-hist-mcp` gives an agent its own memory mid-session and, with the workspace `cloud` connector configured, creates [handoffs](/docs/relayhistory/handoffs) another agent resumes. See [MCP server](/docs/relayhistory/mcp).
 - **TypeScript SDK** — the `ai-hist` package, the same engine the CLI and MCP server call. See [SDK](/docs/relayhistory/sdk).
 
 All three run one Rust engine through a prebuilt Node-API addon. There is no second implementation to fall back to: if the native engine can't load, the error says why.
