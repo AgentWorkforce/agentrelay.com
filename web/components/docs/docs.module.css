@@ -400,7 +400,12 @@
   width: 0.9rem;
   height: 0.9rem;
   color: var(--fg-muted);
-  transition: transform 0.15s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .productSwitcherChevron {
+    transition: transform 0.15s;
+  }
 }
 
 .productSwitcher[open] .productSwitcherChevron {
@@ -1102,8 +1107,13 @@
   .bannerLink:hover {
     background: #4a90c2;
     border-color: #234969;
-    transform: translateY(-1px);
     box-shadow: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bannerLink:hover {
+    transform: translateY(-1px);
   }
 }
 
@@ -1177,6 +1187,11 @@
     box-shadow:
       inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
       0 4px 14px color-mix(in srgb, black 22%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover {
     transform: translateY(-1px);
   }
 }
@@ -1224,6 +1239,11 @@
 @media (hover: hover) and (pointer: fine) {
   .card:hover .cardLinkIcon {
     color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover .cardLinkIcon {
     transform: translateX(2px);
   }
 }

@@ -15,6 +15,13 @@
     U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
+/* Full-document navigations between pages of this app (Markdown links in docs
+   and blog content, plain <a> links, back/forward across them) crossfade.
+   Client-side <Link> navigations never reach this. */
+@view-transition {
+  navigation: auto;
+}
+
 html {
   /* Strong custom easing curves — the built-in CSS easings are too weak to
      feel intentional. Shared across interactive elements site-wide. */
@@ -96,7 +103,12 @@ a {
   text-decoration: none;
   border-radius: var(--r-md);
   transform: translateY(-200%);
-  transition: transform 0.18s var(--ease-out-quint);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skip-link {
+    transition: transform 0.18s var(--ease-out-quint);
+  }
 }
 
 .skip-link:focus-visible {

@@ -273,35 +273,52 @@
   top: 88px;
   left: 248px;
   min-width: 146px;
-  animation: floatPrimary 7s ease-in-out infinite;
 }
 
 .folderCardTop {
   top: 26px;
   left: 84px;
   min-width: 132px;
-  animation: floatSoft 8s ease-in-out infinite;
 }
 
 .fileCardLeft {
   top: 194px;
   left: 68px;
   min-width: 138px;
-  animation: floatSoft 7.5s ease-in-out infinite;
 }
 
 .fileCardRight {
   top: 192px;
   right: 74px;
   min-width: 148px;
-  animation: floatSoft 8.5s ease-in-out infinite reverse;
 }
 
 .fileCardBottom {
   bottom: 62px;
   left: 240px;
   min-width: 158px;
-  animation: floatPrimary 9s ease-in-out infinite reverse;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .folderCardMain {
+    animation: floatPrimary 7s ease-in-out infinite;
+  }
+
+  .folderCardTop {
+    animation: floatSoft 8s ease-in-out infinite;
+  }
+
+  .fileCardLeft {
+    animation: floatSoft 7.5s ease-in-out infinite;
+  }
+
+  .fileCardRight {
+    animation: floatSoft 8.5s ease-in-out infinite reverse;
+  }
+
+  .fileCardBottom {
+    animation: floatPrimary 9s ease-in-out infinite reverse;
+  }
 }
 
 .folderLabel,
@@ -337,7 +354,12 @@
   border-radius: 50%;
   background: var(--primary);
   box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 35%, transparent);
-  animation: ping 2.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pulse {
+    animation: ping 2.6s ease-out infinite;
+  }
 }
 
 .pulseOne {
@@ -656,8 +678,13 @@
 
 @media (hover: hover) and (pointer: fine) {
   .tabButton:hover {
-    transform: translateY(-1px);
     border-color: var(--card-hover-border);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .tabButton:hover {
+    transform: translateY(-1px);
   }
 }
 
@@ -759,6 +786,11 @@
   .deployCard:hover {
     border-color: var(--card-hover-border);
     box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .deployCard:hover {
     transform: translateY(-2px);
   }
 }

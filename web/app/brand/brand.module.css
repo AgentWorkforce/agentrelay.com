@@ -274,6 +274,11 @@
   .brandCtaPrimary:hover {
     background: var(--btn-hover) !important;
     box-shadow: 0 2px 12px color-mix(in srgb, var(--btn-bg) 25%, transparent) !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .brandCtaPrimary:hover {
     transform: translateY(-1px);
   }
 }
@@ -302,6 +307,11 @@
     border-color: var(--primary) !important;
     color: var(--primary) !important;
     background: color-mix(in srgb, var(--secondary-surface) 82%, var(--primary) 18%) !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .brandCtaSecondary:hover {
     transform: translateY(-1px);
   }
 }
@@ -808,6 +818,11 @@
   .kitDownloadBtn:hover {
     border-color: var(--primary);
     color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kitDownloadBtn:hover {
     transform: translateY(-1px);
   }
 }
@@ -828,6 +843,11 @@
 @media (hover: hover) and (pointer: fine) {
   .kitDownloadAll:hover {
     background: var(--btn-hover, var(--primary));
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kitDownloadAll:hover {
     transform: translateY(-1px);
   }
 }
@@ -1006,7 +1026,7 @@
   transition: transform 0.15s ease;
 }
 
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .primaryButton:hover,
   .secondaryButton:hover,
   .inverseButton:hover,

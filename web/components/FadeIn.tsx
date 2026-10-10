@@ -14,6 +14,8 @@ export function FadeIn({ children, className, delay = 0, direction = 'up' }: Fad
   // Default visible so SSR/failed hydration never hides critical content.
   const [visible, setVisible] = useState(true);
   const [animate, setAnimate] = useState(false);
+  // Reduced motion keeps the fade and drops the slide.
+  const [still, setStill] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -29,6 +31,7 @@ export function FadeIn({ children, className, delay = 0, direction = 'up' }: Fad
 
     // Only animate when JS is active; content remains visible if hydration fails.
     setAnimate(true);
+    setStill(window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     // If already near/in viewport, keep it visible immediately.
     const rect = el.getBoundingClientRect();
@@ -73,10 +76,12 @@ export function FadeIn({ children, className, delay = 0, direction = 'up' }: Fad
       className={className}
       style={{
         opacity: visible ? 1 : 0,
-        transform: visible || !animate ? 'none' : translateMap[direction],
-        transition: animate
-          ? `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`
-          : undefined,
+        transform: visible || !animate || still ? 'none' : translateMap[direction],
+        transition: !animate
+          ? undefined
+          : still
+            ? `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`
+            : `opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) ${delay}ms`,
       }}
     >
       {children}
