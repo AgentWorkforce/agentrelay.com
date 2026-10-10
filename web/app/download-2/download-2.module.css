@@ -1,0 +1,309 @@
+/* The same navy ground as the home and Teams heroes, in both themes. */
+.page {
+  --d-fg: #edf4fb;
+  --d-muted: rgba(237, 244, 251, 0.72);
+  --d-faint: rgba(237, 244, 251, 0.5);
+  --d-line: rgba(116, 184, 226, 0.22);
+  min-height: 100dvh;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 14% 7%, rgba(116, 184, 226, 0.14), transparent 32%),
+    radial-gradient(circle at 92% 18%, rgba(193, 103, 75, 0.16), transparent 30%),
+    linear-gradient(180deg, #14344a 0%, #0d2638 720px, #0d2638 100%);
+  color: var(--d-fg);
+  overflow-x: clip;
+}
+
+/* ── Hero ── */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 40px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 150px 0 110px 32px;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.title {
+  margin: 0;
+  font-family: var(--font-heading), var(--font-geist-sans), sans-serif;
+  font-size: clamp(38px, 5vw, 58px);
+  font-weight: 600;
+  line-height: 1.04;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+.lede {
+  max-width: 500px;
+  margin: 20px 0 32px;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--d-muted);
+}
+
+.notice {
+  margin-bottom: 20px;
+}
+
+.page .notice {
+  border-color: var(--d-line);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--d-fg);
+}
+
+.ctaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.ctaRow > a:last-child {
+  min-height: 64px;
+}
+
+/* The main download names the build it will fetch. */
+.download {
+  display: flex;
+  text-align: left;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 10px 18px 10px 12px;
+  border: 1.5px solid var(--primary-800);
+  border-radius: var(--r-lg);
+  background: var(--primary-600);
+  color: #fff;
+  text-decoration: none;
+  box-shadow: 0 12px 30px -12px rgba(45, 106, 156, 0.9);
+  transition: background 0.2s, transform 0.15s var(--ease-out-quint);
+}
+
+.download:hover {
+  background: var(--primary-500);
+}
+
+.download:active {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .download {
+    transition: none;
+  }
+
+  .download:active {
+    transform: none;
+  }
+}
+
+.downloadIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.downloadText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.downloadText strong {
+  font-size: 16px;
+}
+
+.downloadText span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.downloadArrow {
+  margin-left: auto;
+  padding-left: 6px;
+  flex: none;
+}
+
+.requirement {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--d-faint);
+}
+
+.others {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 20px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.others a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--d-line);
+  border-radius: var(--r-sm);
+  color: var(--d-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.others a:hover {
+  border-color: var(--primary-400);
+  color: var(--d-fg);
+}
+
+.others a span {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+/* ── Screenshots ── */
+.stage {
+  position: relative;
+  /* Run to the viewport's right edge on screens wider than the hero. */
+  margin-right: min(0px, calc(640px - 50vw));
+  overflow: hidden;
+  padding: 48px 0 48px 48px;
+  border-radius: 34px 0 0 6px;
+  background:
+    radial-gradient(120% 90% at 85% 0%, rgba(98, 161, 206, 0.9) 0%, transparent 55%),
+    radial-gradient(90% 80% at 0% 100%, rgba(193, 103, 75, 0.85) 0%, transparent 60%),
+    linear-gradient(160deg, #26557e, #16283b);
+}
+
+.stage .window {
+  width: 900px;
+  max-width: none;
+}
+
+.window {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 0.5px rgba(0, 0, 0, 0.4),
+    0 40px 80px -30px rgba(0, 0, 0, 0.65);
+}
+
+.shot {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ── Feature sections ── */
+.feature {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+  align-items: center;
+  gap: 64px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 32px;
+}
+
+.featureFlip {
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr);
+}
+
+.featureFlip .featureText {
+  order: 2;
+}
+
+.featureText h2 {
+  margin: 0;
+  font-family: var(--font-heading), var(--font-geist-sans), sans-serif;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.featureText p {
+  margin: 16px 0 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--d-muted);
+}
+
+/* ── Closing ── */
+.closing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  max-width: 1180px;
+  margin: 40px auto 0;
+  padding: 80px 32px 120px;
+  border-top: 1px solid var(--d-line);
+  text-align: center;
+}
+
+.closing h2 {
+  margin: 0;
+  font-family: var(--font-heading), var(--font-geist-sans), sans-serif;
+  font-size: clamp(28px, 3.4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+
+.closing .ctaRow {
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 40px;
+    padding: 120px 20px 56px;
+  }
+
+  .stage {
+    margin-right: 0;
+    padding: 20px;
+    border-radius: var(--r-lg);
+  }
+
+  .stage .window {
+    width: 100%;
+  }
+
+  .feature,
+  .featureFlip {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 48px 20px;
+  }
+
+  .featureFlip .featureText {
+    order: 0;
+  }
+
+  .closing {
+    padding: 56px 20px 80px;
+  }
+
+  .download,
+  .ctaRow > a:last-child {
+    width: 100%;
+  }
+}

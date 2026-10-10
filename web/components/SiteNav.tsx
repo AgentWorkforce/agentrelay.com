@@ -93,6 +93,9 @@ export function SiteNav({
           <div className={s.navRight}>
             {!hideLinks && (
               <ul className={s.links}>
+                {pathname !== '/' && (
+                  <li><Link href="/download" className={s.link}>Download</Link></li>
+                )}
                 <li>
                   <Link href="/docs" className={s.link}>
                     Docs
@@ -166,6 +169,11 @@ export function SiteNav({
             )}
             {!hideLinks && (
               <>
+                {pathname !== '/' && (
+                  <Link href="/download" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+                    Download
+                  </Link>
+                )}
                 <Link href="/blog" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                   Blog
                 </Link>
