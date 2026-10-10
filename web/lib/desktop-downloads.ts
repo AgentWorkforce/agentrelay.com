@@ -112,10 +112,16 @@ function macArchFromSignals({ uaArchitecture, webglRenderer, webglExtensions }: 
   return null;
 }
 
-export function recommendedBuild(detected: DetectedPlatform): DesktopBuild {
+/**
+ * The build to offer a visitor, or null when there is nothing to recommend:
+ * Windows, mobile and unknown platforms get no default CTA, so they can only
+ * download a build they explicitly choose.
+ */
+export function recommendedBuild(detected: DetectedPlatform): DesktopBuild | null {
   if (detected.os === 'linux') return getBuild(detected.arch === 'arm64' ? 'linux-arm64-deb' : 'linux-x64-deb');
   if (detected.os === 'mac' && detected.arch === 'x64') return getBuild('mac-x64');
-  return getBuild('mac-arm64');
+  if (detected.os === 'mac') return getBuild('mac-arm64');
+  return null;
 }
 
 /* ── Latest release ── */

@@ -60,9 +60,15 @@ describe('detectPlatform', () => {
 
 describe('recommendedBuild', () => {
   it('offers the matching installer, falling back to Apple silicon', () => {
-    expect(recommendedBuild({ os: 'mac', arch: 'x64', confident: true }).id).toBe('mac-x64');
-    expect(recommendedBuild({ os: 'linux', arch: 'arm64', confident: true }).id).toBe('linux-arm64-deb');
-    expect(recommendedBuild({ os: 'windows', arch: null, confident: false }).id).toBe('mac-arm64');
+    expect(recommendedBuild({ os: 'mac', arch: 'x64', confident: true })?.id).toBe('mac-x64');
+    expect(recommendedBuild({ os: 'linux', arch: 'arm64', confident: true })?.id).toBe('linux-arm64-deb');
+    expect(recommendedBuild({ os: 'mac', arch: 'arm64', confident: false })?.id).toBe('mac-arm64');
+  });
+
+  it('recommends nothing on platforms the app does not run on', () => {
+    expect(recommendedBuild({ os: 'windows', arch: null, confident: false })).toBeNull();
+    expect(recommendedBuild({ os: 'mobile', arch: null, confident: false })).toBeNull();
+    expect(recommendedBuild({ os: 'unknown', arch: null, confident: false })).toBeNull();
   });
 });
 

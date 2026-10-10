@@ -15,8 +15,11 @@ import s from './download-2.module.css';
 type Props = { choice: DownloadChoice; release: LatestRelease | null };
 
 function DownloadButton({ choice: { detected, build }, release }: Props) {
+  // No recommendation on unsupported platforms: the device notice above and
+  // the explicit per-build links below carry the section instead.
+  if (!build) return null;
   const size = formatSize(release?.sizes[build.id]);
-  const onThisComputer = detected?.confident === true && recommendedBuild(detected).id === build.id;
+  const onThisComputer = detected?.confident === true && recommendedBuild(detected)?.id === build.id;
   const machine = build.os === 'mac' ? 'this Mac' : 'this computer';
 
   return (
@@ -36,7 +39,7 @@ function DownloadButton({ choice: { detected, build }, release }: Props) {
 }
 
 function OtherDownloads({ choice: { build }, release }: Props) {
-  const others = desktopBuilds.filter((b) => b.id !== build.id && b.format !== 'tar.gz');
+  const others = desktopBuilds.filter((b) => b.id !== build?.id);
 
   return (
     <ul className={s.others} aria-label="Other downloads">

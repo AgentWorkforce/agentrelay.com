@@ -66,7 +66,8 @@ export function useDetectedPlatform(): DetectedPlatform | null {
 
 export type DownloadChoice = {
   detected: DetectedPlatform | null;
-  build: DesktopBuild;
+  /** The detected machine's build until the visitor picks another; null on platforms with no recommendation. */
+  build: DesktopBuild | null;
   choose: (id: DesktopBuildId) => void;
   chosenManually: boolean;
 };
@@ -95,6 +96,27 @@ export function useLatestRelease(): LatestRelease | null {
   return release;
 }
 
+async function copyText(text: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Fall back for embedded browsers that expose clipboard without granting write access.
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand('copy');
+  document.body.removeChild(textarea);
+}
+
 export function useCopy(): [string | null, (key: string, text: string) => void] {
   const [copied, setCopied] = useState<string | null>(null);
   useEffect(() => {
@@ -105,7 +127,7 @@ export function useCopy(): [string | null, (key: string, text: string) => void] 
   return [
     copied,
     (key, text) => {
-      navigator.clipboard?.writeText(text).then(() => setCopied(key)).catch(() => undefined);
+      copyText(text).then(() => setCopied(key)).catch(() => undefined);
     },
   ];
 }

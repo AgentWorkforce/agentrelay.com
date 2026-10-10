@@ -4,7 +4,7 @@ import { EyeOff, MonitorSmartphone, PauseCircle } from 'lucide-react';
 import { OtherDeviceNotice } from '../../components/download/OtherDeviceNotice';
 import { useDownloadChoice, useLatestRelease } from '../../components/download/hooks';
 import { AppTile, AppleIcon, LinuxIcon } from '../../components/download/shared';
-import { DESKTOP_RELEASES_URL, MAC_REQUIREMENT, formatSize, linuxBuilds } from '../../lib/desktop-downloads';
+import { DESKTOP_RELEASES_URL, MAC_REQUIREMENT, formatSize, linuxBuilds, macBuilds } from '../../lib/desktop-downloads';
 import s from './download-5.module.css';
 
 const reassurances = [
@@ -43,9 +43,10 @@ function AboutThisMac({ intel }: { intel: boolean }) {
 export function Download5() {
   const { detected, build, choose } = useDownloadChoice();
   const release = useLatestRelease();
-  const isLinux = build.os === 'linux';
-  const intel = build.id === 'mac-x64';
+  const isLinux = build?.os === 'linux';
+  const intel = build?.id === 'mac-x64';
   const detectedMacArch = detected?.os === 'mac' ? detected.arch : null;
+  const detectedLinuxArch = detected?.os === 'linux' ? detected.arch : null;
 
   return (
     <>
@@ -57,54 +58,104 @@ export function Download5() {
 
           <OtherDeviceNotice detected={detected} className={s.notice} />
 
-          <fieldset className={s.picker}>
-            <legend>Which Mac do you have?</legend>
-            {(['mac-arm64', 'mac-x64'] as const).map((id) => {
-              const arm = id === 'mac-arm64';
-              const selected = build.id === id;
-              const isDetected = detectedMacArch === (arm ? 'arm64' : 'x64');
-              return (
-                <label key={id} className={`${s.option} ${selected ? s.optionOn : ''}`}>
-                  <input type="radio" name="mac" checked={selected} onChange={() => choose(id)} />
-                  <span className={s.radio} />
-                  <span className={s.optionText}>
-                    <strong>
-                      {arm ? 'Apple silicon' : 'Intel'}
-                      {isDetected && <em>{detected?.confident ? 'Detected' : 'Most likely'}</em>}
-                    </strong>
-                    <span>
-                      About This Mac says <b>{arm ? 'Chip: Apple M…' : 'Processor: Intel…'}</b>
+          {isLinux ? (
+            <fieldset className={s.picker}>
+              <legend>Which Linux?</legend>
+              {(['linux-x64-deb', 'linux-arm64-deb'] as const).map((id) => {
+                const x64 = id === 'linux-x64-deb';
+                const selected = build?.id === id;
+                const isDetected = detectedLinuxArch === (x64 ? 'x64' : 'arm64');
+                return (
+                  <label key={id} className={`${s.option} ${selected ? s.optionOn : ''}`}>
+                    <input type="radio" name="linux" checked={selected} onChange={() => choose(id)} />
+                    <span className={s.radio} />
+                    <span className={s.optionText}>
+                      <strong>
+                        {x64 ? 'x64' : 'arm64'}
+                        {isDetected && <em>{detected?.confident ? 'Detected' : 'Most likely'}</em>}
+                      </strong>
+                      <span>
+                        Debian and Ubuntu <b>.deb</b>
+                      </span>
                     </span>
-                  </span>
-                </label>
-              );
-            })}
-          </fieldset>
+                  </label>
+                );
+              })}
+            </fieldset>
+          ) : (
+            <fieldset className={s.picker}>
+              <legend>Which Mac do you have?</legend>
+              {(['mac-arm64', 'mac-x64'] as const).map((id) => {
+                const arm = id === 'mac-arm64';
+                const selected = build?.id === id;
+                const isDetected = detectedMacArch === (arm ? 'arm64' : 'x64');
+                return (
+                  <label key={id} className={`${s.option} ${selected ? s.optionOn : ''}`}>
+                    <input type="radio" name="mac" checked={selected} onChange={() => choose(id)} />
+                    <span className={s.radio} />
+                    <span className={s.optionText}>
+                      <strong>
+                        {arm ? 'Apple silicon' : 'Intel'}
+                        {isDetected && <em>{detected?.confident ? 'Detected' : 'Most likely'}</em>}
+                      </strong>
+                      <span>
+                        About This Mac says <b>{arm ? 'Chip: Apple M…' : 'Processor: Intel…'}</b>
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </fieldset>
+          )}
 
-          <a href={build.href} className={`btn btn-primary ${s.cta}`}>
-            {isLinux ? <LinuxIcon size={18} /> : <AppleIcon size={18} />}
-            Download for {build.label}
-            {formatSize(release?.sizes[build.id]) && <span className={s.size}>{formatSize(release?.sizes[build.id])}</span>}
-          </a>
-          <p className={s.meta}>
-            {isLinux ? `.${build.format} · ${build.detail}` : MAC_REQUIREMENT}
-            {release && <> · v{release.version}</>}
-          </p>
+          {build ? (
+            <>
+              <a href={build.href} className={`btn btn-primary ${s.cta}`}>
+                {isLinux ? <LinuxIcon size={18} /> : <AppleIcon size={18} />}
+                Download for {build.label}
+                {formatSize(release?.sizes[build.id]) && <span className={s.size}>{formatSize(release?.sizes[build.id])}</span>}
+              </a>
+              <p className={s.meta}>
+                {isLinux ? `.${build.format} · ${build.detail}` : MAC_REQUIREMENT}
+                {release && <> · v{release.version}</>}
+              </p>
+            </>
+          ) : (
+            <p className={s.meta}>Choose a build above to download.</p>
+          )}
 
           <p className={s.linux}>
-            <LinuxIcon size={15} /> On Linux?{' '}
-            {linuxBuilds
-              .filter((b) => b.format === 'deb')
-              .map((b, i) => (
-                <span key={b.id}>
-                  {i > 0 && ' · '}
-                  <button type="button" onClick={() => choose(b.id)} aria-pressed={build.id === b.id}>
-                    {b.arch} .deb
-                  </button>
-                </span>
-              ))}
-            {' · '}
-            <a href={release?.url ?? DESKTOP_RELEASES_URL}>tarballs ↗</a>
+            {isLinux ? (
+              <>
+                <AppleIcon size={15} /> On a Mac?{' '}
+                {macBuilds.map((b, i) => (
+                  <span key={b.id}>
+                    {i > 0 && ' · '}
+                    <button type="button" onClick={() => choose(b.id)} aria-pressed={build?.id === b.id}>
+                      {b.label}
+                    </button>
+                  </span>
+                ))}
+                {' · '}
+                <a href={release?.url ?? DESKTOP_RELEASES_URL}>tarballs ↗</a>
+              </>
+            ) : (
+              <>
+                <LinuxIcon size={15} /> On Linux?{' '}
+                {linuxBuilds
+                  .filter((b) => b.format === 'deb')
+                  .map((b, i) => (
+                    <span key={b.id}>
+                      {i > 0 && ' · '}
+                      <button type="button" onClick={() => choose(b.id)} aria-pressed={build?.id === b.id}>
+                        {b.arch} .deb
+                      </button>
+                    </span>
+                  ))}
+                {' · '}
+                <a href={release?.url ?? DESKTOP_RELEASES_URL}>tarballs ↗</a>
+              </>
+            )}
           </p>
         </div>
 

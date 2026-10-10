@@ -15,18 +15,27 @@ import {
 } from '../../lib/desktop-downloads';
 import s from './download-1.module.css';
 
-const steps = [
-  { title: 'Install', body: 'Open the .dmg and drag Agent Relay into Applications.' },
-  { title: 'Sign in', body: 'Open the app and continue with Google in your browser.' },
-  { title: 'Choose', body: 'Switch on the sessions your team should see. Nothing uploads until you do.' },
-];
+function stepsFor(build: { os: string; format: string }) {
+  const install =
+    build.os === 'mac'
+      ? 'Open the .dmg and drag Agent Relay into Applications.'
+      : build.format === 'deb'
+        ? 'From your Downloads folder, install the .deb with apt. It registers the app, tray icon and autostart.'
+        : 'Extract the archive and run usr/bin/agent-relay in place, or copy the tree under /.';
+  return [
+    { title: 'Install', body: install },
+    { title: 'Sign in', body: 'Open the app and continue with Google in your browser.' },
+    { title: 'Choose', body: 'Switch on the sessions your team should see. Nothing uploads until you do.' },
+  ];
+}
 
 export function Download1() {
   const { detected, build, choose } = useDownloadChoice();
   const release = useLatestRelease();
-  const size = formatSize(release?.sizes[build.id]);
+  const size = build ? formatSize(release?.sizes[build.id]) : null;
+  const steps = stepsFor(build ?? { os: 'mac', format: 'dmg' });
   const unsure = detected?.os === 'mac' && !detected.confident;
-  const otherMac = build.id === 'mac-arm64' ? getBuild('mac-x64') : getBuild('mac-arm64');
+  const otherMac = build?.os === 'mac' ? getBuild(build.id === 'mac-arm64' ? 'mac-x64' : 'mac-arm64') : null;
 
   return (
     <>
@@ -38,20 +47,28 @@ export function Download1() {
 
         <OtherDeviceNotice detected={detected} className={s.notice} />
 
-        <a href={build.href} className={`btn btn-primary ${s.cta}`}>
-          {build.os === 'mac' ? <AppleIcon size={20} /> : <LinuxIcon size={20} />}
-          Download for {build.label}
-          {build.format !== 'dmg' && <span className={s.format}>.{build.format}</span>}
-        </a>
+        {build ? (
+          <a href={build.href} className={`btn btn-primary ${s.cta}`}>
+            {build.os === 'mac' ? <AppleIcon size={20} /> : <LinuxIcon size={20} />}
+            Download for {build.label}
+            {build.format !== 'dmg' && <span className={s.format}>.{build.format}</span>}
+          </a>
+        ) : (
+          <a href="#all-heading" className={`btn btn-primary ${s.cta}`}>
+            Choose your download
+          </a>
+        )}
 
-        <p className={s.meta}>
-          {release ? `Version ${release.version}` : 'Latest version'}
-          {size && <> · {size}</>}
-          {' · '}
-          {build.os === 'mac' ? MAC_REQUIREMENT : build.detail}
-        </p>
+        {build && (
+          <p className={s.meta}>
+            {release ? `Version ${release.version}` : 'Latest version'}
+            {size && <> · {size}</>}
+            {' · '}
+            {build.os === 'mac' ? MAC_REQUIREMENT : build.detail}
+          </p>
+        )}
 
-        {build.os === 'mac' && (
+        {build?.os === 'mac' && otherMac && (
           <p className={s.switch}>
             {unsure ? 'Not sure which Mac you have?' : `Not ${build.id === 'mac-arm64' ? 'Apple silicon' : 'an Intel Mac'}?`}{' '}
             <button type="button" onClick={() => choose(otherMac.id)}>
@@ -66,6 +83,7 @@ export function Download1() {
         )}
       </section>
 
+      {build && (
       <section className={s.steps} aria-labelledby="steps-heading">
         <h2 id="steps-heading" className={s.srOnly}>Getting started</h2>
         <ol>
@@ -78,6 +96,7 @@ export function Download1() {
           ))}
         </ol>
       </section>
+      )}
 
       <section className={s.all} aria-labelledby="all-heading">
         <div className={s.allHead}>
@@ -86,7 +105,7 @@ export function Download1() {
         </div>
         <ul className={s.list}>
           {[...macBuilds, ...desktopBuilds.filter((b) => b.os === 'linux')].map((b) => (
-            <li key={b.id} className={b.id === build.id ? s.current : undefined}>
+            <li key={b.id} className={b.id === build?.id ? s.current : undefined}>
               <span className={s.listIcon}>{b.os === 'mac' ? <AppleIcon size={16} /> : <LinuxIcon size={16} />}</span>
               <span className={s.listName}>
                 {b.os === 'mac' ? `Mac · ${b.label}` : b.label}

@@ -348,6 +348,7 @@
 
 .dmgArrow {
   flex: 1;
+  min-width: 0;
   height: 24px;
   margin: 0 8px 22px;
   color: #9ca3af;

@@ -61,7 +61,7 @@ function Scene({ scene, build, command }: { scene: Step['scene']; build: Desktop
   const [copied, copy] = useCopy();
   if (scene === 'drag') {
     return (
-      <div className={s.window}>
+      <div className={s.window} aria-hidden="true">
         <div className={s.windowBar}><i /><i /><i /><span>Agent Relay</span></div>
         <div className={s.dmg}>
           <div className={s.dmgItem}>
@@ -92,7 +92,7 @@ function Scene({ scene, build, command }: { scene: Step['scene']; build: Desktop
   }
   if (scene === 'signin') {
     return (
-      <div className={s.window}>
+      <div className={s.window} aria-hidden="true">
         <div className={s.windowBar}><i /><i /><i /><span>Agent Relay</span></div>
         <div className={s.signin}>
           <div className={s.signinArt}><AppTile size={56} /></div>
@@ -120,7 +120,7 @@ function Scene({ scene, build, command }: { scene: Step['scene']; build: Desktop
       ['Personal dotfiles cleanup', false],
     ] as const;
     return (
-      <div className={s.window}>
+      <div className={s.window} aria-hidden="true">
         <div className={s.windowBar}><i /><i /><i /><span>Session Uploads</span></div>
         <ul className={s.uploads}>
           {rows.map(([title, checked]) => (
@@ -135,7 +135,7 @@ function Scene({ scene, build, command }: { scene: Step['scene']; build: Desktop
     );
   }
   return (
-    <div className={s.window}>
+    <div className={s.window} aria-hidden="true">
       <div className={s.windowBar}><i /><i /><i /><span>Downloads</span></div>
       <div className={s.file}>
         <span className={s.fileIcon}>{build.os === 'mac' ? <AppleIcon size={22} /> : <LinuxIcon size={22} />}</span>
@@ -151,16 +151,17 @@ export function Download3() {
   const release = useLatestRelease();
   const [started, setStarted] = useState(false);
   const [active, setActive] = useState(0);
-  const steps = stepsFor(build);
-  const command = build.format === 'deb' ? `sudo apt install ./${build.asset}` : `tar -xzf ${build.asset}`;
+  const view = build ?? getBuild('mac-arm64');
+  const steps = stepsFor(view);
+  const command = view.format === 'deb' ? `sudo apt install ./${view.asset}` : `tar -xzf ${view.asset}`;
 
-  const linux = build.os === 'linux' ? build : getBuild(detected?.os === 'linux' && detected.arch === 'arm64' ? 'linux-arm64-deb' : 'linux-x64-deb');
   const machines = [
     { build: getBuild('mac-arm64'), label: 'Apple silicon', detail: 'M-series chip' },
     { build: getBuild('mac-x64'), label: 'Intel Mac', detail: 'Intel processor' },
-    { build: linux, label: 'Linux', detail: `${linux.arch} · .${linux.format}` },
+    { build: getBuild('linux-x64-deb'), label: 'Linux x64', detail: 'x64 · .deb' },
+    { build: getBuild('linux-arm64-deb'), label: 'Linux arm64', detail: 'arm64 · .deb' },
   ];
-  const detectedId = detected?.os === 'mac' || detected?.os === 'linux' ? recommendedBuild(detected).id : null;
+  const detectedId = detected?.os === 'mac' || detected?.os === 'linux' ? (recommendedBuild(detected)?.id ?? null) : null;
 
   function start(id: DesktopBuildId) {
     choose(id);
@@ -182,7 +183,7 @@ export function Download3() {
             key={m.label}
             href={m.build.href}
             onClick={() => start(m.build.id)}
-            className={`${s.machine} ${m.build.id === build.id ? s.machineCurrent : ''}`}
+            className={`${s.machine} ${m.build.id === build?.id ? s.machineCurrent : ''}`}
           >
             <span className={s.machineIcon}>{m.build.os === 'linux' ? <LinuxIcon size={20} /> : <AppleIcon size={20} />}</span>
             <span className={s.machineText}>
@@ -216,7 +217,7 @@ export function Download3() {
                     <p>{step.body}</p>
                     {i === 0 && started && (
                       <p className={s.retry}>
-                        Didn’t start? <a href={build.href}>Download {build.asset}</a>
+                        Didn’t start? <a href={view.href}>Download {view.asset}</a>
                       </p>
                     )}
                     {i < steps.length - 1 && (
@@ -230,8 +231,8 @@ export function Download3() {
             );
           })}
         </ol>
-        <div className={s.stage} aria-hidden="true" key={`${build.id}-${active}`}>
-          <Scene scene={steps[active].scene} build={build} command={command} />
+        <div className={s.stage} key={`${view.id}-${active}`}>
+          <Scene scene={steps[active].scene} build={view} command={command} />
         </div>
       </section>
     </div>

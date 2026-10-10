@@ -19,6 +19,7 @@ const RELEASE_BASE = `${DESKTOP_RELEASES_URL}/latest/download`;
 
 function macScript(): string {
   return [
+    'set -euo pipefail',
     'case "$(uname -m)" in arm64) arch=arm64 ;; x86_64) arch=x64 ;; esac',
     `curl -fLO "${RELEASE_BASE}/AgentRelay-macOS-$arch.dmg"`,
     `curl -fLO "${RELEASE_BASE}/AgentRelay-macOS-$arch.dmg.sha256"`,
@@ -32,6 +33,7 @@ function macScript(): string {
 function linuxScript(build: DesktopBuild): string {
   const deb = build.arch === 'arm64' ? 'AgentRelay-Linux-arm64.deb' : 'AgentRelay-Linux-x64.deb';
   return [
+    'set -euo pipefail',
     `curl -fLO "${RELEASE_BASE}/${deb}"`,
     `curl -fLO "${RELEASE_BASE}/${deb}.sha256"`,
     `sha256sum -c ${deb}.sha256`,
@@ -71,7 +73,7 @@ export function Download4() {
   const [copied, copy] = useCopy();
   const [tab, setTab] = useState<'script' | 'agent'>('script');
   const info = describe(detected);
-  const script = build.os === 'mac' ? macScript() : linuxScript(build);
+  const script = build ? (build.os === 'mac' ? macScript() : linuxScript(build)) : null;
 
   return (
     <div className={s.wrap}>
@@ -94,17 +96,21 @@ export function Download4() {
           <dl className={s.kv}>
             <dt>os</dt><dd>{info.os}</dd>
             <dt>arch</dt><dd>{info.arch} <span className={s.comment}>{info.note}</span></dd>
-            <dt>build</dt><dd className={s.str}>{build.asset} <span className={s.comment}>{formatSize(release?.sizes[build.id]) ?? ''}</span></dd>
+            <dt>build</dt><dd className={s.str}>{build ? build.asset : '—'} <span className={s.comment}>{build ? (formatSize(release?.sizes[build.id]) ?? '') : 'pick one below'}</span></dd>
             <dt>release</dt><dd>{release ? `v${release.version} · ${formatReleaseDate(release.publishedAt)}` : 'latest'}</dd>
           </dl>
           <div className={s.actions}>
-            <a href={build.href} className={s.download}>
-              <ArrowDownToLine size={17} aria-hidden="true" />
-              Download {build.os === 'mac' ? `for ${build.label}` : `.${build.format}`}
-            </a>
+            {build ? (
+              <a href={build.href} className={s.download}>
+                <ArrowDownToLine size={17} aria-hidden="true" />
+                Download {build.os === 'mac' ? `for ${build.label}` : `.${build.format}`}
+              </a>
+            ) : (
+              <span className={s.download} aria-disabled="true">Choose a build</span>
+            )}
             <div className={s.switcher} role="group" aria-label="Other builds">
               {desktopBuilds.filter((b) => b.format !== 'tar.gz').map((b) => (
-                <button key={b.id} type="button" aria-pressed={b.id === build.id} onClick={() => choose(b.id)}>
+                <button key={b.id} type="button" aria-pressed={b.id === build?.id} onClick={() => choose(b.id)}>
                   {b.os === 'mac' ? `mac-${b.arch}` : `linux-${b.arch}`}
                 </button>
               ))}
@@ -119,13 +125,19 @@ export function Download4() {
           <button type="button" role="tab" aria-selected={tab === 'agent'} onClick={() => setTab('agent')}>Ask your agent</button>
         </div>
         {tab === 'script' ? (
-          <div className={s.code} role="tabpanel">
-            <div className={s.codeHead}>
-              <span>{build.os === 'mac' ? 'zsh · verifies the checksum, then installs to /Applications' : 'bash · verifies the checksum, then installs with apt'}</span>
-              <CopyButton id="script" text={script} copied={copied} copy={copy} />
+          script ? (
+            <div className={s.code} role="tabpanel">
+              <div className={s.codeHead}>
+                <span>{build?.os === 'mac' ? 'zsh · verifies the checksum, then installs to /Applications' : 'bash · verifies the checksum, then installs with apt'}</span>
+                <CopyButton id="script" text={script} copied={copied} copy={copy} />
+              </div>
+              <pre>{script}</pre>
             </div>
-            <pre>{script}</pre>
-          </div>
+          ) : (
+            <div className={s.code} role="tabpanel">
+              <pre>Choose a build above to see its install script.</pre>
+            </div>
+          )
         ) : (
           <div className={s.code} role="tabpanel">
             <div className={s.codeHead}>
@@ -149,7 +161,7 @@ export function Download4() {
             </thead>
             <tbody>
               {desktopBuilds.map((b) => (
-                <tr key={b.id} className={b.id === build.id ? s.rowCurrent : undefined}>
+                <tr key={b.id} className={b.id === build?.id ? s.rowCurrent : undefined}>
                   <td><a href={b.href}>{b.asset}</a></td>
                   <td>{b.os === 'mac' ? `Mac · ${b.label}` : `${b.label} · ${b.detail}`}</td>
                   <td className={s.num}>{formatSize(release?.sizes[b.id]) ?? '—'}</td>
