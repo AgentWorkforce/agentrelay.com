@@ -15,7 +15,7 @@ import {
 } from './index';
 import s from '../../app/landing.module.css';
 
-export function MessagingLandingPage({ showInvestors = false }: { showInvestors?: boolean }) {
+export function MessagingLandingPage({ showInvestors = false, showSignup = false }: { showInvestors?: boolean; showSignup?: boolean }) {
   return (
     <div className={`${s.page} ${s.messagingPage}`}>
       <a className="skip-link" href="#main">
@@ -25,7 +25,7 @@ export function MessagingLandingPage({ showInvestors = false }: { showInvestors?
       <SiteNav actions={<GitHubStarsBadge />} />
 
       <main id="main">
-        <Hero showInvestors={showInvestors} />
+        <Hero showInvestors={showInvestors} showSignup={showSignup} />
 
         <div className={s.featuresWrapper}>
           <section className={s.featuresSection}>
