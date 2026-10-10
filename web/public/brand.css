@@ -110,7 +110,8 @@
   --secondary-bg: var(--secondary-100);
   --secondary-fg: var(--secondary-600);
   --line: rgba(74, 144, 194, 0.1);
-  --scrollbar-thumb: rgba(74, 144, 194, 0.35);
+  /* Opaque, >= 3:1 against --bg and --code-bg (WCAG non-text contrast). */
+  --scrollbar-thumb: var(--primary-500);
   --surface: #f3f4f6;
   --surface-strong: #ffffff;
   --section-bg: #ffffff;
@@ -186,7 +187,7 @@
   --secondary-bg: rgba(193, 103, 75, 0.14);
   --secondary-fg: #f0b39f;
   --line: rgba(116, 184, 226, 0.18);
-  --scrollbar-thumb: rgba(116, 184, 226, 0.3);
+  --scrollbar-thumb: #426d8a;
   --surface: #0f1b29;
   --surface-strong: #132234;
   --section-bg: #0b141f;
