@@ -8,7 +8,7 @@
   --enterprise-muted: #a8b8c8;
   --enterprise-faint: #77879a;
   --enterprise-accent: #74b8e2;
-  min-height: 100vh;
+  min-height: 100svh;
   overflow-x: clip;
   background:
     linear-gradient(180deg, #14344a 0%, #102b3e 54rem, #0d2638 72rem)
@@ -111,18 +111,20 @@
   transition: transform 180ms var(--ease-out-quint);
 }
 
-.salesButton:hover,
-.salesButtonLight:hover {
-  transform: translateY(-1px);
-}
+@media (hover: hover) and (pointer: fine) {
+  .salesButton:hover,
+  .salesButtonLight:hover {
+    transform: translateY(-1px);
+  }
 
-.salesButton:hover {
-  background: #4a90c2;
-}
+  .salesButton:hover {
+    background: #4a90c2;
+  }
 
-.salesButton:hover svg,
-.salesButtonLight:hover svg {
-  transform: translateX(3px);
+  .salesButton:hover svg,
+  .salesButtonLight:hover svg {
+    transform: translateX(3px);
+  }
 }
 
 .salesButton:active,
@@ -298,10 +300,12 @@
     background 180ms ease;
 }
 
-.deploymentCard:hover {
-  transform: translateY(-3px);
-  border-color: var(--enterprise-line-strong);
-  background: #102e49;
+@media (hover: hover) and (pointer: fine) {
+  .deploymentCard:hover {
+    transform: translateY(-3px);
+    border-color: var(--enterprise-line-strong);
+    background: #102e49;
+  }
 }
 
 .deploymentCardHeader {
@@ -609,8 +613,10 @@
   background: #123d5b;
 }
 
-.ctaCard .salesButton:hover {
-  background: #1e5b83;
+@media (hover: hover) and (pointer: fine) {
+  .ctaCard .salesButton:hover {
+    background: #1e5b83;
+  }
 }
 
 .ctaFinePrint {

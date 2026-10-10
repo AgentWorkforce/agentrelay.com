@@ -1,6 +1,6 @@
 /* Relayfile page */
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       ellipse 36% 28% at 10% 8%,
@@ -654,9 +654,11 @@
     background 0.2s;
 }
 
-.tabButton:hover {
-  transform: translateY(-1px);
-  border-color: var(--card-hover-border);
+@media (hover: hover) and (pointer: fine) {
+  .tabButton:hover {
+    transform: translateY(-1px);
+    border-color: var(--card-hover-border);
+  }
 }
 
 .tabButtonActive {
@@ -753,10 +755,12 @@
     transform 0.2s;
 }
 
-.deployCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .deployCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
 }
 
 .deployIcon {

@@ -3,7 +3,7 @@
    radial hero gradients, global .btn CTAs). */
 
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       ellipse 36% 28% at 10% 8%,
@@ -134,11 +134,13 @@
     box-shadow 0.2s;
 }
 
-.pill:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .pill:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
 }
 
 /* ── Capabilities strip ── */
@@ -254,8 +256,10 @@
   transition: background 0.15s;
 }
 
-.rowLink:hover {
-  background: color-mix(in srgb, var(--primary) 5%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .rowLink:hover {
+    background: color-mix(in srgb, var(--primary) 5%, transparent);
+  }
 }
 
 .rowMain {
@@ -295,9 +299,14 @@
   transition: opacity 0.15s;
 }
 
-.rowLink:hover .rowTrigger,
 .rowLink:focus-visible .rowTrigger {
   opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .rowLink:hover .rowTrigger {
+    opacity: 1;
+  }
 }
 
 .rowTriggerText {
@@ -306,8 +315,8 @@
   white-space: nowrap;
 }
 
-/* No hover on touch — keep the trigger visible rather than unreachable. */
-@media (hover: none) {
+/* No fine hover pointer — keep the trigger visible rather than unreachable. */
+@media (hover: none), (pointer: coarse) {
   .rowTrigger {
     opacity: 1;
   }
@@ -367,9 +376,11 @@
   transition: transform 0.15s, color 0.15s;
 }
 
-.rowLink:hover .rowArrow {
-  color: var(--primary);
-  transform: translateX(2px);
+@media (hover: hover) and (pointer: fine) {
+  .rowLink:hover .rowArrow {
+    color: var(--primary);
+    transform: translateX(2px);
+  }
 }
 
 @media (max-width: 900px) {
@@ -485,8 +496,10 @@
   transition: color 0.2s;
 }
 
-.backLink:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .backLink:hover {
+    color: var(--primary);
+  }
 }
 
 .detailBanner {
@@ -529,9 +542,11 @@
     transform 0.15s;
 }
 
-.titleGitHub:hover {
-  color: var(--fg);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .titleGitHub:hover {
+    color: var(--fg);
+    transform: translateY(-1px);
+  }
 }
 
 .detailTitle {
@@ -755,10 +770,12 @@
     transform 0.2s;
 }
 
-.useCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .useCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 8%, transparent);
+    transform: translateY(-2px);
+  }
 }
 
 .useTitle {
@@ -801,9 +818,11 @@
     color 0.2s;
 }
 
-a.agentRef:hover {
-  border-color: var(--primary);
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  a.agentRef:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
 }
 
 .agentRefDot {
@@ -930,9 +949,11 @@ a.agentRef:hover {
     border-color 0.2s;
 }
 
-.installCmdCopy:hover {
-  color: var(--console-fg);
-  border-color: var(--console-fg);
+@media (hover: hover) and (pointer: fine) {
+  .installCmdCopy:hover {
+    color: var(--console-fg);
+    border-color: var(--console-fg);
+  }
 }
 
 .installCmdCopy svg {
@@ -1027,16 +1048,20 @@ a.agentRef:hover {
   transition: color 0.2s;
 }
 
-.promptShow:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .promptShow:hover {
+    color: var(--primary);
+  }
 }
 
 .promptCta {
   color: var(--primary);
 }
 
-.promptCta:hover {
-  color: var(--primary-700);
+@media (hover: hover) and (pointer: fine) {
+  .promptCta:hover {
+    color: var(--primary-700);
+  }
 }
 
 .promptShow svg,

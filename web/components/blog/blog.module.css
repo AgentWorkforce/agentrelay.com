@@ -7,7 +7,7 @@
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
   --blog-shell-bg: #0b1c2a;
   --blog-post-hero-bg: #0b1c2a;
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--blog-band-bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -168,14 +168,16 @@
     box-shadow 0.2s ease;
 }
 
-.featuredCard:hover {
-  border-color: rgba(156, 207, 255, 0.28);
-  transform: translateY(-2px);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.024)), rgba(17, 30, 47, 0.84);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 24px 62px rgba(2, 9, 18, 0.3);
+@media (hover: hover) and (pointer: fine) {
+  .featuredCard:hover {
+    border-color: rgba(156, 207, 255, 0.28);
+    transform: translateY(-2px);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.024)), rgba(17, 30, 47, 0.84);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      0 24px 62px rgba(2, 9, 18, 0.3);
+  }
 }
 
 .featuredContent {
@@ -319,8 +321,10 @@
   transition: color 0.15s ease;
 }
 
-.authorSocialLinks a:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .authorSocialLinks a:hover {
+    color: var(--primary);
+  }
 }
 
 .authorSocialLinks svg {
@@ -347,8 +351,10 @@
     color 0.15s ease;
 }
 
-.postListRowLink:hover {
-  opacity: 0.78;
+@media (hover: hover) and (pointer: fine) {
+  .postListRowLink:hover {
+    opacity: 0.78;
+  }
 }
 
 .postListTopline {
@@ -369,8 +375,10 @@
   transition: color 0.15s ease;
 }
 
-.postListRowLink:hover .postListTitle {
-  color: #d2e1ea;
+@media (hover: hover) and (pointer: fine) {
+  .postListRowLink:hover .postListTitle {
+    color: #d2e1ea;
+  }
 }
 
 .postListDescription {
@@ -601,10 +609,16 @@
   padding-left: 28px;
 }
 
-.tocActive,
-.tocLink:hover {
+.tocActive {
   border-left-color: var(--primary);
   color: var(--fg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tocLink:hover {
+    border-left-color: var(--primary);
+    color: var(--fg);
+  }
 }
 
 .mobileToc {
@@ -675,8 +689,10 @@
   text-underline-offset: 3px;
 }
 
-.article a:hover {
-  text-decoration-color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .article a:hover {
+    text-decoration-color: var(--primary);
+  }
 }
 
 .article ul,
@@ -891,12 +907,14 @@
   white-space: nowrap;
 }
 
-.postCard:hover {
-  opacity: 0.72;
-}
+@media (hover: hover) and (pointer: fine) {
+  .postCard:hover {
+    opacity: 0.72;
+  }
 
-.postCard:hover .postCardTitle {
-  color: #d2e1ea;
+  .postCard:hover .postCardTitle {
+    color: #d2e1ea;
+  }
 }
 
 .blogBottom {
@@ -922,10 +940,12 @@
     transform 0.15s ease;
 }
 
-.rssIconLink:hover {
-  border-color: rgba(116, 184, 226, 0.42);
-  color: var(--primary);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .rssIconLink:hover {
+    border-color: rgba(116, 184, 226, 0.42);
+    color: var(--primary);
+    transform: translateY(-1px);
+  }
 }
 
 .rssIconLink svg {

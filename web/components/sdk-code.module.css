@@ -29,8 +29,10 @@
     border-color 0.2s;
 }
 
-.tab:hover {
-  opacity: 0.8;
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    opacity: 0.8;
+  }
 }
 
 .tabActive {

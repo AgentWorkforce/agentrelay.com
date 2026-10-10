@@ -15,7 +15,7 @@
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
   --flows-band-dark: #0b1c2a;
   --flows-band-deep: #081723;
-  min-height: 100vh;
+  min-height: 100svh;
   /* Clip decoration without creating a scroll container for the sticky nav. */
   overflow-x: clip;
   background: linear-gradient(180deg, #0b1e2d 0%, #0d2638 38%, #0b1c2a 100%);
@@ -340,7 +340,9 @@
 /* ── flows-specific: use case grid, code block, gate strip ── */
 
 .textLink { display: inline-flex; align-items: center; gap: 0.5rem; width: fit-content; margin-top: 0.5rem; color: var(--flows-accent-strong); font-size: 0.95rem; }
-.textLink:hover { text-decoration: underline; text-underline-offset: 0.3em; }
+@media (hover: hover) and (pointer: fine) {
+  .textLink:hover { text-decoration: underline; text-underline-offset: 0.3em; }
+}
 .textLink:focus-visible { outline: 2px solid var(--flows-accent-strong); outline-offset: 5px; border-radius: 2px; }
 
 .codeSection {
@@ -448,7 +450,9 @@
 .integrationLogo img { object-fit: contain; }
 .integrationLogo img, .integrationLogo > svg { width: 28px; height: 28px; }
 .integrationLogo span { color: var(--flows-muted); font-size: 0.75rem; white-space: nowrap; }
-.integrationWindow:hover .integrationTrack { animation-play-state: paused; }
+@media (hover: hover) and (pointer: fine) {
+  .integrationWindow:hover .integrationTrack { animation-play-state: paused; }
+}
 @keyframes integrationScroll { to { transform: translateX(calc(-100% / var(--integration-copies, 2))); } }
 @media (max-width: 680px) {
   .integrationLogo { width: 112px; min-height: 88px; }
@@ -511,7 +515,9 @@
   cursor: pointer;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.useCaseOption:hover { border-color: var(--flows-line-strong); background: #19394e; color: var(--flows-text); }
+@media (hover: hover) and (pointer: fine) {
+  .useCaseOption:hover { border-color: var(--flows-line-strong); background: #19394e; color: var(--flows-text); }
+}
 .useCaseOption[aria-pressed='true'] { background: #2d6b9c; border-color: #74b8e2; color: #fff; }
 .useCaseNumber { font-family: var(--font-geist-mono), monospace; font-size: 0.75rem; opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) { .useCaseOption { transition: none; } }

@@ -382,7 +382,6 @@
   font-weight: 560;
   letter-spacing: -0.05em;
   line-height: 1.02;
-  text-wrap: balance;
 }
 
 .lede {
@@ -391,7 +390,6 @@
   color: var(--lost-muted);
   font-size: clamp(1rem, 1.25vw, 1.1rem);
   line-height: 1.6;
-  text-wrap: pretty;
 }
 
 .readout {
@@ -520,9 +518,11 @@
   backdrop-filter: blur(8px);
 }
 
-.secondaryAction:hover {
-  border-color: rgba(159, 212, 245, 0.52);
-  background: rgba(116, 184, 226, 0.1);
+@media (hover: hover) and (pointer: fine) {
+  .secondaryAction:hover {
+    border-color: rgba(159, 212, 245, 0.52);
+    background: rgba(116, 184, 226, 0.1);
+  }
 }
 
 .primaryAction:focus-visible,

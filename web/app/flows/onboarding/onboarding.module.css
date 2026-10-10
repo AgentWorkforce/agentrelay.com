@@ -16,7 +16,9 @@
 .agent { display: flex; align-items: center; padding: 22px 17px; gap: 14px; border: 1px solid var(--setup-control-border); background: var(--setup-control); box-shadow: inset 0 1px 0 #d0eaff07; border-radius: var(--r-sm); cursor: pointer; transition: background .18s, border-color .18s; min-width: 0; }
 .agent > span { font-size: 15px; font-weight: 550; }
 .agent > svg { flex-shrink: 0; }
-.agent:hover { background: var(--setup-control-hover); border-color: #8193a7; }
+@media (hover: hover) and (pointer: fine) {
+  .agent:hover { background: var(--setup-control-hover); border-color: #8193a7; }
+}
 .agentSelected { background: var(--setup-selected); border-color: #74b8e2; box-shadow: inset 0 1px 0 #d0eaff0f, 0 2px 6px #030b141a; }
 .agent:focus-within, .option:focus-within { outline: 2px solid #a8d4f4; outline-offset: 3px; }
 .agent input, .option input { margin-left: auto; flex-shrink: 0; width: 16px; height: 16px; accent-color: #8bc4ef; cursor: pointer; }
@@ -33,16 +35,23 @@
 .navigation { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 24px; }
 .navigation .primary { flex: 0 1 220px; margin-left: auto; }
 .primary { composes: btn btn-primary from global; display: flex; justify-content: center; gap: 12px; flex: 1; font-size: 14px; padding: 14px 19px; }
-.primary:disabled, .primary:disabled:hover, .primary[aria-disabled="true"], .primary[aria-disabled="true"]:hover { background: #283440; color: #b5c0cd; border-color: #34414f; cursor: not-allowed; transform: none; }
+.primary:disabled, .primary[aria-disabled="true"] { background: #283440; color: #b5c0cd; border-color: #34414f; cursor: not-allowed; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .primary:disabled:hover, .primary[aria-disabled="true"]:hover { background: #283440; color: #b5c0cd; border-color: #34414f; cursor: not-allowed; transform: none; }
+}
 .previous { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #b8c1ce; cursor: pointer; min-height: 44px; }
-.previous:hover { color: white; }
+@media (hover: hover) and (pointer: fine) {
+  .previous:hover { color: white; }
+}
 .taskChoice label, .suggestionLabel { display: block; font-size: 11px; color: #bbc3ce; margin-bottom: 10px; }
 .taskChoice textarea { display: block; width: 100%; resize: vertical; min-height: 124px; max-height: 250px; border: 1px solid var(--setup-control-border); border-radius: var(--r-sm); padding: 15px; background: var(--setup-control); color: #edf4fb; font-size: 13px; line-height: 1.8; }
 .taskChoice textarea::placeholder { color: #97a4b4; }
 .suggestionLabel { margin-top: 21px; }
 .suggestions { display: grid; gap: 8px; }
 .suggestions button { display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 12px 14px; border: 1px solid var(--setup-control-border); border-radius: var(--r-xs); background: var(--setup-control); font-size: 11px; color: #c2ccd8; cursor: pointer; min-height: 44px; }
-.suggestions button:hover { background: var(--setup-control-hover); border-color: #8193a7; }
+@media (hover: hover) and (pointer: fine) {
+  .suggestions button:hover { background: var(--setup-control-hover); border-color: #8193a7; }
+}
 .reviewerGroup, .roundsGroup { border: 0; padding: 0; margin: 0; min-width: 0; }
 .reviewerGroup legend, .roundsGroup legend { font-size: 11px; color: #bbc3ce; margin-bottom: 12px; }
 .option { display: flex; align-items: center; gap: 15px; padding: 20px 16px; border: 1px solid var(--setup-control-border); background: var(--setup-control); box-shadow: inset 0 1px 0 #d0eaff07; border-radius: var(--r-sm); cursor: pointer; margin-bottom: 11px; }
@@ -50,7 +59,9 @@
 .option > span:not(.roundNumber) { display: flex; flex-direction: column; gap: 7px; }
 .option strong { font-size: 13px; font-weight: 550; }
 .option small { font-size: 11px; color: #9faebf; line-height: 1.6; }
-.option:hover { border-color: #8193a7; }
+@media (hover: hover) and (pointer: fine) {
+  .option:hover { border-color: #8193a7; }
+}
 .optionSelected { background: var(--setup-selected); border-color: #74b8e2; box-shadow: inset 0 1px 0 #d0eaff0f, 0 2px 6px #030b141a; }
 .roundNumber { width: 31px; height: 35px; display: grid; place-items: center; font: 20px var(--font-geist-mono), monospace; color: #acbdce; flex-shrink: 0; }
 .approvalVisual { display: flex; align-items: center; padding: 25px 10px 40px; color: #a4b3c3; }
@@ -76,7 +87,9 @@
 .editorFooter > div { display: flex; gap: 8px; }
 .editorFooter button { display: flex; gap: 6px; align-items: center; min-height: 36px; font-size: 11px; cursor: pointer; padding: 0 5px; color: #c4cdd9; }
 .editorFooter button:disabled { opacity: .4; cursor: not-allowed; }
-.editorFooter button:hover:not(:disabled) { color: #a0d0f3; }
+@media (hover: hover) and (pointer: fine) {
+  .editorFooter button:hover:not(:disabled) { color: #a0d0f3; }
+}
 .notice { min-height: 20px; font-size: 12px; color: #b6d6f4; margin-top: 14px; }
 .ready { padding-top: 0; }
 .ready > p { color: #a8b8c8; font-size: 13px; line-height: 1.8; margin-top: 15px; }
@@ -102,7 +115,9 @@
 .otherAgents summary::-webkit-details-marker { display: none; }
 .otherAgents summary > span { margin-left: auto; font-size: 11px; color: #94a1b2; }
 .otherAgents[open] summary > svg { transform: rotate(180deg); }
-.otherAgents summary:hover { color: #e1e8f0; }
+@media (hover: hover) and (pointer: fine) {
+  .otherAgents summary:hover { color: #e1e8f0; }
+}
 .otherAgents .soonGroup { margin: 9px 0 19px; }
 .agent input, .option input { appearance: none; width: 18px; height: 18px; border: 1px solid #657285; border-radius: 4px; background: transparent; display: grid; place-items: center; }
 .option input[type='radio'] { border-radius: 50%; }
@@ -216,7 +231,9 @@
 .workflowGroup { border: 0; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; min-width: 0; }
 .visuallyHidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .workflowCard { display: block; min-width: 0; padding: 14px; border: 1px solid var(--setup-control-border); border-radius: 10px; background: var(--setup-control); box-shadow: inset 0 1px 0 #d0eaff07; cursor: pointer; transition: border-color .15s, background .15s; }
-.workflowCard:hover { border-color: #7795ae; }
+@media (hover: hover) and (pointer: fine) {
+  .workflowCard:hover { border-color: #7795ae; }
+}
 .workflowSelected { border-color: #74b8e2; background: var(--setup-selected); box-shadow: inset 0 1px 0 #d0eaff0f, 0 2px 6px #030b141a; }
 .workflowCard:focus-within { outline: 2px solid #74b8e2; outline-offset: 3px; }
 .workflowTop { display: grid; grid-template-columns: 1fr auto; grid-template-rows: 22px 40px auto; align-items: start; gap: 9px; }
@@ -233,7 +250,9 @@
 .previewSwitch { display: grid; grid-template-columns: 1fr 1fr; padding: 4px; gap: 4px; margin-bottom: 18px; border-radius: 9px; background: #0b1c29; box-shadow: inset 0 1px 3px #030b144d, 0 1px 0 #c8e4ff0a; }
 .previewSwitch button { min-height: 38px; color: #a8b8c8; font-size: 13px; border-radius: 6px; cursor: pointer; }
 .previewSwitch button[aria-pressed='true'] { background: #17364c; box-shadow: 0 1px 3px #030b1426; color: #edf4fb; }
-.previewSwitch button:hover:not(:disabled) { color: #edf4fb; }
+@media (hover: hover) and (pointer: fine) {
+  .previewSwitch button:hover:not(:disabled) { color: #edf4fb; }
+}
 .previewSwitch button:disabled { opacity: 0.45; cursor: not-allowed; }
 .previewSwitch button:focus-visible { outline: 2px solid #74b8e2; outline-offset: 2px; }
 .previewPane .codePanel { position: static; margin-top: 0; }
@@ -297,7 +316,9 @@
 .googleMark { display: grid; place-items: center; width: 25px; height: 25px; border-radius: 50%; background: #fff; }
 .runDownload { display: flex; align-items: center; flex-direction: column; gap: 9px; margin: 19px 0 32px; }
 .runDownload button { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: #c2d3e3; cursor: pointer; min-height: 30px; }
-.runDownload button:hover { color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .runDownload button:hover { color: #fff; }
+}
 .runDownload > span { color: #99aabb; font-size: 11px; text-align: center; }
 .flowReview { border-top: 1px solid #2c3c4a; }
 .flowReview > summary { display: flex; align-items: center; justify-content: space-between; list-style: none; min-height: 56px; font-size: 13px; color: #b5c5d5; cursor: pointer; }
@@ -337,7 +358,9 @@
 
 
 .processEditable { width: 100%; text-align: left; color: inherit; font: inherit; cursor: pointer; transition: border-color .15s, background .15s; }
-.processEditable:hover { border-color: #88bedf; background: #152e40; }
+@media (hover: hover) and (pointer: fine) {
+  .processEditable:hover { border-color: #88bedf; background: #152e40; }
+}
 .processEditable:focus-visible { outline: 2px solid #88bedf; outline-offset: 3px; }
 .processModel { display: flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
 .processModel svg { flex-shrink: 0; }

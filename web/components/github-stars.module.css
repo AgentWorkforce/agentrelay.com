@@ -24,12 +24,14 @@
   gap: 7px;
 }
 
-.badge:hover {
-  background: var(--nav-surface-hover);
-  border-color: var(--nav-border-strong);
-  color: var(--nav-link-hover);
-  animation: none;
-  transform: scale(1.04);
+@media (hover: hover) and (pointer: fine) {
+  .badge:hover {
+    background: var(--nav-surface-hover);
+    border-color: var(--nav-border-strong);
+    color: var(--nav-link-hover);
+    animation: none;
+    transform: scale(1.04);
+  }
 }
 
 @keyframes throb {

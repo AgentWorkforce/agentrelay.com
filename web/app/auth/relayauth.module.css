@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       ellipse 36% 28% at 10% 8%,
@@ -549,8 +549,10 @@
     border-color 0.2s ease;
 }
 
-.tab:hover {
-  color: var(--terminal-fg);
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--terminal-fg);
+  }
 }
 
 .tabActive {

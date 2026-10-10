@@ -13,7 +13,7 @@
   --agent-tools-band-bg:
     radial-gradient(circle at 18% 24%, rgba(116, 184, 226, 0.16), transparent 32%),
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
-  min-height: 100vh;
+  min-height: 100svh;
   background: #0b1c2a;
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -759,9 +759,11 @@
     transform 0.2s;
 }
 
-.bentoCard:hover {
-  border-color: var(--card-hover-border);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .bentoCard:hover {
+    border-color: var(--card-hover-border);
+    transform: translateY(-2px);
+  }
 }
 
 .bentoIcon {
