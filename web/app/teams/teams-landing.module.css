@@ -18,7 +18,7 @@
 .activityIntro p { max-width: 400px; margin: 1.5rem 0 0; color: var(--flows-muted); font-size: clamp(1rem, 1.5vw, 1.125rem); line-height: 1.75; }
 
 .productScreenshot { width: calc(100% + max(10rem, (100vw - 1140px) / 2)); min-width: 640px; margin: 0; }
-.productScreenshot > a { display: block; border: 1px solid #405c72; border-radius: 12px; overflow: hidden; background: #0b1c2a; }
+.productScreenshot > a { display: block; border: 1px solid #405c72; border-radius: 12px; overflow: clip; background: #0b1c2a; }
 .productScreenshot img { display: block; width: 100%; height: auto; }
 .productScreenshot figcaption { margin-top: 14px; color: #94b0c5; font-size: 13px; line-height: 1.6; }
 
@@ -44,7 +44,7 @@
 .sessionIntro h2 { margin: 0; font-family: var(--font-heading), sans-serif; color: var(--flows-text); font-size: clamp(2rem, 3.8vw, 3.2rem); font-weight: 500; line-height: 1.1; letter-spacing: -0.035em; }
 .sessionIntro p { max-width: 400px; margin: 1.5rem 0 0; color: var(--flows-muted); font-size: clamp(1rem, 1.5vw, 1.125rem); line-height: 1.75; }
 .sessionScreenshot { grid-column: 2; grid-row: 1; justify-self: start; width: calc(100% + max(10rem, (100vw - 1140px) / 2)); min-width: 640px; margin: 0; }
-.sessionScreenshot a { display: block; overflow: hidden; border: 1px solid #405c72; border-radius: 12px; background: #0b1c2a; }
+.sessionScreenshot a { display: block; overflow: clip; border: 1px solid #405c72; border-radius: 12px; background: #0b1c2a; }
 .sessionScreenshot img { display: block; width: 100%; height: auto; }
 @media (max-width: 960px) {
   .sessionSection { grid-template-columns: 1fr; gap: 2.5rem; }

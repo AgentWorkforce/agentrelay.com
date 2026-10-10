@@ -1,6 +1,6 @@
 .codeBlock {
   border-radius: 12px;
-  overflow: hidden;
+  overflow: clip;
   background: var(--code-bg);
   border: 1px solid var(--line);
 }

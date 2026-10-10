@@ -118,7 +118,7 @@
 
 .paletteCard,
 .heroCard {
-  overflow: hidden;
+  overflow: clip;
 }
 
 .paletteTop {
@@ -731,7 +731,8 @@
   background-position:
     0 0,
     10px 10px;
-  overflow: hidden;
+  min-height: 0;
+  overflow: clip;
 }
 
 .kitPreviewDark {

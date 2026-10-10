@@ -234,7 +234,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--card-bg);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .row {
@@ -280,7 +280,7 @@
   font-size: 0.86rem;
   line-height: 1.45;
   color: var(--fg-muted);
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -310,7 +310,8 @@
 }
 
 .rowTriggerText {
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -507,7 +508,7 @@
   width: 100%;
   aspect-ratio: 1400 / 392;
   border-radius: 22px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--line);
   box-shadow: 0 18px 48px color-mix(in srgb, var(--primary) 10%, transparent);
 }

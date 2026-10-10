@@ -29,7 +29,7 @@
 .blogHero,
 .postHero {
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   margin-top: calc(-1 * var(--blog-nav-overlay-offset));
   padding-top: var(--blog-nav-overlay-offset);
   background: var(--blog-post-hero-bg);
@@ -251,7 +251,7 @@
 }
 
 .authorAvatarPhoto {
-  overflow: hidden;
+  overflow: clip;
   border-radius: 999px;
   background: #ffffff;
   border-color: transparent;
@@ -466,7 +466,7 @@
   position: relative;
   height: 72px;
   margin-top: -1px;
-  overflow: hidden;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -798,13 +798,13 @@
 }
 
 .articleFooter {
-  overflow: hidden;
+  overflow: clip;
   background: var(--blog-band-bg);
 }
 
 .articleFooterWave {
   height: 76px;
-  overflow: hidden;
+  overflow: clip;
   background: var(--blog-band-bg);
   pointer-events: none;
 }
