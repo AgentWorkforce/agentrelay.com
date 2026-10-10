@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       ellipse 36% 28% at 10% 8%,
@@ -130,11 +130,18 @@
     box-shadow 0.2s;
 }
 
-.pill:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .pill:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .pill:hover {
+    transform: translateY(-1px);
+  }
 }
 
 /* ── Primitive sections ── */
@@ -231,10 +238,17 @@
     transform 0.2s;
 }
 
-.featureCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .featureCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .featureCard:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .featureTitle {

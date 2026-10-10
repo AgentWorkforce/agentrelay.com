@@ -15,7 +15,7 @@
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
   --flows-band-dark: #0b1c2a;
   --flows-band-deep: #081723;
-  min-height: 100vh;
+  min-height: 100svh;
   /* Clip decoration without creating a scroll container for the sticky nav. */
   overflow-x: clip;
   background: linear-gradient(180deg, #0b1e2d 0%, #0d2638 38%, #0b1c2a 100%);
@@ -134,7 +134,7 @@
   width: 100vw;
   height: 84px;
   margin: -38px calc(50% - 50vw);
-  overflow: hidden;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -340,7 +340,9 @@
 /* ── flows-specific: use case grid, code block, gate strip ── */
 
 .textLink { display: inline-flex; align-items: center; gap: 0.5rem; width: fit-content; margin-top: 0.5rem; color: var(--flows-accent-strong); font-size: 0.95rem; }
-.textLink:hover { text-decoration: underline; text-underline-offset: 0.3em; }
+@media (hover: hover) and (pointer: fine) {
+  .textLink:hover { text-decoration: underline; text-underline-offset: 0.3em; }
+}
 .textLink:focus-visible { outline: 2px solid var(--flows-accent-strong); outline-offset: 5px; border-radius: 2px; }
 
 .codeSection {
@@ -376,7 +378,7 @@
 }
 
 .codeBlock {
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid var(--flows-line);
   border-radius: 20px;
   background: #050f18;
@@ -428,7 +430,7 @@
 .codeCmt { color: var(--flows-faint); font-style: italic; }
 
 .integrationsMarquee { margin-top: 2rem; width: 100vw; margin-inline: calc(50% - 50vw); }
-.integrationWindow { overflow: hidden; }
+.integrationWindow { overflow: clip; }
 .integrationTrack { display: flex; width: max-content; animation: integrationScroll 55s linear infinite; }
 .integrationTrack + .integrationTrack { margin-top: 0.5rem; animation-direction: reverse; animation-duration: 65s; }
 .integrationGroup { flex-shrink: 0; display: flex; gap: 0.5rem; list-style: none; padding: 0 0.5rem 0 0; margin: 0; }
@@ -448,7 +450,9 @@
 .integrationLogo img { object-fit: contain; }
 .integrationLogo img, .integrationLogo > svg { width: 28px; height: 28px; }
 .integrationLogo span { color: var(--flows-muted); font-size: 0.75rem; white-space: nowrap; }
-.integrationWindow:hover .integrationTrack { animation-play-state: paused; }
+@media (hover: hover) and (pointer: fine) {
+  .integrationWindow:hover .integrationTrack { animation-play-state: paused; }
+}
 @keyframes integrationScroll { to { transform: translateX(calc(-100% / var(--integration-copies, 2))); } }
 @media (max-width: 680px) {
   .integrationLogo { width: 112px; min-height: 88px; }
@@ -511,7 +515,9 @@
   cursor: pointer;
   transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
 }
-.useCaseOption:hover { border-color: var(--flows-line-strong); background: #19394e; color: var(--flows-text); }
+@media (hover: hover) and (pointer: fine) {
+  .useCaseOption:hover { border-color: var(--flows-line-strong); background: #19394e; color: var(--flows-text); }
+}
 .useCaseOption[aria-pressed='true'] { background: #2d6b9c; border-color: #74b8e2; color: #fff; }
 .useCaseNumber { font-family: var(--font-geist-mono), monospace; font-size: 0.75rem; opacity: 0.7; }
 @media (prefers-reduced-motion: reduce) { .useCaseOption { transition: none; } }
@@ -519,7 +525,7 @@
 .carouselCode:focus-visible { outline: 2px solid var(--flows-accent-strong); outline-offset: 3px; }
 .carouselCode { min-height: 40rem; overflow: auto; }
 .carouselCode span { color: var(--shiki-dark, inherit) !important; }
-.visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.visuallyHidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: clip; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
 @media (max-width: 980px) {
   .scriptCarousel { gap: 2rem; }
