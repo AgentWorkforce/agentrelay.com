@@ -3,7 +3,7 @@ title: 'Quickstart'
 description: 'The fastest path to a working Relayfile mount: hosted with one command, then read and write provider files.'
 ---
 
-The fastest path is **hosted**: Agent Relay runs the integration stack for you — OAuth, sync workers, writeback — so you only run a local mount. One command and you have provider-backed files in an ordinary directory.
+The fastest path is **hosted**: Agent Relay runs the integration stack for you — OAuth, sync workers, writeback — so you only run a local mount. One command signs you up and puts provider-backed files in an ordinary directory.
 
 <Note>
   Want to run the whole stack yourself instead? See [Run locally](/docs/file/run-locally) for the self-hosted Docker path. The source lives at [github.com/AgentWorkforce/relayfile](https://github.com/AgentWorkforce/relayfile) — clone it first.
@@ -11,24 +11,31 @@ The fastest path is **hosted**: Agent Relay runs the integration stack for you �
 
 ## One command
 
-If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running infrastructure, use Hosted Agent Relay. The CLI logs you in, creates or joins a cloud workspace, completes provider auth, waits for sync, and mounts the result.
+From the project where your agent will work, run:
 
 ```bash
-relayfile setup \
-  --provider notion \
-  --workspace my-agent \
-  --local-dir ./relayfile-mount \
-  --no-open
+npx relayfile@latest
 ```
 
-`--no-open` prints the hosted login and connect URLs instead of opening a browser — useful inside agents and headless environments. The command connects to `agentrelay.com`, completes the Nango connect flow, blocks until the provider reports ready, and starts the mount sync loop.
+Relayfile opens Google sign-in, creates your account and a workspace named after the current directory, connects GitHub, and mounts at `./relayfile-mount`. No invite code, API token, existing Cloud account, or separate `agent-relay` installation is required.
 
-When it returns, `./relayfile-mount` is a live mirror of your workspace:
+Keep that terminal open for synchronization. In another terminal, `./relayfile-mount` is the live mirror of your workspace:
 
 ```bash
-ls ./relayfile-mount/notion
+ls ./relayfile-mount/github
 cat ./relayfile-mount/LAYOUT.md
 ```
+
+For a different provider or explicit names, use:
+
+```bash
+npx relayfile@latest setup \
+  --provider notion \
+  --workspace my-agent \
+  --local-dir ./relayfile-mount
+```
+
+Add `--no-open` to print the hosted login and connect URLs instead of opening a browser, which is useful inside agents and headless environments.
 
 See [Relayfile Cloud](/docs/file/cloud) for what the hosted plane manages, and [Mounting](/docs/file/mounting) to do the same thing programmatically from a sandbox.
 
@@ -38,14 +45,15 @@ Once mounted, the interface is the filesystem you already know:
 
 ```bash
 # read
-cat ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+cat ./relayfile-mount/github/repos/acme/api/pulls/42/metadata.json
 
-# patch back to the provider by writing the canonical path
-echo '{"state":"In Review"}' \
-  > ./relayfile-mount/linear/issues/AGE-12__fix-login-bug.json
+# post a pull-request review by writing the canonical path
+cat > ./relayfile-mount/github/repos/acme/api/pulls/42/reviews/review.json <<'EOF'
+{"body":"Looks good to me.","event":"COMMENT"}
+EOF
 
-# find across providers
-grep -rl '"state":"Todo"' ./relayfile-mount/linear/issues/
+# find pull requests across connected repositories
+find ./relayfile-mount/github/repos -path '*/pulls/*/metadata.json'
 ```
 
 See [Reads and writes](/docs/file/reads-and-writes) for the full PATCH / CREATE / DELETE model.
