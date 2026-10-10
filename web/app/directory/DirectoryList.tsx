@@ -10,6 +10,7 @@ import {
   verificationBadges,
   type DirectoryAgent,
 } from '../../lib/agent-directory';
+import { REGISTER_ANALYTICS_URL } from '../../lib/agent-register';
 import s from './directory.module.css';
 
 export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; complete: boolean }) {
@@ -23,6 +24,9 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
     <div className={s.empty}>
       <p className={s.emptyTitle}>No verified companies yet.</p>
       <a className={s.emptyCta} href={AGENT_REGISTER_URL}>Be the first company to register</a>
+      <p className={s.emptyNote}>
+        Owners get a private analytics dashboard — <a href={REGISTER_ANALYTICS_URL}>what arelay.to measures</a>.
+      </p>
     </div>
   );
 
@@ -78,7 +82,8 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
 
       {hasCompanies ? (
         <p className={s.registerNote}>
-          Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here.
+          Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here. Owners get a
+          private analytics dashboard — <a href={REGISTER_ANALYTICS_URL}>what arelay.to measures</a>.
         </p>
       ) : (
         <div className={s.firstCompany}>{firstCompany}</div>
