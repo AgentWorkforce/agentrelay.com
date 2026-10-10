@@ -170,7 +170,6 @@
 
 .secondHand {
   transform-origin: 100px 100px;
-  animation: tick 60s linear infinite;
 }
 
 @keyframes tick {
@@ -182,16 +181,22 @@
   }
 }
 
-.tick1 {
-  animation: tickFly 3s ease-out infinite;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .secondHand {
+    animation: tick 60s linear infinite;
+  }
 
-.tick2 {
-  animation: tickFly 3s ease-out infinite 0.8s;
-}
+  .tick1 {
+    animation: tickFly 3s ease-out infinite;
+  }
 
-.tick3 {
-  animation: tickFly 3s ease-out infinite 1.6s;
+  .tick2 {
+    animation: tickFly 3s ease-out infinite 0.8s;
+  }
+
+  .tick3 {
+    animation: tickFly 3s ease-out infinite 1.6s;
+  }
 }
 
 @keyframes tickFly {
@@ -465,8 +470,13 @@
 
 @media (hover: hover) and (pointer: fine) {
   .tabButton:hover {
-    transform: translateY(-1px);
     border-color: var(--card-hover-border);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .tabButton:hover {
+    transform: translateY(-1px);
   }
 }
 
@@ -595,6 +605,11 @@
   .deployCard:hover {
     border-color: var(--card-hover-border);
     box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .deployCard:hover {
     transform: translateY(-2px);
   }
 }
@@ -705,7 +720,10 @@
   background: var(--card-bg);
   color: var(--fg);
   font-family: inherit;
-  transition: all 0.15s;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
 }
 
 @media (hover: hover) and (pointer: fine) {

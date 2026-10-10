@@ -96,7 +96,7 @@
   height: 13px;
   transition: transform 160ms ease;
 }
-@media (hover: hover) and (pointer: fine) {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .learnMore:hover svg {
     transform: translate(2px, -2px);
   }
@@ -237,6 +237,11 @@
 @media (hover: hover) and (pointer: fine) {
   .worksWith li:hover {
     opacity: 1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .worksWith li:hover {
     transform: translateY(-2px);
   }
 }

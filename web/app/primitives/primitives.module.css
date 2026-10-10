@@ -134,8 +134,13 @@
   .pill:hover {
     border-color: var(--primary);
     color: var(--primary);
-    transform: translateY(-1px);
     box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .pill:hover {
+    transform: translateY(-1px);
   }
 }
 
@@ -237,6 +242,11 @@
   .featureCard:hover {
     border-color: var(--card-hover-border);
     box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .featureCard:hover {
     transform: translateY(-2px);
   }
 }

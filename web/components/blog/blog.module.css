@@ -171,12 +171,17 @@
 @media (hover: hover) and (pointer: fine) {
   .featuredCard:hover {
     border-color: rgba(156, 207, 255, 0.28);
-    transform: translateY(-2px);
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.024)), rgba(17, 30, 47, 0.84);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.1),
       0 24px 62px rgba(2, 9, 18, 0.3);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .featuredCard:hover {
+    transform: translateY(-2px);
   }
 }
 
@@ -944,6 +949,11 @@
   .rssIconLink:hover {
     border-color: rgba(116, 184, 226, 0.42);
     color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .rssIconLink:hover {
     transform: translateY(-1px);
   }
 }

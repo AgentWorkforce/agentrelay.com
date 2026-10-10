@@ -282,7 +282,12 @@
   background: var(--secondary-500);
   transform: translate(-10%, -50%);
   box-shadow: 0 0 0 8px color-mix(in srgb, var(--secondary-500) 14%, transparent);
-  animation: flow 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .connectorPulse {
+    animation: flow 2.6s ease-in-out infinite;
+  }
 }
 
 @keyframes flow {

@@ -96,7 +96,12 @@ a {
   text-decoration: none;
   border-radius: var(--r-md);
   transform: translateY(-200%);
-  transition: transform 0.18s var(--ease-out-quint);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .skip-link {
+    transition: transform 0.18s var(--ease-out-quint);
+  }
 }
 
 .skip-link:focus-visible {

@@ -138,8 +138,13 @@
   .pill:hover {
     border-color: var(--primary);
     color: var(--primary);
-    transform: translateY(-1px);
     box-shadow: 0 4px 16px color-mix(in srgb, var(--primary) 10%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .pill:hover {
+    transform: translateY(-1px);
   }
 }
 
@@ -379,6 +384,11 @@
 @media (hover: hover) and (pointer: fine) {
   .rowLink:hover .rowArrow {
     color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .rowLink:hover .rowArrow {
     transform: translateX(2px);
   }
 }
@@ -545,6 +555,11 @@
 @media (hover: hover) and (pointer: fine) {
   .titleGitHub:hover {
     color: var(--fg);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .titleGitHub:hover {
     transform: translateY(-1px);
   }
 }
@@ -774,6 +789,11 @@
   .useCard:hover {
     border-color: var(--card-hover-border);
     box-shadow: 0 10px 28px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .useCard:hover {
     transform: translateY(-2px);
   }
 }
