@@ -4,7 +4,13 @@
  *
  *   node web/scripts/propose-software-garden-catalog-bump.mjs            # report only
  *   node web/scripts/propose-software-garden-catalog-bump.mjs --write    # edit the files
- *   node web/scripts/propose-software-garden-catalog-bump.mjs --open-pr  # edit, check, open or update the PR
+ *   node web/scripts/propose-software-garden-catalog-bump.mjs --check    # edit, then run the checks
+ *   node web/scripts/propose-software-garden-catalog-bump.mjs --open-pr  # edit, open or update the PR
+ *
+ * --check installs nothing itself but runs repository code (tests, verify
+ * scripts) and needs node_modules; the workflow runs it in a job with a
+ * read-only token. --open-pr runs no repository dependencies and is the only
+ * step given a write token, in a later job that requires --check to pass.
  *
  * Options: --root <dir> reads and writes the files under another tree (a
  * scratch copy); --git <dir> runs git there (default: --root); --base <ref>
@@ -28,6 +34,8 @@ import { isDeepStrictEqual, parseArgs, promisify } from 'node:util';
 export const CATALOG_PATH = 'web/data/recommended-flow-catalog.v1.json';
 export const MANIFEST_PATH = 'web/public/flows/software-garden/manifest.json';
 export const SOURCE_ROWS_PATH = 'web/lib/test/software-garden-artifact.test.ts';
+export const DOCS_PATH = 'web/content/docs/relayflows/recommended.mdx';
+export const PR_BASE = 'main';
 export const BUMP_BRANCH = 'automation/software-garden-catalog-bump';
 export const DEFAULT_CHECKS = Object.freeze([
   'npm run verify:recommended-flows',
@@ -71,10 +79,10 @@ function pinnedSource(version, ref, sha256) {
   };
 }
 
-function replaceOnce(text, from, to, label) {
+function replaceOnce(text, from, to, label, file = CATALOG_PATH) {
   const first = text.indexOf(from);
   if (first === -1 || text.indexOf(from, first + from.length) !== -1) {
-    throw new Error(`${CATALOG_PATH}: ${label} must appear exactly once to be edited`);
+    throw new Error(`${file}: ${label} must appear exactly once to be edited`);
   }
   return text.slice(0, first) + to + text.slice(first + from.length);
 }
@@ -108,6 +116,17 @@ export function renderCatalogEdit(catalogText, next) {
   return text;
 }
 
+/** Move the docs' mention of the current catalogVersion and Software Garden version. */
+export function renderDocsEdit(docsText, from, to) {
+  let text = docsText;
+  for (const [before, after, label] of [
+    [`\`catalogVersion: ${from.catalogVersion}\``, `\`catalogVersion: ${to.catalogVersion}\``, 'the catalogVersion'],
+    [`\`software-garden-v${from.version}\``, `\`software-garden-v${to.version}\``, 'the Software Garden release'],
+    [`/${gardenArtifactPath(from.version)}`, `/${gardenArtifactPath(to.version)}`, 'the Software Garden path'],
+  ]) text = replaceOnce(text, before, after, label, DOCS_PATH);
+  return text;
+}
+
 /** Record which source a catalogVersion served; rows only ever append. */
 export function addSourceRow(rowsText, catalogVersion, ref, sha256) {
   const match = ROWS.exec(rowsText);
@@ -138,7 +157,7 @@ export function addSourceRow(rowsText, catalogVersion, ref, sha256) {
  * path first landed on the base branch (or null); `fileAt(ref, path)` returns
  * that file's bytes at a commit.
  */
-export function planCatalogBump({ catalogText, manifestText, rowsText, firstAddedCommit, fileAt }) {
+export function planCatalogBump({ catalogText, manifestText, rowsText, docsText, firstAddedCommit, fileAt }) {
   const catalog = JSON.parse(catalogText);
   const manifest = JSON.parse(manifestText);
   const pinned = pinnedGardenVersion(catalog);
@@ -175,6 +194,11 @@ export function planCatalogBump({ catalogText, manifestText, rowsText, firstAdde
     files: {
       [CATALOG_PATH]: renderCatalogEdit(catalogText, next),
       [SOURCE_ROWS_PATH]: addSourceRow(rowsText, next.catalogVersion, ref, sha256),
+      [DOCS_PATH]: renderDocsEdit(
+        docsText,
+        { catalogVersion: catalog.catalogVersion, version: pinned },
+        { catalogVersion: next.catalogVersion, version: latest },
+      ),
     },
   };
 }
@@ -198,9 +222,11 @@ Software Garden v${plan.to} is published (\`${MANIFEST_PATH}\`), but the recomme
 | \`sha256\` | \`${source.sha256}\` |
 | \`rawUrl\` | ${source.rawUrl} |
 
-The entry's \`version\` advances with \`catalogVersion\`, and \`SOURCE_BY_CATALOG_VERSION\` in \`${SOURCE_ROWS_PATH}\` records the new source, because Cloud refuses to upgrade an activation onto a different source at the same catalogVersion.
+The entry's \`version\` advances with \`catalogVersion\`, and \`SOURCE_BY_CATALOG_VERSION\` in \`${SOURCE_ROWS_PATH}\` records the new source, because Cloud refuses to upgrade an activation onto a different source at the same catalogVersion. \`${DOCS_PATH}\` names the new values.
 
 ## Checks run by the workflow before opening this PR
+
+The workflow's read-only \`check\` job made this same edit and ran:
 
 ${checks.map(check => `- \`${check}\` passed`).join('\n')}
 
@@ -220,7 +246,7 @@ The workflow only opens and updates this pull request; it never merges it. It ne
  * Commit the edit on BUMP_BRANCH, push it only when its tree differs from
  * what the branch already carries, and create or update the one open PR.
  */
-export async function syncPullRequest({ plan, exec, repository, base, token, checks, bodyFile }) {
+export async function syncPullRequest({ plan, exec, repository, base = PR_BASE, token, checks, bodyFile }) {
   const redact = text => (token ? String(text).split(token).join('***') : String(text));
   const run = async (command, args) => {
     try {
@@ -229,23 +255,30 @@ export async function syncPullRequest({ plan, exec, repository, base, token, che
       throw new Error(redact(error?.message ?? error));
     }
   };
-  const remote = `https://x-access-token:${token}@github.com/${repository}.git`;
+  // The token never appears in an argument: git asks this helper, which reads
+  // it from the environment, only when GitHub asks for credentials.
+  const remote = `https://github.com/${repository}.git`;
+  const git = (...args) => run('git', [
+    '-c', 'credential.helper=',
+    '-c', 'credential.helper=!f() { test "$1" = get && echo username=x-access-token && echo "password=$GH_TOKEN"; }; f',
+    ...args,
+  ]);
   const title = pullRequestTitle(plan);
 
   await run('git', ['checkout', '-B', BUMP_BRANCH]);
-  await run('git', ['add', '--', CATALOG_PATH, SOURCE_ROWS_PATH]);
+  await run('git', ['add', '--', ...Object.keys(plan.files)]);
   await run('git', ['-c', 'user.name=github-actions[bot]', '-c', 'user.email=41898282+github-actions[bot]@users.noreply.github.com',
     'commit', '-m', `${title}\n\nGenerated by web/scripts/propose-software-garden-catalog-bump.mjs.`]);
 
   const localTree = (await run('git', ['rev-parse', 'HEAD^{tree}'])).trim();
-  const listed = (await run('git', ['ls-remote', remote, `refs/heads/${BUMP_BRANCH}`])).trim();
+  const listed = (await git('ls-remote', remote, `refs/heads/${BUMP_BRANCH}`)).trim();
   let remoteTree = null;
   if (listed) {
-    await run('git', ['fetch', '--no-tags', remote, `refs/heads/${BUMP_BRANCH}`]);
+    await git('fetch', '--no-tags', remote, `refs/heads/${BUMP_BRANCH}`);
     remoteTree = (await run('git', ['rev-parse', 'FETCH_HEAD^{tree}'])).trim();
   }
   const pushed = remoteTree !== localTree;
-  if (pushed) await run('git', ['push', '--force', remote, `HEAD:refs/heads/${BUMP_BRANCH}`]);
+  if (pushed) await git('push', '--force', remote, `HEAD:refs/heads/${BUMP_BRANCH}`);
 
   const body = pullRequestBody(plan, checks);
   const file = bodyFile ?? path.join(mkdtempSync(path.join(tmpdir(), 'garden-bump-')), 'body.md');
@@ -284,6 +317,7 @@ async function main() {
   const { values } = parseArgs({
     options: {
       write: { type: 'boolean', default: false },
+      check: { type: 'boolean', default: false },
       'open-pr': { type: 'boolean', default: false },
       root: { type: 'string' },
       git: { type: 'string' },
@@ -297,6 +331,7 @@ async function main() {
     catalogText: read(CATALOG_PATH),
     manifestText: read(MANIFEST_PATH),
     rowsText: read(SOURCE_ROWS_PATH),
+    docsText: read(DOCS_PATH),
     ...realGit(gitDir, values.base),
   });
   if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `status=${plan.status}\n`);
@@ -307,30 +342,33 @@ async function main() {
   }
   console.log(`Software Garden v${plan.to} is published but the catalog pins v${plan.from}:`);
   console.log(`  catalogVersion ${plan.catalogVersion}, ${plan.path} at ${plan.ref}, sha256 ${plan.sha256}`);
-  if (!values.write && !values['open-pr']) return;
+  if (!values.write && !values.check && !values['open-pr']) return;
 
   for (const [file, text] of Object.entries(plan.files)) writeFileSync(path.join(root, file), text);
   console.log(`Wrote ${Object.keys(plan.files).join(', ')}.`);
+
+  if (values.check) {
+    // Repository code runs here, so it must not be handed a token.
+    const { GH_TOKEN: _token, GITHUB_TOKEN: _github, ...checkEnv } = process.env;
+    for (const check of DEFAULT_CHECKS) {
+      console.log(`$ ${check}`);
+      await new Promise((resolve, reject) => {
+        const child = spawn(check, { cwd: root, env: checkEnv, shell: true, stdio: 'inherit' });
+        child.on('error', reject);
+        child.on('exit', code => (code === 0 ? resolve() : reject(new Error(`${check} exited ${code}`))));
+      });
+    }
+  }
   if (!values['open-pr']) return;
 
   const token = process.env.GH_TOKEN;
   const repository = process.env.GITHUB_REPOSITORY ?? `${OWNER}/${REPO}`;
   if (!token) throw new Error('--open-pr needs GH_TOKEN');
-  // The checks never see the token.
-  const { GH_TOKEN: _token, GITHUB_TOKEN: _github, ...checkEnv } = process.env;
-  for (const check of DEFAULT_CHECKS) {
-    console.log(`$ ${check}`);
-    await new Promise((resolve, reject) => {
-      const child = spawn(check, { cwd: root, env: checkEnv, shell: true, stdio: 'inherit' });
-      child.on('error', reject);
-      child.on('exit', code => (code === 0 ? resolve() : reject(new Error(`${check} exited ${code}`))));
-    });
-  }
   const exec = async (command, args) => (await execFileAsync(command, args, {
     cwd: gitDir, env: process.env, maxBuffer: 16 * 1024 * 1024,
   })).stdout;
   const result = await syncPullRequest({
-    plan, exec, repository, base: values.base.replace(/^origin\//, ''), token, checks: DEFAULT_CHECKS,
+    plan, exec, repository, token, checks: DEFAULT_CHECKS,
   });
   console.log(`${result.action === 'created' ? 'Opened' : 'Updated'} ${result.url}${result.pushed ? '' : ' (branch already current)'}`);
   if (process.env.GITHUB_STEP_SUMMARY) {
