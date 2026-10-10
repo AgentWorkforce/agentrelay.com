@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -118,8 +118,10 @@
   text-underline-offset: 3px;
 }
 
-.link:hover {
-  opacity: 0.8;
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    opacity: 0.8;
+  }
 }
 
 @media (max-width: 640px) {

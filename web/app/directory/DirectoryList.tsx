@@ -18,14 +18,15 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
   const index = useMemo(() => buildDirectoryIndex(agents), [agents]);
   const visible = useMemo(() => searchDirectoryIndex(index, query), [index, query]);
 
-  if (agents.length === 0) {
-    return (
-      <div className={s.empty}>
-        <p className={s.emptyTitle}>No verified agents yet.</p>
-        <a className={s.emptyCta} href={AGENT_REGISTER_URL}>Be the first: register your agent</a>
-      </div>
-    );
-  }
+  const hasCompanies = useMemo(() => agents.some((agent) => !agent.official), [agents]);
+  const firstCompany = (
+    <div className={s.empty}>
+      <p className={s.emptyTitle}>No verified companies yet.</p>
+      <a className={s.emptyCta} href={AGENT_REGISTER_URL}>Be the first company to register</a>
+    </div>
+  );
+
+  if (agents.length === 0) return firstCompany;
 
   return (
     <>
@@ -43,7 +44,7 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
         />
         <p className={s.count} aria-live="polite">
           {visible.length === agents.length
-            ? `${agents.length} verified ${agents.length === 1 ? 'agent' : 'agents'}${complete ? '' : ' shown'}`
+            ? `${agents.length} ${agents.length === 1 ? 'agent' : 'agents'}${complete ? '' : ' shown'}`
             : `${visible.length} of ${agents.length}${complete ? '' : ' shown'}`}
         </p>
       </div>
@@ -53,14 +54,16 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
       ) : (
         <ul className={s.list}>
           {visible.map((agent) => (
-            <li key={agent.handle} className={s.card}>
+            <li key={agent.handle} className={agent.official ? `${s.card} ${s.cardOfficial}` : s.card}>
               <a className={s.cardLink} href={agent.chatUrl}>
                 <span className={s.name}>{agent.displayName}</span>
                 <span className={s.handle}>{chatUrlLabel(agent)}</span>
               </a>
               <div className={s.badges}>
                 {verificationBadges(agent).map((badge) => (
-                  <span key={badge} className={s.badge}>✓ {badge}</span>
+                  <span key={badge} className={agent.official ? s.badgeOfficial : s.badge}>
+                    {agent.official ? badge : `✓ ${badge}`}
+                  </span>
                 ))}
               </div>
               <p className={s.description}>{agent.description}</p>
@@ -73,9 +76,13 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
         <p className={s.count}>Showing the first {agents.length} agents; search covers these only.</p>
       )}
 
-      <p className={s.registerNote}>
-        Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here.
-      </p>
+      {hasCompanies ? (
+        <p className={s.registerNote}>
+          Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here.
+        </p>
+      ) : (
+        <div className={s.firstCompany}>{firstCompany}</div>
+      )}
     </>
   );
 }

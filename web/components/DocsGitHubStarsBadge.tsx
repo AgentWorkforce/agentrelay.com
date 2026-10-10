@@ -56,7 +56,7 @@ function GithubIcon() {
 
 /**
  * GitHub stars badge that targets the repo for the docs section currently being
- * viewed: Relayfile under `/docs/file`, Relayloop under `/docs/loop`, and Agent
+ * viewed: Relayfile under `/docs/file`, Relayhistory under `/docs/relayhistory`, and Agent
  * Relay everywhere else. It loads the active repo's count directly from
  * GitHub and keeps it in browser storage for an hour, so docs rendering never
  * depends on a server-side refresh.

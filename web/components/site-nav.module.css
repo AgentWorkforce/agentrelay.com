@@ -119,9 +119,11 @@
   opacity: 1;
 }
 
-.link:hover {
-  color: var(--nav-link-hover);
-  border-bottom-color: currentColor;
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    color: var(--nav-link-hover);
+    border-bottom-color: currentColor;
+  }
 }
 
 @media (max-width: 960px) {
@@ -177,8 +179,10 @@
   transition: background 0.15s;
 }
 
-.hamburger:hover {
-  background: var(--nav-surface);
+@media (hover: hover) and (pointer: fine) {
+  .hamburger:hover {
+    background: var(--nav-surface);
+  }
 }
 
 @media (max-width: 960px) {
@@ -194,7 +198,7 @@
   flex-direction: column;
   padding: 4px 10px 14px;
   gap: 4px;
-  max-height: min(72vh, calc(100vh - 88px));
+  max-height: min(72dvh, calc(100dvh - 88px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -215,9 +219,11 @@
     opacity 0.15s;
 }
 
-.mobileLink:hover {
-  background: var(--nav-surface);
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .mobileLink:hover {
+    background: var(--nav-surface);
+    opacity: 1;
+  }
 }
 
 /* ── Product dropdown (desktop hover) ── */

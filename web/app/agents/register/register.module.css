@@ -29,9 +29,11 @@
   color: var(--flows-text);
 }
 
-.content .copy:hover {
-  background: rgba(116, 184, 226, 0.12);
-  color: var(--flows-accent-strong);
+@media (hover: hover) and (pointer: fine) {
+  .content .copy:hover {
+    background: rgba(116, 184, 226, 0.12);
+    color: var(--flows-accent-strong);
+  }
 }
 
 .promptNote {
@@ -41,19 +43,6 @@
   line-height: 1.7;
 }
 
-.content .soon {
-  display: inline-block;
-  margin-left: 6px;
-  border: 1px solid #8a7a4a;
-  border-radius: 999px;
-  padding: 1px 8px;
-  color: #f3dfa2;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  vertical-align: 2px;
-}
 
 .prose {
   margin: 0 0 16px;
@@ -126,4 +115,22 @@
   padding: 0;
   background: none;
   font-size: 13px;
+}
+
+/* Example verification badges, matching the /u/<handle> profile badges. Scoped
+   under .content so they win over the list's `.stepList span` colour, and a
+   block-level chip so they never sit inline in (or overlap) the text. */
+.content .badge {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 10px 0 6px;
+  border: 1px solid #47708d;
+  border-radius: 999px;
+  padding: 6px 12px;
+  color: #b9ddf5;
+  font-family: var(--font-mono, ui-monospace), monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }

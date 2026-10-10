@@ -184,10 +184,11 @@ describe('dashboard grant exchange', () => {
   });
 });
 
-// next.config.mjs is untyped JS; load it as a plain module.
+// next.config.mjs is untyped JS; load it as a plain module. The server phase
+// resolves the config without the build-time npm version lookup.
 async function loadNextConfig() {
   const configPath: string = '../../next.config.mjs';
-  return (await import(configPath)).default;
+  return (await import(configPath)).default('phase-production-server');
 }
 
 describe('next.config dashboard routing', () => {

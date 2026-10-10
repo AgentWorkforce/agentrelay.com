@@ -94,4 +94,19 @@ describe('agent signup funnel', () => {
     expect(clean.properties.$current_url).toContain('utm_source=docs');
     expect(event.properties.writeToken).toBe('secret');
   });
+  it('scrubs workspace invite tokens from login URLs, autocaptured hrefs, and replay snapshots', () => {
+    const token = 'INVITE-SECRET-7Q2';
+    const event = {
+      event: '$autocapture',
+      properties: {
+        $current_url: `https://agentrelay.com/login?next=%2Fdashboard&invite_token=${token}`,
+        $elements: [{ attr__href: `/cloud/api/auth/google/start?next=%2Fdashboard&invite_token=${token}` }],
+        $snapshot_data: [{ data: { href: `https://agentrelay.com/login?inviteToken=${token}#x`, alt: `/login?invite=${token}` } }],
+        inviteToken: token,
+      },
+    };
+    const clean = sanitizeSignupAnalytics(event)!;
+    expect(JSON.stringify(clean)).not.toContain(token);
+    expect(clean.properties.$current_url).toBe('https://agentrelay.com/login?next=%2Fdashboard&invite_token=[redacted]');
+  });
 });

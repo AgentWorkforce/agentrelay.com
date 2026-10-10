@@ -1,6 +1,6 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
-import { maybeRateLimit, type RateLimitEnv } from "./src/rate-limit.js";
 import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
+import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
@@ -10,7 +10,6 @@ interface Env extends AnalyticsEnv {
   FILE_OBSERVER_ORIGIN?: string;
   TRAFFIC_RECORDER?: RecorderEnv["TRAFFIC_RECORDER"];
   ROUTER_CONFIG?: RecorderEnv["ROUTER_CONFIG"];
-  RATE_LIMIT_COUNTERS?: RateLimitEnv["RATE_LIMIT_COUNTERS"];
   RELAY_AGENT_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -660,8 +659,8 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
   return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+const router = {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
 
     const insecureShortHost = getInsecureShortHostResponse(url, request.method);
@@ -739,16 +738,6 @@ export default {
       request = new Request(url.toString(), request);
     }
 
-    // Per-key rate limiting runs BEFORE any worker routing so a runaway
-    // workspace gets bounded everywhere — including webhook ingress and
-    // /cloud* traffic. The bypass list inside maybeRateLimit exempts
-    // health and observer paths. See packages/router/src/rate-limit.ts
-    // and docs/security/rate-limiting.md.
-    const rateLimited = await maybeRateLimit(request, env);
-    if (rateLimited) {
-      return rateLimited;
-    }
-
     // Clone the request up front so any branch that returns early (cloud-web
     // Worker service binding, webhook Worker service binding, etc.) can
     // still feed the recorder the original payload. Without this clone, the
@@ -771,7 +760,7 @@ export default {
     // origin alternative) is the rollback flag that restores the Cloud route.
     if (relayAgentRoute && relayAgentEnabled(env)) {
       try {
-        const workerResponse = await fetchRelayAgent(request, url, env);
+        const workerResponse = await timing.measure("up", () => fetchRelayAgent(request, url, env));
         return workerResponse;
       } catch (error) {
         console.error(JSON.stringify({
@@ -840,7 +829,8 @@ export default {
         );
       }
 
-      const workerResponse = await env.CLOUD_WEB_WORKER.fetch(request);
+      const cloudWebWorker = env.CLOUD_WEB_WORKER;
+      const workerResponse = await timing.measure("up", () => cloudWebWorker.fetch(request));
       if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
           maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
@@ -855,8 +845,9 @@ export default {
       // the env.WEBHOOK_WORKER check would disturb the stream and make the
       // WEBHOOK_WORKER_ORIGIN fallback throw a TypeError.
       if (env.WEBHOOK_WORKER) {
-        const workerResponse = await env.WEBHOOK_WORKER.fetch(
-          buildWebhookWorkerRequest(request, url),
+        const webhookWorker = env.WEBHOOK_WORKER;
+        const workerResponse = await timing.measure("up", () =>
+          webhookWorker.fetch(buildWebhookWorkerRequest(request, url)),
         );
         if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
@@ -868,8 +859,8 @@ export default {
 
       const workerOrigin = env.WEBHOOK_WORKER_ORIGIN?.trim();
       if (workerOrigin) {
-        const originResponse = await globalThis.fetch(
-          buildWebhookWorkerRequest(request, url, workerOrigin),
+        const originResponse = await timing.measure("up", () =>
+          globalThis.fetch(buildWebhookWorkerRequest(request, url, workerOrigin)),
         );
         if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
@@ -913,7 +904,7 @@ export default {
       // Use `globalThis.fetch` rather than a bare `fetch` identifier: Cloudflare
       // Workers can hoist bare `fetch` off `globalThis` and throw
       // `TypeError: Illegal invocation`. See sage `.claude/rules/workers-fetch.md`.
-      const upstreamResponse = await globalThis.fetch(subRequest);
+      const upstreamResponse = await timing.measure("up", () => globalThis.fetch(subRequest));
       const responseHeaders = new Headers(upstreamResponse.headers);
 
       const location = responseHeaders.get("Location");
@@ -947,5 +938,21 @@ export default {
         headers: { "content-type": "application/json" },
       });
     }
+  },
+};
+
+// Every response leaves through `timing.finish`, which adds the
+// `Server-Timing` header; `router.fetch` measures the phases.
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const timing = startEdgeTiming(request);
+    let response: Response;
+    try {
+      response = await router.fetch(request, env, ctx, timing);
+    } catch (error) {
+      timing.fail(error);
+      throw error;
+    }
+    return timing.finish(response);
   },
 };
