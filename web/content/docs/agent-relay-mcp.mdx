@@ -8,7 +8,7 @@ description: 'Expose Agent Relay messaging and registered actions to any agent a
 
 `agent-relay mcp` registers three groups of tools:
 
-- workspace and agent tools (`register_agent`, `list_agents`, `add_agent`, `remove_agent`, `create_workspace`, `set_workspace_key`, `spawn`, `submit_result`, `query_nodes`)
+- workspace and agent tools (`register_agent`, `list_agents`, `add_agent`, `remove_agent`, `create_workspace`, `set_workspace_key`, `spawn`, `submit_result`, `query_nodes`, `get_observer_url`)
 - messaging and inbox tools (the table below)
 - action tools (`list_actions`, `invoke_action`, plus one generated tool per registered action)
 
@@ -77,6 +77,25 @@ agents.
 calling `spawn` or before asking an operator to bind an app-server agent to a node. Nodes are delivery
 routes, not a workspace feature flag: a roster entry can be a direct connection, a broker-controlled
 WebSocket worker, an HTTP push endpoint, or a polling integration.
+
+## Observer Links
+
+`get_observer_url` mints a scoped, read-only observer token and returns a URL built from it, so an
+orchestrating agent can hand a watching human a follow-along link. Requires a workspace key on the
+session.
+
+| Input | Type | Description |
+| --- | --- | --- |
+| `channels` | `string[]` | Optional. Restrict the view to these channels. Omit to show every channel. |
+| `include_dms` | `boolean` | Optional. Include agent DM traffic. Defaults to `false`. |
+| `expires_in_hours` | `integer` | Optional. Token lifetime, 1–2160. Defaults to `24`. |
+
+Returns `url`, `tokenId`, `expiresAt`, `includesDms`, and `channels` when a channel filter was applied.
+Revoke a link early with `agent-relay observer revoke <tokenId>`.
+
+Never build an observer URL from the workspace key. `rk_live_*` is an administrative credential, and the
+realtime endpoint rejects it — only a scoped observer token with `stream:read` is accepted. See
+[Observer](/docs/observer).
 
 ## Generated Action Tools
 

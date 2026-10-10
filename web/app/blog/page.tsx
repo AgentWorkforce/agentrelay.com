@@ -19,6 +19,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/blog'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: `${SITE_NAME} Blog`,
     description: 'Essays, playbooks, and product thinking on multi-agent systems and AI coordination.',
     url: absoluteUrl('/blog'),

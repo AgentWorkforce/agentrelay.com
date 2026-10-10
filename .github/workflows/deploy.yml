@@ -37,6 +37,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify recommended-flow release pins
+        run: npm run verify:recommended-flows
+
       - name: Build OpenNext (Cloudflare)
         working-directory: web
         env:

@@ -80,6 +80,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       canonical: postUrl,
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: post.frontmatter.title,
       description: post.frontmatter.description,
       url: postUrl,

@@ -301,53 +301,25 @@ export function ChannelMessagesPreview() {
     const stream = streamRef.current;
     if (!stream) return;
 
-    let observer: IntersectionObserver | undefined;
-    let visibilityPoll: number | undefined;
-
-    const start = () => {
+    if (!('IntersectionObserver' in window)) {
       setIsActive(true);
-      if (visibilityPoll) window.clearInterval(visibilityPoll);
-      visibilityPoll = undefined;
-      window.removeEventListener('scroll', maybeStart);
-      window.removeEventListener('resize', maybeStart);
-    };
-
-    const isVisible = () => {
-      const rect = stream.getBoundingClientRect();
-      return rect.top < window.innerHeight * 0.9 && rect.bottom > window.innerHeight * 0.1;
-    };
-
-    const maybeStart = () => {
-      if (isVisible()) start();
-    };
-
-    window.addEventListener('scroll', maybeStart, { passive: true });
-    window.addEventListener('resize', maybeStart);
-    visibilityPoll = window.setInterval(maybeStart, 250);
-
-    if ('IntersectionObserver' in window) {
-      observer = new IntersectionObserver(
-        ([entry]) => {
-          if (entry.isIntersecting) {
-            start();
-            observer?.disconnect();
-          }
-        },
-        { threshold: 0.35 }
-      );
-      observer.observe(stream);
-    } else {
-      start();
+      return;
     }
 
-    maybeStart();
+    // Start once the stream reaches the middle 80% of the viewport. The
+    // observer tracks scrolling and resizing itself, so no listeners or polling.
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsActive(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '-10% 0px -10% 0px' }
+    );
+    observer.observe(stream);
 
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('scroll', maybeStart);
-      window.removeEventListener('resize', maybeStart);
-      if (visibilityPoll) window.clearInterval(visibilityPoll);
-    };
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {

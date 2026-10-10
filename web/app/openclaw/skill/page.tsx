@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { SkillPage } from '../../../components/SkillPage';
 import { readOpenClawSkillMarkdown } from '../../../lib/skill-markdown';
 import { defaultOgImage } from '../../../lib/og-meta';
-import { absoluteUrl } from '../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 
 export const dynamic = 'force-static';
 export const revalidate = 86400;
@@ -17,6 +17,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/openclaw/skill'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'OpenClaw Skill',
     description: 'Hosted setup and troubleshooting instructions for connecting OpenClaw to Agent Relay.',
     url: absoluteUrl('/openclaw/skill'),

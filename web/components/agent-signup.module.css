@@ -1,0 +1,16 @@
+.button { composes: btn btn-secondary from global; gap: 12px; white-space: nowrap; }
+.icons { position: relative; display: inline-block; width: 24px; height: 24px; flex-shrink: 0; }
+.icons > span { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; animation: agentIcon 16s infinite; }
+.icons > span:nth-child(2) { animation-delay: 4s; }
+.icons > span:nth-child(3) { animation-delay: 8s; }
+.icons > span:nth-child(4) { animation-delay: 12s; }
+.logo { width: 24px; height: 24px; }
+@keyframes agentIcon {
+  0%, 20% { opacity: 1; transform: translateY(0) scale(1); }
+  25%, 95% { opacity: 0; transform: translateY(-4px) scale(.85); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .icons > span { animation: none; }
+  .icons > span:first-child { opacity: 1; }
+}

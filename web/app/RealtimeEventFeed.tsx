@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { AgentToolLogo, type AgentTool } from '../components/AgentToolLogos';
+import { useOnScreen } from '../components/useOnScreen';
 import s from './landing.module.css';
 
 const REALTIME_EVENT_ACTIVITY = [
@@ -141,8 +142,12 @@ export function RealtimeEventFeed() {
   const sequenceRef = useRef(INITIAL_EVENT_COUNT);
   const idRef = useRef(INITIAL_EVENT_COUNT);
   const stepRef = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(rootRef);
 
   useEffect(() => {
+    if (!onScreen) return;
+
     let active = true;
     let timeoutId: number | undefined;
 
@@ -172,10 +177,10 @@ export function RealtimeEventFeed() {
       active = false;
       window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [onScreen]);
 
   return (
-    <div className={s.realtimeFeed}>
+    <div className={s.realtimeFeed} ref={rootRef}>
       <div className={s.realtimeFeedList}>
         {events.map((event) => (
           <div className={s.realtimeEvent} key={event.id}>

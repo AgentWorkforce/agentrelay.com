@@ -8,7 +8,7 @@ import {
   getProductDocMarkdownUrl,
   getProductDocSlugs,
 } from '../../../../lib/product-docs';
-import { absoluteUrl } from '../../../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../../../lib/site';
 
 const SECTION_ID = fileSection.id;
 
@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       types: { 'text/markdown': getProductDocMarkdownUrl(SECTION_ID, slug) },
     },
     openGraph: {
+      siteName: SITE_NAME,
       title: `${doc.frontmatter.title} — Relayfile`,
       description: doc.frontmatter.description,
       url: absoluteUrl(`/docs/${SECTION_ID}/${slug}`),

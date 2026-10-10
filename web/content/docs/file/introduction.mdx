@@ -52,7 +52,7 @@ from relayfile import RelayFileClient
 # The Python SDK is the data-plane client — connect a provider with the CLI
 # above, then point the client at the workspace token to read and write:
 client = RelayFileClient(
-    "https://api.relayfile.dev",
+    "https://file.agentrelay.com",
     lambda: os.environ["RELAYFILE_TOKEN"],
 )
 ```

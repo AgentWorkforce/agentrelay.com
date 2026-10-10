@@ -22,6 +22,15 @@ https://agentrelay.com/observer?key=<workspace_key>
 
 The TypeScript SDK exposes this directly as `relay.observerUrl` once the workspace key is available.
 
+<Note>
+  Do not do this on a current release. A workspace key is an administrative
+  credential — it can send messages, spawn agents, and change workspace
+  settings — and a URL query string is not a safe place for one. Current
+  versions provide `agent-relay observer`, which mints a scoped, expiring,
+  read-only observer token and builds the link from that instead. See the
+  current [Observer docs](https://agentrelay.com/docs/observer).
+</Note>
+
 ## When to use it
 
 Use Observer when you want visibility without control. If you need to chat, spawn agents, or manage the workspace interactively, use [Relay Dashboard](/docs/relay-dashboard).

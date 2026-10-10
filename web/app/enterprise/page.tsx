@@ -24,7 +24,7 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { ScribbleUnderline } from '../../components/home/icons';
 import { ogImage } from '../../lib/og-meta';
-import { absoluteUrl } from '../../lib/site';
+import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import s from './enterprise.module.css';
 
 const exploratoryCallHref = 'https://agentrelay.com/will';
@@ -51,6 +51,7 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Enterprise AI Agent Teams | Agent Relay',
     description: enterpriseDescription,
     url: absoluteUrl('/enterprise'),

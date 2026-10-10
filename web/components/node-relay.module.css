@@ -4,7 +4,7 @@
   height: 100%;
   min-height: 420px;
   background: transparent;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .canvas {
@@ -28,7 +28,7 @@
   backdrop-filter: blur(10px);
   border: 1px solid var(--agent-card-border);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: clip;
   transition:
     box-shadow 0.4s ease,
     opacity 0.2s ease-out,
@@ -122,7 +122,7 @@
   letter-spacing: 0.01em;
   line-height: 1.4;
   color: var(--agent-card-muted);
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   transition: color 0.3s ease;
 }

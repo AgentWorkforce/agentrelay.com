@@ -162,13 +162,13 @@ await run(agent, 'Review /digests/yesterday.md and file Linear follow-ups.');`,
   curl: {
     label: 'cURL',
     language: 'curl',
-    code: `curl "https://api.agentrelay.com/relayfile/v1/workspaces/rw_123/fs/tree?path=/" \\
+    code: `curl "https://file.agentrelay.com/v1/workspaces/rw_123/fs/tree?path=/" \\
   -H "authorization: Bearer $RELAYFILE_TOKEN"
 
-curl "https://api.agentrelay.com/relayfile/v1/workspaces/rw_123/fs/file?path=/digests/yesterday.md" \\
+curl "https://file.agentrelay.com/v1/workspaces/rw_123/fs/file?path=/digests/yesterday.md" \\
   -H "authorization: Bearer $RELAYFILE_TOKEN"
 
-curl -X PUT "https://api.agentrelay.com/relayfile/v1/workspaces/rw_123/fs/file?path=/linear/issues/AGE-12.json" \\
+curl -X PUT "https://file.agentrelay.com/v1/workspaces/rw_123/fs/file?path=/linear/issues/AGE-12.json" \\
   -H "authorization: Bearer $RELAYFILE_TOKEN" \\
   -H "content-type: application/json" \\
   -d '{"contentType":"application/json","content":"{\\"state\\":\\"In Review\\"}"}'`,

@@ -1,12 +1,10 @@
-import { productSections } from '../lib/product-docs-nav';
-import { DocsGitHubStarsBadge, type DocsStarRepo } from './DocsGitHubStarsBadge';
 import s from './github-stars.module.css';
 
 type GitHubRepoResponse = {
   stargazers_count?: number;
 };
 
-const DEFAULT_REPO = 'agentworkforce/relay';
+export const DEFAULT_REPO = 'agentworkforce/relay';
 
 function GithubIcon() {
   return (
@@ -37,31 +35,6 @@ async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | nul
   } catch {
     return null;
   }
-}
-
-/**
- * Docs header badge that follows the active section: Relayfile under
- * `/docs/file`, Relayloop under `/docs/loop`, Agent Relay elsewhere. The
- * client loads only the active repo's count, so the docs route stays static.
- */
-export async function DocsGitHubStarsBadgeServer() {
-  const targets: { id: string | null; repo: string; label: string }[] = [
-    { id: null, repo: DEFAULT_REPO, label: 'Agent Relay' },
-    ...productSections.map((section) => ({
-      id: section.id,
-      repo: section.repo,
-      label: section.label,
-    })),
-  ];
-
-  const repos: DocsStarRepo[] = targets.map((t) => ({
-    id: t.id,
-    repo: t.repo,
-    href: `https://github.com/${t.repo}`,
-    label: t.label,
-  }));
-
-  return <DocsGitHubStarsBadge repos={repos} />;
 }
 
 export async function GitHubStarsBadge() {

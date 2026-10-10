@@ -1,8 +1,10 @@
 // Pure, dependency-free section + nav definitions for the standalone product
-// docs (Relayfile, Agents, Reflex). This module is safe to import from client
+// docs (Relayfile, Relayhistory, Flows). This module is safe to import from client
 // components — it must NOT import anything that touches `node:fs` (e.g.
 // content-store), so the sidebar can use it without dragging server-only code
 // into the browser bundle. Content loaders live in `./product-docs`.
+
+import type { DocsPackage } from './docs-packages.mjs';
 
 export interface NavItem {
   title: string;
@@ -27,8 +29,14 @@ export interface ProductDocSection {
   tagline: string;
   /** GitHub org/repo, used for the sidebar source link. */
   repo: string;
-  /** Current published version, shown as a badge in the sidebar header. */
-  version?: string;
+  /** npm package whose latest published version the sidebar header shows. */
+  npmPackage?: DocsPackage;
+  /**
+   * Slugs that are built and indexed but deliberately kept out of the sidebar —
+   * pages whose real audience is an agent fetching the `.md` mirror, not a
+   * human browsing the nav.
+   */
+  unlistedSlugs?: string[];
   nav: NavGroup[];
 }
 
@@ -37,7 +45,9 @@ export const fileSection: ProductDocSection = {
   label: 'Relayfile',
   tagline: 'The event layer for AI agents.',
   repo: 'AgentWorkforce/relayfile',
-  version: '0.10.31',
+  npmPackage: 'relayfile',
+  // Handed to an agent as markdown from the review-bot guide, not browsed.
+  unlistedSlugs: ['review-bot-brief'],
   nav: [
     {
       title: 'Start',
@@ -46,6 +56,10 @@ export const fileSection: ProductDocSection = {
         { title: 'Quickstart', slug: 'quickstart' },
         { title: 'Why files', slug: 'why-files' },
       ],
+    },
+    {
+      title: 'Guides',
+      items: [{ title: 'Build a PR review bot', slug: 'review-bot' }],
     },
     {
       title: 'Concepts',
@@ -96,52 +110,50 @@ export const fileSection: ProductDocSection = {
   ],
 };
 
-export const loopSection: ProductDocSection = {
-  id: 'loop',
-  label: 'Reflex',
-  tagline: 'The system of record for how your team works with AI agents.',
+export const relayhistorySection: ProductDocSection = {
+  id: 'relayhistory',
+  label: 'Relayhistory',
+  tagline: 'Search, resume, and hand off every coding-agent session.',
   repo: 'AgentWorkforce/relayhistory',
-  version: '0.3.6',
+  npmPackage: 'ai-hist',
   nav: [
     {
       title: 'Start',
       items: [
         { title: 'Introduction', slug: 'introduction' },
-        { title: 'Install', slug: 'install' },
         { title: 'Quickstart', slug: 'quickstart' },
       ],
     },
     {
-      title: 'Using Relayloop',
+      title: 'Use',
       items: [
-        { title: 'Sync', slug: 'sync' },
-        { title: 'Search', slug: 'search' },
-        { title: 'Sessions & resume', slug: 'sessions' },
-        { title: 'Sources', slug: 'sources' },
-        { title: 'Stats & burn', slug: 'stats' },
+        { title: 'CLI', slug: 'cli' },
+        { title: 'Sessions', slug: 'sessions' },
       ],
     },
     {
-      title: 'Cloud',
+      title: 'Agents',
       items: [
-        { title: 'Relayloop Cloud', slug: 'cloud' },
-        { title: 'Architecture', slug: 'cloud-architecture' },
-        { title: 'Privacy & encryption', slug: 'privacy' },
-        { title: 'Teams', slug: 'teams' },
+        { title: 'MCP server', slug: 'mcp' },
+        { title: 'Handoffs', slug: 'handoffs' },
       ],
     },
     {
-      title: 'Reference',
-      items: [{ title: 'CLI reference', slug: 'cli' }],
+      title: 'Build',
+      items: [
+        { title: 'TypeScript SDK', slug: 'sdk' },
+        { title: 'Remote sources', slug: 'remote-sources' },
+        { title: 'Export', slug: 'export' },
+      ],
     },
   ],
 };
 
-export const agentsSection: ProductDocSection = {
-  id: 'agents',
-  label: 'Agents',
-  tagline: 'Proactive workers you can fork, adapt, and deploy.',
-  repo: 'AgentWorkforce/agents',
+export const relayflowsSection: ProductDocSection = {
+  id: 'relayflows',
+  label: 'Flows',
+  tagline: 'Deterministic scripts over agentic primitives — every step verified, every crash resumable.',
+  repo: 'AgentWorkforce/flows',
   nav: [
     {
       title: 'Start',
@@ -151,55 +163,32 @@ export const agentsSection: ProductDocSection = {
       ],
     },
     {
-      title: 'Design',
-      items: [{ title: 'Build your own', slug: 'build' }],
+      title: 'Author',
+      items: [{ title: 'Build a flow', slug: 'build' }],
     },
     {
       title: 'Run',
       items: [{ title: 'CLI', slug: 'cli' }],
     },
-  ],
-};
-
-export const factorySection: ProductDocSection = {
-  id: 'factory',
-  label: 'Factory',
-  tagline: 'Turns tracker issues into reviewed pull requests.',
-  repo: 'AgentWorkforce/factory',
-  version: '0.1.34',
-  nav: [
     {
-      title: 'Start',
+      title: 'Going further',
       items: [
-        { title: 'Introduction', slug: 'introduction' },
-        { title: 'Quickstart', slug: 'quickstart' },
+        { title: 'Multi-agent flows', slug: 'multi-agent' },
+        { title: 'Cloud', slug: 'cloud' },
+        { title: 'Recommended flows', slug: 'recommended' },
+        { title: 'Plugins', slug: 'plugins' },
+        { title: 'Memory & integrations', slug: 'memory-and-integrations' },
+        { title: 'Reliability', slug: 'reliability' },
       ],
     },
     {
-      title: 'Configure',
-      items: [
-        { title: 'Safety scope', slug: 'safety-scope' },
-        { title: 'Issue labels & routing', slug: 'issue-routing' },
-        { title: 'Configuration', slug: 'configuration' },
-      ],
-    },
-    {
-      title: 'Run',
-      items: [
-        { title: 'CLI', slug: 'cli' },
-        { title: 'Where it runs', slug: 'where-it-runs' },
-        { title: 'Observability', slug: 'observability' },
-      ],
+      title: 'Cookbook',
+      items: [{ title: 'Recipes', slug: 'cookbook' }],
     },
   ],
 };
 
-export const productSections: ProductDocSection[] = [
-  fileSection,
-  agentsSection,
-  factorySection,
-  loopSection,
-];
+export const productSections: ProductDocSection[] = [fileSection, relayhistorySection, relayflowsSection];
 
 export function getProductSection(id: string): ProductDocSection | null {
   return productSections.find((section) => section.id === id) ?? null;
@@ -214,7 +203,12 @@ export function getProductSectionForPath(pathname: string): ProductDocSection | 
 }
 
 export function getProductDocSlugs(section: ProductDocSection): string[] {
-  return [...new Set(section.nav.flatMap((group) => group.items.map((item) => item.slug)))];
+  return [
+    ...new Set([
+      ...section.nav.flatMap((group) => group.items.map((item) => item.slug)),
+      ...(section.unlistedSlugs ?? []),
+    ]),
+  ];
 }
 
 export const productBasePath = (section: ProductDocSection): string => `/docs/${section.id}`;
