@@ -23,6 +23,7 @@ export const docsNav: NavGroup[] = [
     items: [
       { title: 'Relay Connect', slug: 'relay-connect' },
       { title: 'Fleet setup', slug: 'fleet-setup' },
+      { title: 'Set up with skills', slug: 'setup-with-skills' },
     ],
   },
   {
