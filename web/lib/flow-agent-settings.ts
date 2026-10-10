@@ -1,8 +1,7 @@
-import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
-import type { WorkflowId, WorkflowStep } from './flow-workflows';
+import { isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
+import type { WorkflowId } from './flow-workflows';
 
-// planner, plan-reviewer and fixer are no longer generated (agentrelay.com#155)
-// but stay valid, so a saved draft that customised them still loads.
+// planner, plan-reviewer and fixer are no longer generated (agentrelay.com#155).
 export const AGENT_ROLES = ['planner', 'plan-reviewer', 'prototype-1', 'prototype-2', 'prototype-3', 'comparator', 'implementer', 'adversary', 'fixer', 'check-discovery', 'check-repair'] as const;
 export type AgentRole = typeof AGENT_ROLES[number];
 export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string };
@@ -22,11 +21,6 @@ export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
   cursor: 'gpt-5.6-sol-high',
   grok: 'grok-4.7',
 };
-
-export function rolesForStep(step: WorkflowStep): AgentRole[] {
-  if (step === '3 implementations') return ['prototype-1', 'prototype-2', 'prototype-3'];
-  return ({ Compare: ['comparator'], Implement: ['implementer'], Build: ['implementer'], Review: ['adversary'], 'Adversarial review': ['adversary'] } as Partial<Record<WorkflowStep, AgentRole[]>>)[step] ?? [];
-}
 
 export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): string {
   if (role.startsWith('prototype-')) return 'Implement independently using the assigned approach. Work only in this worktree. Add and run tests. Commit your implementation and write prototype-notes.md with results and tradeoffs. Do not open a PR.';
@@ -73,17 +67,4 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
 export function resolveGeneratedAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
   const value = resolveAgentSettings(workflow, role, selected, settings);
   return { ...value, model: value.model || DEFAULT_AGENT_MODELS[value.agent] };
-}
-
-export function validFlowAgentSettings(value: unknown): value is FlowAgentSettings {
-  if (value === undefined) return true;
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  return Object.entries(value).every(([key, settings]) => {
-    const [workflow, role, extra] = key.split(':');
-    if (extra || !['traditional', 'prototype', 'simple'].includes(workflow) || !(AGENT_ROLES as readonly string[]).includes(role)) return false;
-    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
-    return Object.entries(settings).every(([field, v]) => field === 'agent' ? typeof v === 'string' && CODING_AGENTS.some(agent => agent.id === v)
-      : field === 'model' ? typeof v === 'string' && v.length <= 120 && !/[\r\n\0]/.test(v)
-      : field === 'prompt' ? typeof v === 'string' && v.trim().length > 0 && v.length <= 6000 : false);
-  });
 }
