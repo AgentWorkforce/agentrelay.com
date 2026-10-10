@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       circle at top left,
@@ -118,7 +118,7 @@
 
 .paletteCard,
 .heroCard {
-  overflow: hidden;
+  overflow: clip;
 }
 
 .paletteTop {
@@ -264,11 +264,23 @@
   box-shadow: 0 2px 12px color-mix(in srgb, var(--btn-bg) 25%, transparent) !important;
 }
 
-.brandCtaPrimary:hover,
 .brandCtaPrimary[data-state='hover'] {
   background: var(--btn-hover) !important;
   box-shadow: 0 2px 12px color-mix(in srgb, var(--btn-bg) 25%, transparent) !important;
   transform: translateY(-1px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brandCtaPrimary:hover {
+    background: var(--btn-hover) !important;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--btn-bg) 25%, transparent) !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .brandCtaPrimary:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .brandCtaPrimary[data-state='active'] {
@@ -283,12 +295,25 @@
   border: 1.5px solid var(--line) !important;
 }
 
-.brandCtaSecondary:hover,
 .brandCtaSecondary[data-state='hover'] {
   border-color: var(--primary) !important;
   color: var(--primary) !important;
   background: color-mix(in srgb, var(--secondary-surface) 82%, var(--primary) 18%) !important;
   transform: translateY(-1px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brandCtaSecondary:hover {
+    border-color: var(--primary) !important;
+    color: var(--primary) !important;
+    background: color-mix(in srgb, var(--secondary-surface) 82%, var(--primary) 18%) !important;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .brandCtaSecondary:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .brandCtaSecondary[data-state='active'] {
@@ -307,11 +332,18 @@
     0 1px 0 rgba(0, 0, 0, 0.14) !important;
 }
 
-:global(html[data-theme='dark']) .brandCtaSecondary:hover,
 :global(html[data-theme='dark']) .brandCtaSecondary[data-state='hover'] {
   background: color-mix(in srgb, var(--surface-strong) 76%, var(--primary) 24%) !important;
   border-color: color-mix(in srgb, var(--primary) 36%, transparent) !important;
   color: #d9efff !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  :global(html[data-theme='dark']) .brandCtaSecondary:hover {
+    background: color-mix(in srgb, var(--surface-strong) 76%, var(--primary) 24%) !important;
+    border-color: color-mix(in srgb, var(--primary) 36%, transparent) !important;
+    color: #d9efff !important;
+  }
 }
 
 :global(html[data-theme='dark']) .brandCtaSecondary[data-state='active'] {
@@ -371,8 +403,10 @@
     box-shadow 0.2s ease;
 }
 
-.searchField:hover {
-  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .searchField:hover {
+    border-color: color-mix(in srgb, var(--primary) 28%, transparent);
+  }
 }
 
 .searchField:focus-within {
@@ -656,8 +690,10 @@
   transition: color 0.2s ease;
 }
 
-.themeLink:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .themeLink:hover {
+    color: var(--primary);
+  }
 }
 
 /* ── Brand kit ── */
@@ -705,7 +741,8 @@
   background-position:
     0 0,
     10px 10px;
-  overflow: hidden;
+  min-height: 0;
+  overflow: clip;
 }
 
 .kitPreviewDark {
@@ -778,10 +815,17 @@
   flex-shrink: 0;
 }
 
-.kitDownloadBtn:hover {
-  border-color: var(--primary);
-  color: var(--primary);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .kitDownloadBtn:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kitDownloadBtn:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .kitDownloadBtn svg {
@@ -797,9 +841,16 @@
   box-shadow: 0 2px 12px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
-.kitDownloadAll:hover {
-  background: var(--btn-hover, var(--primary));
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .kitDownloadAll:hover {
+    background: var(--btn-hover, var(--primary));
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .kitDownloadAll:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .kitDownloadAll svg {
@@ -976,11 +1027,13 @@
   transition: transform 0.15s ease;
 }
 
-.primaryButton:hover,
-.secondaryButton:hover,
-.inverseButton:hover,
-.outlineButton:hover {
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .primaryButton:hover,
+  .secondaryButton:hover,
+  .inverseButton:hover,
+  .outlineButton:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .primaryButton {

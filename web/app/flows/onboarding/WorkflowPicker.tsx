@@ -93,12 +93,10 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
               {selectedWorkflow?.steps.map(step => {
                 const roles = rolesForStep(step);
                 const configs = roles.map(role => resolveGeneratedAgentSettings(selectedWorkflow.id, role, draft.agents, draft.agentSettings));
-                const nodeConfigs = step === '2× adversarial review' ? configs.slice(0, 1) : configs;
-                const agents = nodeConfigs.map(value => value.agent);
+                const agents = configs.map(value => value.agent);
                 const Node = agents.length ? 'button' : 'div';
                 const human = step === 'Human gate';
                 const script = step === 'Run checks' || step === 'Open PR';
-                const review = step === '2× adversarial review';
                 return <li key={step}>
                   <Node className={`${s.processNode} ${human ? s.processGate : ''} ${agents.length ? s.processEditable : ''}`} {...(agents.length ? { type: 'button' as const, 'aria-label': `Edit ${step} agent settings`, onClick: () => { setEditing(roles); onTrack('agent_settings_opened', { role: roles[0] }); } } : {})}>
                     <span className={`${s.processAvatars} ${agents.length > 1 ? s.processAgentCluster : ''}`}>
@@ -107,11 +105,10 @@ export function WorkflowPlan({ draft, onChange, onTrack }: { draft: FactoryDraft
                       {human && <span className={s.processPerson}><UserRound size={21} aria-hidden="true" /></span>}
                     </span>
                     <span className={s.processText}>
-                      <span className={s.processHeading}><strong>{human ? 'Your approval' : review ? 'Adversarial review' : step}</strong><small className={s.processOwner}>{human ? 'You' : script ? 'Script' : step === '3 implementations' ? 'Parallel' : 'Agent'}</small></span>
+                      <span className={s.processHeading}><strong>{human ? 'Your approval' : step}</strong><small className={s.processOwner}>{human ? 'You' : script ? 'Script' : step === '3 implementations' ? 'Parallel' : 'Agent'}</small></span>
                       <span className={s.processDescription}>{WORKFLOW_STEP_DETAILS[step]}</span>
-                      {agents.length > 0 && <small className={s.processModel}><span>{nodeConfigs.length > 1 ? 'Configure 3 agents' : nodeConfigs[0].model}</span><Settings size={12} aria-hidden="true" /></small>}
+                      {agents.length > 0 && <small className={s.processModel}><span>{configs.length > 1 ? 'Configure 3 agents' : configs[0].model}</span><Settings size={12} aria-hidden="true" /></small>}
                     </span>
-                    {review && <span className={s.processRounds}>2 rounds</span>}
                     {human && <LockKeyhole size={15} className={s.processLock} aria-hidden="true" />}
                   </Node>
                 </li>;

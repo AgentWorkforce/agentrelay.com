@@ -3,7 +3,7 @@
   --agent-tools-band-bg:
     radial-gradient(circle at 18% 24%, rgba(116, 184, 226, 0.16), transparent 32%),
     linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
-  min-height: 100vh;
+  min-height: 100svh;
   background: #152e44;
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -27,7 +27,7 @@
 
 .homeMain {
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   background: transparent;
 }
 
@@ -50,7 +50,7 @@
   width: min(100%, 1600px);
   min-height: clamp(560px, 64vw, 860px);
   margin: 0 auto;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .homePosterSvg {
@@ -130,7 +130,6 @@
   font-weight: 560;
   letter-spacing: -0.04em;
   line-height: 1.04;
-  text-wrap: balance;
 }
 
 .homeHeadlineLine {
@@ -160,7 +159,6 @@
   color: rgba(207, 225, 240, 0.78);
   font-size: clamp(1rem, 1.35vw, 1.18rem);
   line-height: 1.68;
-  text-wrap: pretty;
 }
 
 .homeCtas {
@@ -192,7 +190,7 @@
 
 .homeTerminalWindow {
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   min-width: 0;
   height: clamp(390px, 35vw, 540px);
   border: 1px solid rgba(185, 194, 214, 0.2);
@@ -519,7 +517,7 @@
 .homeRelayFeaturePreview .homeRelayMessages {
   gap: 6px;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .homeRelayFeaturePreview .homeRelayMessage {
@@ -568,7 +566,7 @@
   place-items: center;
   width: 34px;
   height: 34px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(143, 202, 247, 0.18);
   border-radius: 999px;
   background: rgba(8, 24, 38, 0.92);
@@ -593,7 +591,7 @@
   gap: 14px;
   width: min(540px, 100%);
   padding: 18px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(143, 202, 247, 0.2);
   border-radius: 18px;
   background:
@@ -1003,7 +1001,6 @@
   color: rgba(239, 247, 255, 0.9);
   font-size: clamp(1rem, 1.55vw, 1.22rem);
   line-height: 1.7;
-  text-wrap: pretty;
 }
 
 .careersEmailButton {
@@ -1043,7 +1040,6 @@
   font-weight: 560;
   letter-spacing: -0.048em;
   line-height: 1;
-  text-wrap: balance;
 }
 
 .homeSectionText {
@@ -1052,7 +1048,6 @@
   color: rgba(195, 212, 228, 0.76);
   font-size: 1.05rem;
   line-height: 1.68;
-  text-wrap: pretty;
 }
 
 .homeCardGrid {
@@ -1406,7 +1401,7 @@
 
 .aboutMain {
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   min-height: calc(100dvh - 80px);
   padding: clamp(30px, 4vw, 62px) 24px 112px;
 }
@@ -1428,7 +1423,7 @@
   position: absolute;
   inset: 0;
   z-index: 0;
-  overflow: hidden;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -1509,7 +1504,6 @@
   font-weight: 620;
   letter-spacing: -0.06em;
   line-height: 0.92;
-  text-wrap: balance;
 }
 
 .aboutNoBreak {
@@ -1522,7 +1516,6 @@
   color: rgba(204, 221, 236, 0.84);
   font-size: clamp(1.05rem, 1.7vw, 1.24rem);
   line-height: 1.6;
-  text-wrap: pretty;
 }
 
 .aboutStory {
@@ -1531,7 +1524,7 @@
   gap: clamp(28px, 6vw, 86px);
   margin-top: -12px;
   padding: clamp(34px, 5vw, 58px);
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(143, 202, 247, 0.14);
   border-radius: 28px;
   background:
@@ -1612,7 +1605,6 @@
   font-weight: 620;
   letter-spacing: -0.036em;
   line-height: 1.02;
-  text-wrap: balance;
 }
 
 .aboutStoryItem p {
@@ -1732,7 +1724,7 @@
   align-items: end;
   margin-top: 16px;
   padding: clamp(32px, 5vw, 58px);
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(143, 202, 247, 0.16);
   border-radius: 28px;
   background:
@@ -1959,7 +1951,7 @@
   position: relative;
   background: var(--agent-tools-band-bg);
   transition: background 0.3s ease;
-  overflow: hidden;
+  overflow: clip;
   margin-top: 0px;
   padding-top: 60px;
 }
@@ -2014,13 +2006,11 @@
 .heroCenterColumn .heroCenterHeadline {
   font-size: clamp(2.6rem, 5.4vw, 4.5rem);
   max-width: 20ch;
-  text-wrap: balance;
 }
 
 .heroCenterColumn .heroCenterSubtitle {
   max-width: 52ch;
   margin: -4px auto 0;
-  text-wrap: pretty;
 }
 
 .heroCenterCtas {
@@ -2171,7 +2161,7 @@
   border-radius: 10px;
   background: rgba(8, 22, 36, 0.9);
   box-shadow: 0 6px 18px rgba(2, 10, 20, 0.28);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroTermSm {
@@ -2242,7 +2232,7 @@
   letter-spacing: 0.01em;
   color: rgba(206, 227, 243, 0.82);
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -2270,7 +2260,7 @@
 }
 
 .heroTermSessionName {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(218, 232, 244, 0.9);
   font-size: 0.62rem;
   font-weight: 650;
@@ -2287,7 +2277,7 @@
 .heroTermRepo {
   grid-column: 1 / -1;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(147, 171, 193, 0.7);
   font-size: 0.57rem;
   text-overflow: ellipsis;
@@ -2312,7 +2302,7 @@
   line-height: 1.35;
   letter-spacing: 0;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroTermLineMarker {
@@ -2325,7 +2315,7 @@
 
 .heroTermLineCopy {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -2485,7 +2475,7 @@
 
 .heroGrokPath {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -2508,12 +2498,12 @@
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.63rem;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroGrokPrompt span:last-child {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -2528,12 +2518,12 @@
   font-size: 0.56rem;
   line-height: 1.25;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroGrokReply {
   margin-top: 2px;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(217, 228, 236, 0.84);
   text-overflow: ellipsis;
 }
@@ -2565,7 +2555,7 @@
 
 .heroGrokResult {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(133, 198, 236, 0.86);
   text-overflow: ellipsis;
 }
@@ -2635,7 +2625,7 @@
   line-height: 1.3;
   text-overflow: ellipsis;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroOpenCodeActivity {
@@ -2649,7 +2639,7 @@
   font-size: 0.56rem;
   line-height: 1.25;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroOpenCodeThought {
@@ -2657,7 +2647,7 @@
 }
 
 .heroOpenCodeResult {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(220, 231, 239, 0.86);
   text-overflow: ellipsis;
 }
@@ -2733,7 +2723,7 @@
 .heroOpenCodeShortcut {
   min-width: 0;
   margin-left: auto;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -2857,7 +2847,7 @@
   position: relative;
   height: 78px;
   flex: none;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroClaudeScrollTrack,
@@ -2936,7 +2926,7 @@
 }
 
 .heroClaudeIdentityTitle {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(222, 230, 246, 0.94);
   font-size: 0.58rem;
   font-weight: 680;
@@ -2953,7 +2943,7 @@
 .heroClaudeModel,
 .heroClaudePath {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(177, 189, 204, 0.76);
   font-size: 0.49rem;
   text-overflow: ellipsis;
@@ -2982,7 +2972,7 @@
   height: 80px;
   flex: none;
   margin-bottom: 3px;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroCodexScrollTrack,
@@ -3048,7 +3038,7 @@
 
 .heroCodexIdentityPath {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(162, 208, 178, 0.86);
   text-overflow: ellipsis;
 }
@@ -3074,12 +3064,12 @@
   font-size: 0.58rem;
   line-height: 1.25;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroCodexPrompt span:last-child {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -3093,12 +3083,12 @@
   font-size: 0.51rem;
   line-height: 1.25;
   white-space: nowrap;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .heroCodexReply span:last-child {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
 }
 
@@ -3119,7 +3109,7 @@
 .heroCodexRunCopy,
 .heroCodexRunResult {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -3173,7 +3163,7 @@
 
 .heroCodexComposerHint {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(155, 177, 197, 0.66);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3199,7 +3189,7 @@
 .heroCodexFooterPath {
   min-width: 0;
   margin-left: auto;
-  overflow: hidden;
+  overflow: clip;
   color: rgba(162, 208, 178, 0.82);
   text-overflow: ellipsis;
 }
@@ -3444,7 +3434,7 @@
 .installCommand code {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
+  overflow: clip;
   color: var(--fg);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.86rem;
@@ -3568,7 +3558,7 @@
   --line: rgba(116, 184, 226, 0.22);
   position: relative;
   z-index: 3;
-  overflow: hidden;
+  overflow: clip;
   padding: 106px 40px 112px;
   background: #08111a;
   border-top: 1px solid rgba(116, 184, 226, 0.08);
@@ -3814,15 +3804,17 @@
   z-index: 4;
 }
 
-.installVisual:hover .installAgentLogo,
-.installAgentLogo:hover {
-  opacity: 1;
-  transform: var(--logo-hover);
-}
+@media (hover: hover) and (pointer: fine) {
+  .installVisual:hover .installAgentLogo,
+  .installAgentLogo:hover {
+    opacity: 1;
+    transform: var(--logo-hover);
+  }
 
-.installVisual:hover .installConnectionLayer {
-  opacity: 1;
-  transform: scale(1);
+  .installVisual:hover .installConnectionLayer {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .installAgentLogoIcon {
@@ -3832,7 +3824,7 @@
   flex-shrink: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .installVisual:hover .installConnectionPulseOne {
     animation: installPulseX 3.1s 0.05s infinite ease-out;
   }
@@ -4119,7 +4111,7 @@
   height: 70px;
   margin: -56px calc(50% - 50vw) -72px;
   isolation: isolate;
-  overflow: hidden;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -4237,7 +4229,8 @@
 .featurePreview {
   position: relative;
   border-radius: 14px;
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
   margin-bottom: 0;
   height: clamp(340px, 36vw, 440px);
   border: 1px solid var(--line);
@@ -4283,7 +4276,7 @@
   height: 70px;
   margin: -104px calc(50% - 50vw) 44px;
   isolation: isolate;
-  overflow: hidden;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -4401,7 +4394,7 @@
 .searchCapabilityPreview .searchPreview {
   align-content: start;
   gap: 0;
-  overflow: hidden;
+  overflow: clip;
   padding: 14px;
   border: 1px solid rgba(156, 207, 255, 0.15);
   border-radius: 14px;
@@ -4456,7 +4449,7 @@
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 10px;
   padding: 14px;
-  overflow: hidden;
+  overflow: clip;
   background:
     radial-gradient(circle at 50% -30%, rgba(73, 157, 214, 0.2), transparent 52%),
     #07111e;
@@ -4485,7 +4478,7 @@
 }
 
 .mountTopbar code {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(241, 245, 249, 0.9);
   font: inherit;
   text-overflow: ellipsis;
@@ -4538,7 +4531,7 @@
 .mountTransport {
   position: relative;
   height: 10px;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .mountTransport::before {
@@ -4578,7 +4571,7 @@
 
 .mountTree {
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
   border-radius: 9px;
 }
 
@@ -4633,7 +4626,7 @@
 }
 
 .mountFile code {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(218, 229, 239, 0.84);
   font: inherit;
   text-overflow: ellipsis;
@@ -4884,10 +4877,26 @@
     transform 0.18s ease;
 }
 
-.actionToolBadge:hover,
 .actionToolBadge:focus-visible {
   color: #ffffff;
-  transform: translateY(-1px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actionToolBadge:hover {
+    color: #ffffff;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .actionToolBadge:focus-visible {
+    transform: translateY(-1px);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .actionToolBadge:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .actionToolBadge:focus-visible {
@@ -4916,10 +4925,15 @@
   line-height: 1.45;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(5px);
   transition:
     opacity 0.16s ease,
     transform 0.16s ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .actionToolTooltip {
+    transform: translateY(5px);
+  }
 }
 
 .actionToolTooltip strong {
@@ -4932,10 +4946,16 @@
   text-transform: uppercase;
 }
 
-.actionToolBadge:hover .actionToolTooltip,
 .actionToolBadge:focus-visible .actionToolTooltip {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .actionToolBadge:hover .actionToolTooltip {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .featureList {
@@ -5014,7 +5034,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
   /* SVG swooping curves as inline background */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 320'%3E%3Cpath d='M-20,80 Q100,20 250,120 T500,90' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'/%3E%3Cpath d='M-20,130 Q120,60 280,160 T520,130' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='1.5'/%3E%3Cpath d='M-20,180 Q80,120 200,200 T480,170' fill='none' stroke='rgba(255,255,255,0.15)' stroke-width='1.5'/%3E%3Cpath d='M-20,240 Q100,180 260,260 T500,230' fill='none' stroke='rgba(255,255,255,0.12)' stroke-width='1'/%3E%3Cpath d='M-20,280 Q140,230 300,290 T520,270' fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='1'/%3E%3C/svg%3E");
   background-size: cover;
@@ -5057,7 +5077,7 @@
   border-radius: 12px 0 12px 0;
   background: color-mix(in srgb, var(--surface) 94%, white 6%);
   box-shadow: -10px 10px 28px color-mix(in srgb, var(--fg) 14%, transparent);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .chatChannelHeader {
@@ -5087,7 +5107,7 @@
 }
 
 .chatChannelHeader strong {
-  overflow: hidden;
+  overflow: clip;
   color: var(--fg);
   font-size: 0.76rem;
   font-weight: 800;
@@ -5330,7 +5350,7 @@
   border-radius: 0 0 12px 0;
   box-shadow: 10px 10px 28px color-mix(in srgb, #020712 42%, transparent);
   transform: none;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .previewDashboard::before {
@@ -5393,7 +5413,7 @@
 }
 
 .searchBar span {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(255, 255, 255, 0.94);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.78rem;
@@ -5432,7 +5452,8 @@
 }
 
 .searchResults strong {
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
   color: #ffffff;
   font-size: 0.76rem;
   line-height: 1.1;
@@ -5441,7 +5462,8 @@
 }
 
 .searchResults span {
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
   color: rgba(240, 246, 252, 0.68);
   font-size: 0.68rem;
   line-height: 1.3;
@@ -5520,7 +5542,7 @@
   justify-self: stretch;
   min-width: 0;
   margin: 22px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(156, 207, 255, 0.16);
   border-radius: 12px;
   background: #07111e;
@@ -5566,7 +5588,8 @@
   margin: 0;
   padding: 18px 16px 20px;
   color: rgba(248, 250, 252, 0.9);
-  overflow: hidden;
+  min-height: 0;
+  overflow: clip;
 }
 
 .editorCode code {
@@ -5645,7 +5668,7 @@
   align-content: end;
   height: 100%;
   gap: 6px;
-  overflow: hidden;
+  overflow: clip;
   padding: 0 18px 14px 42px;
   mask-image: none;
   -webkit-mask-image: none;
@@ -5708,7 +5731,7 @@
 .durableEvent time,
 .durableDelivered strong,
 .durableDelivered time {
-  overflow: hidden;
+  overflow: clip;
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.66rem;
   font-weight: 700;
@@ -5738,7 +5761,7 @@
 }
 
 .durableAgentCard strong {
-  overflow: hidden;
+  overflow: clip;
   color: rgba(245, 248, 255, 0.96);
   font-size: 0.72rem;
   font-weight: 700;
@@ -5852,7 +5875,7 @@
 .workflowTracePreview {
   position: relative;
   height: 100%;
-  overflow: hidden;
+  overflow: clip;
   padding: 12px 18px 12px 44px;
   font-family: var(--font-geist-mono), monospace;
 }
@@ -5883,7 +5906,7 @@
   bottom: 28px;
   left: 27px;
   width: 1px;
-  overflow: hidden;
+  overflow: clip;
   background: rgba(126, 184, 218, 0.16);
 }
 
@@ -5908,7 +5931,7 @@
   align-items: center;
   min-height: 35px;
   padding: 3px 9px;
-  overflow: hidden;
+  overflow: clip;
   border: 1px solid rgba(156, 207, 255, 0.12);
   border-radius: 8px;
   background: rgba(15, 27, 45, 0.7);
@@ -5995,7 +6018,7 @@
 .workflowTraceCopy strong,
 .workflowTraceCopy small {
   display: block;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -6067,7 +6090,7 @@
 }
 
 .deliveryTableHead span {
-  overflow: hidden;
+  overflow: clip;
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6083,7 +6106,7 @@
   flex-direction: column;
   justify-content: flex-end;
   min-height: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .dashRow {
@@ -6130,7 +6153,7 @@
 }
 
 .dashAgentGroup .dashAgent {
-  overflow: hidden;
+  overflow: clip;
   flex: 0 1 auto;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -6141,7 +6164,7 @@
 }
 
 .deliveryStats span {
-  overflow: hidden;
+  overflow: clip;
   color: var(--fg);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.66rem;
@@ -6173,13 +6196,13 @@
   border-radius: 10px;
   background: color-mix(in srgb, var(--surface) 92%, white 8%);
   box-shadow: none;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .realtimeFeed {
   position: relative;
   height: 100%;
-  overflow: hidden;
+  overflow: clip;
   display: grid;
   mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 100%);
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, black 12%, black 100%);
@@ -6237,7 +6260,7 @@
 }
 
 .realtimeEvent code {
-  overflow: hidden;
+  overflow: clip;
   color: var(--fg);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.68rem;
@@ -6247,7 +6270,7 @@
 }
 
 .realtimeEvent span {
-  overflow: hidden;
+  overflow: clip;
   color: var(--fg-muted);
   font-size: 0.68rem;
   text-overflow: ellipsis;
@@ -6479,7 +6502,7 @@
 .byohWrapper {
   background: var(--showcase-bg);
   position: relative;
-  overflow: hidden;
+  overflow: clip;
   transition: background 0.3s ease;
 }
 
@@ -6580,10 +6603,17 @@
   min-width: 100px;
 }
 
-.logoCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .logoCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .logoCard:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .byohLogo {
@@ -6689,12 +6719,19 @@
   backdrop-filter: blur(18px);
 }
 
-:global(html[data-theme='dark']) .logoCard:hover {
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-  box-shadow:
-    0 22px 56px rgba(0, 0, 0, 0.28),
-    0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
-  transform: translateY(-4px);
+@media (hover: hover) and (pointer: fine) {
+  :global(html[data-theme='dark']) .logoCard:hover {
+    border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+    box-shadow:
+      0 22px 56px rgba(0, 0, 0, 0.28),
+      0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :global(html[data-theme='dark']) .logoCard:hover {
+    transform: translateY(-4px);
+  }
 }
 
 :global(html[data-theme='dark']) .byohLogo {
@@ -6767,10 +6804,17 @@
     transform 0.2s;
 }
 
-.deployCard:hover {
-  border-color: var(--card-hover-border);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .deployCard:hover {
+    border-color: var(--card-hover-border);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--primary) 8%, transparent);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .deployCard:hover {
+    transform: translateY(-2px);
+  }
 }
 
 .deployCard:focus-visible {
@@ -6904,9 +6948,14 @@
     max-width: 560px;
   }
 
-  .installAgentLogo,
-  .installAgentLogos:hover .installAgentLogo {
+  .installAgentLogo {
     margin-right: 0;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .installAgentLogos:hover .installAgentLogo {
+      margin-right: 0;
+    }
   }
 
   .installActions {

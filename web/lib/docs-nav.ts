@@ -20,7 +20,10 @@ export const docsNav: NavGroup[] = [
   },
   {
     title: 'Guides',
-    items: [{ title: 'Fleet setup', slug: 'fleet-setup' }],
+    items: [
+      { title: 'Relay Connect', slug: 'relay-connect' },
+      { title: 'Fleet setup', slug: 'fleet-setup' },
+    ],
   },
   {
     title: 'Messaging',

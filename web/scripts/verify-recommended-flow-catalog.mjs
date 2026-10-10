@@ -3,16 +3,15 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { assertRecommendedFlowSourceContract } from './recommended-flow-contract.mjs';
+import { assertRecommendedCatalogEnvelope, assertRecommendedFlowSourceContract } from './recommended-flow-contract.mjs';
 
 const execFileAsync = promisify(execFile);
 const catalogUrl = new URL('../data/recommended-flow-catalog.v1.json', import.meta.url);
 const catalog = JSON.parse(await readFile(catalogUrl, 'utf8'));
 const MAX_SOURCE_BYTES = 1024 * 1024;
+const gardenManifest = JSON.parse(await readFile(new URL('../public/flows/software-garden/manifest.json', import.meta.url), 'utf8'));
 
-if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 4 || !Array.isArray(catalog.flows)) {
-  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 4, with a flows array');
-}
+assertRecommendedCatalogEnvelope(catalog);
 
 for (const flow of catalog.flows) {
   const { source } = flow;
@@ -22,7 +21,8 @@ for (const flow of catalog.flows) {
   }
   if (!/^[0-9a-f]{40}$/.test(source.ref)) throw new Error(`${flow.id}: source.ref must be a full commit SHA`);
   if (!/^[0-9a-f]{64}$/.test(source.sha256)) throw new Error(`${flow.id}: source.sha256 must be lowercase hex`);
-  if (!/^v\d+\.\d+\.\d+$/.test(source.release)) throw new Error(`${flow.id}: source.release must be a version tag`);
+  const generated = source.owner === 'AgentWorkforce' && source.repo === 'agentrelay.com';
+  if (!generated && !/^v\d+\.\d+\.\d+$/.test(source.release)) throw new Error(`${flow.id}: source.release must be a version tag`);
   if (!source.path || source.path.startsWith('/') || source.path.includes('..')) throw new Error(`${flow.id}: invalid source.path`);
 
   const blobUrl = `https://github.com/${source.owner}/${source.repo}/blob/${source.ref}/${source.path}`;
@@ -31,14 +31,27 @@ for (const flow of catalog.flows) {
     throw new Error(`${flow.id}: source URLs do not match owner/repo/ref/path`);
   }
 
-  const tagRef = `refs/tags/${source.release}`;
-  const { stdout } = await execFileAsync('git', [
-    'ls-remote', `https://github.com/${source.owner}/${source.repo}.git`, tagRef, `${tagRef}^{}`,
-  ], { maxBuffer: 1024 * 1024, timeout: 30_000 });
-  const remoteRefs = new Map(stdout.trim().split('\n').filter(Boolean).map(line => line.split(/\s+/, 2).reverse()));
-  const releasedCommit = remoteRefs.get(`${tagRef}^{}`) ?? remoteRefs.get(tagRef);
-  if (releasedCommit !== source.ref) {
-    throw new Error(`${flow.id}: ${source.release} resolves to ${releasedCommit ?? 'nothing'}, not ${source.ref}`);
+  if (generated) {
+    // The generated Software Garden has no release tag. Its release names a
+    // version recorded in this checkout's manifest, whose published file must
+    // hash to the catalog's digest; the raw fetch below then proves the pinned
+    // commit carries those same bytes.
+    const published = gardenManifest.versions.find(entry => `web/public/flows/software-garden/v${entry.version}.flow.ts` === source.path);
+    if (!published || source.release !== `software-garden-v${published.version}` || published.sha256 !== source.sha256) {
+      throw new Error(`${flow.id}: ${source.path} at ${source.release} is not a published Software Garden version with sha256 ${source.sha256}`);
+    }
+    const local = createHash('sha256').update(await readFile(new URL(`../${source.path.slice('web/'.length)}`, import.meta.url))).digest('hex');
+    if (local !== source.sha256) throw new Error(`${flow.id}: local ${source.path} hashes to ${local}, expected ${source.sha256}`);
+  } else {
+    const tagRef = `refs/tags/${source.release}`;
+    const { stdout } = await execFileAsync('git', [
+      'ls-remote', `https://github.com/${source.owner}/${source.repo}.git`, tagRef, `${tagRef}^{}`,
+    ], { maxBuffer: 1024 * 1024, timeout: 30_000 });
+    const remoteRefs = new Map(stdout.trim().split('\n').filter(Boolean).map(line => line.split(/\s+/, 2).reverse()));
+    const releasedCommit = remoteRefs.get(`${tagRef}^{}`) ?? remoteRefs.get(tagRef);
+    if (releasedCommit !== source.ref) {
+      throw new Error(`${flow.id}: ${source.release} resolves to ${releasedCommit ?? 'nothing'}, not ${source.ref}`);
+    }
   }
 
   const response = await fetch(source.rawUrl, { redirect: 'follow', signal: AbortSignal.timeout(30_000) });

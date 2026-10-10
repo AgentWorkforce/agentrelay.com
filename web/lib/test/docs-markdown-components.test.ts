@@ -26,7 +26,18 @@ describe('docs markdown export for MDX components', () => {
     expect(llms).toContain('# Agent Relay');
     expect(llms).toContain('https://agentrelay.com/llms-full.txt');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/quickstart.md');
+    expect(llms).toContain('https://agentrelay.com/docs/markdown/relay-connect.md');
     expect(llms).not.toContain('https://agentrelay.com/docs/7.1.1/introduction');
+  });
+
+  it('exports the Relay Connect public guide', () => {
+    const doc = getDocMarkdown('relay-connect');
+
+    expect(doc).not.toBeNull();
+    expect(doc?.markdown).toContain('npx -y @agent-relay/connect join');
+    expect(doc?.markdown).toContain('## Privacy and safety');
+    expect(doc?.markdown).toContain('`connect_expired`');
+    expect(doc?.markdown).toContain('`connect_full`');
   });
 
   it('serves the singular and plural llms paths as the same content', async () => {

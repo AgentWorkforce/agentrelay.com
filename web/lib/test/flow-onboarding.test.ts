@@ -1,13 +1,22 @@
 import { describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import ts from 'typescript';
-import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_BLOCKED_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
+import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
 import { localInput } from '../flow-local';
-import { FLOW_PUSH_COMMAND } from '../flow-workflows';
+import { FLOW_PUSH_COMMAND, FLOW_REFERENCE_LIMIT } from '../flow-workflows';
 
 // Every push goes through the workflow-file guard (run 065fd98f).
 const PUSH = 'base=abc123; ' + FLOW_PUSH_COMMAND + ' --set-upstream origin HEAD';
-const REVISION_PUSH = 'base=abc123; comment=yes; ' + FLOW_PUSH_COMMAND;
+/**
+ * A check command without what the flow gives it, so it compares as written:
+ * a branch check's ID, total and wait, in that order, or the base check's
+ * limit alone. A branch check missing any of the three no longer matches.
+ */
+const plain = (command: string) => command.replace(/^RELAYFLOW_CHECK_ID=\d+-\d+; RELAYFLOW_CHECK_TIMEOUT=\d+; RELAYFLOW_CHECK_WAIT=\d+; /, '').replace(/^(base=[^;]*; )RELAYFLOW_CHECK_TIMEOUT=\d+; /, '$1');
 
 const matchingIssue = { source: 'github', title: '  Fix   login  ', body: 'Login fails', labels: ['ready', 'bug'], repository: 'acme/app', identifier: '#507', url: 'https://github.com/acme/app/issues/507' };
 
@@ -24,9 +33,9 @@ const withoutComments = (source: string) => source.split('\n').filter(line => !l
  * each run of the repository's checks reports, in order (pass once the list is
  * used up), and `baseline` what the base commit's check reports. Three
  * commands are built as `base=<commit>; ...`, so the mock matches each by the
- * command it ends with.
+ * command it ends with. `validate` answers the metadata validation step.
  */
-async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish', checks: string[] = [], baseline = 'pass', edit = (source: string) => source) {
+async function runFactory(clean: boolean[], _approved = true, issue = matchingIssue, draft = completed, publish = 'publish', checks: string[] = [], baseline = 'pass', edit = (source: string) => source, validate = (_command: string) => 'valid') {
   const calls: string[] = [];
   const errors: string[] = [];
   let finish = '';
@@ -41,12 +50,13 @@ async function runFactory(clean: boolean[], _approved = true, issue = matchingIs
   try {
     await exports.default!({
       agent: async (name: string, options: { cli: string; cwd?: string }) => { calls.push(`${name}:${options.cli}`); if (name.startsWith('prototype-')) { await Promise.resolve(); calls.push('finished:' + name + ':' + options.cwd); } },
-      run: async (command: string) => {
+      run: async (raw: string) => {
+        const command = plain(raw);
         calls.push(command);
         if (command === FLOW_CHECK_RUN_COMMAND) return checks[checkIndex++] ?? 'pass';
         if (command.endsWith(FLOW_BASE_CHECK_COMMAND)) return baseline;
         if (command.endsWith(FLOW_PUBLISH_CHECK_COMMAND)) return publish;
-        if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
+        if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return validate(command);
         if (command === FLOW_REPORT_REVIEW_FINDINGS_COMMAND) return 'relayflow report-review-findings: review.clean absent; remaining findings from review.md:\nOne P2 remains.\n';
         return command.startsWith('test -f') ? (clean[index++] ? 'yes' : 'no') : command.startsWith('mktemp') ? '/tmp/relay-prototypes.test' : command === 'git rev-parse HEAD' ? 'abc123' : '';
       },
@@ -83,7 +93,7 @@ describe('software factory onboarding', () => {
   it('treats failing checks the change itself introduced as the change\'s own failure, not pre-existing', () => {
     for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
       const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
-      expect(source, workflow).toContain('checkPlan === "none"\n      ? "new"');
+      expect(source, workflow).toContain('if (checkPlan === "none") return "new";');
       expect(source, workflow).toContain('(baseline === "pass" || baseline === "new")');
     }
   });
@@ -92,10 +102,10 @@ describe('software factory onboarding', () => {
     for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
       const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
       const implementer = source.indexOf('f.agent("implementer"');
-      const again = source.indexOf('if (checkPlan === "none") await f.run(resolveChecks);');
+      const again = source.indexOf('if (checkPlan === "none" && (await f.run(resolveChecks)).trim() === "default") checkSetup = "default";');
       expect(implementer, workflow).toBeGreaterThan(-1);
       expect(again, workflow).toBeGreaterThan(implementer);
-      expect(source.indexOf('await f.run(runChecks'), workflow).toBeGreaterThan(again);
+      expect(source.indexOf('await spannedCheck(checkLimit)'), workflow).toBeGreaterThan(again);
     }
   });
 
@@ -125,10 +135,8 @@ describe('software factory onboarding', () => {
     expect(primaryAgent(draft)).toBe(agent);
     expect(factorySource(draft)).toContain(`const builder = "${agent}"`);
     const { calls } = await runFactory([true, true], true, matchingIssue, draft);
-    expect(calls).toContain(`planner:${agent}`);
-    expect(calls).toContain(`plan-reviewer:${agent}`);
     expect(calls).toContain(`implementer:${agent}`);
-    expect(calls).toContain(`adversary-2:${agent}`);
+    expect(calls).toContain(`adversary:${agent}`);
     expect(calls.some(call => call.endsWith(':claude'))).toBe(false);
   });
 
@@ -245,6 +253,7 @@ describe('software factory onboarding', () => {
   it('gives Cloud flows a wall-clock budget so unpriced agents are never refused', () => {
     for (const agents of [['claude', 'codex'], ['codex'], ['claude']] as FactoryDraft['agents'][]) {
       const source = factorySource({ ...completed, agents });
+      // An hour under Cloud's 180-minute cap on a hosted run (AgentWorkforce/cloud#4270).
       expect(source).toContain('{ budget: { wallclock: "2h" } }');
       expect(source).not.toMatch(/budget: "\$\d/);
     }
@@ -318,13 +327,14 @@ describe('software factory onboarding', () => {
     expect(tasks[0]).toContain(matchingIssue.body);
   });
 
-  it('revises a failed review, retests, then asks for human approval', async () => {
+  it('revises nothing after a failed review: no fixer, no second check, no second push', async () => {
     const { calls, finish } = await runFactory([false, true]);
-    expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
-    expect(calls).toContain('fixer:claude');
-    expect(calls.filter(call => call === FLOW_CHECK_RUN_COMMAND)).toHaveLength(2);
+    expect(calls.filter(call => call.startsWith('adversary'))).toEqual(['adversary:codex']);
+    expect(calls).not.toContain('fixer:claude');
+    expect(calls.filter(call => call === FLOW_CHECK_RUN_COMMAND)).toHaveLength(1);
+    expect(calls.filter(call => call.includes(FLOW_PUSH_COMMAND))).toEqual([PUSH]);
     expect(calls).not.toContain('human');
-    expect(finish).toBe('needs_human');
+    expect(finish).toBe('step_failed');
   });
 
   it('opens no pull request, and pushes nothing, when the agents made no commits', async () => {
@@ -341,6 +351,25 @@ describe('software factory onboarding', () => {
     expect(finish).toBe('needs_human');
     // The reason reaches the operator, so "nothing was built" is never silent.
     expect(errors.join('\n')).toContain('no commits');
+  });
+
+  it('stops before any push or pull request when the closing reference is too long (agentrelay.com#160)', async () => {
+    // The real validation command decides, as the generated flow calls it.
+    const root = mkdtempSync(path.join(tmpdir(), 'flow-reference-'));
+    try {
+      mkdirSync(path.join(root, '.relayflow'));
+      writeFileSync(path.join(root, '.relayflow/pr-body.md'), 'Fixed it.\n\nFixes #507\n');
+      const real = (command: string) => spawnSync('/bin/sh', ['-c', command], { cwd: root, encoding: 'utf8' }).stdout.trim();
+      const runaway = { ...matchingIssue, identifier: '#' + '1'.repeat(FLOW_REFERENCE_LIMIT), url: '' };
+      const { calls, finish, errors } = await runFactory([true, true], true, runaway, completed, 'publish', [], 'pass', source => source, real);
+      expect(calls.some(call => call.includes(FLOW_PUSH_COMMAND))).toBe(false);
+      expect(calls.some(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND))).toBe(false);
+      expect(finish).toBe('needs_human');
+      expect(errors.join('\n')).toContain('invalid pull-request metadata (reference-too-long)');
+      // The same harness with an ordinary reference publishes.
+      const ordinary = await runFactory([true, true], true, matchingIssue, completed, 'publish', [], 'pass', source => source, real);
+      expect(ordinary.calls).toContain(PUSH);
+    } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   it('pushes the work but opens no pull request when no summary.md was written', async () => {
@@ -370,12 +399,12 @@ describe('software factory onboarding', () => {
     const create = calls.findIndex(call => call.startsWith(FLOW_OPEN_CHANGE_COMMAND));
     expect(push).toBeGreaterThan(calls.indexOf(FLOW_CHECK_RUN_COMMAND));
     expect(create).toBeGreaterThan(push);
-    expect(calls.indexOf('adversary-1:codex')).toBeGreaterThan(create);
+    expect(calls.indexOf('adversary:codex')).toBeGreaterThan(create);
   });
 
   it('marks the pull request and parks, never approves, if all reviews fail', async () => {
     const { calls, finish, errors } = await runFactory([false, false, false]);
-    expect(calls.filter(call => call.startsWith('adversary-'))).toHaveLength(2);
+    expect(calls.filter(call => call.startsWith('adversary'))).toHaveLength(1);
     expect(calls).not.toContain('human');
     // done("step_failed") is the honest reason, and since the 2.0.15 pin the
     // runtime lowers it (AgentWorkforce/flows#436). Before that it did not: a
@@ -384,13 +413,16 @@ describe('software factory onboarding', () => {
     // outcome that tells an operator nothing. The reason is back, and the pull
     // request still carries the findings, which no exit code can.
     expect(finish).toBe('step_failed');
-    expect(calls).toContain(FLOW_REVIEW_BLOCKED_COMMAND);
-    expect(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND)).toBeGreaterThan(calls.lastIndexOf('adversary-2:codex'));
+    // The reviewer finished, so the report does not say it was stopped at its
+    // time limit (agentrelay.com#138).
+    const blocked = 'review_timeout=no; review_limit=20; ' + FLOW_REVIEW_BLOCKED_COMMAND;
+    expect(calls).toContain(blocked);
+    expect(calls.indexOf(blocked)).toBeGreaterThan(calls.lastIndexOf('adversary:codex'));
     // The run outcome says only "its own checks did not pass", so the findings
     // are printed by a step of their own just before done("step_failed"), and
     // repeated in the stop message (AgentWorkforce/flows#542 would carry them
     // on done() itself).
-    expect(calls.indexOf(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)).toBeGreaterThan(calls.indexOf(FLOW_REVIEW_BLOCKED_COMMAND));
+    expect(calls.indexOf(FLOW_REPORT_REVIEW_FINDINGS_COMMAND)).toBeGreaterThan(calls.indexOf(blocked));
     expect(calls.at(-1)).toBe(FLOW_REPORT_REVIEW_FINDINGS_COMMAND);
     expect(errors.join('\n')).toContain('One P2 remains.');
     expect(factorySource(completed)).toContain('AgentWorkforce/flows#542');
@@ -407,7 +439,7 @@ describe('software factory onboarding', () => {
       // The paired negative for the failed-review case above: a clean run parks
       // with the same reason, so the difference has to be visible somewhere. It
       // is — a clean run never marks the pull request as unapproved.
-      expect(calls).not.toContain(FLOW_REVIEW_BLOCKED_COMMAND);
+      expect(calls.some(call => call.endsWith(FLOW_REVIEW_BLOCKED_COMMAND))).toBe(false);
       expect(calls).not.toContain(FLOW_REPORT_REVIEW_FINDINGS_COMMAND);
       expect(calls.some(call => call.includes('pr merge'))).toBe(false);
       expect(factorySource({ ...completed, workflow })).not.toContain('f.human(');
@@ -416,10 +448,10 @@ describe('software factory onboarding', () => {
     }
   });
 
-  it('always runs both reviews after the plan and implementation', async () => {
+  it('runs one review after the implementation, with no separate planning agents (agentrelay.com#155)', async () => {
     const { calls, finish } = await runFactory([true, true]);
-    expect(calls.filter(call => /^(planner|plan-reviewer|implementer|adversary-)/.test(call))).toEqual([
-      'planner:claude', 'plan-reviewer:codex', 'implementer:claude', 'adversary-1:codex', 'adversary-2:codex',
+    expect(calls.filter(call => /^(planner|plan-reviewer|implementer|adversary)/.test(call))).toEqual([
+      'implementer:claude', 'adversary:codex',
     ]);
     expect(calls).not.toContain('fixer:claude');
     expect(finish).toBe('needs_human');
@@ -437,7 +469,9 @@ describe('software factory onboarding', () => {
     const source = factorySource({ ...completed, workflow: 'prototype' });
     expect(source).not.toContain('best-plan.md');
     expect(source).toContain('Read comparison.md and inspect the prototype implementations');
-    expect(calls).toContain('adversary-1:codex');
+    expect(calls).toContain('adversary:codex');
+    // The prototypes' builds are freed once they are compared.
+    expect(calls.findIndex(call => call.startsWith("dirs='/tmp/relay-prototypes.test/1 ") && call.endsWith(FLOW_FREE_DISK_COMMAND))).toBeGreaterThan(calls.indexOf('comparator:codex'));
     expect(calls).not.toContain('human');
     expect(finish).toBe('needs_human');
   });
@@ -462,7 +496,8 @@ describe('software factory onboarding', () => {
       const { calls } = await runFactory([true, true]);
       expect(calls[0]).toContain('# relayflow working files');
       expect(calls.indexOf('check-discovery:claude')).toBeLessThan(calls.indexOf('implementer:claude'));
-      expect(calls.indexOf('check-discovery:claude')).toBeGreaterThan(calls.indexOf('plan-reviewer:codex'));
+      // The first agent: discovery is setup, and comes before any code changes.
+      expect(calls.find(call => /:(claude|codex)$/.test(call))).toBe('check-discovery:claude');
     });
 
     it('uses the author\'s checkCommand instead of discovering one', async () => {
@@ -491,22 +526,24 @@ describe('software factory onboarding', () => {
       // acbe30c1's shape: the first run fails for want of a build step, the
       // repair agent adds it to the check script, and the rerun passes.
       const { calls, finish } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'pass']);
-      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual(['check-repair-1:claude']);
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual(['check-repair:claude']);
       expect(calls.some(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe(false);
       expect(createCall(calls)).not.toContain('--draft');
-      expect(calls).toContain('adversary-1:codex');
+      expect(calls).toContain('adversary:codex');
       expect(finish).toBe('needs_human');
     });
 
     it('opens a draft and keeps reviewing when the base commit fails the same checks', async () => {
       // 139d1a46's shape: the failure is the environment's, not the change's.
       const { calls, finish, errors } = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['fail', 'fail', 'fail'], 'fail');
-      expect(calls.filter(call => call.startsWith('check-repair'))).toHaveLength(2);
+      // Two repair rounds, the second only because the re-check still fails,
+      // then the base commit (agentrelay.com#155).
+      expect(calls.filter(call => call.startsWith('check-repair'))).toEqual(['check-repair:claude', 'check-repair-2:claude']);
       expect(calls.find(call => call.endsWith(FLOW_BASE_CHECK_COMMAND))).toBe('base=abc123; ' + FLOW_BASE_CHECK_COMMAND);
       expect(reportCall(calls)).toMatch(/^check=fail; baseline=fail; /);
       expect(createCall(calls)).toContain('--draft');
       expect(calls).toContain(PUSH);
-      expect(calls).toContain('adversary-2:codex');
+      expect(calls).toContain('adversary:codex');
       expect(finish).toBe('needs_human');
       expect(errors.join('\n')).toContain('not because of this change');
     });
@@ -517,16 +554,16 @@ describe('software factory onboarding', () => {
       expect(createCall(calls)).toContain('--draft');
       // The work is pushed, never thrown away; the reviews are not worth running.
       expect(calls).toContain(PUSH);
-      expect(calls.some(call => call.startsWith('adversary-'))).toBe(false);
+      expect(calls.some(call => call.startsWith('adversary'))).toBe(false);
       expect(finish).toBe('step_failed');
       expect(errors.join('\n')).toContain('breaks checks that pass on the base commit');
     });
 
     it('treats a timeout like a failure and an unrecognised answer as one too', async () => {
       const timedOut = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['timeout', 'pass']);
-      expect(timedOut.calls).toContain('check-repair-1:claude');
+      expect(timedOut.calls).toContain('check-repair:claude');
       const garbled = await runFactory([true, true], true, matchingIssue, completed, 'publish', ['???', 'pass']);
-      expect(garbled.calls).toContain('check-repair-1:claude');
+      expect(garbled.calls).toContain('check-repair:claude');
     });
 
     it('says so, and still opens a ready pull request, when there is nothing to run', async () => {
@@ -537,22 +574,12 @@ describe('software factory onboarding', () => {
       expect(finish).toBe('needs_human');
     });
 
-    it('drops committed working files before deciding what to publish, and before every push', async () => {
+    it('drops committed working files before deciding what to publish, and before the push', async () => {
       const { calls } = await runFactory([false, true]);
       const drops = calls.flatMap((call, index) => call.endsWith(FLOW_DROP_WORKING_FILES_COMMAND) ? [index] : []);
-      expect(drops).toHaveLength(2);
+      expect(drops).toHaveLength(1);
       expect(drops[0]).toBeLessThan(calls.findIndex(call => call.endsWith(FLOW_PUBLISH_CHECK_COMMAND)));
-      expect(drops[1]).toBeLessThan(calls.indexOf(REVISION_PUSH));
-      expect(drops[1]).toBeGreaterThan(calls.indexOf('fixer:claude'));
-    });
-
-    it('pushes a review fix that breaks passing checks, then drafts the pull request and stops', async () => {
-      const { calls, finish } = await runFactory([false, true], true, matchingIssue, completed, 'publish', ['pass', 'fail', 'fail', 'fail']);
-      expect(calls).toContain(REVISION_PUSH);
-      expect(calls.indexOf(FLOW_CHECK_BLOCKED_COMMAND)).toBeGreaterThan(calls.indexOf(REVISION_PUSH));
-      expect(calls.filter(call => call.startsWith('check=')).at(-1)).toMatch(/^check=fail; baseline=revision; /);
-      expect(calls).not.toContain('adversary-2:codex');
-      expect(finish).toBe('step_failed');
+      expect(drops[0]).toBeLessThan(calls.indexOf(PUSH));
     });
   });
 

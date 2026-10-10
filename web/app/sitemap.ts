@@ -3,6 +3,7 @@ import type { MetadataRoute } from 'next';
 import { allAgentSlugs } from '../lib/agents';
 import { getAllPosts } from '../lib/blog';
 import { getAllDocSlugs } from '../lib/docs-nav';
+import { productBasePath, productSections } from '../lib/product-docs-nav';
 import { absoluteUrl } from '../lib/site';
 
 // ISR so OpenNext serves it from the incremental cache on Cloudflare Workers;
@@ -76,16 +77,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
-      url: absoluteUrl('/chief'),
+      url: absoluteUrl('/primitives'),
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
-      url: absoluteUrl('/primitives'),
+      url: absoluteUrl('/directory'),
       lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.9,
+      changeFrequency: 'daily',
+      priority: 0.8,
     },
     {
       url: absoluteUrl('/agents'),
@@ -106,6 +107,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     {
+      url: absoluteUrl('/agents/register'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.8,
+    },
+    {
+      url: absoluteUrl('/agents/register/checklist'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: absoluteUrl('/agents/register/checklist.md'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
       url: absoluteUrl('/brand'),
       lastModified: now,
       changeFrequency: 'monthly',
@@ -124,10 +143,64 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.4,
     },
     {
+      url: absoluteUrl('/support'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
       url: absoluteUrl('/terms'),
       lastModified: now,
       changeFrequency: 'yearly',
       priority: 0.4,
+    },
+    {
+      url: absoluteUrl('/flows'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: absoluteUrl('/reflex'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: absoluteUrl('/process'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: absoluteUrl('/about'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.7,
+    },
+    {
+      url: absoluteUrl('/careers'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: absoluteUrl('/telemetry'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: absoluteUrl('/u/agent-relay'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.7,
+    },
+    {
+      url: absoluteUrl('/brand/deploy-button'),
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
   ];
 
@@ -137,6 +210,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     changeFrequency: 'weekly',
     priority: slug === 'introduction' ? 0.9 : 0.8,
   }));
+
+  // Product docs (Relayfile, Relayhistory, Flows): every page in each section's
+  // sidebar. Unlisted slugs are agent-facing briefs and stay out.
+  const productDocsRoutes: MetadataRoute.Sitemap = productSections.flatMap((section) =>
+    section.nav.flatMap((group) =>
+      group.items.map((item) => ({ url: absoluteUrl(`${productBasePath(section)}/${item.slug}`) }))
+    )
+  );
 
   const agentRoutes: MetadataRoute.Sitemap = allAgentSlugs().map((slug) => ({
     url: absoluteUrl(`/agents/${slug}`),
@@ -156,5 +237,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...blogRoutes];
+  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...productDocsRoutes, ...blogRoutes];
 }

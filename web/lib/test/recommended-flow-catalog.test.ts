@@ -5,17 +5,25 @@ import {
 } from '../recommended-flow-catalog';
 import { GET as getCatalog } from '../../app/api/v1/flows/catalog/route';
 import { GET as getCatalogItem } from '../../app/api/v1/flows/catalog/[flowId]/route';
+import catalogJson from '../../data/recommended-flow-catalog.v1.json';
+
+// The exact Software Garden pin and the catalogVersion it was served at are
+// recorded once, in software-garden-artifact.test.ts (SOURCE_BY_CATALOG_VERSION),
+// so moving the pin to a newly published version does not edit this file.
+const gardenEntry = catalogJson.flows.find(flow => flow.id === 'software-factory')!;
+const gardenVersion = Number(/^software-garden-v([1-9][0-9]*)$/.exec(gardenEntry.source.release)?.[1]);
+const gardenPath = `web/public/flows/software-garden/v${gardenVersion}.flow.ts`;
 
 describe('recommended flow catalog', () => {
   it('publishes Software Garden metadata under its canonical flow id', () => {
     const catalog = getRecommendedFlowCatalog();
     expect(catalog).toMatchObject({
       schemaVersion: 1,
-      catalogVersion: 4,
+      catalogVersion: catalogJson.catalogVersion,
       flows: [{
         id: 'software-factory',
         kind: 'flow',
-        version: 3,
+        version: gardenEntry.version,
         name: 'Software Garden',
         summary: expect.any(String),
         description: expect.any(String),
@@ -64,14 +72,14 @@ describe('recommended flow catalog', () => {
         source: {
           kind: 'github',
           owner: 'AgentWorkforce',
-          repo: 'flows',
-          path: 'examples/software-factory/software-factory.flow.ts',
-          release: 'v2.0.26',
-          ref: '8b33ebab8347514f80d9da5a81206a087f641714',
-          url: 'https://github.com/AgentWorkforce/flows/blob/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts',
-          rawUrl: 'https://raw.githubusercontent.com/AgentWorkforce/flows/8b33ebab8347514f80d9da5a81206a087f641714/examples/software-factory/software-factory.flow.ts',
+          repo: 'agentrelay.com',
+          path: gardenPath,
+          release: `software-garden-v${gardenVersion}`,
+          ref: expect.stringMatching(/^[0-9a-f]{40}$/),
+          url: `https://github.com/AgentWorkforce/agentrelay.com/blob/${gardenEntry.source.ref}/${gardenPath}`,
+          rawUrl: `https://raw.githubusercontent.com/AgentWorkforce/agentrelay.com/${gardenEntry.source.ref}/${gardenPath}`,
           mediaType: 'text/typescript',
-          sha256: '49c993220b9c34fab2d4b0e51911656f62b8b657f534d988691960d45bb9d9b6',
+          sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
         },
       }, {
         id: 'babysitter',
@@ -142,7 +150,7 @@ describe('recommended flow catalog HTTP surface', () => {
     expect(list.headers.get('access-control-allow-origin')).toBe('*');
     await expect(list.json()).resolves.toMatchObject({
       schemaVersion: 1,
-      catalogVersion: 4,
+      catalogVersion: catalogJson.catalogVersion,
       flows: [{ id: 'software-factory' }, {
         id: 'babysitter',
         kind: 'extension',
@@ -158,7 +166,7 @@ describe('recommended flow catalog HTTP surface', () => {
     await expect(detail.json()).resolves.toMatchObject({
       id: 'software-factory',
       name: 'Software Garden',
-      source: { ref: '8b33ebab8347514f80d9da5a81206a087f641714' },
+      source: { ref: gardenEntry.source.ref, sha256: gardenEntry.source.sha256 },
       extensions: [{ id: 'babysitter', activation: { state: 'blocked' } }],
     });
 

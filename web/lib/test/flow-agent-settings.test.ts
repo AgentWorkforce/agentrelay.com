@@ -23,7 +23,8 @@ async function execute(value: FactoryDraft, target: 'cloud' | 'local' = 'cloud')
     // request for work that was never committed.
     run: async (command: string) => {
       if (command.endsWith(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)) return 'valid';
-      if (command === FLOW_CHECK_RUN_COMMAND) return ++checkRuns <= 2 ? 'fail' : 'pass';
+      if (command === 'date +%s') return '0';
+      if (command.endsWith(FLOW_CHECK_RUN_COMMAND)) return ++checkRuns <= 2 ? 'fail' : 'pass';
       if (command.startsWith('base=')) return 'publish';
       if (command.startsWith('mktemp')) return '/tmp/prototypes';
       if (command.includes('review.clean &&')) return ++reviewChecks === 1 ? 'no' : 'yes';
@@ -73,6 +74,17 @@ describe('per-step agent settings', () => {
     expect(resolveGeneratedAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-5', prompt: 'Custom work' });
   });
 
+  it('gives a saved copy of the old traditional implementer default the new one, which plans instead of reading reviewed-plan.md', () => {
+    const old = 'Follow reviewed-plan.md. Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.';
+    const saved = { 'traditional:implementer': { agent: 'codex' as const, model: 'm', prompt: old } };
+    const resolved = resolveAgentSettings('traditional', 'implementer', ['claude', 'codex'], saved);
+    expect(resolved.prompt).not.toContain('reviewed-plan.md');
+    expect(resolved).toMatchObject({ agent: 'codex', model: 'm', prompt: resolveAgentSettings('traditional', 'implementer', ['claude', 'codex']).prompt });
+    // A prompt the person wrote themselves is kept, even if it names the file.
+    const custom = { 'traditional:implementer': { prompt: 'Follow reviewed-plan.md carefully.' } };
+    expect(resolveAgentSettings('traditional', 'implementer', ['claude'], custom).prompt).toBe('Follow reviewed-plan.md carefully.');
+  });
+
   it('does not turn a prompt-only editor change into a model override', () => {
     const current = resolveAgentSettings('simple', 'implementer', ['claude']);
     expect(current.model).toBe('');
@@ -83,7 +95,8 @@ describe('per-step agent settings', () => {
 
   it('pins every Claude step in the simple prebuilt flow to a probeable model', async () => {
     const calls = await execute({ ...draft, agents: ['claude'], workflow: 'simple' });
-    expect(Object.keys(calls)).toEqual(['check-discovery', 'implementer', 'check-repair-1', 'check-repair-2']);
+    // Checks that still fail after the first repair get a second round.
+    expect(Object.keys(calls)).toEqual(['check-discovery', 'implementer', 'check-repair', 'check-repair-2']);
     for (const options of Object.values(calls)) {
       expect(options).toMatchObject({ cli: 'claude', model: 'claude-sonnet-5' });
     }
@@ -112,7 +125,7 @@ describe('per-step agent settings', () => {
         }
       }
     }
-  });
+  }, 20_000); // 60 generated flows, compiled and run; about 2s alone, slower under the full suite's load.
 
   it('keeps Cloud handoff and local-kit source on the same explicit model contract', () => {
     for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
@@ -158,10 +171,10 @@ describe('per-step agent settings', () => {
     expect(calls.implementer).toMatchObject({ cli: 'cursor', model: 'build-model' });
   });
 
-  it('applies the shared reviewer settings to both traditional rounds', async () => {
+  it('applies the reviewer settings to the traditional review', async () => {
     const calls = await execute({ ...draft, workflow: 'traditional', agentSettings: { 'traditional:adversary': { agent: 'grok', model: 'review-model', prompt: 'Check the diff. Write review.clean only if clean.' } } });
-    for (const role of ['adversary-1', 'adversary-2']) expect(calls[role]).toMatchObject({ cli: 'grok', model: 'review-model' });
-    expect(calls.planner.model).toBe('claude-sonnet-5');
+    expect(calls.adversary).toMatchObject({ cli: 'grok', model: 'review-model' });
+    expect(calls.implementer.model).toBe('claude-sonnet-5');
   });
 
   it('persists valid overrides and includes them in both handoff sources', () => {

@@ -1,6 +1,8 @@
 import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
 import type { WorkflowId, WorkflowStep } from './flow-workflows';
 
+// planner, plan-reviewer and fixer are no longer generated (agentrelay.com#155)
+// but stay valid, so a saved draft that customised them still loads.
 export const AGENT_ROLES = ['planner', 'plan-reviewer', 'prototype-1', 'prototype-2', 'prototype-3', 'comparator', 'implementer', 'adversary', 'fixer', 'check-discovery', 'check-repair'] as const;
 export type AgentRole = typeof AGENT_ROLES[number];
 export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string };
@@ -23,8 +25,7 @@ export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
 
 export function rolesForStep(step: WorkflowStep): AgentRole[] {
   if (step === '3 implementations') return ['prototype-1', 'prototype-2', 'prototype-3'];
-  if (step === '2× adversarial review') return ['adversary', 'fixer'];
-  return ({ Plan: ['planner'], 'Review plan': ['plan-reviewer'], Compare: ['comparator'], Implement: ['implementer'], Build: ['implementer'], Review: ['adversary'] } as Partial<Record<WorkflowStep, AgentRole[]>>)[step] ?? [];
+  return ({ Compare: ['comparator'], Implement: ['implementer'], Build: ['implementer'], Review: ['adversary'], 'Adversarial review': ['adversary'] } as Partial<Record<WorkflowStep, AgentRole[]>>)[step] ?? [];
 }
 
 export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): string {
@@ -33,7 +34,7 @@ export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): strin
     case 'planner': return 'Read the repository and write plan.md. Do not implement yet.';
     case 'plan-reviewer': return 'Review plan.md against the ticket and repository. Challenge assumptions, address gaps, and write reviewed-plan.md. Do not implement yet.';
     case 'comparator': return 'Compare the implementations and test results in the provided worktrees. Read their code and prototype-notes.md. Write comparison.md with each prototype path, strengths, weaknesses, and which ideas to combine. Do not modify the prototypes or implement yet.';
-    case 'implementer': return (workflow === 'traditional' ? 'Follow reviewed-plan.md. ' : workflow === 'prototype' ? 'Read comparison.md and inspect the prototype implementations it references. Combine the strongest ideas into the final implementation on the current branch, not in the prototype worktrees. ' : '') + 'Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.';
+    case 'implementer': return (workflow === 'traditional' ? 'Start by reading the ticket and the code it touches, and plan the change before you write it. ' : workflow === 'prototype' ? 'Read comparison.md and inspect the prototype implementations it references. Combine the strongest ideas into the final implementation on the current branch, not in the prototype worktrees. ' : '') + 'Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.';
     case 'adversary': return 'Review the PR diff, tests, and all PR comments. ' + (workflow === 'prototype' ? 'Read comparison.md to check that the final implementation combines the strongest ideas. ' : '') + 'Find bugs and edge cases. Write review.md. Create review.clean only if no issues remain.';
     case 'fixer': return 'Read review.md and gh pr view --comments. Address every issue. Commit fixes without pushing. The workflow runs the checks and pushes the revision.';
     // Setup, not the ticket: the ticket text arrives with every task, so the
@@ -43,6 +44,16 @@ export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): strin
     default: return '';
   }
 }
+
+/**
+ * Defaults an editor may have saved verbatim that no longer fit the workflow:
+ * the traditional implementer followed the plan reviewer's reviewed-plan.md,
+ * which is no longer written (agentrelay.com#155). A saved copy of one
+ * resolves to the current default; a prompt the person wrote is kept.
+ */
+const RETIRED_DEFAULT_PROMPTS: Partial<Record<`${WorkflowId}:${AgentRole}`, readonly string[]>> = {
+  'traditional:implementer': ['Follow reviewed-plan.md. Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.'],
+};
 
 export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
   const available = [...new Set(selected.filter(isCodingAgent))];
@@ -54,7 +65,8 @@ export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, sele
   const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
   const compatible = !saved?.agent || saved.agent === agent;
   const model = compatible ? saved?.model?.trim() || '' : '';
-  return { agent, model, prompt: saved?.prompt ?? defaultAgentPrompt(workflow, role) };
+  const retired = saved?.prompt !== undefined && RETIRED_DEFAULT_PROMPTS[`${workflow}:${role}`]?.includes(saved.prompt);
+  return { agent, model, prompt: saved?.prompt !== undefined && !retired ? saved.prompt : defaultAgentPrompt(workflow, role) };
 }
 
 /** Resolve the explicit pair emitted by a first-party generated flow. */

@@ -225,8 +225,8 @@ export function FactoryBuilder() {
       <div className={s.waveBreak} aria-hidden="true" />
       <div className={s.workspace}>
       {!started ? <section className={s.welcome} aria-labelledby="welcome-title">
-        <h2 id="welcome-title">Start with a software factory.</h2>
-        <p>A software factory is the easiest flow to set up. It’ll take about 5 minutes. Once you get the hang of Flows, you can build another one for other use cases.</p>
+        <h2 id="welcome-title">Start with Software Garden.</h2>
+        <p>Software Garden is the easiest flow to set up. It’ll take about 5 minutes. Once you get the hang of Flows, you can build another one for other use cases.</p>
         <button type="button" className={s.primary} disabled={!hydrated} onClick={showQuestions}>
           {draft.step > 0 ? 'Continue building my flow' : 'Let’s get started'}<ArrowRight size={17} />
         </button>
@@ -281,7 +281,7 @@ export function FactoryBuilder() {
 
           </div> : <div className={s.ready}>
             <h2 tabIndex={-1} ref={questionHeading}>Let’s run your first flow.</h2>
-            <p className={s.runDescription}>Your software factory is built. Choose where to put it to work.</p>
+            <p className={s.runDescription}>Your Software Garden is built. Choose where to put it to work.</p>
             <RunOptions draft={draft} chosen={destination} setDestination={setDestination} onNotice={setNotice} onTrack={track} getJourneyId={getJourneyId} getDistinctId={getDistinctId} markOutcome={markOutcome} />
             <details className={s.flowReview} onToggle={event => track('help_toggled', { section: 'review_flow', open: event.currentTarget.open })}>
               <summary>Review your flow<ChevronDown size={16} /></summary>
