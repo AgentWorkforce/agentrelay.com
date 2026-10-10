@@ -52,7 +52,7 @@
   border-radius: 6px;
   background: #fff;
   border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .mark img {
@@ -72,7 +72,8 @@
 .name {
   font-size: 0.86rem;
   color: var(--fg);
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

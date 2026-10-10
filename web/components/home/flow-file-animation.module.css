@@ -1,4 +1,4 @@
-.editor { min-width: 0; width: 100%; border: 1px solid #29475d; border-radius: 14px; background: #07131e; overflow: hidden; color: #d3e3ef; box-shadow: 0 24px 65px #020a1040; }
+.editor { min-width: 0; width: 100%; border: 1px solid #29475d; border-radius: 14px; background: #07131e; overflow: clip; color: #d3e3ef; box-shadow: 0 24px 65px #020a1040; }
 .header { height: 48px; padding: 0 18px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #243a4c; background: #102130; font: 12px monospace; }
 .header small { margin-left: auto; color: #7995ac; font-size: 10px; }
 .dots { display: flex; gap: 6px; }

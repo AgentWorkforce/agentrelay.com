@@ -3,6 +3,7 @@ import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { flowPreview } from '../flow-preview';
 import { localInput } from '../flow-local';
+import { WORKFLOWS } from '../flow-workflows';
 import { ISSUE_SOURCES, issueSourceCode, repositoryHost, validSourcePreferences } from '../flow-sources';
 
 /**
@@ -72,6 +73,19 @@ describe('GitLab ticket source', () => {
     // Cloud's flow-handoff reads sourceSettings.gitlab.project from them.
     const source = factorySource(gitlab);
     expect(source).toContain('relayflow-open-change');
+  });
+
+  it('drafts and comments on the merge request through relayflow-change, with gh only as the local fallback', () => {
+    // cloud#4164: a bare `gh pr ready --undo` / `gh pr comment` does nothing on
+    // GitLab, so a merge request with broken checks looked ready to merge.
+    for (const { id } of WORKFLOWS) {
+      const source = factorySource({ ...gitlab, workflow: id });
+      expect(source, id).toContain('relayflow-change comment --body-file');
+      if (id !== 'simple') expect(source, id).toContain('relayflow-change draft');
+      const bare = source.match(/gh pr (ready|comment)/g) ?? [];
+      const fallback = source.match(/else gh pr (ready|comment)/g) ?? [];
+      expect(bare.length, id).toBe(fallback.length);
+    }
     expect(gitlab.sourceSettings.gitlab?.project).toMatch(/^[^/\s]+(\/[^/\s]+)+$/);
   });
 });

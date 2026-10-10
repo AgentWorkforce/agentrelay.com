@@ -3,11 +3,18 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import ts from 'typescript';
+import { micromark } from 'micromark';
+import { gfm, gfmHtml } from 'micromark-extension-gfm';
 import {
   FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_REPORT_COMMAND, FLOW_CHECK_RESOLVE_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_CHECK_SCRIPT,
   FLOW_DROP_WORKING_FILES_COMMAND, FLOW_EXCLUDE_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_REVIEW_FINDINGS_LIMIT,
-  FLOW_VALIDATE_CHANGE_METADATA_COMMAND,
+  FLOW_VALIDATE_CHANGE_METADATA_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_TIME_STOP_COMMAND, FLOW_PUSH_COMMAND, FLOW_DRAFT_CHANGE_COMMAND,
+  flowCommentChangeCommand, FLOW_BODY_LIMIT, FLOW_WITHHELD_NOTICE_RESERVE, FLOW_REFERENCE_LIMIT,
+  WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
+import { factorySource, type FactoryDraft } from '../flow-onboarding';
+import { RELAYFLOWS_VERSION } from '../flow-local';
 
 /**
  * Every generated check step runs under `sh`, and its exit code is the only
@@ -151,7 +158,7 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
     // Only the tools the command needs, plus perl: no timeout, no gtimeout.
     const bin = fixture({});
     const root0 = () => fixture({});
-    for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl']) {
+    for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv']) {
       const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
       if (found) symlinkSync(found, path.join(bin, tool));
     }
@@ -194,6 +201,210 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
     const { code, token } = runChecksIn(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 5\n' }), { RELAYFLOW_CHECK_TIMEOUT: '1' });
     expect(code).toBe(0);
     expect(token).toBe('timeout');
+  });
+
+  describe('across several leases (flows#626)', () => {
+    /** Calls the command as the flow does, one bounded wait after another, until it stops saying `running`. */
+    function spanned(root: string, id: string, total: number, wait = 1) {
+      const tokens: string[] = [];
+      const started = Date.now();
+      let result = { code: 0 as number | null, token: 'running', stdout: '', stderr: '' };
+      while (result.token === 'running' && Date.now() - started < 60_000) {
+        const call = Date.now();
+        result = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: id, RELAYFLOW_CHECK_TIMEOUT: String(total), RELAYFLOW_CHECK_WAIT: String(wait) });
+        // Each call returns within its wait (with a second of polling, and the
+        // 5s grace before SIGKILL when it stops a check), never holding the
+        // lease for the whole check.
+        expect(Date.now() - call).toBeLessThan((wait + 8) * 1000);
+        expect(result.code).toBe(0);
+        tokens.push(result.token);
+      }
+      return { tokens, last: result, exit: read(root, '.relayflow/check.log.exit').trim(), elapsed: Number(read(root, '.relayflow/check.log.elapsed').trim()), limit: Number(read(root, '.relayflow/check.log.limit').trim()), log: read(root, '.relayflow/check.log') };
+    }
+
+    /** Whether `pid` (a process, or with a minus a group) is gone, allowing a moment for the kernel to reap it. */
+    function gone(pid: number) {
+      const until = Date.now() + 3000;
+      for (;;) {
+        try { process.kill(pid, 0); } catch { return true; }
+        if (Date.now() > until) return false;
+        spawnSync('/bin/sleep', ['0.1']);
+      }
+    }
+
+    it('finishes a check longer than one wait across calls, and honours its exit status', () => {
+      const passing = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'echo building\nsleep 3\necho suite-ran\n' }), 'a-1', 60);
+      expect(passing.tokens.length).toBeGreaterThan(1);
+      expect(passing.tokens.slice(0, -1).every(token => token === 'running')).toBe(true);
+      expect(passing.tokens.at(-1)).toBe('pass');
+      expect(passing.exit).toBe('0');
+      expect(passing.log).toContain('suite-ran');
+
+      const failing = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 3\necho broke\nexit 3\n' }), 'a-1', 60);
+      expect(failing.tokens.length).toBeGreaterThan(1);
+      expect(failing.tokens.at(-1)).toBe('fail');
+      expect(failing.exit).toBe('3');
+      expect(failing.last.stderr).toContain('exit 3');
+      expect(failing.last.stderr).toContain('broke');
+    }, 30_000);
+
+    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v timeout || command -v gtimeout || command -v perl']).status !== 0)('reports a check that runs past its total as a timeout, not a failure', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      const stopped = spanned(root, 'b-1', 2);
+      expect(stopped.tokens.at(-1)).toBe('timeout');
+      expect(stopped.exit).toBe('124');
+      expect(stopped.limit).toBe(2);
+      expect(stopped.elapsed).toBeGreaterThanOrEqual(2);
+      expect(stopped.elapsed).toBeLessThan(10);
+    }, 30_000);
+
+    it('stops the check\'s whole process group at its total, with SIGKILL after a grace when SIGTERM is ignored', () => {
+      // The suite starts a child of its own and ignores SIGTERM: only a
+      // group-wide SIGKILL stops it all.
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: "trap '' TERM\nsleep 60 &\necho $! > .relayflow/child.pid\nwhile :; do sleep 1; done\n" });
+      const stopped = spanned(root, 'd-1', 2);
+      expect(stopped.tokens.at(-1)).toBe('timeout');
+      expect(stopped.log).toContain('stopped the checks after');
+      const group = Number(read(root, '.relayflow/check.log.group').trim());
+      const child = Number(read(root, '.relayflow/child.pid').trim());
+      expect(group).toBeGreaterThan(0);
+      expect(child).toBeGreaterThan(0);
+      expect(gone(group)).toBe(true);
+      expect(gone(child)).toBe(true);
+      expect(gone(-group)).toBe(true);
+    }, 30_000);
+
+    it('reports a suite\'s own exit 124 as a failure, not as the flow\'s timeout', () => {
+      // A CI-shaped check.sh can run `timeout 60 some-test` itself.
+      const own = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 2\nexit 124\n' }), 'f-1', 60);
+      expect(own.tokens.at(-1)).toBe('fail');
+      expect(own.exit).toBe('124');
+    }, 30_000);
+
+    it('tells a resumed waiter that a check stopped for time timed out', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      expect(spanned(root, 'g-1', 2).tokens.at(-1)).toBe('timeout');
+      // The same ID again, as a resumed run asks: still a timeout, not a fail.
+      const again = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'g-1', RELAYFLOW_CHECK_TIMEOUT: '2', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(again.token).toBe('timeout');
+    }, 30_000);
+
+    it('stops a check an earlier attempt left running before it starts a new one', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo $$ >> .relayflow/suites\nsleep 60\n' });
+      // The first attempt starts and is abandoned while its check runs.
+      expect(sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'h-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' }).token).toBe('running');
+      const first = Number(read(root, '.relayflow/check.log.group').trim());
+      expect(gone(-first)).toBe(false);
+      const next = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'h-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(next.token).toBe('running');
+      expect(next.stderr).toContain('stopped a check an earlier attempt left running');
+      expect(gone(-first)).toBe(true);
+      // Where there is no ps to identify it, a live group with no status is
+      // stopped anyway rather than left writing the same files.
+      const noPs = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'setsid', 'perl']);
+      const other = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 60\n' });
+      expect(sh(FLOW_CHECK_RUN_COMMAND, other, { PATH: noPs, RELAYFLOW_CHECK_ID: 'j-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' }).token).toBe('running');
+      const left = Number(read(other, '.relayflow/check.log.group').trim());
+      const after = sh(FLOW_CHECK_RUN_COMMAND, other, { PATH: noPs, RELAYFLOW_CHECK_ID: 'j-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(after.stderr).toContain('no ps here to identify it');
+      expect(gone(-left)).toBe(true);
+      try { process.kill(-Number(read(other, '.relayflow/check.log.group').trim()), 'SIGKILL'); } catch { /* already gone */ }
+      // Clean up the second check.
+      const second = Number(read(root, '.relayflow/check.log.group').trim());
+      try { process.kill(-second, 'SIGKILL'); } catch { /* already gone */ }
+    }, 30_000);
+
+    /** A PATH with only `tools` on it, so a missing one is genuinely missing. */
+    function onlyTools(tools: string[]) {
+      const bin = fixture({});
+      for (const tool of tools) {
+        const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
+        if (found) symlinkSync(found, path.join(bin, tool));
+      }
+      return bin;
+    }
+
+    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v perl']).status !== 0)('puts the check in a group of its own where there is no setsid, as on macOS', () => {
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv', 'ps', 'grep']);
+      expect(sh('command -v setsid || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 60 &\necho $! > .relayflow/child.pid\nwait\n' });
+      let result = { token: 'running', code: 0 as number | null, stdout: '', stderr: '' };
+      for (let i = 0; i < 20 && result.token === 'running'; i++) {
+        result = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_ID: 'e-1', RELAYFLOW_CHECK_TIMEOUT: '2', RELAYFLOW_CHECK_WAIT: '1' });
+      }
+      expect(result.token).toBe('timeout');
+      const group = Number(read(root, '.relayflow/check.log.group').trim());
+      // Its own group: not this test's, and gone with everything in it.
+      expect(group).not.toBe(process.pid);
+      expect(gone(-group)).toBe(true);
+      expect(gone(Number(read(root, '.relayflow/child.pid').trim()))).toBe(true);
+    }, 30_000);
+
+    it('runs the check in the step itself where nothing can put it in a group of its own', () => {
+      // Without setsid and perl nothing could stop a detached check's
+      // descendants, so it is never detached: it runs here, within the wait,
+      // where the limiter stops it. macOS has no timeout or gtimeout, and perl
+      // is excluded here on purpose, so the fixture brings its own limiter:
+      // without one the command refuses to run the checks at all (below), and
+      // the timeout case would never exercise the timeout path.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv']);
+      writeFileSync(path.join(bin, 'timeout'), '#!/bin/sh\nsecs=$1; shift\n"$@" & c=$!\n( sleep "$secs"; kill -TERM "$c" 2>/dev/null ) & w=$!\nwait "$c"; status=$?\nkill -TERM "$w" 2>/dev/null\nif [ "$status" -ge 128 ]; then exit 124; fi\nexit "$status"\n', { mode: 0o755 });
+      expect(sh('command -v setsid || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      expect(sh('command -v timeout', fixture({}), { PATH: bin }).stdout.trim()).toBe(path.join(bin, 'timeout'));
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran\n' });
+      const passing = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '5' });
+      expect(passing.token).toBe('pass');
+      expect(passing.stderr).toContain('neither setsid nor perl');
+      // Nothing was detached, so there is no group to wait on, and the step
+      // cannot hold its lease longer than the wait it was given.
+      expect(read(root, '.relayflow/check.log.group')).toBe('');
+      expect(read(root, '.relayflow/check.log')).toContain('suite-ran');
+      // The wait, not the total, is what bounds this step: a 30s suite with a
+      // 60s total and a 2s wait is stopped at 2s and reported as a timeout.
+      const slow = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      const started = Date.now();
+      const timedOut = sh(FLOW_CHECK_RUN_COMMAND, slow, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' });
+      expect(timedOut.token).toBe('timeout');
+      expect(Date.now() - started).toBeLessThan(20_000);
+      // The limit it was held to, and reports, is the wait, not the total.
+      expect(read(slow, '.relayflow/check.log.limit').trim()).toBe('2');
+    }, 30_000);
+
+    it('refuses to start the checks where nothing can stop them at a time limit', () => {
+      // No timeout, no gtimeout, no perl: a suite started here could not be
+      // stopped, would hold the step's lease until the runner killed it, and
+      // the run would end with no verdict. Cloud's image always has coreutils
+      // `timeout`, so only a local run can reach this.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'setsid']);
+      expect(sh('command -v timeout || command -v gtimeout || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran > ran.txt\nsleep 30\n' });
+      // Both paths refuse: a branch check waited on across leases, and the
+      // single-call check the base-commit comparison uses.
+      const cases: Record<string, string>[] = [{ RELAYFLOW_CHECK_ID: 'k-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' }, { RELAYFLOW_CHECK_TIMEOUT: '60' }];
+      for (const env of cases) {
+        const started = Date.now();
+        const result = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, ...env });
+        // Bounded, explicit, and exit 0 like every other verdict.
+        expect(result).toMatchObject({ code: 0, token: 'unrunnable' });
+        expect(Date.now() - started).toBeLessThan(10_000);
+        expect(result.stderr).toContain('no timeout, gtimeout or perl');
+        expect(result.stderr).toContain('Install coreutils (timeout) or perl');
+        expect(read(root, '.relayflow/check.log')).toContain('they were not run');
+        // The suite never started, so nothing was detached and nothing ran.
+        expect(read(root, 'ran.txt')).toBe('');
+        expect(read(root, '.relayflow/check.log.group')).toBe('');
+      }
+    }, 30_000);
+
+    it('waits for the check an ID already started instead of starting another, so a resumed run picks it up', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo started >> .relayflow/starts\nsleep 3\n' });
+      const first = spanned(root, 'c-1', 60);
+      expect(first.tokens.at(-1)).toBe('pass');
+      expect(read(root, '.relayflow/starts').trim().split('\n')).toHaveLength(1);
+      // A new ID is a new check: the re-check after a repair.
+      spanned(root, 'c-2', 60);
+      expect(read(root, '.relayflow/starts').trim().split('\n')).toHaveLength(2);
+    }, 30_000);
   });
 
   it('runs the resolved default end to end, and still fails a failing suite', () => {
@@ -525,11 +736,66 @@ describe('FLOW_BASE_CHECK_COMMAND', () => {
     expect(git(root, 'worktree', 'list').trim().split('\n')).toHaveLength(1);
   });
 
+  it('reuses the branch build in a throwaway worktree instead of building a second copy (agentrelay.com#155)', () => {
+    // A Rust build is several GB; a second one for the base commit filled the
+    // 10 GB sandbox. The worktree gets the branch's cache-tagged build
+    // directory, and removing the worktree leaves that directory in place.
+    const { root, ids } = history([{ '.gitignore': 'target/\n', state: 'good' }, { state: 'bad' }]);
+    mkdirSync(path.join(root, '.relayflow'), { recursive: true });
+    mkdirSync(path.join(root, 'target/debug'), { recursive: true });
+    writeFileSync(path.join(root, 'target/CACHEDIR.TAG'), 'Signature: 8a477f597d28d172789f06886806bc55\n');
+    writeFileSync(path.join(root, 'target/debug/built'), 'artifact\n');
+    writeFileSync(path.join(root, FLOW_CHECK_SCRIPT), 'if [ -f target/debug/built ]; then echo "build reused"; else echo "built from scratch"; fi\ngrep -q good state\n');
+    writeFileSync(path.join(root, 'state'), 'bad but edited\n');
+    expect(sh(`base=${ids[0]}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'pass' });
+    expect(read(root, '.relayflow/base-check.log')).toContain('build reused');
+    expect(read(root, 'target/debug/built')).toBe('artifact\n');
+    expect(git(root, 'worktree', 'list').trim().split('\n')).toHaveLength(1);
+  });
+
   it('says unknown, with exit 0, when the base commit cannot be checked out', () => {
     const { root } = compare('good', 'bad');
     for (const base of ['', 'deadbeef'.repeat(5)]) {
       expect(sh(`base=${base}; ${FLOW_BASE_CHECK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'unknown' });
     }
+  });
+});
+
+describe('FLOW_FREE_DISK_COMMAND (agentrelay.com#155)', () => {
+  const TAG = 'Signature: 8a477f597d28d172789f06886806bc55\n';
+  /** A repository with an ignored, cache-tagged build directory and a tracked directory that carries a tag too. */
+  function built() {
+    const { root } = history([{ '.gitignore': 'target/\n', 'vendor/CACHEDIR.TAG': TAG, 'vendor/lib.rs': 'tracked\n' }]);
+    mkdirSync(path.join(root, 'crates/core/target/debug'), { recursive: true });
+    writeFileSync(path.join(root, 'crates/core/target/CACHEDIR.TAG'), TAG);
+    writeFileSync(path.join(root, 'crates/core/target/debug/big'), 'build\n');
+    return root;
+  }
+
+  it('removes the builds of trees the run is done with, and only ignored ones', () => {
+    const spent = built();
+    const root = built();
+    const result = sh(`dirs=${spent}; ${FLOW_FREE_DISK_COMMAND}`, root);
+    expect(result).toMatchObject({ code: 0, token: 'done' });
+    expect(existsSync(path.join(spent, 'crates/core/target'))).toBe(false);
+    // Tracked content is never touched, even with a cache tag.
+    expect(read(spent, 'vendor/lib.rs')).toBe('tracked\n');
+    // The branch's own build is what the next check reuses: kept while there is room.
+    expect(read(root, 'crates/core/target/debug/big')).toBe('build\n');
+  });
+
+  it('removes the branch build too when the disk is nearly full, rather than fail the next check', () => {
+    const root = built();
+    const result = sh(FLOW_FREE_DISK_COMMAND, root, { RELAYFLOW_MIN_FREE_MB: String(1024 * 1024 * 1024) });
+    expect(result).toMatchObject({ code: 0, token: 'done' });
+    expect(existsSync(path.join(root, 'crates/core/target'))).toBe(false);
+    expect(read(root, 'vendor/lib.rs')).toBe('tracked\n');
+    expect(result.stderr).toContain('low on disk');
+  });
+
+  it('exits 0 with its token outside a repository and with nothing to free', () => {
+    const root = fixture({ 'README.md': 'x\n' });
+    expect(sh(`dirs=${path.join(root, 'missing')}; ${FLOW_FREE_DISK_COMMAND}`, root)).toMatchObject({ code: 0, token: 'done' });
   });
 });
 
@@ -634,11 +900,79 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     expect(regression.body).not.toContain('FAIL src/other.test.ts');
 
     expect(report('timeout', 'unknown').body).toContain('could not be checked for comparison');
-    expect(report('fail', 'revision').report).toContain('latest revision breaks checks that passed before it');
     const introduced = report('fail', 'new');
     expect(introduced.body).toContain('The checks this change adds fail');
     expect(introduced.body).not.toContain('FAIL src/other.test.ts');
     expect(report('fail', 'fail', { '.relayflow/repair-notes.md': 'cargo is not installed.\n' }).body).toContain('cargo is not installed.');
+  });
+
+  it('says when the checks, or the base commit, were skipped for time (agentrelay.com#155)', () => {
+    const skipped = report('skipped', '');
+    expect(skipped.code).toBe(0);
+    expect(skipped.body).toContain('ran out of time before it could run');
+    expect(skipped.body).toContain('npm test');
+    expect(skipped.body).not.toContain('FAIL src/login.test.ts');
+    const unchecked = report('fail', 'skipped');
+    expect(unchecked.body).toContain('base not checked');
+    expect(unchecked.body).toContain('FAIL src/login.test.ts');
+    expect(unchecked.body).not.toContain('FAIL src/other.test.ts');
+    expect(unchecked.body).not.toContain('could not be checked for comparison');
+  });
+
+  it('tells a failed check, a timed-out check and checks that never ran apart', () => {
+    // A failure: its exit status, and the end of its output.
+    const failed = report('fail', 'skipped', { '.relayflow/check.log.exit': '3\n', '.relayflow/check.log.elapsed': '200\n', '.relayflow/check.log.limit': '1800\n' });
+    expect(failed.body).toContain('**The checks failed** (exit 3). The end of their output is below.');
+    expect(failed.body).toContain('FAIL src/login.test.ts');
+    expect(failed.body).not.toContain('timed out');
+    // A timeout (flows#626): how long it ran against its budget, and what to
+    // do about it. Never "The checks failed".
+    const timedOut = report('timeout', 'skipped', { '.relayflow/check.log.exit': '124\n', '.relayflow/check.log.elapsed': '1803\n', '.relayflow/check.log.limit': '1800\n' });
+    expect(timedOut.body).toContain('**The checks timed out**: they ran for 30m03s of their 30m00s budget and were stopped before they finished, so this is a time limit, not a test failure.');
+    expect(timedOut.body).toContain('Run them locally (`sh .relayflow/check.sh`)');
+    expect(timedOut.body).toContain('raise the check budget (`checkTotal` in the flow)');
+    expect(timedOut.body).toContain('FAIL src/login.test.ts');
+    expect(timedOut.body).not.toContain('The checks failed');
+    expect(timedOut.body).toContain('base not checked');
+    // Without the timings it still says timeout, not failure.
+    const bare = report('timeout', 'unknown');
+    expect(bare.body).toContain('**The checks timed out**: they were stopped at their time budget');
+    expect(bare.body).not.toContain('The checks failed');
+    // Not run: the flow ran out of time before the checks (relaycast-cloud#216).
+    const notRun = report('skipped', '');
+    expect(notRun.body).toContain("ran out of time before it could run this repository's checks");
+    expect(notRun.body).not.toContain('timed out');
+    expect(notRun.body).not.toContain('The checks failed');
+  });
+
+  it('keeps the base commit\'s output when its verdict is unknown, such as a base check that ran out of time', () => {
+    const unknown = report('fail', 'unknown');
+    expect(unknown.body).toContain('could not be checked for comparison');
+    expect(unknown.body).toContain('FAIL src/other.test.ts');
+    // No base run, no log: nothing is shown.
+    expect(report('fail', 'unknown', { '.relayflow/base-check.log': '' }).body).not.toContain('Output on the base commit');
+  });
+
+  it('says when the implementer was stopped at its time limit', () => {
+    const root = fixture({ 'summary.md': 'Fixed it.\n' });
+    expect(sh(`check=pass; baseline=; implementer_timeout=yes; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
+    expect(read(root, '.relayflow/pr-body.md')).toContain('implementer was stopped at its time limit');
+    expect(sh(`check=pass; baseline=; implementer_timeout=no; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
+    expect(read(root, '.relayflow/pr-body.md')).not.toContain('implementer was stopped');
+  });
+
+  it('says the checks could not be run, not that they failed, when nothing could bound them', () => {
+    const { body, code } = report('unrunnable', '', { '.relayflow/check.log': 'relayflow: this machine has no timeout, gtimeout or perl, so there is no way to stop the checks at a time limit and they were not run.\n' });
+    expect(code).toBe(0);
+    expect(body).toContain("**Relayflow could not run this repository's checks**");
+    expect(body).toContain('no `timeout`, `gtimeout` or `perl`');
+    expect(body).toContain('This is not a test failure');
+    expect(body).toContain('Install coreutils');
+    expect(body).not.toContain('The checks failed');
+    expect(body).not.toContain('timed out');
+    // What ran is still shown; there is no suite output to show.
+    expect(body).toContain('npm test');
+    expect(body).not.toContain('Output on this branch');
   });
 
   it('says plainly when nothing could be checked', () => {
@@ -687,6 +1021,70 @@ describe('FLOW_OPEN_CHANGE_COMMAND', () => {
   });
 });
 
+describe('change request follow-ups (draft and comment)', () => {
+  /** A bin dir whose fakes append `name|arg|arg|` per call to calls.txt (argument boundaries kept) and exit with `code`. */
+  function fakes(names: string[], code = 0) {
+    const root = fixture({ '.relayflow/check-report.md': 'report\n', 'review.md': '## Findings\n' });
+    const bin = path.join(root, 'bin');
+    mkdirSync(bin);
+    for (const name of names) {
+      writeFileSync(path.join(bin, name), `#!/bin/sh\n{ printf '%s|' "${name}" "$@"; echo; } >> "${root}/calls.txt"\nexit ${code}\n`, { mode: 0o755 });
+    }
+    return { root, env: { PATH: `${bin}:/usr/bin:/bin` } };
+  }
+  const followUps = [
+    ['FLOW_TIME_STOP_COMMAND', FLOW_TIME_STOP_COMMAND, '.relayflow/time-stop.md'],
+    ['FLOW_REVIEW_BLOCKED_COMMAND', FLOW_REVIEW_BLOCKED_COMMAND, 'review-blocked.md'],
+  ] as const;
+
+  it.each(followUps)('%s drafts and comments through the hosted helper when Cloud put it on PATH', (_name, command, file) => {
+    const { root, env } = fakes(['relayflow-change', 'gh']);
+    const result = sh(command, root, env);
+    expect(result.code).toBe(0);
+    expect(read(root, 'calls.txt').trim().split('\n')).toEqual([
+      'relayflow-change|draft|',
+      `relayflow-change|comment|--body-file|${file}|`,
+    ]);
+    expect(result.stdout).toContain('converted the pull request to a draft.');
+  });
+
+  it.each(followUps)('%s falls back to gh for a local run, with the same arguments as before', (_name, command, file) => {
+    const { root, env } = fakes(['gh']);
+    expect(sh(command, root, env).code).toBe(0);
+    expect(read(root, 'calls.txt').trim().split('\n')).toEqual([
+      'gh|pr|ready|--undo|',
+      `gh|pr|comment|--body-file|${file}|`,
+    ]);
+  });
+
+  it.each(followUps)('%s still exits 0 when the helper cannot draft or comment', (_name, command) => {
+    const { root, env } = fakes(['relayflow-change'], 1);
+    const result = sh(command, root, env);
+    expect(result.code).toBe(0);
+    expect(result.stderr).toContain('could not convert the pull request to a draft');
+    expect(result.stderr).toContain('could not comment on the pull request');
+  });
+
+  it('comments a quoted file path through the helper or gh, keeping the exit status', () => {
+    const helper = fakes(['relayflow-change', 'gh'], 4);
+    expect(sh(`section='withheld changes.md'; ${flowCommentChangeCommand('"$section"')}`, helper.root, helper.env).code).toBe(4);
+    expect(read(helper.root, 'calls.txt').trim()).toBe('relayflow-change|comment|--body-file|withheld changes.md|');
+    const local = fakes(['gh']);
+    expect(sh(`section=withheld.md; ${flowCommentChangeCommand('"$section"')}`, local.root, local.env).code).toBe(0);
+    expect(read(local.root, 'calls.txt').trim()).toBe('gh|pr|comment|--body-file|withheld.md|');
+    expect(FLOW_DRAFT_CHANGE_COMMAND).toContain('relayflow-change draft');
+  });
+
+  it('never calls gh pr ready or gh pr comment except as the local fallback', () => {
+    for (const command of [FLOW_TIME_STOP_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_PUSH_COMMAND]) {
+      const bare = command.match(/gh pr (ready|comment)/g) ?? [];
+      const fallback = command.match(/else gh pr (ready|comment)/g) ?? [];
+      expect(bare.length).toBe(fallback.length);
+    }
+    expect(FLOW_PUSH_COMMAND).toContain('relayflow-change comment');
+  });
+});
+
 describe('change metadata contract', () => {
   const prepare = (root: string, reference: string) =>
     sh(`reference='${reference}'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
@@ -731,5 +1129,410 @@ describe('change metadata contract', () => {
     prepare(markdown, '');
     expect(read(markdown, '.relayflow/pr-body.md')).toBe('## Summary\n');
     expect(validate(markdown, 'tasks.md', 'markdown', '').token).toBe('valid');
+  });
+});
+
+/**
+ * Garden run 80faae32 (AgentWorkforce/flows#494) worked for 92 minutes and then
+ * lost its pull request to `Body is too long (maximum is 65536 characters)`:
+ * nothing bounded summary.md plus the check report (agentrelay.com#160). Every
+ * body the flow posts is capped at FLOW_BODY_LIMIT, measured in bytes, which
+ * also bounds the characters, and the closing reference always survives.
+ */
+describe('change bodies stay under GitHub\'s 65,536-character limit (agentrelay.com#160)', () => {
+  const chars = (text: string) => Array.from(text).length;
+  /** Renders a body as GitHub does: GFM, raw HTML allowed. */
+  const render = (body: string) => micromark(body, { extensions: [gfm()], htmlExtensions: [gfmHtml()], allowDangerousHtml: true });
+  /**
+   * What a reader sees before the check report, or null when the report is
+   * hidden: inside a code block, an HTML comment, or a collapsed <details>.
+   */
+  const beforeReport = (body: string) => {
+    const html = render(body)
+      .replace(/<!--[\s\S]*?(-->|$)/g, '');
+    const at = html.indexOf('<h2>Checks</h2>');
+    if (at < 0) return null;
+    const before = html.slice(0, at);
+    return (before.match(/<details/g) ?? []).length === (before.match(/<\/details>/g) ?? []).length ? before : null;
+  };
+  const longLines = (prefix: string, count: number, width: number) =>
+    Array.from({ length: count }, (_, i) => `${prefix} ${i} ${'修'.repeat(width)}`).join('\n') + '\n';
+
+  function publishBody(files: Record<string, string>, check = 'fail', baseline = 'fail', reference = 'Fixes #160', source = 'github') {
+    const root = fixture(files);
+    const report = sh(`check=${check}; baseline=${baseline}; reference='${reference}'; ${FLOW_CHECK_REPORT_COMMAND}`, root);
+    const prepare = sh(`reference='${reference}'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
+    const verdict = sh(`title='Fix login'; title_length=9; source='${source}'; identifier='#160'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root).token;
+    return { root, report, prepare, verdict, body: read(root, '.relayflow/pr-body.md') };
+  }
+
+  it('stays under the cap a verbose summary and long check output would break, keeping the summary, the verdict and Fixes', () => {
+    const files = {
+      'summary.md': '## What changed\n\nFixed the login bug.\n\n```ts\n' + longLines('summary', 400, 60),
+      [FLOW_CHECK_SCRIPT]: 'set -e\n' + longLines('# step', 200, 40),
+      '.relayflow/check.log': longLines('FAIL src/login.test.ts', 200, 400),
+      '.relayflow/base-check.log': longLines('FAIL src/other.test.ts', 200, 400),
+      '.relayflow/repair-notes.md': longLines('note', 100, 200),
+    };
+    expect(chars(Object.values(files).join(''))).toBeGreaterThan(65536);
+    const { report, prepare, verdict, body } = publishBody(files);
+    expect(report.code).toBe(0);
+    expect(prepare.token).toBe('prepared');
+    expect(verdict).toBe('valid');
+    expect(chars(body)).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    // Room is left for the push step's withheld-workflow notice.
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(FLOW_BODY_LIMIT).toBeLessThan(65536);
+    // Valid UTF-8: no multibyte character was split.
+    expect(body).not.toContain('\uFFFD');
+    expect(body.startsWith('````text\n## What changed\n\nFixed the login bug.')).toBe(true);
+    expect(body).toContain('**The checks fail on the base commit too**');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    // The newest output is what a reviewer needs, so the logs keep their tail.
+    expect(body).toContain('FAIL src/login.test.ts 199 ');
+    expect(body).toContain('FAIL src/other.test.ts 199 ');
+    expect(body).toMatch(/truncated to fit GitHub's limit/);
+    expect(body).toContain('summary.md in the run workspace');
+    expect(body).toContain('.relayflow/check.log in the run workspace');
+    // The summary's open code fence cannot swallow the report or the reference.
+    expect(beforeReport(body)).toContain('Fixed the login bug.');
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    // A cut script is fenced inside the report's own block, which still ends
+    // where it should: the logs after it render as their own sections.
+    expect(render(body)).toMatch(/<summary>Output on this branch \(last 80 lines\)<\/summary>/);
+    expect(render(body)).toMatch(/<summary>Output on the base commit \(last 80 lines\)<\/summary>/);
+    // The step says what it cut, but never prints the text: a log can hold credentials.
+    expect(body).not.toContain('FAIL src/login.test.ts 120 ');
+    expect(report.stderr).toContain('so it was cut; the full text is .relayflow/check.log in the run workspace');
+    expect(report.stderr).not.toContain('FAIL src/login.test.ts 120 ');
+  });
+
+  it('keeps what fits of a one-line summary, cut at a character boundary', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '修'.repeat(30000) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).not.toContain('\uFFFD');
+    expect(body.split('\n')[1]).toMatch(/^修{15000,}$/);
+    expect(body).toMatch(/truncated to fit GitHub's limit/);
+  });
+
+  it('keeps the verdict and the whole reference when the reference is long', () => {
+    // As long as a reference may be: well past the old fixed 1 KB reserve's margin.
+    const prefix = 'Ticket: https://tickets.example.com/';
+    const reference = prefix + 'a'.repeat(FLOW_REFERENCE_LIMIT - prefix.length);
+    expect(Buffer.byteLength(reference)).toBe(FLOW_REFERENCE_LIMIT);
+    const { verdict, body } = publishBody({ 'summary.md': longLines('summary', 400, 60), '.relayflow/check.log': longLines('FAIL', 80, 400) }, 'fail', 'pass', reference, 'linear');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('**This change breaks checks that pass on the base commit.**');
+    // The whole report survives, to the end of the log: the summary made the room.
+    expect(body).toContain('FAIL 79 ');
+    expect(body.split('\n').filter(line => line === reference)).toHaveLength(1);
+  });
+
+  it('tells the check report the closing reference it must leave room for', () => {
+    const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
+    expect(source).toContain('"; reference=" + shellQuote(changeReference) + "; " + checkReport');
+  });
+
+  it('stays under the cap when the summary opens a fence longer than the reserve', () => {
+    const fence = '`'.repeat(5000);
+    const { verdict, body } = publishBody({ 'summary.md': fence + '\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(beforeReport(body)).not.toBeNull();
+    expect(body).toContain('Relayflow ran this repository\'s checks');
+  });
+
+  // Review on #161: a cut can leave any construct open. The kept text is
+  // shown as plain text, so none of them can hide the report or Fixes.
+  it.each([
+    ['a backtick fence', '```ts\n'],
+    ['a tilde fence', '~~~~text\n'],
+    ['an indented fence', '   ```\n'],
+    ['an HTML comment', '<!--\n'],
+    ['an HTML comment after inline code', 'Strips `<!--` markers.\n\n<!--\n'],
+    ['a comment marker in uneven backticks', 'See ``<!--```.\n\n```\n'],
+    ['a multi-line code span', 'A `<!--\nspan` then\n\n```\n'],
+    ['a collapsed <details>', '<details>\n<summary>More</summary>\n\n'],
+    ['CRLF line endings', 'Done.\r\n\r\n```\r\nx\r\n```\r\n\r\n```\r\n'],
+    ['an invalid backtick fence', '```not `a` fence\n'],
+  ])('keeps the report and Fixes visible when the cut leaves %s open', (_name, opening) => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\n' + opening + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE);
+    expect(beforeReport(body)).toContain('## What changed');
+    const html = render(body);
+    expect(html).toContain('<p>Fixes #160</p>');
+    expect(html).toMatch(/<em>…truncated to fit GitHub's limit/);
+  });
+
+  it('refuses a reference longer than FLOW_REFERENCE_LIMIT before anything is pushed', () => {
+    const prefix = 'Ticket: https://tickets.example.com/';
+    const reference = prefix + 'a'.repeat(FLOW_REFERENCE_LIMIT - prefix.length + 1);
+    expect(Buffer.byteLength(reference)).toBe(FLOW_REFERENCE_LIMIT + 1);
+    const { prepare, body } = publishBody({ 'summary.md': 'Fixed it.\n' }, 'pass', '', reference, 'linear');
+    expect(prepare.token).toBe('prepared');
+    expect(body).not.toContain(reference);
+    expect(sh(`reference='${reference}'; title='Fix login'; title_length=9; source='linear'; identifier='ENG-1'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, fixture({ '.relayflow/pr-body.md': 'Fixed it.\n' })).token).toBe('reference-too-long');
+    const source = factorySource({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow: 'simple', step: 3 }, 'cloud');
+    expect(source).toContain('f.run("reference=" + shellQuote(changeReference) + "; title=" + shellQuote(changeTitle)');
+  });
+
+  it('moves a closing reference out of a cut summary, where it would be code', () => {
+    const { verdict, body } = publishBody({ 'summary.md': '## What changed\n\nFixes #160\n\n' + longLines('code', 400, 60) }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    // So does the last-resort cap of a whole body.
+    const root = fixture({ '.relayflow/pr-body.md': 'Fixes #160\n\n' + longLines('line', 400, 100) });
+    sh(`reference='Fixes #160'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root);
+    const capped = read(root, '.relayflow/pr-body.md');
+    expect(capped.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+    expect(render(capped)).toContain('<p>Fixes #160</p>');
+  });
+
+  it('fences check output that holds a fence of its own', () => {
+    const { body } = publishBody({ 'summary.md': 'Fixed it.\n', '.relayflow/check.log': 'FAIL\n```\nnot the end\n' }, 'fail', 'pass');
+    expect(render(body)).toContain('<p>Fixes #160</p>');
+    expect(body).toContain('````\nFAIL\n```\nnot the end\n````\n');
+  });
+
+  it('puts back a closing reference that truncation cut from the summary', () => {
+    const { verdict, body } = publishBody({ 'summary.md': 'x'.repeat(80000) + '\n\nFixes #160\n' }, 'pass', '');
+    expect(verdict).toBe('valid');
+    expect(chars(body)).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('Relayflow ran this repository\'s checks');
+    expect(body.split('\n').filter(line => line === 'Fixes #160')).toHaveLength(1);
+  });
+
+  it('caps a body that is already too long when the reference is added, ending with the reference', () => {
+    const root = fixture({ '.relayflow/pr-body.md': longLines('line', 400, 100) });
+    expect(sh(`reference='Fixes #160'; ${FLOW_PREPARE_CHANGE_METADATA_COMMAND}`, root).token).toBe('prepared');
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).not.toContain('\uFFFD');
+    expect(body.trimEnd().endsWith('Fixes #160')).toBe(true);
+    expect(sh(`title='Fix login'; title_length=9; source='github'; identifier='#160'; ${FLOW_VALIDATE_CHANGE_METADATA_COMMAND}`, root).token).toBe('valid');
+  });
+
+  it('leaves a body under the cap exactly as it was', () => {
+    const { body } = publishBody({ 'summary.md': '## What changed\n\nFixed the login bug.\n', '.relayflow/check.log': 'FAIL src/login.test.ts\n' });
+    expect(body).not.toContain('truncated');
+    expect(body).toContain('FAIL src/login.test.ts\n');
+  });
+
+  it('caps the unresolved review it posts', () => {
+    const { code, blocked, ghCalls, stderr } = runReviewBlocked({ 'review.md': '## Findings\n\n' + longLines('P1', 600, 60) }, 'works');
+    expect(code).toBe(0);
+    expect(ghCalls).toContain('pr comment --body-file review-blocked.md');
+    expect(Buffer.byteLength(blocked, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(blocked).not.toContain('\uFFFD');
+    expect(blocked).toContain('## Findings');
+    expect(blocked).toContain('review.md in the run workspace');
+    expect(stderr).toContain('so it was cut');
+    expect(stderr).not.toContain('P1 599 ');
+  });
+
+  it('keeps the time-stop comment under the cap', () => {
+    const root = fixture({});
+    expect(sh(FLOW_TIME_STOP_COMMAND, root, { PATH: `${path.dirname(process.execPath)}:/usr/bin:/bin` }).code).toBe(0);
+    expect(Buffer.byteLength(read(root, '.relayflow/time-stop.md'), 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(FLOW_TIME_STOP_COMMAND).toContain(`relayflow_cap .relayflow/time-stop.md ${FLOW_BODY_LIMIT}`);
+  });
+});
+
+/**
+ * A step without a `timeout` gets the kernel's 30s default, and a timed-out
+ * `f.run` throws: Garden run ccbc27c8 worked for 1h46m and then lost all of it
+ * when the push of its branch to AgentWorkforce/flows took longer than 30s
+ * (agentrelay.com#135). So every generated step that talks to the forge, or
+ * rewrites the branch before a push, must say how long it may take.
+ */
+describe('publish-path step timeouts (agentrelay.com#135)', () => {
+  const NETWORK = /git push|relayflow-open-change|relayflow-change|gh pr\b/;
+  const draft = (workflow: FactoryDraft['workflow']): FactoryDraft => ({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow, step: 3 });
+
+  /** Every `f.run` call in the generated source, with the text its command can expand to. */
+  function runSteps(source: string) {
+    const file = ts.createSourceFile('flow.ts', source, ts.ScriptTarget.ES2022, true);
+    const constants = new Map<string, string>();
+    const calls: ts.CallExpression[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && ts.isStringLiteralLike(node.initializer)) {
+        constants.set(node.name.text, node.initializer.text);
+      }
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.name.text === 'run' && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'f') {
+        calls.push(node);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    const expand = (node: ts.Node): string => {
+      if (ts.isStringLiteralLike(node)) return node.text;
+      if (ts.isIdentifier(node)) return constants.get(node.text) ?? '';
+      let text = '';
+      ts.forEachChild(node, child => { text += expand(child); });
+      return text;
+    };
+    return calls.map(call => {
+      const options = call.arguments[1];
+      const timeout = options && ts.isObjectLiteralExpression(options)
+        ? options.properties.find(property => ts.isPropertyAssignment(property) && property.name.getText(file) === 'timeout')
+        : undefined;
+      return {
+        source: call.getText(file),
+        command: expand(call.arguments[0]!),
+        timeout: timeout && ts.isPropertyAssignment(timeout) && ts.isStringLiteralLike(timeout.initializer) ? timeout.initializer.text : undefined,
+      };
+    });
+  }
+
+  for (const { id } of WORKFLOWS) {
+    it(`gives every forge or branch-rewriting step in the ${id} flow an explicit timeout`, () => {
+      const steps = runSteps(factorySource(draft(id)));
+      const publishing = steps.filter(step => NETWORK.test(step.command) || step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND));
+      // Pushes (with and without comment=yes), the change request, and the
+      // working-file rewrite are always generated; never pass vacuously.
+      expect(publishing.filter(step => step.command.includes(FLOW_PUSH_COMMAND)).length).toBeGreaterThanOrEqual(2);
+      expect(publishing.some(step => step.command.includes(FLOW_OPEN_CHANGE_COMMAND))).toBe(true);
+      expect(publishing.some(step => step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND))).toBe(true);
+      expect(publishing.filter(step => step.timeout === undefined).map(step => step.source)).toEqual([]);
+      // The limits are the ones FLOW_TIME's publish arithmetic is built on.
+      for (const step of publishing) {
+        const minutes = step.command.includes(FLOW_PUSH_COMMAND) ? FLOW_TIME.pushMinutes
+          : step.command.includes(FLOW_OPEN_CHANGE_COMMAND) || step.command.includes(FLOW_DROP_WORKING_FILES_COMMAND) ? FLOW_TIME.forgeMinutes
+            : FLOW_TIME.followUpMinutes;
+        expect(step.timeout, step.source).toBe(`${minutes}m`);
+      }
+    });
+  }
+});
+
+/**
+ * FLOW_TIME starts a long agent step only when its allowance still fits, but
+ * until relayflows 2.0.40 nothing stopped an agent at that allowance: a
+ * check-repair agent ran 38m / 592 turns / $54, another 44m / $26.57
+ * (agentrelay.com#138, cloud#4108). Each long agent step now states its
+ * allowance as a hard `timeout`, which resolves the step with
+ * `completionReason: "timeout"` instead of throwing (AgentWorkforce/flows#606).
+ */
+describe('agent step time limits (agentrelay.com#138)', () => {
+  const draft = (workflow: FactoryDraft['workflow']): FactoryDraft => ({ version: 4, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude', 'codex'], otherAgent: '', task: 'Add a test', workflow, step: 3 });
+
+  /** Every `f.agent` call in the generated source: its name expression and its `timeout`, if any. */
+  function agentSteps(source: string) {
+    const file = ts.createSourceFile('flow.ts', source, ts.ScriptTarget.ES2022, true);
+    const steps: { name: string; timeout?: string; source: string }[] = [];
+    const visit = (node: ts.Node) => {
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.name.text === 'agent' && ts.isIdentifier(node.expression.expression) && node.expression.expression.text === 'f') {
+        const [name, options] = node.arguments;
+        const timeout = options && ts.isObjectLiteralExpression(options)
+          ? options.properties.find(property => ts.isPropertyAssignment(property) && property.name.getText(file) === 'timeout')
+          : undefined;
+        // "check-repair-" + (++repairs) and "adversary-" + (round + 1) name a family by their prefix.
+        const prefix = name && ts.isBinaryExpression(name) ? name.left : name;
+        steps.push({
+          name: prefix && ts.isStringLiteralLike(prefix) ? prefix.text.replace(/-$/, '') : prefix?.getText(file) ?? '',
+          // A timeout that is not a string literal is still a timeout: record it
+          // so the no-limit checks cannot pass over it.
+          timeout: timeout === undefined ? undefined
+            : ts.isPropertyAssignment(timeout) && ts.isStringLiteralLike(timeout.initializer) ? timeout.initializer.text
+              : `<not a string literal: ${timeout.getText(file)}>`,
+          source: node.getText(file),
+        });
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    return steps;
+  }
+
+  // How each agent step is stopped on the cloud target. Discovery runs first
+  // and gets its fixed allowance; every later agent gets what is left of the
+  // run after the steps behind it (agentrelay.com#155), computed when it starts.
+  const LIMITS: Record<string, RegExp> = {
+    'check-discovery': new RegExp(`^${FLOW_TIME.discoveryMinutes}m$`),
+    'prototype': /^<not a string literal: timeout: prototypeLimit \+ "m">$/,
+    'comparator': /^<not a string literal: timeout: comparatorLimit \+ "m">$/,
+    'implementer': /^<not a string literal: timeout: implementerLimit \+ "m">$/,
+    'check-repair': /^<not a string literal: timeout: repairLimit \+ "m">$/,
+    'adversary': /^<not a string literal: timeout: reviewLimit \+ "m">$/,
+  };
+
+  it('keeps every allowance within the runtime\'s 60m ceiling', () => {
+    for (const minutes of [FLOW_TIME.discoveryMinutes, FLOW_TIME.prototypeMinutes, FLOW_TIME.comparatorMinutes, FLOW_TIME.repairMinutes, FLOW_TIME.reviewMinutes]) {
+      expect(minutes).toBeGreaterThan(0);
+      expect(minutes).toBeLessThanOrEqual(FLOW_TIME.agentLimitMaxMinutes);
+    }
+    expect(FLOW_TIME.agentLimitMaxMinutes).toBe(60);
+  });
+
+  for (const { id } of WORKFLOWS) {
+    it(`stops every agent step in the ${id} cloud flow at a limit`, () => {
+      const steps = agentSteps(factorySource(draft(id)));
+      expect(steps.length).toBeGreaterThan(0);
+      for (const step of steps) {
+        expect(Object.keys(LIMITS), step.source).toContain(step.name);
+        expect(step.timeout, step.source).toMatch(LIMITS[step.name]!);
+      }
+      const names = steps.map(step => step.name);
+      // The planner, plan reviewer and fixer are gone (agentrelay.com#155).
+      expect(names).toEqual(id === 'traditional' ? ['check-discovery', 'implementer', 'check-repair', 'adversary']
+        : id === 'prototype' ? ['check-discovery', 'prototype', 'comparator', 'implementer', 'check-repair', 'adversary']
+          : ['check-discovery', 'implementer', 'check-repair']);
+    });
+
+    it(`handles every timed-out agent in the ${id} flow, and never as success`, () => {
+      const source = factorySource(draft(id));
+      // The results are read, not dropped, and each branch says what happened.
+      expect(source).toMatch(/const repair = await f\.agent\("check-repair"/);
+      expect(source).toMatch(/if \(timedOut\(repair\)\)/);
+      expect(source).toMatch(/const discovery = await f\.agent\("check-discovery"/);
+      expect(source).toMatch(/if \(timedOut\(discovery\)\)/);
+      expect(source).toMatch(/const implementation = await f\.agent\("implementer"/);
+      expect(source).toMatch(/implementerTimedOut = timedOut\(implementation\)/);
+      if (id !== 'simple') {
+        expect(source).toMatch(/const review = await f\.agent\("adversary"/);
+        expect(source).toMatch(/reviewTimedOut = timedOut\(review\)/);
+        expect(source).toContain('clean = !reviewTimedOut && ');
+      }
+      if (id === 'prototype') expect(source).toMatch(/if \(timedOut\(comparison\)\)/);
+    });
+
+    it(`states no agent time limit in the ${id} local flow, whose pinned runtime predates them`, () => {
+      // The local kit installs RELAYFLOWS_VERSION, older than 2.0.40, and an
+      // older runtime refuses an agent `timeout`. Once the pin reaches 2.0.40,
+      // emit the limits for the local target too and change this test.
+      const [major, minor, patch] = RELAYFLOWS_VERSION.split('.').map(Number);
+      expect(major! * 1e6 + minor! * 1e3 + patch!).toBeLessThan(2_000_040);
+      const source = factorySource(draft(id), 'local');
+      expect(agentSteps(source).filter(step => step.timeout !== undefined).map(step => step.source)).toEqual([]);
+      // The branches are still there, and still typecheck against 2.0.26's
+      // AgentResult (which has no completionReason): they never fire.
+      expect(source).toContain('const timedOut = (result: unknown) =>');
+    });
+  }
+});
+
+describe('FLOW_REVIEW_BLOCKED_COMMAND after a timed-out review (agentrelay.com#138)', () => {
+  it('says the review was stopped at its limit, and still posts what it wrote', () => {
+    const root = fixture(review);
+    const bin = path.join(root, 'bin');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(path.join(bin, 'gh'), '#!/bin/sh\necho "$@" >> gh-calls.txt\nexit 0\n', { mode: 0o755 });
+    const run = (timedOut: string) => {
+      const result = spawnSync('/bin/sh', ['-c', `review_timeout=${timedOut}; review_limit=12; ${FLOW_REVIEW_BLOCKED_COMMAND}`], { cwd: root, encoding: 'utf8', env: { ...process.env, PATH: `${bin}:${process.env.PATH}` } });
+      return { code: result.status, blocked: read(root, 'review-blocked.md') };
+    };
+    const stopped = run('yes');
+    expect(stopped.code).toBe(0);
+    expect(stopped.blocked).toContain('stopped at its 12-minute limit');
+    expect(stopped.blocked).toContain('The retry loop still drops the last error.');
+    const finished = run('no');
+    expect(finished.blocked).not.toContain('stopped at its');
+    expect(finished.blocked).toContain('The retry loop still drops the last error.');
   });
 });

@@ -1,6 +1,6 @@
 import { validFlowAgentSettings, type FlowAgentSettings } from './flow-agent-settings';
 import { flowPreview } from './flow-preview';
-import { WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
+import { FLOW_TIME, WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
 import { ISSUE_SOURCES, issueSourceCode, validSourcePreferences, type IssueSourceId, type SourcePreferences } from './flow-sources';
 
 import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
@@ -95,7 +95,7 @@ export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, jou
   // id from shared browser storage. Carrying it here lets Cloud measure whether
   // that continuity actually held and merge the two people when it did not.
   const analytics = { ...(journeyId ? { journeyId } : {}), ...(distinctId ? { distinctId } : {}) };
-  const payload = { version: 1, handoffId, ...(Object.keys(analytics).length ? { analytics } : {}), name: 'Software factory', source: factorySource({ ...draft, step: 3 }),
+  const payload = { version: 1, handoffId, ...(Object.keys(analytics).length ? { analytics } : {}), name: 'Software Garden', source: factorySource({ ...draft, step: 3 }),
     workflow: draft.workflow, preview: flowPreview(draft), sources: draft.sources, sourceSettings: draft.sourceSettings,
     agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
   const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
@@ -107,8 +107,11 @@ export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'loca
   // budget no longer refuses a model-less Codex step (AgentWorkforce/flows#421);
   // such a step runs unmetered, so a dollar cap cannot bound it. Wall-clock is
   // enforced on every step regardless of pricing, which is why it stays the
-  // default here; `{ dollars, wallclock }` together is also valid.
-  const budget = '{ wallclock: "2h" }';
+  // default here; `{ dollars, wallclock }` together is also valid. Its length
+  // is the flow's time plan (FLOW_TIME): 2h, an hour under Cloud's 180-minute
+  // cap on a hosted run (AgentWorkforce/cloud#4270), and 3h for a local run,
+  // which has no sandbox lifetime and cannot stop an agent at a limit.
+  const budget = `{ wallclock: "${(target === 'cloud' ? FLOW_TIME.headerMinutes : FLOW_TIME.localHeaderMinutes) / 60}h" }`;
   if (!draft.sources.length) return [{ id: 'empty', code: `import { flow } from "@relayflows/surface";
 
 export default flow("software-factory",
@@ -163,7 +166,9 @@ const builder = "${agent}";` });
     console.error("Stopped: no ticket arrived with this run, so there was nothing to work on.");
     return f.done("needs_human");
   }`;
-  sections.push({ id: 'input', code: `type Input = { issue${hasMarkdown ? '?' : ''}: Issue; approver: string };
+  // checkCommand: the flow's test command, when Cloud or a local input sets
+  // one; it replaces check discovery (see the 'discover' section).
+  sections.push({ id: 'input', code: `type Input = { issue${hasMarkdown ? '?' : ''}: Issue; approver: string; checkCommand?: string };
 
 // Run in a connected repository, on a new branch.
 export default flow<Input>("software-factory",

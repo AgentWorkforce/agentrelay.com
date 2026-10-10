@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { FLOW_PUSH_COMMAND, WORKFLOW_FILES_HINT } from '../flow-workflows';
+import { FLOW_BODY_LIMIT, FLOW_PUSH_COMMAND, FLOW_WITHHELD_NOTICE_RESERVE, WORKFLOW_FILES_HINT } from '../flow-workflows';
 import { factorySource, DEFAULT_FACTORY, type FactoryDraft } from '../flow-onboarding';
 
 /**
@@ -111,7 +111,10 @@ const CI = 'name: ci\non:\n  pull_request:\n    paths: [src/**]\njobs: {}\n';
 const CI_EDITED = 'name: ci\non:\n  pull_request:\n    paths: [src/**, docs/**]\njobs: {}\n';
 const BODY = 'Consolidates the docs.\n\nFixes #40\n';
 
-describe('FLOW_PUSH_COMMAND', () => {
+// Each case spawns roughly 50–150 real git processes (setup, the push command,
+// the remote's hook). Alone that is 1–3s, but under the full suite's parallel
+// load it passes vitest's 5s default, so give every case room to finish.
+describe('FLOW_PUSH_COMMAND', { timeout: 30_000 }, () => {
   it('pushes a branch without workflow edits exactly as git push does', () => {
     const { root, remote, base } = setup({ 'README.md': '#\n' });
     const head = commit(root, 'docs', { 'docs/a.md': 'a\n' });
@@ -326,7 +329,7 @@ describe('FLOW_PUSH_COMMAND', () => {
   });
 
   // Review on #114: the whole section, not just the patch, must fit GitHub's
-  // 65,536-character body limit.
+  // 65,536-character body limit, within the flow's own cap (agentrelay.com#160).
   it('keeps the pull-request body under GitHub\'s limit even with a long file list', () => {
     const files: Record<string, string> = { 'README.md': '#\n' };
     const edits: Record<string, string> = { 'src/x.ts': 'x\n' };
@@ -341,9 +344,44 @@ describe('FLOW_PUSH_COMMAND', () => {
     const result = push(root, base);
     expect(result.code).toBe(0);
     const body = read(root, '.relayflow/pr-body.md');
-    expect(body.length).toBeLessThanOrEqual(65536);
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
     expect(body).toContain('…and 70 more');
     expect(body.split('````').length % 2).toBe(1);
+  }, 60_000);
+
+  // Review on #161: a near-full body and 50 long workflow paths must not
+  // overflow it either; the whole section is capped, not just the patch.
+  it('keeps a near-full pull-request body under the cap with 50 long workflow paths', () => {
+    const files: Record<string, string> = { 'README.md': '#\n' };
+    const edits: Record<string, string> = { 'src/x.ts': 'x\n' };
+    for (let i = 0; i < 50; i += 1) {
+      const name = `.github/workflows/${'w'.repeat(200)}-${i}.yml`;
+      files[name] = 'name: w\n';
+      edits[name] = 'name: w\n# edited\n';
+    }
+    const { root, base } = setup(files);
+    commit(root, 'long workflow paths', edits);
+    write(root, { '.relayflow/pr-body.md': BODY + 'x\n'.repeat(29000) });
+    const result = push(root, base);
+    expect(result.code).toBe(0);
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('## Workflow changes not applied');
+    expect(body).toMatch(/truncated to fit GitHub's limit/);
+  }, 60_000);
+
+  // Review on #161: a body prepared as full as it may be still leaves room to
+  // say the workflow edits were withheld.
+  it('still says the workflow edits were withheld when the prepared body is as full as it may be', () => {
+    const { root, base } = setup({ 'README.md': '#\n', '.github/workflows/ci.yml': CI });
+    commit(root, 'one', { 'src/x.ts': 'x\n', '.github/workflows/ci.yml': CI_EDITED });
+    const filler = FLOW_BODY_LIMIT - FLOW_WITHHELD_NOTICE_RESERVE - Buffer.byteLength(BODY);
+    write(root, { '.relayflow/pr-body.md': BODY + 'x'.repeat(filler - 1) + '\n' });
+    expect(push(root, base).code).toBe(0);
+    const body = read(root, '.relayflow/pr-body.md');
+    expect(Buffer.byteLength(body, 'utf8')).toBeLessThanOrEqual(FLOW_BODY_LIMIT);
+    expect(body).toContain('## Workflow changes not applied');
+    expect(body).toContain('.github/workflows/ci.yml');
   }, 60_000);
 
   it('bounds the patch in the pull-request body and says where the rest is', () => {

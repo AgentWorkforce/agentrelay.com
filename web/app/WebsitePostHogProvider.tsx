@@ -4,6 +4,7 @@
 // through the server-component boundary, and before the first SDK capture.
 import { PostHogProvider } from '@posthog/next/pages';
 import type { ReactNode } from 'react';
+import { dropAgentDashboardAnalytics } from '../lib/site-analytics';
 import { maskSignupNetworkRequest, sanitizeSignupAnalytics } from '../lib/signup-analytics-privacy';
 
 export function WebsitePostHogProvider({ apiKey, host, children }: { apiKey: string; host: string; children: ReactNode }) {
@@ -11,6 +12,6 @@ export function WebsitePostHogProvider({ apiKey, host, children }: { apiKey: str
     api_host: host, autocapture: true, capture_exceptions: true, capture_heatmaps: true,
     capture_pageview: false, capture_pageleave: true,
     session_recording: { maskAllInputs: true, blockSelector: '.ph-sensitive', maskCapturedNetworkRequestFn: maskSignupNetworkRequest },
-    before_send: sanitizeSignupAnalytics,
+    before_send: [dropAgentDashboardAnalytics, sanitizeSignupAnalytics],
   }}>{children}</PostHogProvider>;
 }

@@ -19,12 +19,15 @@ describe('Cloud visual preview handoff', () => {
     expect(payload.source).toContain('model: "custom-model"');
   });
 
-  it('preserves parallel implementations and two-round review only where applicable', () => {
+  it('preserves parallel implementations, and shows the traditional workflow\'s single review', () => {
     const prototype = flowPreview({ ...draft, workflow: 'prototype' })!;
     expect(prototype.nodes[1]).toMatchObject({ title: '3 implementations', owner: 'Parallel' });
     expect(prototype.nodes[1].detail.split('\n')).toHaveLength(3);
     expect(prototype.nodes[1].icons).toEqual(['claude', 'codex', 'claude']);
-    expect(flowPreview(draft)!.nodes.find(node => node.title === 'Adversarial review')).toMatchObject({ badge: '2 rounds' });
+    // One review, no fix round, no separate planning agents (agentrelay.com#155).
+    expect(flowPreview(draft)!.nodes.map(node => node.title)).toEqual(['Work matches your sources', 'Implement', 'Run checks', 'Open PR', 'Adversarial review', 'Your approval']);
+    expect(flowPreview(draft)!.nodes.find(node => node.title === 'Adversarial review')).toMatchObject({ owner: 'Codex' });
+    expect(flowPreview(draft)!.nodes.find(node => node.title === 'Adversarial review')).not.toHaveProperty('badge');
     expect(flowPreview({ ...draft, workflow: 'simple' })!.nodes.map(node => node.title)).toEqual(['Work matches your sources', 'Implement', 'Run checks', 'Open PR', 'Your approval']);
   });
 

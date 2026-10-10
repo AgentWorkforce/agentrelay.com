@@ -1,6 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants.js';
+
+import { fetchDocsPackageVersions } from './lib/docs-packages.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -57,13 +61,13 @@ const nextConfig = {
       '/docs/llms.txt',
       '/docs/markdown.md',
       '/docs/markdown/:path*',
-      '/docs/agents/markdown/:path*',
-      '/docs/factory/markdown/:path*',
       '/docs/file/markdown/:path*',
-      '/docs/loop/markdown/:path*',
+      '/docs/relayhistory/markdown/:path*',
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
+      '/u/:handle/agent.md',
+      '/agents/register/checklist.md',
     ];
 
     return [
@@ -84,6 +88,24 @@ const nextConfig = {
         source: '/well-known/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
       },
+      {
+        // The owner analytics dashboard: private, never cached, never framed,
+        // never leaks its URL. The grant-bearing first request is rewritten to
+        // the exchange route below and sets its own stricter headers, so it is
+        // excluded here. Kept in sync with DASHBOARD_PAGE_HEADERS in
+        // lib/agent-dashboard.ts (asserted by lib/test/agent-dashboard.test.ts).
+        source: '/u/:handle/dashboard',
+        missing: [{ type: 'query', key: 'grant', value: '.+' }],
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'none'",
+          },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
     ];
   },
   async rewrites() {
@@ -99,7 +121,19 @@ const nextConfig = {
       cloudProxy.push({ source: '/cloud/:path*', destination: `${origin.origin}/cloud/:path*` });
     }
     return {
-      beforeFiles: cloudProxy,
+      beforeFiles: [
+        ...cloudProxy,
+        // A dashboard link carries a single-use grant. Exchange it in a route
+        // handler before any page, layout, or PostHog code can run; the handler
+        // sets the session cookie and 303s to the bare dashboard URL. `value`
+        // is explicit because OpenNext treats a valueless query `has` as
+        // always matching.
+        {
+          source: '/u/:handle/dashboard',
+          has: [{ type: 'query', key: 'grant', value: '.+' }],
+          destination: '/u/:handle/dashboard/exchange',
+        },
+      ],
       afterFiles: [
         // Conventional llms.txt path under /docs resolves to the root route.
         { source: '/docs/llms.txt', destination: '/llms.txt' },
@@ -163,13 +197,28 @@ const nextConfig = {
       { source: '/relaycast/:path*', destination: '/primitives#message', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
-      // The agents docs lost these two pages: 'Deploy and operate' became the
-      // CLI reference, and 'Agent patterns' was dropped without a successor
-      // (the build guide is the nearest thing that still covers agent shape).
-      { source: '/docs/agents/deploy', destination: '/docs/agents/cli', permanent: true },
-      { source: '/docs/agents/patterns', destination: '/docs/agents/build', permanent: true },
+      // The Reflex docs described the relayhistory repository; Relayhistory's docs replace them.
+      { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
+      { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
     ];
   },
 };
 
-export default nextConfig;
+/**
+ * The docs show the latest published version of each product (see
+ * lib/docs-packages.mjs), looked up from npm once per build and inlined. A
+ * production build fails rather than guess; the dev server starts without
+ * versions when npm is unreachable, so offline development still works.
+ */
+export default async function config(phase) {
+  let versions = {};
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    versions = await fetchDocsPackageVersions();
+  } else if (phase === PHASE_DEVELOPMENT_SERVER) {
+    versions = await fetchDocsPackageVersions().catch((error) => {
+      console.warn(`Docs package versions unavailable: ${error.message}`);
+      return {};
+    });
+  }
+  return { ...nextConfig, env: { DOCS_PACKAGE_VERSIONS: JSON.stringify(versions) } };
+}
