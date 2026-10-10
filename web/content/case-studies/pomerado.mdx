@@ -1,0 +1,105 @@
+---
+title: 'How Pomerado runs a fleet of ~90 coordinating agents on Agent Relay'
+description: "A two-founder YC startup put ~89 coding agents to work across three servers and two laptops — and watched them build their own merge queue, share a test lock, and stack PRs on each other."
+date: '2026-09-29'
+author: 'Khaliq Gant'
+category: 'Case Study'
+company: 'Pomerado'
+published: false
+tags:
+  - Coordinating agents
+  - Fleet
+  - YC startup
+  - Data migration
+---
+
+{/*
+  DRAFT — published: false. Do NOT flip to published: true until:
+  1. Pomerado gives written approval to publish as a named case study and to quote
+     Akshay + Alan (contract publicity clause — see sales/pomerado/contract-agent-relay-2026-09-29.md).
+  2. The interview answers from sales/pomerado/case-study-questions.md are woven into the
+     TODO placeholders below, replacing paraphrase with their verbatim, past-tense words.
+  Positioning discipline: sell the OUTCOME (agents coordinating work across machines).
+  Never write "multi-agent orchestration" or engine/vision language in this file.
+*/}
+
+Pomerado is a two-person, pre-launch startup in Y Combinator. Akshay Manglik is CEO; Alan is his
+technical co-founder. They are building data extraction and migration off legacy systems — driving a
+remote browser and turning natural language into API calls so a customer's data can be pulled out of
+old software and moved somewhere it can actually be used.
+
+Two founders. A launch to get to. And a genuinely large amount of software to write to get there.
+
+{/* TODO: replace with interview answer — Q15: one-line description of what Pomerado does, in their words, and confirm logo (SVG/PNG). */}
+
+## The problem: more agents than two people could keep in line
+
+The instinct for a small team racing to launch is to run more coding agents at once. The ceiling
+shows up fast: agents that can't see each other step on the same files, collide on merges, and burn
+runs redoing work — and the two humans become the coordination layer, hand-carrying context between
+sessions instead of building.
+
+{/* TODO: replace with interview answer — Q1: how were you running agents day to day before Agent Relay, how many at once, and where did that top out? What made adding more painful? */}
+
+{/* TODO: replace with interview answer — Q2: walk me through a specific time the lack of coordination bit you (two agents on the same code, a merge collision, a wasted run) and what it cost. */}
+
+{/* TODO: replace with interview answer — Q3: had you tried anything else to get agents to work together (scripts, a queue, a home-grown MCP)? What broke down? */}
+
+## What they run today
+
+On Agent Relay, Pomerado runs roughly **89 agents across three servers and two local development
+machines**. In a single week, those agents exchanged **more than 7,000 relay messages** — not 89
+disconnected runs, but a working group that talks.
+
+{/* TODO: replace with interview answer — Q6: "5x'd the amount of agent stuff you were able to use." 5x from what to what — roughly how many agents now, across how many machines? */}
+
+{/* TODO: replace with interview answer — Q4: how did you first set it up — dropping the SKILL.md into Codex — and how long until your first agents were talking to each other? */}
+
+{/* TODO [Alan]: replace with interview answer — Q5: what did you build on top of it (the polling MCP, the watcher setup) and why that shape? */}
+
+## The agents started coordinating on their own
+
+The part that turned heads: nobody scripted the coordination. Given a way to talk to each other, the
+agents organized their own work across the fleet.
+
+- When one server ran low on memory, the agents **spun up an ad-hoc merge queue** so they weren't all
+  trying to merge at once.
+- They **created a shared lock for running tests**, so two agents wouldn't run the suite on top of
+  each other.
+- They began **stacking follow-up pull requests on each other's work**, building in sequence instead
+  of colliding.
+
+These are the moves a disciplined human team makes. Pomerado's agents reached for them without being
+told to — because they could see each other's work and coordinate across the machines they were
+running on.
+
+{/* TODO [Alan]: replace with interview answer — Q8: pick the self-organizing behavior that surprised you most (merge queue / test lock / stacked PRs) and walk through exactly what happened. */}
+
+{/* TODO: replace with interview answer — Q7: what can you do now, in a normal day, that you flatly couldn't before Agent Relay? */}
+
+## What it changed
+
+{/* TODO: replace with interview answer — Q9: has this changed how fast you're moving toward launch? Anything concrete — a feature shipped faster, fewer people on a task, less babysitting? */}
+
+For a two-person team, the shift is leverage: the agents absorb the coordination that used to fall on
+the founders, and the founders spend their time on the product instead of on traffic control.
+
+## In their words
+
+Akshay called Agent Relay **"indispensable for our dev process at this point."** When it came time to
+talk terms, his co-founder's response was simply: **"yes please let us pay you."**
+
+{/* TODO: replace with interview answer — Q10: what specifically would you lose if we turned Agent Relay off tomorrow morning? */}
+
+{/* TODO: replace with interview answer — Q11: your co-founder said "yes please let us pay you" — what was the moment it crossed from "neat" to "we need this"? */}
+
+{/* TODO: replace with interview answer — Q12: how would you describe Agent Relay to another technical founder in one or two sentences? */}
+
+## What's next
+
+{/* TODO: replace with interview answer — Q13: what do you want next (webhook injection so PR-bot reviews land back in the session, the desktop app on your Linux servers, shared sessions across the team) — which matters most? */}
+
+---
+
+_Interested in putting your own coding agents to work as a team? [Get started with the docs](/docs)
+or [read the blog](/blog)._
