@@ -598,21 +598,36 @@ function readNangoProviderConfigKey(record: Record<string, unknown>): string | n
   )?.toLowerCase() ?? null;
 }
 
+// The ingest verdict is requested twice per webhook (once from the cloud-web
+// check, once from the relayfile-cloud route), for the same Request object.
+// Memoize it so the body is cloned and parsed once.
+const ingestRequestCache = new WeakMap<Request, Promise<boolean>>();
+
 async function isRelayfileCloudNangoIngestRequest(request: Request): Promise<boolean> {
-  let body: unknown;
-  try {
-    body = await request.clone().json();
-  } catch {
+  if (request.method !== "POST") {
     return false;
   }
-  if (!isRecord(body)) return false;
-  const type = readNangoWebhookType(body);
-  if (!type || RELAYFILE_CLOUD_NANGO_LIFECYCLE_TYPES.has(type)) return false;
-  if (!RELAYFILE_CLOUD_NANGO_INGEST_TYPES.has(type)) return false;
-  const providerConfigKey = readNangoProviderConfigKey(body);
-  return providerConfigKey
-    ? RELAYFILE_CLOUD_NANGO_PROVIDER_CONFIG_KEYS.has(providerConfigKey)
-    : false;
+  let verdict = ingestRequestCache.get(request);
+  if (!verdict) {
+    verdict = (async () => {
+      let body: unknown;
+      try {
+        body = await request.clone().json();
+      } catch {
+        return false;
+      }
+      if (!isRecord(body)) return false;
+      const type = readNangoWebhookType(body);
+      if (!type || RELAYFILE_CLOUD_NANGO_LIFECYCLE_TYPES.has(type)) return false;
+      if (!RELAYFILE_CLOUD_NANGO_INGEST_TYPES.has(type)) return false;
+      const providerConfigKey = readNangoProviderConfigKey(body);
+      return providerConfigKey
+        ? RELAYFILE_CLOUD_NANGO_PROVIDER_CONFIG_KEYS.has(providerConfigKey)
+        : false;
+    })();
+    ingestRequestCache.set(request, verdict);
+  }
+  return verdict;
 }
 
 function isWebhookWorkerForward(request: Request): boolean {

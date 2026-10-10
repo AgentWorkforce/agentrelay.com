@@ -261,4 +261,53 @@ describe("router webhook routing", () => {
     expect(cloudWebWorker.fetch).toHaveBeenCalledOnce();
     expect(webhookWorker.fetch).not.toHaveBeenCalled();
   });
+
+  it("clones the webhook body once across both routing checks (no double body read)", async () => {
+    const cloudWebWorker = makeBinding();
+    const relayfileCloudWorker = makeBinding();
+    const env = buildEnv({
+      webhookOriginFlag: "relayfile-cloud",
+      cloudWebWorker,
+      relayfileCloudWorker,
+    });
+
+    const request = new Request(
+      "https://origin.agentrelay.cloud/cloud/api/v1/webhooks/nango",
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ type: "forward", providerConfigKey: "github-relay" }),
+      },
+    );
+    const clone = request.clone.bind(request);
+    request.clone = vi.fn(() => clone()) as typeof request.clone;
+
+    await worker.fetch(request, env, buildCtx());
+
+    expect(relayfileCloudWorker.fetch).toHaveBeenCalledOnce();
+    expect(request.clone).toHaveBeenCalledTimes(1);
+  });
+
+  it("routes non-POST nango requests to cloud-web without ingest parsing", async () => {
+    const cloudWebWorker = makeBinding();
+    const relayfileCloudWorker = makeBinding();
+    const env = buildEnv({
+      webhookOriginFlag: "relayfile-cloud",
+      cloudWebWorker,
+      relayfileCloudWorker,
+    });
+
+    const request = new Request(
+      "https://origin.agentrelay.cloud/cloud/api/v1/webhooks/nango",
+      { method: "GET" },
+    );
+    const clone = request.clone.bind(request);
+    request.clone = vi.fn(() => clone()) as typeof request.clone;
+
+    await worker.fetch(request, env, buildCtx());
+
+    expect(cloudWebWorker.fetch).toHaveBeenCalledOnce();
+    expect(relayfileCloudWorker.fetch).not.toHaveBeenCalled();
+    expect(request.clone).not.toHaveBeenCalled();
+  });
 });
