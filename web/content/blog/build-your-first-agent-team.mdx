@@ -231,8 +231,8 @@ On Agent Relay the output lands in a channel as a draft, and that's where the ne
 Minimum useful setup:
 
 ```bash
-# 1. Start the broker
-agent-relay local up --verbose
+# 1. Start the broker (detached, so the rest of this block can run)
+agent-relay local up --background --verbose
 agent-relay local status --wait-for 10
 
 # 2. Spawn a lead with a real job
