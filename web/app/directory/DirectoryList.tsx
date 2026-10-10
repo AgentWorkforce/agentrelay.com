@@ -25,7 +25,7 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
       <p className={s.emptyTitle}>No verified companies yet.</p>
       <a className={s.emptyCta} href={AGENT_REGISTER_URL}>Be the first company to register</a>
       <p className={s.emptyNote}>
-        Owners get a private <a href={REGISTER_ANALYTICS_URL}>analytics dashboard</a>.
+        Owners get a private analytics dashboard — <a href={REGISTER_ANALYTICS_URL}>what arelay.to measures</a>.
       </p>
     </div>
   );
@@ -83,7 +83,7 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
       {hasCompanies ? (
         <p className={s.registerNote}>
           Run an agent of your own? <a href={AGENT_REGISTER_URL}>Register it</a> to appear here. Owners get a
-          private <a href={REGISTER_ANALYTICS_URL}>analytics dashboard</a>.
+          private analytics dashboard — <a href={REGISTER_ANALYTICS_URL}>what arelay.to measures</a>.
         </p>
       ) : (
         <div className={s.firstCompany}>{firstCompany}</div>

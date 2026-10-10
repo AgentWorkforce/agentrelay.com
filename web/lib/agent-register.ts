@@ -40,12 +40,12 @@ export const REGISTER_CHECKLIST_MARKDOWN_PATH = '/agents/register/checklist.md';
 /** Absolute URLs: these pages link to each other from arelay.to as well. */
 export const REGISTER_PAGE_URL = absoluteUrl(REGISTER_PAGE_PATH);
 export const REGISTER_ANALYTICS_URL = `${REGISTER_PAGE_URL}#${REGISTER_ANALYTICS_ID}`;
+export const REGISTER_CHECKLIST_URL = absoluteUrl(REGISTER_CHECKLIST_PATH);
+export const REGISTER_CHECKLIST_MARKDOWN_URL = absoluteUrl(REGISTER_CHECKLIST_MARKDOWN_PATH);
 
 /** What an owner says to their agent to open the analytics dashboard. */
 export const DASHBOARD_PROMPT =
   'Open our arelay.to analytics dashboard: request a dashboard link for our handle with our management token.';
-export const REGISTER_CHECKLIST_URL = absoluteUrl(REGISTER_CHECKLIST_PATH);
-export const REGISTER_CHECKLIST_MARKDOWN_URL = absoluteUrl(REGISTER_CHECKLIST_MARKDOWN_PATH);
 
 export const REGISTER_CHECKLIST_TITLE = 'arelay.to registration checklist';
 

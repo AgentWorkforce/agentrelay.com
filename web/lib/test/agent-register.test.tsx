@@ -16,7 +16,9 @@ import RegisterAgentPage, {
 import RegisterChecklistPage, { metadata as checklistMetadata } from '../../app/agents/register/checklist/page';
 import { GET as getChecklistMarkdown } from '../../app/agents/register/checklist.md/route';
 import { generateStaticParams as agentSlugParams } from '../../app/agents/[slug]/page';
+import { DirectoryList } from '../../app/directory/DirectoryList';
 import sitemap from '../../app/sitemap';
+import type { DirectoryAgent } from '../agent-directory';
 import {
   REGISTER_CHECKLIST_BODY,
   REGISTER_CHECKLIST_MARKDOWN,
@@ -85,7 +87,7 @@ describe('/agents/register', () => {
       'Analytics and your dashboard',
       'median and 95th-percentile reply time',
       'Claude Code, Codex, Grok, curl or other',
-      'changes every\n                day at midnight UTC'.replace(/\n\s+/g, ' '),
+      'changes every day at midnight UTC',
       'is not an identity',
       'visitor-days',
       'Message text or replies',
@@ -99,13 +101,31 @@ describe('/agents/register', () => {
     }
   });
 
-  it('points owners to the dashboard from the profile page and the directory', () => {
+  it('points owners to the dashboard from the profile page', () => {
     const profile = readFileSync(path.join(webRoot, 'app/u/[handle]/page.tsx'), 'utf8');
     expect(profile).toContain('Own this agent? Ask your agent for your private analytics dashboard link.');
     expect(profile).toContain('href={REGISTER_ANALYTICS_URL}');
-    const directory = readFileSync(path.join(webRoot, 'app/directory/DirectoryList.tsx'), 'utf8');
-    // Both the populated register note and today's "first company" block link it.
-    expect(directory.match(/href=\{REGISTER_ANALYTICS_URL\}/g)).toHaveLength(2);
+  });
+
+  it('links the analytics disclosure from both directory states', () => {
+    const href = 'href="https://agentrelay.com/agents/register#analytics"';
+    // Empty directory: the "first company" block.
+    expect(renderToStaticMarkup(<DirectoryList agents={[]} complete />)).toContain(href);
+    // Populated directory with a company agent: the register note.
+    const company: DirectoryAgent = {
+      handle: 'example-co',
+      displayName: 'Example Co',
+      description: 'An example company agent.',
+      verifiedDomain: 'example.com',
+      verifiedWorkspace: null,
+      verificationMethod: 'domain',
+      deliveryType: 'relay',
+      official: false,
+      chatUrl: 'https://arelay.to/example-co',
+    };
+    const populated = renderToStaticMarkup(<DirectoryList agents={[company]} complete />);
+    expect(populated).toContain(href);
+    expect(populated).toContain('what arelay.to measures');
   });
 
   it('links the live example, the agent guide and the checklist', () => {

@@ -173,7 +173,8 @@ export default function RegisterAgentPage() {
           <h2 id="analytics-heading" className={s.stepsHeading}>Analytics and your dashboard</h2>
           <p className={r.prose}>
             arelay.to counts how visitors find and use your agent, on its servers, so agents that never run
-            JavaScript are counted too. Only you, the owner, can see your numbers.
+            JavaScript are counted too. Your numbers are visible only to whoever holds a dashboard link — it
+            works once, for 15 minutes, so keep it private.
           </p>
           <ul className={`${s.stepList} ${s.wayList}`}>
             <li>
