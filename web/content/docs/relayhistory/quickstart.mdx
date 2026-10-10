@@ -1,0 +1,73 @@
+---
+title: 'Quickstart'
+description: 'Install Relayhistory, index the sessions already on your machine, and search, resume, and pack them.'
+---
+
+## Install
+
+Relayhistory needs Node.js 20 or 22.
+
+```bash
+npm install --global ai-hist
+```
+
+npm picks the prebuilt native package for your platform: macOS (arm64, x64), Linux glibc ≥ 2.28 and musl (arm64, x64), and Windows x64. No Rust toolchain, compiler, or separate binary download is involved.
+
+## Index your sessions
+
+```bash
+ai-hist
+```
+
+The first bare run discovers your most recent local sessions, indexes their evidence, and reports what it found. It leaves an already-populated database alone. Run a full ingest any time with:
+
+```bash
+ai-hist sync
+```
+
+Relayhistory reads each harness from its configured state directory:
+
+| Harness | Location |
+|---|---|
+| Claude Code | `CLAUDE_CONFIG_DIR`, else `~/.claude` |
+| Codex | `CODEX_HOME`, else `~/.codex` |
+| Grok | `GROK_HOME`, else `~/.grok` |
+| Muse Code | `$XDG_DATA_HOME/muse/sessions`, else `~/.local/share/muse/sessions` |
+| OpenCode | `OPENCODE_DB`, else `~/.local/share/opencode/opencode.db` |
+| Devin CLI | `$XDG_DATA_HOME/devin/cli/sessions.db`, else `~/.local/share/devin/cli/sessions.db` |
+
+The database lives at `~/.local/share/ai-hist/ai-history.db`. Set `AI_HIST_DB` to put it somewhere else.
+
+## Search, resume, pack
+
+```bash
+ai-hist search "the thing i was working on"   # prompts and events, every harness
+ai-hist sessions list                         # most recent sessions, with source and id
+ai-hist resume "auth rewrite"                 # print the harness's native resume command
+ai-hist pack "auth rewrite" --tokens 1500     # compact context to hand another agent
+```
+
+`resume` prints a command for Claude Code, Codex, Cursor, Grok, and Muse Code. OpenCode, Devin CLI, and Agent Relay sessions have no native resume command, so carry them forward with `pack`.
+
+<Note>
+  Reads such as `search` and `sessions list` answer from the index. On first use they build it, and after that they read only what is already indexed. Run `ai-hist sync` to pick up sessions written since; pass `--no-bootstrap` to answer from the store exactly as it stands.
+</Note>
+
+## Give your agent its memory
+
+```bash
+claude mcp add ai-hist -- npx -y ai-hist-mcp
+```
+
+Your agent can now search its own past sessions while it works. See [MCP server](/docs/relayhistory/mcp) for other harnesses and the full tool list.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="CLI" href="/docs/relayhistory/cli">
+    Every command, and the local/remote/all scopes.
+  </Card>
+  <Card title="Sessions" href="/docs/relayhistory/sessions">
+    Subagent trees, tool calls, file edits, and token usage per session.
+  </Card>
+</CardGroup>

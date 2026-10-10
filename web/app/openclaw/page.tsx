@@ -5,7 +5,7 @@ import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { defaultOgImage } from '../../lib/og-meta';
-import { absoluteUrl, SITE_HOST } from '../../lib/site';
+import { absoluteUrl, SITE_HOST, SITE_NAME } from '../../lib/site';
 import s from './openclaw.module.css';
 
 export const metadata: Metadata = {
@@ -16,6 +16,7 @@ export const metadata: Metadata = {
     canonical: absoluteUrl('/openclaw'),
   },
   openGraph: {
+    siteName: SITE_NAME,
     title: 'Agent Relay for OpenClaw',
     description:
       'Set up Agent Relay for OpenClaw with a clean first-run flow, shared channels, DMs, threads, reactions, and observer mode.',

@@ -3,6 +3,7 @@ import matter from 'gray-matter';
 import { readContentFile } from './content-store';
 import { docsNav, getAllDocSlugs } from './docs-nav';
 import { absoluteUrl } from './site';
+import { providersByCategory } from './integrations';
 
 const DOCS_BASE_URL = absoluteUrl('/docs');
 
@@ -85,7 +86,17 @@ function renderBannerLink(attrs: string, body: string): string {
   return href ? `[${label}](${href})` : label;
 }
 
-function renderMarkdownBody(content: string): string {
+/**
+ * The <IntegrationGrid /> is the whole point of the integrations page, so the
+ * markdown mirror renders the provider list rather than dropping the tag.
+ */
+function renderIntegrationGrid(): string {
+  return providersByCategory()
+    .map(({ category, providers }) => `**${category}**\n\n${providers.map((p) => `- ${p.name}`).join('\n')}`)
+    .join('\n\n');
+}
+
+export function renderMarkdownBody(content: string): string {
   let output = content;
 
   output = output.replace(/<CodeGroup>\s*/g, '');
@@ -108,6 +119,7 @@ function renderMarkdownBody(content: string): string {
     /<BannerLink\s+([^>]*)>([\s\S]*?)<\/BannerLink>/g,
     (_match, attrs: string, body: string) => `\n${renderBannerLink(attrs, body)}\n`
   );
+  output = output.replace(/<IntegrationGrid[^>]*\/>/g, () => `\n${renderIntegrationGrid()}\n`);
   output = output.replace(/<SpawnOptionsTable[^>]*\/>/g, '');
 
   output = output.replace(/\n{3,}/g, '\n\n');
@@ -204,6 +216,8 @@ export function getLlmsText(): string {
     '',
     '## Documentation',
     '',
+    formatLink({ title: 'Sign up for Teams with an agent', url: absoluteUrl('/signup/agent/teams'), description: 'Google authorization, desktop installation, session sharing, and verification.' }),
+    formatLink({ title: 'Sign up for Flows with an agent', url: absoluteUrl('/signup/agent/flows'), description: 'Google authorization, repository and provider connections, flow activation, and verification.' }),
     formatLink({
       title: 'Full documentation content',
       url: absoluteUrl('/llms-full.txt'),

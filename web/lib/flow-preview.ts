@@ -1,0 +1,41 @@
+import { CODING_AGENTS } from './flow-agents';
+import { resolveGeneratedAgentSettings, rolesForStep } from './flow-agent-settings';
+import type { FactoryDraft } from './flow-onboarding';
+import { repositoryHost, sourceLabel, sourceSummary } from './flow-sources';
+import { WORKFLOWS, WORKFLOW_STEP_DETAILS } from './flow-workflows';
+
+/** Display-only snapshot of the same plan shown by WorkflowPlan. Never executed by Cloud. */
+export function flowPreview(draft: FactoryDraft) {
+  const workflow = WORKFLOWS.find(item => item.id === draft.workflow);
+  if (!workflow) return undefined;
+  return {
+    version: 1,
+    description: workflow.description,
+    nodes: [
+      {
+        kind: 'trigger', title: draft.sources.length === 1
+          ? draft.sources[0] === 'markdown' ? 'Read your Markdown file'
+            : draft.sources[0] === 'slack' ? 'Slack message matches' : `${sourceLabel(draft.sources[0])} ticket matches`
+          : 'Work matches your sources',
+        description: draft.sources.map(id => `${draft.sources.length > 1 ? `${sourceLabel(id)}: ` : ''}${sourceSummary(id, draft.sourceSettings[id] ?? {})}`).join('\n'),
+        owner: 'Trigger', detail: draft.sources.length > 1 ? 'Any one source can start the flow.' : '', icons: draft.sources,
+      },
+      ...workflow.steps.map(step => {
+        const configs = rolesForStep(step).map(role => resolveGeneratedAgentSettings(workflow.id, role, draft.agents, draft.agentSettings));
+        const human = step === 'Human gate';
+        const agents = configs.map(config => ({
+          id: config.agent, label: CODING_AGENTS.find(agent => agent.id === config.agent)!.label,
+          model: config.model,
+        }));
+        return {
+          kind: human ? 'approval' : configs.length ? 'agent' : 'script',
+          title: human ? 'Your approval' : step,
+          description: WORKFLOW_STEP_DETAILS[step],
+          owner: human ? 'You' : !agents.length ? 'Script' : agents.length > 1 ? 'Parallel' : agents[0].label,
+          detail: agents.map(agent => agents.length > 1 ? `${agent.label} · ${agent.model}` : agent.model).join('\n'),
+          icons: step === 'Open PR' ? [repositoryHost(draft.sources)] : agents.map(agent => agent.id),
+        };
+      }),
+    ],
+  };
+}

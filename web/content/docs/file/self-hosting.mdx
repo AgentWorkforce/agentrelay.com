@@ -1,0 +1,47 @@
+---
+title: 'Self-hosting'
+description: 'Run the entire Relayfile stack yourself — core server, adapters, and the provider auth layer — so provider data and OAuth tokens never leave your infrastructure.'
+---
+
+Relayfile is open source end to end. [Relayfile Cloud](/docs/file/cloud) runs it for you, but every layer can run inside your own infrastructure. For teams with data-residency or compliance constraints, this is the path where no provider data and no OAuth token ever leaves your network.
+
+## The stack you run
+
+Self-hosting means running all three layers yourself (see [Adapters and providers](/docs/file/adapters-and-providers) for what each does):
+
+- **Core file server** ([relayfile](https://github.com/AgentWorkforce/relayfile)) — the VFS API, scoped tokens, event ingest, writeback queue, and mount layer.
+- **Adapters** ([relayfile-adapters](https://github.com/AgentWorkforce/relayfile-adapters)) — per-provider webhook-to-path normalization and writeback.
+- **Provider layer** ([relayfile-providers](https://github.com/AgentWorkforce/relayfile-providers)) — auth, token refresh, API proxy, and webhook subscriptions.
+
+Start with [Run locally](/docs/file/run-locally) for the Docker stack, or [Local development](/docs/file/local-development) to run from source. Clone the repo first: [github.com/AgentWorkforce/relayfile](https://github.com/AgentWorkforce/relayfile).
+
+## Self-host the provider layer too
+
+The provider layer is backed by an aggregator — Nango, Composio, or Pipedream — which handles OAuth, token storage, and API proxying. **Nango is itself open source and self-hostable**, so you can run it inside your own network and point the Relayfile provider layer at it. With self-hosted Nango, the OAuth flow, the stored refresh tokens, and every proxied provider API call stay on your infrastructure — there is no third-party hop in the data path.
+
+Point the provider config at your Nango host and secret, and link the workspace to the connection before sync. The connection fields are documented in [Adapters and providers › Bring existing connections](/docs/file/adapters-and-providers).
+
+<Note>
+  Already running Nango, Composio, or Pipedream? You don't need to re-do OAuth. Relayfile can adopt an existing `connectionId` — bring the connection you already have and Relayfile starts routing sync and writeback against it.
+</Note>
+
+## The fully-private deployment
+
+Put together, the self-hosted stack keeps the entire integration path inside your boundary:
+
+```text
+provider webhook → your Nango → your provider layer
+  → your adapters → your relayfile core → your mount
+  → your agent
+```
+
+Nothing in that chain calls out to Agent Relay. This pairs well with self-hosted workflow tools (n8n, your own queue) for teams that want every part of the agent's integration surface under their own control.
+
+<CardGroup cols={2}>
+  <Card title="Run locally" href="/docs/file/run-locally">
+    The Docker stack: file server, dev token issuer, and a seeded sample workspace.
+  </Card>
+  <Card title="Local development" href="/docs/file/local-development">
+    Run the pieces from source with the durable-local backend — no containers.
+  </Card>
+</CardGroup>

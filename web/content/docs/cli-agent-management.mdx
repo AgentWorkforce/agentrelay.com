@@ -3,12 +3,24 @@ title: 'Agent management'
 description: 'Register workspace agent identities, then optionally spawn, attach, tail, retarget, and release local CLI agents.'
 ---
 
-Version 8 separates agent identity from local process lifecycle.
+Agent identity and local process lifecycle are separate:
 
 - `agent ...` commands manage workspace identities and tokens.
-- `local agent ...` commands manage local broker-spawned CLI processes.
+- `node agent ...` commands manage broker-spawned CLI processes on this machine.
 
 Use the first group for any workspace. Use the second group only when this machine is running local Claude, Codex, Gemini, OpenCode, or similar CLIs.
+
+<Warning>
+  Agent Relay 11.3.0 and earlier print the active workspace key from `node up`
+  and `node status`. Upgrade to Agent Relay 11.3.1 or later — confirm with
+  `agent-relay --version`. Upgrading closes the key print in
+  `agent-relay node up` and `agent-relay node status`. It is not a guarantee
+  about credential output from every command in an Agent Relay install. Until
+  upgraded, run these commands only from a trusted, non-transcribed human
+  terminal; agents must not run them. To share a live view of a workspace, never
+  put a workspace key in a URL — use [`agent-relay observer`](/docs/observer),
+  available from 11.8.1.
+</Warning>
 
 ## Register Workspace Agents
 
@@ -23,6 +35,8 @@ agent-relay agent register release-system --type system --persona "Posts release
 ```bash
 export RELAY_AGENT_TOKEN="at_live_..."
 ```
+
+Agent tokens are identity credentials, not workspace administration keys. See [Authentication](/docs/authentication) for the full token model.
 
 ## List And Remove Workspace Agents
 
@@ -40,19 +54,17 @@ agent-relay agent remove reviewer
 Local process management needs a broker.
 
 ```bash
-agent-relay local up --background
+agent-relay node up --background
 ```
 
 ## Spawn Local Agents
 
 ```bash
-agent-relay local agent spawn codex --name reviewer --channels reviews --task "Review the docs."
-agent-relay local agent spawn claude --name planner --channels planning reviews --model sonnet
+agent-relay node agent spawn codex --name reviewer --channels reviews --task "Review the docs."
+agent-relay node agent spawn claude --name planner --channels planning reviews --model sonnet
 ```
 
 `spawn` creates a local managed agent process under the running broker.
-
-Useful flags:
 
 | Flag | Description |
 | --- | --- |
@@ -60,15 +72,18 @@ Useful flags:
 | `--channels <channels...>` | Channels to join. Defaults to `general`. |
 | `--task <task>` | Initial task prompt. |
 | `--model <model>` | Provider model override. |
+| `--cwd <path>` | Working directory for the agent process. |
+| `--spawn-mode <mode>` | `interactive` (default) or `task-exit`. |
+| `--exit-after-task` | Release the agent when its task completes. |
 
 ## Spawn And Attach
 
 ```bash
-agent-relay local agent new codex --name reviewer --mode drive --task "Review the docs."
-agent-relay local agent new claude --name planner --mode passthrough
+agent-relay node agent new codex --name reviewer --mode drive --task "Review the docs."
+agent-relay node agent new claude --name planner --mode passthrough
 ```
 
-`new` spawns the agent, then opens an attach session.
+`new` spawns the agent, then opens an attach session (default mode `drive`).
 
 Attach modes:
 
@@ -81,9 +96,9 @@ Attach modes:
 Drive mode uses out-of-band message controls so terminal control keys can pass through to the agent TUI:
 
 ```bash
-agent-relay local agent message hold reviewer
-agent-relay local agent message flush reviewer
-agent-relay local agent message auto reviewer
+agent-relay node agent message hold reviewer
+agent-relay node agent message flush reviewer
+agent-relay node agent message auto reviewer
 ```
 
 `hold` switches the local agent to manual delivery, `flush` drains pending relay messages into the agent, and `auto` resumes automatic injection. Each command accepts `--broker-url`, `--api-key`, and `--state-dir` when the broker is not discoverable from the current directory. Attach sessions use `Ctrl+C` to detach locally.
@@ -91,21 +106,21 @@ agent-relay local agent message auto reviewer
 ## Inspect, Tail, And Attach
 
 ```bash
-agent-relay local agent list
-agent-relay local tail
-agent-relay local tail --agent reviewer
-agent-relay local agent attach reviewer --mode view
-agent-relay local agent attach reviewer --mode drive
-agent-relay local agent attach reviewer --mode passthrough
+agent-relay node agent list
+agent-relay node tail
+agent-relay node tail --agent reviewer
+agent-relay node agent attach reviewer --mode view
+agent-relay node agent attach reviewer --mode drive
+agent-relay node agent attach reviewer --mode passthrough
 ```
 
-`local tail` streams broker events or one agent's output stream. `attach` reconnects to a running agent without spawning a new one.
+`node tail` streams broker events or one agent's output stream. `attach` reconnects to a running agent without spawning a new one (default mode `view`).
 
 ## Release Or Retarget
 
 ```bash
-agent-relay local agent set-model reviewer gpt-5.5
-agent-relay local agent release reviewer
+agent-relay node agent set-model reviewer gpt-5.5
+agent-relay node agent release reviewer
 ```
 
 `set-model` sends a best-effort model switch to the agent TUI. `release` gracefully stops the local managed agent.
@@ -125,6 +140,9 @@ A workspace identity can exist without a local process. A local process can be r
   </Card>
   <Card title="Workspaces" href="/docs/workspaces">
     How workspace keys define the coordination boundary.
+  </Card>
+  <Card title="Authentication" href="/docs/authentication">
+    Workspace keys, agent tokens, node tokens, and observer tokens.
   </Card>
   <Card title="Harnesses" href="/docs/harnesses">
     SDK/runtime concepts behind managed sessions.

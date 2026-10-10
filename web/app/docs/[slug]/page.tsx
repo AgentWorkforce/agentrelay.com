@@ -1,20 +1,12 @@
 import type { Metadata } from 'next';
-import type React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { evaluate } from '@mdx-js/mdx';
 import { Fragment } from 'react';
 import { jsx, jsxs } from 'react/jsx-runtime';
 import remarkGfm from 'remark-gfm';
 
-import { Card } from '../../../components/docs/Card';
-import { CardGroup } from '../../../components/docs/CardGroup';
-import { BannerLink } from '../../../components/docs/BannerLink';
-import { CodeGroup } from '../../../components/docs/CodeGroup';
 import { DocsPageActions } from '../../../components/docs/DocsPageActions';
-import { HighlightedPre } from '../../../components/docs/HighlightedCode';
-import { LegacySpawnOptionsTable } from '../../../components/docs/LegacySpawnOptionsTable';
-import { Note } from '../../../components/docs/Note';
-import { Warning } from '../../../components/docs/Warning';
+import { mdxComponents } from '../../../components/docs/mdx-components';
 import { TableOfContents } from '../../../components/docs/TableOfContents';
 import styles from '../../../components/docs/docs.module.css';
 import { getDoc } from '../../../lib/docs';
@@ -22,41 +14,7 @@ import { getDocMarkdownUrl } from '../../../lib/docs-markdown';
 import { getAllDocSlugs, getAllLegacyDocSlugs } from '../../../lib/docs-nav';
 import { getDefaultDocsVersionForSlug } from '../../../lib/docs-versions';
 import { ogImage } from '../../../lib/og-meta';
-import { absoluteUrl } from '../../../lib/site';
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
-function HeadingWithId(level: 2 | 3) {
-  return function Heading({ children, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-    const text = typeof children === 'string' ? children : String(children);
-    const id = slugify(text);
-    const Tag = `h${level}` as const;
-    return (
-      <Tag id={id} {...props}>
-        {children}
-      </Tag>
-    );
-  };
-}
-
-const components = {
-  CodeGroup,
-  Card,
-  CardGroup,
-  BannerLink,
-  Note,
-  Warning,
-  SpawnOptionsTable: LegacySpawnOptionsTable,
-  pre: HighlightedPre,
-  h2: HeadingWithId(2),
-  h3: HeadingWithId(3),
-};
+import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -74,7 +32,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const legacyDoc = getDoc(slug, 'v7.1.1');
     const canonical = absoluteUrl(`/docs/7.1.1/${slug}`);
     return {
-      title: legacyDoc?.frontmatter.title ?? 'Not Found',
+      title: legacyDoc?.frontmatter.metaTitle ?? legacyDoc?.frontmatter.title ?? 'Not Found',
       description: legacyDoc?.frontmatter.description,
       alternates: { canonical },
     };
@@ -86,15 +44,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Not Found' };
   }
 
+  const seoTitle = doc.frontmatter.metaTitle ?? doc.frontmatter.title;
+
   return {
-    title: doc.frontmatter.title,
+    title: seoTitle,
     description: doc.frontmatter.description,
     alternates: {
       canonical: absoluteUrl(`/docs/${slug}`),
       types: { 'text/markdown': getDocMarkdownUrl(slug) },
     },
     openGraph: {
-      title: doc.frontmatter.title,
+      siteName: SITE_NAME,
+      title: seoTitle,
       description: doc.frontmatter.description,
       url: absoluteUrl(`/docs/${slug}`),
       type: 'article',
@@ -102,7 +63,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     },
     twitter: {
       card: 'summary_large_image',
-      title: doc.frontmatter.title,
+      title: seoTitle,
       description: doc.frontmatter.description,
       images: [absoluteUrl(`/docs/${slug}/og.png`)],
     },
@@ -152,7 +113,7 @@ export default async function DocsPage({ params }: PageProps) {
           <p className={styles.articleDescription}>{doc.frontmatter.description}</p>
         )}
         <div className={styles.articleBody}>
-          <MDXContent components={components} />
+          <MDXContent components={mdxComponents} />
         </div>
       </article>
       <aside className={styles.tocSidebar}>

@@ -3,21 +3,34 @@ import type { ReactNode } from 'react';
 import { DocsLanguageProvider } from '../../components/docs/DocsLanguageContext';
 import { DocsNav } from '../../components/docs/DocsNav';
 import { DocsSearch } from '../../components/docs/DocsSearch';
-import { GitHubStarsBadge } from '../../components/GitHubStars';
+import { DocsGitHubStarsBadgeServer } from '../../components/DocsGitHubStarsBadgeServer';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import styles from '../../components/docs/docs.module.css';
 import { getSearchIndex } from '../../lib/docs';
+import { productBasePath, productSections, getProductSearchIndex } from '../../lib/product-docs';
+
+// Docs are deployed as pre-rendered assets. The Cloudflare incremental cache
+// configured for this site is intentionally read-only, so allowing Next's
+// default hourly revalidation would eventually send a stale docs request down
+// a regeneration path that cannot be persisted.
+export const revalidate = false;
 
 const searchIndex = getSearchIndex();
+const productScopes = productSections.map((section) => ({
+  id: section.id,
+  label: section.label,
+  basePath: productBasePath(section),
+  index: getProductSearchIndex(section),
+}));
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
     <DocsLanguageProvider>
       <div className={styles.docsPage}>
         <SiteNav
-          center={<DocsSearch index={searchIndex} />}
-          actions={<GitHubStarsBadge />}
+          center={<DocsSearch index={searchIndex} productScopes={productScopes} />}
+          actions={<DocsGitHubStarsBadgeServer />}
           mobileMenuContent={<DocsNav variant="mobileMenu" />}
           hideMobileDocsLink
         />

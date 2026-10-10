@@ -1,0 +1,68 @@
+---
+title: 'Real-time multi-agent sync'
+description: 'Write-through invalidation makes a Relayfile workspace a real coordination substrate: one agent writes, others see it on the next read.'
+---
+
+Most "filesystem for agents" projects assume one agent at a time. Relayfile assumes many. When agent A writes a file, agent B sees the new contents on the next read — within a second, no commit, no push, no merge. That's not polish; it's the difference between agents that *use* a filesystem and agents that *coordinate through* one.
+
+## The reviewer / implementer loop
+
+The clearest demonstration is two agents watching the same record:
+
+```bash
+# terminal 1: reviewer agent watching the ticket
+$ tail -F mount/linear/issues/AGE-12.json
+{ "title": "Fix login bug", "state": "Todo", ... }
+
+# terminal 2: implementer agent (writes after pushing the fix)
+$ echo '{"state":"In Review","description":"PR #42"}' \
+    > mount/linear/issues/AGE-12.json
+
+# terminal 1, ~half a second later — same file, new contents
+$ tail -F mount/linear/issues/AGE-12.json
+{ "title": "Fix login bug", "state": "In Review", ..., "description": "PR #42" }
+```
+
+The reviewer didn't poll an API or subscribe to a custom event bus. It tailed a file. A persona-orchestrator agent can watch all its workers' progress the same way — by reading the files they write. None of that requires a coordination protocol on top of Relayfile. **The filesystem is the protocol.**
+
+## Write-through invalidation
+
+Without write-through invalidation, this falls apart. Two agents on the same data either hit stale-read bugs (B reads a cached version after A wrote) or step on each other (last-write-wins, no notification). Some virtual-filesystem-for-agents projects have this as an open issue today; Relayfile shipped it.
+
+The mechanism: a write doesn't just persist, it invalidates. When a change stream delivers a mutation event for a path, any cached copy of that path is evicted, so the next read fetches fresh content. This is what turns multi-agent collaboration into a property of the substrate instead of something every app has to reinvent.
+
+## The client-side read cache
+
+The TypeScript SDK ships a client-side read cache (enabled by default, `v0.10.1+`) that makes this efficient without sacrificing freshness. `RelayFileClient.readFile` caches responses with:
+
+- **A short TTL** — 5 seconds by default, 500 entries by default.
+- **In-flight deduplication** — concurrent reads for the same path resolve from a single in-flight request.
+- **LRU eviction** — the cache stays bounded.
+- **Automatic write-through invalidation** — the cache auto-evicts when a change stream delivers a mutation event, and immediately on `writeFile` / `bulkWrite` / `deleteFile` from the same client.
+
+```ts
+// custom TTL for fast-changing workspaces (default: 5000ms, 500 entries)
+const files = new RelayFileClient({ token, readCache: { ttlMs: 2000 } })
+
+// disable caching entirely
+const files = new RelayFileClient({ token, readCache: false })
+```
+
+The default settings are deliberately conservative: a 5-second TTL plus event-driven invalidation means a reader almost never serves data older than the most recent write it could have heard about. Tune `ttlMs` down for workspaces with very fast churn, or disable the cache when you need every read to hit the server.
+
+<Note>
+  The FUSE/poll mount layer has its own kernel content and attribute caches, tuned separately with `--fuse-content-ttl`. The SDK read cache and the mount caches are independent — see [Run locally](/docs/file/run-locally).
+</Note>
+
+## The protocol is the filesystem
+
+Putting it together: provider webhooks become file events, file writes invalidate caches, and any agent can subscribe to a path. A new Linear issue mutates `/linear/issues/X.json`, which raises a change event, which wakes every subscribed agent — one comments, one pings Slack, one opens a PR. See [Why files](/docs/file/why-files) for the reactive-invocation argument and [Agents](/docs/file/agents) for the `onEvent` webhook helper that turns these events into agent invocations.
+
+<CardGroup cols={2}>
+  <Card title="The SDK" href="/docs/file/sdk">
+    Configure the read cache and subscribe to change streams.
+  </Card>
+  <Card title="ACLs" href="/docs/file/acls">
+    Coordinate many agents safely with per-agent path scopes.
+  </Card>
+</CardGroup>

@@ -3,13 +3,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import type { SearchEntry } from '../../lib/docs';
 import s from './docs-search.module.css';
 
+export interface ProductSearchScope {
+  id: string;
+  label: string;
+  basePath: string;
+  index: SearchEntry[];
+}
+
 interface DocsSearchProps {
   index: SearchEntry[];
+  productScopes?: ProductSearchScope[];
 }
 
 function search(query: string, index: SearchEntry[]): SearchEntry[] {
@@ -36,27 +44,56 @@ function search(query: string, index: SearchEntry[]): SearchEntry[] {
     .map((r) => r.entry);
 }
 
-export function DocsSearch({ index }: DocsSearchProps) {
+export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const backdropPressRef = useRef(false);
   const router = useRouter();
-  const results = search(query, index);
+  const pathname = usePathname();
 
-  const close = useCallback(() => {
-    setOpen(false);
+  const activeScope = productScopes.find(
+    (scope) => pathname === scope.basePath || pathname?.startsWith(`${scope.basePath}/`)
+  );
+  const activeIndex = activeScope?.index ?? index;
+  const basePath = activeScope?.basePath ?? '/docs';
+  const results = search(query, activeIndex);
+
+  // The query resets on open, so the closing dialog keeps its content while it fades out.
+  const openSearch = useCallback(() => {
     setQuery('');
     setActiveIdx(0);
+    setOpen(true);
   }, []);
+
+  const close = useCallback(() => setOpen(false), []);
 
   const navigate = useCallback(
     (slug: string) => {
       close();
-      router.push(`/docs/${slug}`);
+      router.push(`${basePath}/${slug}`);
     },
-    [close, router]
+    [basePath, close, router]
   );
+
+  // The dialog renders into document.body, which only exists after mount.
+  useEffect(() => setMounted(true), []);
+
+  // Native modal: top layer, inert page, focus trap, Esc to close, and focus
+  // returns to the element that opened it.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      dialog.showModal();
+      inputRef.current?.focus();
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open, mounted]);
 
   // Reset active index when results change
   useEffect(() => {
@@ -68,18 +105,13 @@ export function DocsSearch({ index }: DocsSearchProps) {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        if (dialogRef.current?.open) close();
+        else openSearch();
       }
-      if (e.key === 'Escape') close();
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [close]);
-
-  // Focus input when modal opens
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
+  }, [close, openSearch]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {
@@ -96,7 +128,7 @@ export function DocsSearch({ index }: DocsSearchProps) {
 
   return (
     <>
-      <button className={s.trigger} onClick={() => setOpen(true)}>
+      <button type="button" className={s.trigger} onClick={openSearch} aria-haspopup="dialog">
         <svg
           width="14"
           height="14"
@@ -114,10 +146,22 @@ export function DocsSearch({ index }: DocsSearchProps) {
         <kbd className={s.triggerKbd}>&#8984;K</kbd>
       </button>
 
-      {open &&
+      {mounted &&
         createPortal(
-          <div className={s.overlay} onClick={close}>
-            <div className={s.modal} onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
+          <dialog
+            ref={dialogRef}
+            className={s.dialog}
+            aria-label="Search documentation"
+            onClose={close}
+            // The dialog element itself is only hit through its ::backdrop; the panel fills the box.
+            onPointerDown={(e) => {
+              backdropPressRef.current = e.target === e.currentTarget;
+            }}
+            onClick={(e) => {
+              if (backdropPressRef.current && e.target === e.currentTarget) close();
+            }}
+          >
+            <div className={s.panel} onKeyDown={handleKeyDown}>
               <div className={s.inputRow}>
                 <svg
                   width="16"
@@ -135,7 +179,7 @@ export function DocsSearch({ index }: DocsSearchProps) {
                 <input
                   ref={inputRef}
                   className={s.input}
-                  placeholder="Search documentation..."
+                  placeholder={activeScope ? `Search ${activeScope.label} docs...` : 'Search documentation...'}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -152,7 +196,7 @@ export function DocsSearch({ index }: DocsSearchProps) {
                     results.map((entry, i) => (
                       <Link
                         key={entry.slug}
-                        href={`/docs/${entry.slug}`}
+                        href={`${basePath}/${entry.slug}`}
                         className={`${s.result} ${i === activeIdx ? s.resultActive : ''}`}
                         onClick={() => close()}
                         onMouseEnter={() => setActiveIdx(i)}
@@ -165,7 +209,7 @@ export function DocsSearch({ index }: DocsSearchProps) {
                 </div>
               )}
             </div>
-          </div>,
+          </dialog>,
           document.body
         )}
     </>

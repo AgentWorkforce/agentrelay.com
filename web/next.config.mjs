@@ -1,12 +1,26 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PHASE_DEVELOPMENT_SERVER, PHASE_PRODUCTION_BUILD } from 'next/constants.js';
+
+import { fetchDocsPackageVersions } from './lib/docs-packages.mjs';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    // Default ("loose") chunking merged unrelated route CSS into one
+    // render-blocking file: the homepage was shipping the /brand, /enterprise,
+    // /telemetry and /legal stylesheets — about 60% of its critical CSS —
+    // before a byte of its own. 'strict' still merges them; opting out entirely
+    // gives each CSS module its own chunk, loaded only where it is used, which
+    // takes the homepage's render-blocking CSS from 253 KB to 82 KB raw
+    // (51 KB → 20 KB gzip) at the cost of a couple more HTTP/2 requests.
+    cssChunking: false,
+  },
   outputFileTracingRoot: path.resolve(__dirname, '..'),
   outputFileTracingIncludes: {
     '/*': ['content/docs/**/*', 'content/blog/**/*'],
@@ -31,11 +45,102 @@ const nextConfig = {
 
     return config;
   },
+  async headers() {
+    // Machine-readable surfaces an agent may fetch from another origin (or from
+    // a browser-based agent). Without CORS these are unreadable to anything that
+    // isn't a server-side crawler.
+    const agentReadable = [
+      '/llms.txt',
+      '/llms-full.txt',
+      '/llm.txt',
+      '/agents.md',
+      '/skill.md',
+      '/feed.xml',
+      '/sitemap.xml',
+      '/robots.txt',
+      '/docs/llms.txt',
+      '/docs/markdown.md',
+      '/docs/markdown/:path*',
+      '/docs/file/markdown/:path*',
+      '/docs/relayhistory/markdown/:path*',
+      '/docs/relayflows/markdown/:path*',
+      '/docs/:slug([^/]+\\.md)',
+      '/.well-known/:path*',
+      '/u/:handle/agent.md',
+      '/agents/register/checklist.md',
+    ];
+
+    return [
+      {
+        source: '/:path*',
+        headers: [{ key: 'X-Content-Type-Options', value: 'nosniff' }],
+      },
+      ...agentReadable.map((source) => ({
+        source,
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET, HEAD' },
+        ],
+      })),
+      {
+        // The internal path the /.well-known rewrite targets; keep it out of
+        // indexes so the canonical dot-prefixed URL is the only one advertised.
+        source: '/well-known/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
+      },
+      {
+        // The owner analytics dashboard: private, never cached, never framed,
+        // never leaks its URL. The grant-bearing first request is rewritten to
+        // the exchange route below and sets its own stricter headers, so it is
+        // excluded here. Kept in sync with DASHBOARD_PAGE_HEADERS in
+        // lib/agent-dashboard.ts (asserted by lib/test/agent-dashboard.test.ts).
+        source: '/u/:handle/dashboard',
+        missing: [{ type: 'query', key: 'grant', value: '.+' }],
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'none'",
+          },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+    ];
+  },
   async rewrites() {
+    // Keep Cloud API calls and OAuth cookies on the marketing origin locally.
+    // Only the development server may proxy to a loopback Cloud process.
+    const cloudProxy = [];
+    if (process.env.NODE_ENV === 'development' && process.env.CLOUD_DEV_ORIGIN) {
+      const origin = new URL(process.env.CLOUD_DEV_ORIGIN);
+      if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) ||
+          origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) {
+        throw new Error('CLOUD_DEV_ORIGIN must be an HTTP loopback origin, for example http://127.0.0.1:3101');
+      }
+      cloudProxy.push({ source: '/cloud/:path*', destination: `${origin.origin}/cloud/:path*` });
+    }
     return {
+      beforeFiles: [
+        ...cloudProxy,
+        // A dashboard link carries a single-use grant. Exchange it in a route
+        // handler before any page, layout, or PostHog code can run; the handler
+        // sets the session cookie and 303s to the bare dashboard URL. `value`
+        // is explicit because OpenNext treats a valueless query `has` as
+        // always matching.
+        {
+          source: '/u/:handle/dashboard',
+          has: [{ type: 'query', key: 'grant', value: '.+' }],
+          destination: '/u/:handle/dashboard/exchange',
+        },
+      ],
       afterFiles: [
         // Conventional llms.txt path under /docs resolves to the root route.
         { source: '/docs/llms.txt', destination: '/llms.txt' },
+        // The App Router skips dot-prefixed directories, so the /.well-known
+        // documents are implemented under app/well-known/ and surfaced here at
+        // their canonical paths.
+        { source: '/.well-known/:path*', destination: '/well-known/:path*' },
         // Append .md to any docs URL to get its markdown mirror. afterFiles
         // runs after static routes (so /docs/markdown.md is untouched) but
         // before the /docs/[slug] dynamic page.
@@ -45,6 +150,44 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // Mirror the router's calendar aliases for direct Next.js and local dev requests.
+      {
+        source: '/will',
+        destination: 'https://calendar.app.google/RqLuQyT3dYe5e2YdA',
+        permanent: false,
+      },
+      {
+        source: '/khaliq',
+        destination: 'https://calendly.com/khaliq-agent-relay/30min',
+        permanent: false,
+      },
+      // In-person event banner QR code → homepage, tagged so the traffic is
+      // attributable to the physical banner at the current event. Temporary
+      // (not permanent) so /banner can be repointed at the next event without
+      // browsers having cached a permanent redirect. Current event:
+      // AI Engineer World's Fair.
+      //
+      // The destination is an absolute URL on purpose. A relative root-path
+      // destination ('/?utm_...') 500s under our OpenNext/Cloudflare runtime:
+      // its URL parser treats the empty path segment of '/?...' as the whole
+      // string and feeds '/?...' to path-to-regexp, which throws "Unexpected
+      // MODIFIER" on the bare '?'. Using the absolute form routes through the
+      // external-URL branch, which splits the path and query correctly.
+      {
+        source: '/banner',
+        destination:
+          'https://agentrelay.com/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
+        permanent: false,
+      },
+      // In-person event QR card → the relay GitHub repo, tagged like /banner
+      // above so card scans are attributable to the current event. Temporary
+      // for the same repointing reason.
+      {
+        source: '/qr-card',
+        destination:
+          'https://github.com/agentworkforce/relay?utm_source=ai-engineer-worldfair&utm_medium=qr-card&utm_campaign=ai-engineer-worldfair-2026',
+        permanent: false,
+      },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
       { source: '/relayfile', destination: '/primitives#file', permanent: true },
       { source: '/relayfile/:path*', destination: '/primitives#file', permanent: true },
@@ -54,8 +197,28 @@ const nextConfig = {
       { source: '/relaycast/:path*', destination: '/primitives#message', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
+      // The Reflex docs described the relayhistory repository; Relayhistory's docs replace them.
+      { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
+      { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
     ];
   },
 };
 
-export default nextConfig;
+/**
+ * The docs show the latest published version of each product (see
+ * lib/docs-packages.mjs), looked up from npm once per build and inlined. A
+ * production build fails rather than guess; the dev server starts without
+ * versions when npm is unreachable, so offline development still works.
+ */
+export default async function config(phase) {
+  let versions = {};
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    versions = await fetchDocsPackageVersions();
+  } else if (phase === PHASE_DEVELOPMENT_SERVER) {
+    versions = await fetchDocsPackageVersions().catch((error) => {
+      console.warn(`Docs package versions unavailable: ${error.message}`);
+      return {};
+    });
+  }
+  return { ...nextConfig, env: { DOCS_PACKAGE_VERSIONS: JSON.stringify(versions) } };
+}

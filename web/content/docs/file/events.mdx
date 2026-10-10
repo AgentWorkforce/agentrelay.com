@@ -1,0 +1,89 @@
+---
+title: 'Events and webhooks'
+description: 'How Relayfile turns per-provider webhooks into one normalized, filesystem-shaped event stream — so your agent reacts to a changed file instead of parsing a raw payload.'
+---
+
+A raw webhook is a diff without context, and every provider fires one differently: different payload shapes, different signature schemes, different retry semantics. Relayfile collapses all of that into a single event model. A provider webhook becomes a **normalized file event** pointing at a canonical path — the same shape whether it came from Linear, GitHub, Notion, or Slack.
+
+## The pipeline
+
+```text
+provider webhook
+  → provider layer verifies + receives        (Nango / Composio / Pipedream)
+  → adapter normalizes payload → canonical path
+  → core server materializes the file, revision++
+  → normalized file event emitted to subscribers
+```
+
+The load-bearing word is **materializes**. Relayfile doesn't forward the webhook — it applies it. By the time the event reaches your agent, the file at `path` already holds current state, and the surrounding context (`by-state/`, related records, the provider's `LAYOUT.md`) is already on disk. The event creates urgency; the materialized tree is what makes acting on it possible without an API call. See [Adapters and providers](/docs/file/adapters-and-providers) for how normalization is implemented per integration.
+
+## The normalized event
+
+Every change — webhook, sync, or another agent's write — surfaces as the same object:
+
+```json
+{
+  "eventId": "evt_2507297",
+  "type": "file.created",
+  "path": "/runs/pr-59/findings/security.json",
+  "revision": "rev_2935117",
+  "provider": "runs",
+  "origin": "agent_write",
+  "contentType": "application/json",
+  "contentHash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "content": "{}",
+  "inlineContent": true,
+  "encoding": "utf-8",
+  "correlationId": "lt-1-1788520629",
+  "timestamp": "2026-09-04T11:17:09.694Z"
+}
+```
+
+Small files arrive with their content inlined (`inlineContent: true`), so a handler often needs no follow-up read. `correlationId` carries through from the write that caused the event, which is how you tie an event back to the request that produced it.
+
+- **`type`** is one of `file.created`, `file.updated`, `file.deleted`.
+- **`path`** is the canonical file that changed. The path itself carries context — you know which provider and which record without parsing a payload.
+- **`revision`** monotonically increases per file. Use it to order events and to fetch the prior state for a diff.
+- **`origin`** distinguishes `provider_sync` (a webhook or sync from the provider), `agent_write` (another agent wrote the file), and `api` (a direct API write). This is how an agent avoids reacting to its own writes.
+
+## Consuming events
+
+Filter by path glob and event type so an agent only wakes for what it cares about. From the CLI:
+
+```bash
+relayfile listen \
+  --path "/linear/issues/by-state/triage/**" \
+  --event file.created \
+  --run "claude --print 'Triage this: {{path}}'"
+```
+
+`relayfile listen [WORKSPACE] [--provider PROVIDER] [--path GLOB] [--event TYPE] [--run CMD] [--format text|json] [--background]` streams the workspace's event feed. `--run` substitutes `{{path}}`, `{{type}}`, `{{provider}}`, and `{{revision}}` as single values, plus `{{event}}` for the whole event as space-separated `key:value` pairs — quote that one, or its dozen-odd tokens splatter across the command's arguments. `--format json` prints one event object per line, for piping into anything that isn't a shell command. To fan events out to a channel instead of a local process, bind the glob to a webhook with `relayfile integration bind <provider> <glob> --channel … --webhook … --webhook-token …`.
+
+Or from the SDK with `onWrite`, which subscribes over the same WebSocket stream and dispatches by pattern:
+
+```typescript
+import { onWrite } from '@relayfile/sdk';
+
+onWrite('/linear/issues/**', async (event) => {
+  if (event.origin === 'agent_write') return; // ignore our own writes
+  await agent.handle(event);
+}, { client, workspaceId, operations: ['create', 'update'] });
+```
+
+See [Agents](/docs/file/agents) for the framework helpers built on this.
+
+## Delivery semantics
+
+- **At-least-once.** Events can repeat. Deduplicate on `eventId`; treat handlers as idempotent.
+- **Ordering.** Per file, `revision` is the source of truth — wall-clock `timestamp` can be close together under bursty traffic.
+- **Catch-up.** A subscriber that connects with a cursor receives the events it missed while disconnected, so a restart doesn't drop changes. If the WebSocket can't open, the SDK degrades to HTTP polling rather than going silent.
+- **Reconnect.** Long-lived subscribers do get dropped — a busy workspace can end a stream mid-message — and a reconnect storm is answered with `429` on the WebSocket handshake. Supervise the subscriber (`relayfile listen --background`, or `relayfile supervisor install`) and back off between reconnects rather than looping immediately.
+
+<CardGroup cols={2}>
+  <Card title="Real-time sync" href="/docs/file/realtime-sync">
+    How those events fan out to every subscribed agent in sub-second time.
+  </Card>
+  <Card title="Adapters and providers" href="/docs/file/adapters-and-providers">
+    The layer that maps each provider's webhooks and objects into paths.
+  </Card>
+</CardGroup>

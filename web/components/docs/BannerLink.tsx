@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BookOpen, PlayCircle, Rocket } from 'lucide-react';
+import { ArrowRight, BookOpen, Bot, Compass, PlayCircle, Rocket } from 'lucide-react';
 
 import styles from './docs.module.css';
 
@@ -8,7 +8,7 @@ function isInternalHref(href: string): boolean {
   return href.startsWith('/') && !href.startsWith('//');
 }
 
-type BannerIcon = 'play' | 'rocket' | 'docs';
+type BannerIcon = 'play' | 'rocket' | 'docs' | 'bot' | 'compass';
 
 interface BannerLinkProps {
   href: string;
@@ -20,6 +20,8 @@ const iconMap = {
   play: PlayCircle,
   rocket: Rocket,
   docs: BookOpen,
+  bot: Bot,
+  compass: Compass,
 } satisfies Record<BannerIcon, typeof PlayCircle>;
 
 export function BannerLink({ href, children, icon = 'docs' }: BannerLinkProps) {

@@ -7,6 +7,12 @@ Capabilities live on the session, not the harness definition.
 
 The harness tells Relay what a session can do after it creates or attaches to that session. Two sessions from the same harness may have different capabilities because they were created with different provider settings, transports, permissions, or connection state.
 
+<Note>
+  Session capabilities describe what one created session can do — receive, emit, invoke, expose, release.
+  They are distinct from a [node](/docs/nodes)'s **capabilities**, which are the named `spawn` and `action`
+  operations a node advertises to the fleet for [placement](/docs/nodes#placement).
+</Note>
+
 ## Capability Shape
 
 ```ts
@@ -240,7 +246,7 @@ type AgentSessionEvent =
 
 ## Capability Negotiation
 
-When Relay registers a session, it should use capabilities to decide:
+When Relay registers a session, it uses capabilities to decide:
 
 - whether the session can receive the message content type
 - which delivery modes are valid
@@ -249,4 +255,4 @@ When Relay registers a session, it should use capabilities to decide:
 - which event predicates can be satisfied by live session observations
 - whether release, pause, resume, fork, or snapshot operations are available
 
-Capability errors should be explicit and structured. They should not become silent message loss.
+Capability errors are explicit and structured — never silent message loss.

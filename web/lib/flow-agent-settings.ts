@@ -1,0 +1,89 @@
+import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
+import type { WorkflowId, WorkflowStep } from './flow-workflows';
+
+// planner, plan-reviewer and fixer are no longer generated (agentrelay.com#155)
+// but stay valid, so a saved draft that customised them still loads.
+export const AGENT_ROLES = ['planner', 'plan-reviewer', 'prototype-1', 'prototype-2', 'prototype-3', 'comparator', 'implementer', 'adversary', 'fixer', 'check-discovery', 'check-repair'] as const;
+export type AgentRole = typeof AGENT_ROLES[number];
+export type AgentSettings = { agent?: AgentId; model?: string; prompt?: string };
+export type FlowAgentSettings = Partial<Record<`${WorkflowId}:${AgentRole}`, AgentSettings>>;
+
+/**
+ * Stable defaults for first-party generated flows. These identifiers are
+ * verified against the current CLI model catalogs/readiness probes; the
+ * runtime still proves the exact credential/model pair before agent work.
+ *
+ * Keep this exhaustive so enabling another generator agent cannot silently
+ * reintroduce an omitted model and inherit an adapter default.
+ */
+export const DEFAULT_AGENT_MODELS: Readonly<Record<CodingAgent, string>> = {
+  claude: 'claude-sonnet-5',
+  codex: 'gpt-5.6-sol',
+  cursor: 'gpt-5.6-sol-high',
+  grok: 'grok-4.7',
+};
+
+export function rolesForStep(step: WorkflowStep): AgentRole[] {
+  if (step === '3 implementations') return ['prototype-1', 'prototype-2', 'prototype-3'];
+  return ({ Compare: ['comparator'], Implement: ['implementer'], Build: ['implementer'], Review: ['adversary'], 'Adversarial review': ['adversary'] } as Partial<Record<WorkflowStep, AgentRole[]>>)[step] ?? [];
+}
+
+export function defaultAgentPrompt(workflow: WorkflowId, role: AgentRole): string {
+  if (role.startsWith('prototype-')) return 'Implement independently using the assigned approach. Work only in this worktree. Add and run tests. Commit your implementation and write prototype-notes.md with results and tradeoffs. Do not open a PR.';
+  switch (role) {
+    case 'planner': return 'Read the repository and write plan.md. Do not implement yet.';
+    case 'plan-reviewer': return 'Review plan.md against the ticket and repository. Challenge assumptions, address gaps, and write reviewed-plan.md. Do not implement yet.';
+    case 'comparator': return 'Compare the implementations and test results in the provided worktrees. Read their code and prototype-notes.md. Write comparison.md with each prototype path, strengths, weaknesses, and which ideas to combine. Do not modify the prototypes or implement yet.';
+    case 'implementer': return (workflow === 'traditional' ? 'Start by reading the ticket and the code it touches, and plan the change before you write it. ' : workflow === 'prototype' ? 'Read comparison.md and inspect the prototype implementations it references. Combine the strongest ideas into the final implementation on the current branch, not in the prototype worktrees. ' : '') + 'Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.';
+    case 'adversary': return 'Review the PR diff, tests, and all PR comments. ' + (workflow === 'prototype' ? 'Read comparison.md to check that the final implementation combines the strongest ideas. ' : '') + 'Find bugs and edge cases. Write review.md. Create review.clean only if no issues remain.';
+    case 'fixer': return 'Read review.md and gh pr view --comments. Address every issue. Commit fixes without pushing. The workflow runs the checks and pushes the revision.';
+    // Setup, not the ticket: the ticket text arrives with every task, so the
+    // prompt says plainly not to start on it.
+    case 'check-discovery': return 'This is a setup step: do not start on the ticket. Work out how this repository checks itself on a fresh machine, the way its CI does. Read the CI configuration (.github/workflows, .gitlab-ci.yml, .circleci and similar), any Makefile, justfile or Taskfile, and AGENTS.md, CLAUDE.md, CONTRIBUTING and README. Write .relayflow/check.sh: a POSIX sh script starting with set -e that installs dependencies, runs whatever CI runs before its tests (builds, code generation), then runs the tests. Leave out steps that need secrets, deployments or services this machine does not have, with a comment saying why. Do not run the full test suite, do not change any other file, and do not commit. If the repository has no tests, do not create the file.';
+    case 'check-repair': return 'The repository\'s checks failed on this branch. The command that ran is .relayflow/check.sh and its full output is in .relayflow/check.log. For each failure, work out whether it comes from missing setup (a build, code generation or install step the tests expect, often named in the error) or from a bug in the change on this branch. Fix missing setup by adding the step to .relayflow/check.sh the way the repository\'s CI does it; do not commit that file. Fix bugs in the change and commit the fix. Never skip, delete or weaken a test, and never change a test only to make it pass. If a failure is outside your control, such as a tool that is not installed, no network, or missing credentials, leave it and write what you found to .relayflow/repair-notes.md.';
+    default: return '';
+  }
+}
+
+/**
+ * Defaults an editor may have saved verbatim that no longer fit the workflow:
+ * the traditional implementer followed the plan reviewer's reviewed-plan.md,
+ * which is no longer written (agentrelay.com#155). A saved copy of one
+ * resolves to the current default; a prompt the person wrote is kept.
+ */
+const RETIRED_DEFAULT_PROMPTS: Partial<Record<`${WorkflowId}:${AgentRole}`, readonly string[]>> = {
+  'traditional:implementer': ['Follow reviewed-plan.md. Implement on the current branch. Add regression tests. Commit changes. Write a PR summary to summary.md.'],
+};
+
+export function resolveAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
+  const available = [...new Set(selected.filter(isCodingAgent))];
+  const builder = available[0] ?? 'claude';
+  const reviewer = available.find(id => id !== builder) ?? builder;
+  const defaultAgent = ['plan-reviewer', 'comparator', 'adversary', 'prototype-2'].includes(role) ? reviewer : builder;
+  const saved = settings[`${workflow}:${role}`];
+  // Changing the selected agents must never leave an unavailable CLI assigned.
+  const agent = saved?.agent && isCodingAgent(saved.agent) && available.includes(saved.agent) ? saved.agent : defaultAgent;
+  const compatible = !saved?.agent || saved.agent === agent;
+  const model = compatible ? saved?.model?.trim() || '' : '';
+  const retired = saved?.prompt !== undefined && RETIRED_DEFAULT_PROMPTS[`${workflow}:${role}`]?.includes(saved.prompt);
+  return { agent, model, prompt: saved?.prompt !== undefined && !retired ? saved.prompt : defaultAgentPrompt(workflow, role) };
+}
+
+/** Resolve the explicit pair emitted by a first-party generated flow. */
+export function resolveGeneratedAgentSettings(workflow: WorkflowId, role: AgentRole, selected: readonly string[], settings: FlowAgentSettings = {}) {
+  const value = resolveAgentSettings(workflow, role, selected, settings);
+  return { ...value, model: value.model || DEFAULT_AGENT_MODELS[value.agent] };
+}
+
+export function validFlowAgentSettings(value: unknown): value is FlowAgentSettings {
+  if (value === undefined) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return Object.entries(value).every(([key, settings]) => {
+    const [workflow, role, extra] = key.split(':');
+    if (extra || !['traditional', 'prototype', 'simple'].includes(workflow) || !(AGENT_ROLES as readonly string[]).includes(role)) return false;
+    if (!settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
+    return Object.entries(settings).every(([field, v]) => field === 'agent' ? typeof v === 'string' && CODING_AGENTS.some(agent => agent.id === v)
+      : field === 'model' ? typeof v === 'string' && v.length <= 120 && !/[\r\n\0]/.test(v)
+      : field === 'prompt' ? typeof v === 'string' && v.trim().length > 0 && v.length <= 6000 : false);
+  });
+}

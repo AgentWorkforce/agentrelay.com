@@ -10,7 +10,8 @@ directions, both under the `relay.webhooks` namespace:
 - **Outbound:** subscribe your service to Relay events. Relay POSTs HMAC-signed event payloads to your URL.
 
 Provider connections (Slack, GitHub App installs, and similar) live under the separate `relay.integrations`
-namespace — don't conflate it with webhooks.
+namespace — don't conflate it with webhooks. To wake an agent on provider events like GitHub issues and
+comments, use [Provider subscriptions](/docs/provider-subscriptions).
 
 ## Inbound: external services into Relay
 
@@ -102,8 +103,6 @@ Messages are sent from a registered participant — reconnect a stored agent tok
 `relay.workspace.reconnect({ apiToken })`, then call `agent.sendMessage(...)`.
 
 ## Delivery and idempotency
-
-Webhook handlers should be boring and repeatable.
 
 - Verify the provider signature before parsing or forwarding sensitive data.
 - Pass `idempotencyKey` when sending messages so retries do not duplicate posts.

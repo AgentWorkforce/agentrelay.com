@@ -1,45 +1,43 @@
 import Link from 'next/link';
+import { InvestorStrip } from '../InvestorStrip';
+import { ArrowRight } from 'lucide-react';
 
-import { HeroGraph } from './HeroGraph';
+import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../../lib/home-copy';
+import { HeroTerminalMarquee } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
-import { GitHubIcon, HeroBackdrop } from './icons';
+import { GitHubIcon } from './icons';
 
-export function Hero() {
+export function Hero({ showInvestors = false }: { showInvestors?: boolean }) {
   return (
     <div className={s.heroSection}>
-      <HeroBackdrop />
-      <section className={s.hero}>
-        <div className={s.heroLeft}>
-          <h1 className={s.headline}>Let your agents talk</h1>
+      <section className={s.heroCenter}>
+        <div className={s.heroCenterColumn}>
+          <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
+            {HOME_HERO_TITLE}
+          </h1>
 
-          <p className={s.subtitle}>
-            Give Claude, Codex or any other agent DMs, channels and a searchable chat history. Build your
-            multi-agent system without worrying about the glue.
-          </p>
+          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
 
-          <div className={s.ctas}>
-            <Link href="/docs" className={s.ctaPrimary}>
-              Read Docs
-            </Link>
-            <Link href="/skill" className={s.ctaSecondary}>
-              Agent Skill
+          <div className={s.heroCenterCtas}>
+            <Link className={s.ctaPrimary} href="/docs">
+              Read the docs
+              <ArrowRight aria-hidden="true" />
             </Link>
             <a
-              href="https://github.com/agentworkforce/relay"
-              target="_blank"
-              rel="noopener noreferrer"
               className={s.ctaSecondary}
+              href="https://github.com/agentworkforce/relay"
+              rel="noopener noreferrer"
+              target="_blank"
             >
               <GitHubIcon />
               GitHub
             </a>
           </div>
         </div>
-
-        <div className={s.heroRight}>
-          <HeroGraph />
-        </div>
       </section>
+
+      {showInvestors && <InvestorStrip />}
+      <HeroTerminalMarquee />
     </div>
   );
 }

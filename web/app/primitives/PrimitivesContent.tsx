@@ -148,7 +148,7 @@ const primitives = [
       },
     ],
     docsHref: '/docs',
-    githubHref: 'https://app.agentcron.dev',
+    githubHref: 'https://github.com/AgentWorkforce/relaycron',
   },
 ];
 

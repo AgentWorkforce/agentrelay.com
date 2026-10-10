@@ -1,0 +1,69 @@
+---
+title: 'Relayfile Cloud'
+description: 'Hosted Agent Relay runs the workspace, scoped auth, Nango OAuth, sync workers, and writeback workers — connect provider-backed files with one token.'
+---
+
+If you want Notion, Slack, Linear, GitHub, or other provider-backed files without running any infrastructure, use Hosted Agent Relay. Agent Relay Cloud runs the workspace, the Relayfile API, scoped auth, Nango OAuth, provider sync workers, and writeback workers for you. Your agents connect with a single token; there's no integration runtime on your machine.
+
+## The setup flow
+
+`relayfile setup` is the human and agent-guided entry point. It connects to `agentrelay.com`, creates or joins a cloud workspace, completes provider auth, waits for sync, and mounts the resulting files:
+
+```bash
+relayfile setup \
+  --provider notion \
+  --workspace my-agent \
+  --local-dir ./relayfile-mount \
+  --no-open
+```
+
+`--no-open` prints the hosted login and connect URLs instead of opening a browser, which is what you want inside agents and headless environments. The local directory is just the agent's file interface — the integration stack is hosted. Re-running with the same workspace name reuses the workspace, refreshes the session, and only opens a new connect flow when the requested provider isn't already connected.
+
+After setup, hand the agent the mount path and it reads and writes under `$RELAYFILE_LOCAL_DIR/<provider>/...` instead of calling provider APIs directly:
+
+```bash
+export RELAYFILE_LOCAL_DIR="$PWD/relayfile-mount"
+```
+
+For the programmatic equivalent from inside an authorized sandbox, see [Mounting from a sandbox](/docs/file/mounting).
+
+## What Cloud manages
+
+Cloud runs the whole integration path so you don't operate the stack:
+
+- **Managed OAuth (Nango).** The polished connect-session flow and provider credentials.
+- **Provider sync workers.** Initial backfill plus live webhook ingestion, normalized into the file tree.
+- **Writeback workers.** Your agents' file writes turned into provider API calls, with retry and dead-letter handling.
+- **Scoped auth.** Short-lived, path-scoped Relayfile tokens minted per workspace and per agent.
+
+## Local OSS vs Hosted
+
+Use local OSS for development, tests, or fully self-hosted deployments. Use Hosted Agent Relay when you want provider-backed files to work without operating the stack.
+
+| Need | Local OSS | Hosted Agent Relay |
+|---|---|---|
+| Run the Relayfile API | you run it | managed |
+| Mount files for an agent | yes | yes |
+| Issue scoped tokens | run relayauth or equivalent | managed |
+| Provider OAuth | self-host provider auth | managed |
+| Provider sync / writeback | self-host workers | managed |
+| Nango | self-host for end-to-end OAuth | managed |
+
+For end-to-end self-hosting, run relayfile, relayauth, the relevant [adapters and providers](/docs/file/adapters-and-providers), and Nango. The split is deliberate: Relayfile's OSS surface handles the VFS, scoped tokens, generic ingest, writeback queue, and mount; the polished OAuth connect flow and provider sync definitions are hosted by Cloud or implemented in your self-host provider stack.
+
+<Note>
+  Relayfile itself never stores third-party OAuth credentials. Whether hosted or self-hosted, credentials live in the provider layer (Nango, Composio, Pipedream) — Relayfile receives normalized files, events, writeback operations, and a `connectionId`.
+</Note>
+
+## file.agentrelay.com
+
+`relayfile-cloud` is the standalone Cloudflare service for the hosted Relayfile data plane, currently being extracted from the internal SST monorepo and moved onto the **`file.agentrelay.com`** domain. It's a rebuild in progress: the previous standalone implementation has been archived (not deleted) under the git tag `archive/standalone-impl-pre-migration`, and the source of truth being ported from is the internal cloud monorepo's `packages/relayfile` and `infra/relayfile.ts`. The control plane today resolves through `agentrelay.com/cloud`; the data plane is being consolidated onto its own domain as part of that migration.
+
+<CardGroup cols={2}>
+  <Card title="CLI reference" href="/docs/file/cli">
+    Every flag of `relayfile setup` and the integration commands.
+  </Card>
+  <Card title="Mounting from a sandbox" href="/docs/file/mounting">
+    The SDK equivalent of `relayfile setup` for runtimes.
+  </Card>
+</CardGroup>

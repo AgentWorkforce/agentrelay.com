@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { getWebsiteAnalyticsPage } from '../site-analytics';
 
 describe('getWebsiteAnalyticsPage', () => {
+  it('tracks the landing page and every onboarding route', () => {
+    for (const pathname of ['/flows', '/flows/onboarding', ...['sources', 'agents', 'task', 'connections'].map(stage => `/flows/onboarding/${stage}`)]) {
+      expect(getWebsiteAnalyticsPage(pathname)).toEqual({ pageGroup: 'flows', pathname });
+    }
+  });
   it('tracks docs routes', () => {
     expect(getWebsiteAnalyticsPage('/docs/quickstart')).toEqual({
       pageGroup: 'docs',

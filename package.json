@@ -14,8 +14,11 @@
     "dev": "npm --workspace web run dev",
     "build": "npm --workspace web run build",
     "test": "npm --workspaces run test",
+    "verify:catalog-gates": "node web/scripts/verify-catalog-gates.mjs",
+    "verify:recommended-flows": "npm run verify:catalog-gates && node web/scripts/verify-recommended-flow-catalog.mjs",
+    "skills:generate": "node web/scripts/generate-setup-skills.mjs",
+    "verify:setup-skills": "node web/scripts/generate-setup-skills.mjs --check",
     "preview": "npm --workspace web run preview",
-    "deploy": "npm --workspace web run deploy",
-    "deploy:router": "npm --workspace router run deploy"
+    "dev:teams": "CLOUD_DEV_ORIGIN=http://127.0.0.1:3101 npm --workspace web run dev -- --hostname 127.0.0.1 --port 3100"
   }
 }

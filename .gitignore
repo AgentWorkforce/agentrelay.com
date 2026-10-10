@@ -6,6 +6,10 @@ node_modules/
 web/.next/
 web/out/
 
+# Playwright
+web/playwright-report/
+web/test-results/
+
 # OpenNext (Cloudflare) build output
 web/.open-next/
 
@@ -19,6 +23,7 @@ web/.dev.vars
 
 # Runtime data
 web/waitlist.json
+.agentworkforce/
 
 # Env
 .env
@@ -27,3 +32,9 @@ web/waitlist.json
 
 # OS
 .DS_Store
+
+# Palate website-builder skill telemetry, written at the repo root during agent sessions
+build-manifest.json
+
+# Native probe builds are staged locally, not committed with the website.
+web/public/downloads/agent-relay-probe/

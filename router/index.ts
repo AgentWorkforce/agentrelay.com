@@ -1,7 +1,8 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
-import { maybeRateLimit, type RateLimitEnv } from "./src/rate-limit.js";
+import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
+import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 
-interface Env {
+interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
   CLOUD_WEB_WORKER?: {
     fetch(request: Request): Promise<Response>;
@@ -9,7 +10,10 @@ interface Env {
   FILE_OBSERVER_ORIGIN?: string;
   TRAFFIC_RECORDER?: RecorderEnv["TRAFFIC_RECORDER"];
   ROUTER_CONFIG?: RecorderEnv["ROUTER_CONFIG"];
-  RATE_LIMIT_COUNTERS?: RateLimitEnv["RATE_LIMIT_COUNTERS"];
+  RELAY_AGENT_WORKER?: {
+    fetch(request: Request): Promise<Response>;
+  };
+  RELAY_AGENT_ORIGIN?: string;
   WEBHOOK_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -34,7 +38,43 @@ const PRIMARY_HOST = "agentrelay.com";
 const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
+// Relay Connect invite links are advertised as agentrelay.com/connect/<id>, but
+// the invite route lives in the cloud app (basePath /cloud). Only the single
+// opaque-ID segment (with an optional trailing slash) is claimed; /connect
+// itself stays with the marketing site.
+const CONNECT_INVITE_PATH = /^(\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?)\/?$/i;
+// arelay.to is the short public front door for agent chat. It serves the same
+// site, but its bare root and the signed-in cloud app send people to agentrelay.com.
+const SHORT_HOST = "arelay.to";
+const SHORT_HOST_WWW = "www.arelay.to";
+const HANDLE_SEGMENT = "[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])";
+// Keep this aligned with relay-agent's registry reservation set. agent-relay is
+// the one seeded exception; every other reserved site/API slug must retain its
+// router meaning instead of being rewritten as a company profile.
+const RESERVED_AGENT_PAGE_HANDLES = new Set([
+  "register", "connect", "api", "cloud", "admin", "www", "help", "support",
+  "docs", "status", "security", "abuse", "login", "signup", "agents", "directory",
+]);
+// The verified-agent directory page. web/lib/agent-directory.ts names the same
+// path (AGENT_DIRECTORY_PATH); keep the two in step.
+const AGENT_DIRECTORY_PAGE_PATH = "/directory";
+const AGENT_DIRECTORY_MARKDOWN_PATH = `${AGENT_DIRECTORY_PAGE_PATH}.md`;
+// A visitor's coding agent chats through /<handle>/<32 hex id>. arelay.to
+// accepts every handle-shaped slug and lets relay-agent's registry decide
+// whether it exists. agentrelay.com retains its established agent-relay route.
+const AGENT_CHAT_PATH = new RegExp(`^/(${HANDLE_SEGMENT})/([0-9a-f]{32})/?$`);
+const REGISTRY_API_PATH = /^\/api\/v1\/(?:registrations|agents)(?:\/|$)/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
+export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
+export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
+const VIRTUAL_OFFICE_URL = "https://meet.google.com/ijx-gpfb-brt";
+const VANITY_REDIRECTS = new Map<string, string>([
+  ["/meet-with-will", WILL_CALENDAR_URL],
+  ["/will", WILL_CALENDAR_URL],
+  ["/meet-with-khaliq", KHALIQ_CALENDAR_URL],
+  ["/khaliq", KHALIQ_CALENDAR_URL],
+  ["/virtual-office", VIRTUAL_OFFICE_URL],
+]);
 
 // Header set by webhook-worker's queue consumer
 // (`packages/webhook-worker/src/queue-consumer.ts`'s `buildForwardHeaders`) on
@@ -93,6 +133,242 @@ function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean 
 
 function isCloudPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
+}
+
+// Returns the cloud-app path serving a Relay Connect invite link, or undefined
+// when the request is not an apex invite read.
+export function getConnectInviteCloudPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+): string | undefined {
+  if (hostname !== PRIMARY_HOST || (method !== "GET" && method !== "HEAD")) {
+    return undefined;
+  }
+
+  const invitePath = CONNECT_INVITE_PATH.exec(pathname)?.[1];
+  return invitePath ? `${CLOUD_PATH_PREFIX}${invitePath}` : undefined;
+}
+
+// Returns the cloud-app path for an agent chat conversation POST, or undefined.
+// www.arelay.to is accepted here so a chat POST is never sent to its redirect,
+// which curl would not follow and which would turn the POST into a GET.
+export function getAgentChatCloudPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+): string | undefined {
+  if (method !== "POST") {
+    return undefined;
+  }
+  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW) {
+    return undefined;
+  }
+
+  const match = AGENT_CHAT_PATH.exec(pathname);
+  if (!match || (hostname === PRIMARY_HOST && match[1] !== "agent-relay")) {
+    return undefined;
+  }
+  return `${CLOUD_PATH_PREFIX}/api/v1/agent-chat/${match[1]}/${match[2]}`;
+}
+
+// Agent pages live under /u/<handle> on agentrelay.com, so company handles never
+// collide with the site's own pages, and at the root on arelay.to. Agents told
+// to "go to arelay.to/agent-relay" fetch it with curl (Accept: */*) or a
+// web-fetch tool (Accept: text/markdown); both get the agent-readable guide.
+// Browsers, which prefer text/html, get the page. HEAD always gets the page, so
+// uptime probes and `curl -I` neither change content type nor mint a guide.
+export function getAgentPagePath(
+  hostname: string,
+  pathname: string,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (method !== "GET" && method !== "HEAD") {
+    return undefined;
+  }
+  let agent: string | undefined;
+  if (hostname === SHORT_HOST || hostname === SHORT_HOST_WWW) {
+    agent = new RegExp(`^/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
+  } else if (hostname === PRIMARY_HOST) {
+    agent = new RegExp(`^/u/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
+  }
+  if (!agent || RESERVED_AGENT_PAGE_HANDLES.has(agent)) {
+    return undefined;
+  }
+  const wantsHtml = method === "HEAD" || prefersHtmlOverMarkdown(accept);
+  if (wantsHtml && hostname === SHORT_HOST_WWW) {
+    // Browsers on the www alias are canonicalized by getShortHostRedirect.
+    return undefined;
+  }
+  return wantsHtml ? `/u/${agent}` : `/u/${agent}/agent.md`;
+}
+
+// The verified-agent directory lives at agentrelay.com/directory and is
+// advertised as arelay.to/agents. Like an agent page, browsers get the HTML
+// page and agents (curl, web-fetch tools) get the Markdown directory; HEAD
+// always gets the page. Browsers on www.arelay.to are canonicalized by
+// getShortHostRedirect instead.
+export function getAgentDirectoryPath(
+  hostname: string,
+  pathname: string,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (method !== "GET" && method !== "HEAD") {
+    return undefined;
+  }
+  const path = pathname.replace(/\/$/, "");
+  const directory = hostname === SHORT_HOST || hostname === SHORT_HOST_WWW
+    ? path === "/agents"
+    : hostname === PRIMARY_HOST && path === AGENT_DIRECTORY_PAGE_PATH;
+  if (!directory) {
+    return undefined;
+  }
+  const wantsHtml = method === "HEAD" || prefersHtmlOverMarkdown(accept);
+  if (wantsHtml && hostname === SHORT_HOST_WWW) {
+    return undefined;
+  }
+  return wantsHtml ? AGENT_DIRECTORY_PAGE_PATH : AGENT_DIRECTORY_MARKDOWN_PATH;
+}
+
+// Quality the Accept header gives one media type, using the most specific
+// matching range (exact, then type/*, then */*), per RFC 9110 section 12.5.1.
+function acceptQuality(accept: string, mediaType: string): number {
+  const [type] = mediaType.split("/");
+  let best = -1;
+  let quality = 0;
+  for (const part of accept.split(",")) {
+    const [range, ...params] = part.trim().toLowerCase().split(";");
+    const name = range.trim();
+    const specificity = name === mediaType ? 2 : name === `${type}/*` ? 1 : name === "*/*" ? 0 : -1;
+    if (specificity <= best) {
+      continue;
+    }
+    const q = params
+      .map((param) => /^\s*q\s*=\s*([0-9.]+)\s*$/.exec(param)?.[1])
+      .find((value) => value !== undefined);
+    const parsed = q === undefined ? 1 : Number(q);
+    best = specificity;
+    quality = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), 1) : 0;
+  }
+  return quality;
+}
+
+// HTML only when the client rates it strictly above markdown. Ties (curl's
+// */*, no Accept, text/plain) go to the agent guide.
+export function prefersHtmlOverMarkdown(accept: string | null): boolean {
+  if (!accept) {
+    return false;
+  }
+  return acceptQuality(accept, "text/html") > acceptQuality(accept, "text/markdown");
+}
+
+// Any /u/<handle> page, guide, or owner dashboard, on any host, after the
+// rewrite above. The whole /u/ namespace is excluded, not a list of known
+// suffixes, so no dashboard variant can slip past the recorder.
+export function isAgentPageRequestPath(pathname: string): boolean {
+  return /^\/u(?:\/|$)/i.test(pathname);
+}
+
+// Dashboard grants are single-use bearer credentials. Any request carrying a
+// grant parameter, on any path, stays out of the replay corpus.
+export function carriesDashboardGrant(url: URL): boolean {
+  let found = false;
+  url.searchParams.forEach((_value, key) => {
+    if (key.toLowerCase() === "grant") found = true;
+  });
+  return found;
+}
+
+// The handle whose agent guide this request negotiated, when it is an external
+// GET that analytics may count. HTML, HEAD and Worker subrequests never count.
+export function getGuideAnalyticsHandle(
+  request: Request,
+  agentPagePath: string | undefined,
+): string | undefined {
+  if (request.method !== "GET" || !agentPagePath || request.headers.has("cf-worker")) {
+    return undefined;
+  }
+  return /^\/u\/([a-z0-9-]+)\/agent\.md$/.exec(agentPagePath)?.[1];
+}
+
+// The page first shipped at agentrelay.com/agent-relay; keep that link working.
+export function getLegacyAgentPageRedirect(url: URL): string | undefined {
+  if (url.hostname !== PRIMARY_HOST) {
+    return undefined;
+  }
+  const agent = /^\/([a-z0-9-]+)\/?$/.exec(url.pathname)?.[1];
+  return agent === "agent-relay"
+    ? `https://${PRIMARY_HOST}/u/${agent}${url.search}`
+    : undefined;
+}
+
+// Registration and management are served directly by relay-agent. The public
+// API matcher is prefix-bounded so lookalikes such as /registrations-legacy do
+// not escape the marketing site.
+// Browsers opening arelay.to/register get the human page on agentrelay.com.
+// Agents (curl's */*, no Accept, text/markdown, ties) and HEAD keep getting
+// relay-agent's Markdown registration guide from isRelayAgentRegistryRoute.
+// `?format=md` lets a person open the raw guide in a browser (the human page
+// links to it that way).
+export const HUMAN_REGISTER_PAGE_URL = `https://${PRIMARY_HOST}/agents/register`;
+const REGISTER_FORMAT_PARAM = "format";
+const REGISTER_MARKDOWN_FORMATS = new Set(["md", "markdown"]);
+
+export function getHumanRegisterPageRedirect(
+  url: URL,
+  method: string,
+  accept: string | null,
+): string | undefined {
+  if (url.hostname !== SHORT_HOST && url.hostname !== SHORT_HOST_WWW) return undefined;
+  if (url.pathname !== "/register" && url.pathname !== "/register/") return undefined;
+  if (method !== "GET" || !prefersHtmlOverMarkdown(accept)) return undefined;
+  const format = url.searchParams.get(REGISTER_FORMAT_PARAM)?.toLowerCase();
+  if (format && REGISTER_MARKDOWN_FORMATS.has(format)) return undefined;
+  return `${HUMAN_REGISTER_PAGE_URL}${url.search}`;
+}
+
+export function isRelayAgentRegistryRoute(
+  hostname: string,
+  pathname: string,
+  method: string,
+): boolean {
+  // The guide is served on the www alias too: curl does not follow the
+  // canonicalizing redirect. The registry API stays on the bare host.
+  if ((hostname === SHORT_HOST || hostname === SHORT_HOST_WWW)
+    && (pathname === "/register" || pathname === "/register/")
+    && (method === "GET" || method === "HEAD")) {
+    return true;
+  }
+  if (hostname !== SHORT_HOST) return false;
+  return REGISTRY_API_PATH.test(pathname);
+}
+
+// arelay.to only fronts agent chat: its root, its www alias and the signed-in
+// cloud app redirect to the primary host.
+export function getShortHostRedirect(url: URL): string | undefined {
+  if (url.hostname === SHORT_HOST_WWW) {
+    return `https://${SHORT_HOST}${url.pathname}${url.search}`;
+  }
+  if (url.hostname !== SHORT_HOST) {
+    return undefined;
+  }
+  if (url.pathname === "/" || isCloudPath(url.pathname)) {
+    return `https://${PRIMARY_HOST}${url.pathname}${url.search}`;
+  }
+  return undefined;
+}
+
+export function getVanityRedirect(hostname: string, pathname: string): string | undefined {
+  if (hostname !== PRIMARY_HOST) {
+    return undefined;
+  }
+
+  const normalizedPathname = (pathname.length > 1
+    ? pathname.replace(/\/$/, "")
+    : pathname).toLowerCase();
+  return VANITY_REDIRECTS.get(normalizedPathname);
 }
 
 // True only for the exact paths the webhook worker knows how to handle. Used
@@ -437,18 +713,161 @@ function buildRelayfileCloudWebhookRequest(
   return new Request(targetUrl.toString(), init);
 }
 
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+function relayAgentOrigin(env: Env): string | undefined {
+  const origin = env.RELAY_AGENT_ORIGIN?.trim();
+  return origin || undefined;
+}
+
+// arelay.to carries agent chat, so it is HTTPS only. agentrelay.com gets this
+// from the zone's Always Use HTTPS setting; arelay.to's zone does not have it,
+// and keeping it here keeps it in source control. GET and HEAD get a permanent
+// redirect. Anything else gets a 308 whose body names the HTTPS URL, so an
+// agent's curl (which does not follow redirects) prints what to use instead,
+// and the message is never processed over plain HTTP.
+export function getInsecureShortHostResponse(url: URL, method: string): Response | undefined {
+  // A fully qualified Host ("arelay.to.") names the same site; match it too.
+  const hostname = url.hostname.replace(/\.$/, "");
+  if (url.protocol !== "http:" || (hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW)) {
+    return undefined;
+  }
+  const secure = new URL(url);
+  secure.protocol = "https:";
+  secure.hostname = hostname;
+  secure.port = "";
+  if (method === "GET" || method === "HEAD") {
+    return Response.redirect(secure.toString(), 301);
+  }
+  return new Response(`agent-relay: use HTTPS: ${secure.toString()}\n`, {
+    status: 308,
+    headers: { location: secure.toString(), "content-type": "text/plain; charset=utf-8" },
+  });
+}
+
+class RelayAgentOriginError extends Error {}
+
+function validatedRelayAgentOrigin(origin: string): string {
+  let url: URL;
+  try {
+    url = new URL(origin);
+  } catch {
+    throw new RelayAgentOriginError("RELAY_AGENT_ORIGIN is not a valid URL");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.pathname !== "/" ||
+    url.search ||
+    url.hash
+  ) {
+    throw new RelayAgentOriginError("RELAY_AGENT_ORIGIN must be an HTTPS origin without credentials, path, query, or fragment");
+  }
+  return url.origin;
+}
+
+function relayAgentEnabled(env: Env): boolean {
+  return Boolean(env.RELAY_AGENT_WORKER || relayAgentOrigin(env));
+}
+
+function buildRelayAgentRequest(request: Request, requestUrl: URL, origin: string): Request {
+  const target = new URL(requestUrl.pathname + requestUrl.search, origin);
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers: request.headers,
+    body: request.body,
+    redirect: "manual",
+    duplex: "half",
+  };
+  return new Request(target.toString(), init);
+}
+
+async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Response> {
+  if (env.RELAY_AGENT_WORKER) {
+    return env.RELAY_AGENT_WORKER.fetch(request);
+  }
+
+  const origin = relayAgentOrigin(env);
+  if (!origin) throw new Error("relay agent upstream is not configured");
+  return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
+}
+
+const router = {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
 
-    // Per-key rate limiting runs BEFORE any worker routing so a runaway
-    // workspace gets bounded everywhere — including webhook ingress and
-    // /cloud* traffic. The bypass list inside maybeRateLimit exempts
-    // health and observer paths. See packages/router/src/rate-limit.ts
-    // and docs/security/rate-limiting.md.
-    const rateLimited = await maybeRateLimit(request, env);
-    if (rateLimited) {
-      return rateLimited;
+    const insecureShortHost = getInsecureShortHostResponse(url, request.method);
+    if (insecureShortHost) {
+      return insecureShortHost;
+    }
+
+    const vanityRedirect = getVanityRedirect(url.hostname, url.pathname);
+    if (vanityRedirect) {
+      const redirectUrl = new URL(vanityRedirect);
+      url.searchParams.forEach((value, key) => {
+        redirectUrl.searchParams.set(key, value);
+      });
+      return Response.redirect(redirectUrl.toString(), 302);
+    }
+
+    const agentChatCloudPath = getAgentChatCloudPath(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    const humanRegisterPage = getHumanRegisterPageRedirect(
+      url,
+      request.method,
+      request.headers.get("accept"),
+    );
+    if (humanRegisterPage) {
+      return Response.redirect(humanRegisterPage, 302);
+    }
+
+    // Agents fetching the www alias get the guide directly: plain curl does
+    // not follow the canonicalizing redirect.
+    const agentPagePath = getAgentPagePath(
+      url.hostname,
+      url.pathname,
+      request.method,
+      request.headers.get("accept"),
+    );
+    const agentDirectoryPath = agentPagePath
+      ? undefined
+      : getAgentDirectoryPath(url.hostname, url.pathname, request.method, request.headers.get("accept"));
+    const registryRoute = isRelayAgentRegistryRoute(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    const registryOwnedChatRoute = Boolean(
+      agentChatCloudPath && AGENT_CHAT_PATH.exec(url.pathname)?.[1] !== "agent-relay",
+    );
+    const relayAgentRoute = Boolean(agentChatCloudPath || registryRoute);
+    const shortHostRedirect = relayAgentRoute || agentPagePath || agentDirectoryPath
+      ? undefined
+      : getShortHostRedirect(url);
+    if (shortHostRedirect) {
+      return Response.redirect(shortHostRedirect, 302);
+    }
+
+    const legacyAgentPage = getLegacyAgentPageRedirect(url);
+    if (legacyAgentPage && (request.method === "GET" || request.method === "HEAD")) {
+      return Response.redirect(legacyAgentPage, 301);
+    }
+
+    const guideAnalyticsHandle = getGuideAnalyticsHandle(request, agentPagePath);
+    // Keep the original request: rewrites build new Requests, which do not
+    // carry the incoming request.cf (and with it the country).
+    const guideAnalyticsRequest = request;
+
+    if (agentPagePath && agentPagePath !== url.pathname.replace(/\/$/, "")) {
+      url.pathname = agentPagePath;
+      request = new Request(url.toString(), request);
+    }
+    // Compared with the raw path so /directory/ is normalized to /directory too.
+    if (agentDirectoryPath && agentDirectoryPath !== url.pathname) {
+      url.pathname = agentDirectoryPath;
+      request = new Request(url.toString(), request);
     }
 
     // Clone the request up front so any branch that returns early (cloud-web
@@ -458,9 +877,77 @@ export default {
     // harness has no corpus to prove equivalence during Phase 4 cutover.
     // See Codex P2.6 on bundle PR #647.
     const recorderEnv = hasRecorderEnv(env) ? env : null;
+    // Conversation URLs are bearer secrets and request bodies are private chat
+    // content, so neither the new route nor the existing Cloud fallback belongs
+    // in the replay corpus. Agent pages and guides mint a conversation URL in
+    // every response, so they stay out too, however they were reached.
     const recorderRequestClone = recorderEnv
+      && !relayAgentRoute
+      && !isAgentPageRequestPath(url.pathname)
+      && !carriesDashboardGrant(url)
       ? (request.clone() as unknown as Request)
       : null;
+
+    // Production config includes the service binding. Removing it (and any
+    // origin alternative) is the rollback flag that restores the Cloud route.
+    if (relayAgentRoute && relayAgentEnabled(env)) {
+      try {
+        const workerResponse = await timing.measure("up", () => fetchRelayAgent(request, url, env));
+        return workerResponse;
+      } catch (error) {
+        console.error(JSON.stringify({
+          error: error instanceof RelayAgentOriginError
+            ? "relay_agent_origin_invalid"
+            : "relay_agent_upstream_failed",
+          message: error instanceof Error ? error.message : "unknown error",
+        }));
+        const unavailableMessage = registryRoute
+          ? "The agent registry is unavailable. Retry shortly.\n"
+          : "The agent chat is unavailable. Retry the same command shortly.\n";
+        return new Response(unavailableMessage, {
+          status: 503,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "no-store",
+            "referrer-policy": "no-referrer",
+            "x-content-type-options": "nosniff",
+          },
+        });
+      }
+    }
+
+    // Unlike the legacy agent-relay chat route, registry endpoints have no
+    // Cloud fallback. Keep them off the marketing origin when the dedicated
+    // Worker is absent during a rollback or unavailable environment.
+    if (registryRoute || registryOwnedChatRoute) {
+      const unavailableMessage = registryRoute
+        ? "The agent registry is unavailable. Retry shortly.\n"
+        : "The agent chat is unavailable. Retry the same command shortly.\n";
+      return new Response(unavailableMessage, {
+        status: 503,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "no-store",
+          "referrer-policy": "no-referrer",
+          "x-content-type-options": "nosniff",
+        },
+      });
+    }
+
+    const connectInviteCloudPath = getConnectInviteCloudPath(
+      url.hostname,
+      url.pathname,
+      request.method,
+    );
+    if (connectInviteCloudPath) {
+      url.pathname = connectInviteCloudPath;
+      request = new Request(url.toString(), request);
+    }
+
+    if (agentChatCloudPath) {
+      url.pathname = agentChatCloudPath;
+      request = new Request(url.toString(), request);
+    }
 
     if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
@@ -474,7 +961,8 @@ export default {
         );
       }
 
-      const workerResponse = await env.CLOUD_WEB_WORKER.fetch(request);
+      const cloudWebWorker = env.CLOUD_WEB_WORKER;
+      const workerResponse = await timing.measure("up", () => cloudWebWorker.fetch(request));
       if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
           maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
@@ -489,8 +977,9 @@ export default {
       // the env.WEBHOOK_WORKER check would disturb the stream and make the
       // WEBHOOK_WORKER_ORIGIN fallback throw a TypeError.
       if (env.WEBHOOK_WORKER) {
-        const workerResponse = await env.WEBHOOK_WORKER.fetch(
-          buildWebhookWorkerRequest(request, url),
+        const webhookWorker = env.WEBHOOK_WORKER;
+        const workerResponse = await timing.measure("up", () =>
+          webhookWorker.fetch(buildWebhookWorkerRequest(request, url)),
         );
         if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
@@ -502,8 +991,8 @@ export default {
 
       const workerOrigin = env.WEBHOOK_WORKER_ORIGIN?.trim();
       if (workerOrigin) {
-        const originResponse = await globalThis.fetch(
-          buildWebhookWorkerRequest(request, url, workerOrigin),
+        const originResponse = await timing.measure("up", () =>
+          globalThis.fetch(buildWebhookWorkerRequest(request, url, workerOrigin)),
         );
         if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
@@ -574,7 +1063,7 @@ export default {
       // Use `globalThis.fetch` rather than a bare `fetch` identifier: Cloudflare
       // Workers can hoist bare `fetch` off `globalThis` and throw
       // `TypeError: Illegal invocation`. See sage `.claude/rules/workers-fetch.md`.
-      const upstreamResponse = await globalThis.fetch(subRequest);
+      const upstreamResponse = await timing.measure("up", () => globalThis.fetch(subRequest));
       const responseHeaders = new Headers(upstreamResponse.headers);
 
       const location = responseHeaders.get("Location");
@@ -595,6 +1084,12 @@ export default {
         ctx.waitUntil(maybeRecord(recordingRequest, response.clone(), env, ctx));
       }
 
+      // Count a guide fetch only once the upstream guide answered 2xx;
+      // not-found, suspended, redirect and error responses write nothing.
+      if (guideAnalyticsHandle && upstreamResponse.status >= 200 && upstreamResponse.status < 300) {
+        ctx.waitUntil(recordGuideFetched(guideAnalyticsRequest, guideAnalyticsHandle, env));
+      }
+
       return response;
     } catch (error) {
       return new Response(JSON.stringify({ error: (error as Error).message }), {
@@ -602,5 +1097,21 @@ export default {
         headers: { "content-type": "application/json" },
       });
     }
+  },
+};
+
+// Every response leaves through `timing.finish`, which adds the
+// `Server-Timing` header; `router.fetch` measures the phases.
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const timing = startEdgeTiming(request);
+    let response: Response;
+    try {
+      response = await router.fetch(request, env, ctx, timing);
+    } catch (error) {
+      timing.fail(error);
+      throw error;
+    }
+    return timing.finish(response);
   },
 };

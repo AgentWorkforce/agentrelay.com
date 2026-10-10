@@ -1,0 +1,84 @@
+---
+title: 'Local development'
+description: 'Run Relayfile without Docker: start relayauth, run the server with the durable-local backend, generate a dev token, and use the CLI.'
+---
+
+When you're working on Relayfile itself or want a no-container loop, you can run the pieces directly from source. This path uses the durable-local backend so state survives restarts, a local token issuer, and the `relayfile-cli` binary for login, seed, tree, and mount.
+
+## Start the token issuer
+
+`relayauth` is the local dev JWT issuer. Start it first:
+
+```bash
+node docker/relayauth/server.js
+```
+
+## Run the server
+
+In another terminal, start the file server with the durable-local backend profile so workspace state persists between runs, pointed at the local issuer's JWKS:
+
+```bash
+RELAYFILE_BACKEND_PROFILE=durable-local \
+RELAYFILE_DATA_DIR=.data \
+RELAYAUTH_JWKS_URL=http://127.0.0.1:9091/.well-known/jwks.json \
+go run ./cmd/relayfile
+```
+
+`RELAYFILE_BACKEND_PROFILE=durable-local` selects a durable on-disk profile (other values include `memory` for ephemeral test runs and `production`/`prod` for a Postgres-backed deployment). `RELAYFILE_DATA_DIR` is where the durable profile writes state; it defaults to `.relayfile`.
+
+## Generate a dev token and use the CLI
+
+In a third terminal, generate a workspace-scoped dev token and drive the CLI:
+
+```bash
+export RELAYFILE_WORKSPACE=ws_demo
+export RELAYFILE_TOKEN="$(./scripts/generate-dev-token.sh "$RELAYFILE_WORKSPACE")"
+
+go run ./cmd/relayfile-cli login \
+  --server http://127.0.0.1:8080 \
+  --token "$RELAYFILE_TOKEN"
+
+go run ./cmd/relayfile-cli seed "$RELAYFILE_WORKSPACE" ./examples
+go run ./cmd/relayfile-cli tree "$RELAYFILE_WORKSPACE" /
+go run ./cmd/relayfile-cli mount "$RELAYFILE_WORKSPACE" ./relayfile-mount --once
+```
+
+`generate-dev-token.sh` emits a JWT with `workspace_id`, `agent_name`, and `aud: ["relayfile"]`, signed with the dev secret (`RELAYFILE_JWT_SECRET`, default `dev-secret`).
+
+<Note>
+  The default server address is `:8080`, so the CLI's `--server http://127.0.0.1:8080` matches the server you started above. This differs from the Docker stack, which publishes relayfile on port 9090.
+</Note>
+
+## Common local commands
+
+```bash
+# read remote tree and files without mounting
+go run ./cmd/relayfile-cli tree ws_demo /
+go run ./cmd/relayfile-cli read ws_demo /docs/welcome.md
+
+# one-shot sync for CI
+go run ./cmd/relayfile-cli mount ws_demo ./relayfile-mount --once
+
+# export a workspace
+go run ./cmd/relayfile-cli export ws_demo --format tar --output ws_demo.tar
+```
+
+`mount --once` runs a single sync cycle and exits, which is the right shape for CI and tests. Drop `--once` for a long-running mirror. See the [CLI reference](/docs/file/cli) for the full command and flag set.
+
+## Where state lives
+
+The CLI keeps local config under `~/.relayfile/`:
+
+- `credentials.json` — self-hosted/API-key credentials only, mode `0600`.
+- `workspaces.json` — local workspace metadata (names, IDs, default).
+
+The mount directory keeps sync state under `<local-dir>/.relay/` (`state.json`, conflicts, dead-letter, denial log). For the full set of environment variables the server, mount, and CLI read, this all maps to the source-backed env reference in the Relayfile repo.
+
+<CardGroup cols={2}>
+  <Card title="Run locally" href="/docs/file/run-locally">
+    The Docker path and `relayfile-mount` daemon flags.
+  </Card>
+  <Card title="CLI reference" href="/docs/file/cli">
+    Every `relayfile` subcommand and global flag.
+  </Card>
+</CardGroup>

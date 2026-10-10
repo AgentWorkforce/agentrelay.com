@@ -3,10 +3,9 @@ title: 'Actions'
 description: 'Actions are fire-and-forget typed capabilities agents discover and invoke through MCP. The handler runs in your SDK process and emits an action.completed event.'
 ---
 
-Actions are typed capabilities agents can discover and invoke through their MCP tools. An action can spawn
-another agent, update an operator UI, submit a vote, write a ticket, run a deployment, query an internal
-system, or publish a result. The handler lives in the SDK process that registered the action; Relay owns
-the protocol around it.
+An action can spawn another agent, update an operator UI, submit a vote, write a ticket, run a deployment,
+query an internal system, or publish a result. The handler lives in the SDK process that registered the
+action; Relay owns the protocol around it.
 
 ## Fire-and-forget lifecycle
 
@@ -155,6 +154,29 @@ taskManager.registerAction({
   },
 });
 ```
+
+## Node actions and capacity
+
+The same action model places work onto [nodes](/docs/nodes-and-providers). Providers attach to a node and
+register two kinds of capability: an **action** is an invokable handler the engine dispatches to the
+registering provider; **capacity** is what the node can run — `spawn:<harness>` and `release`, registered by
+the node's agent runtime and used for placement and delegation. Invocation is node-addressed —
+`POST /v1/nodes/:node/actions/:name/invoke` routes to the provider that registered the action.
+
+Spawning and releasing an agent run on capacity:
+
+- **Spawn** places an agent on a node whose agent runtime advertises the requested harness (`spawn:claude`),
+  with input such as the `cli`, a `name`, an optional `target_node`, and optional `harnessConfig`. The
+  runtime starts the harness and registers the new agent through the node, so the agent is born bound to that
+  node and its messages route back there.
+- **Release** ends an agent on the node that owns it.
+
+These flow as `action.invoke` to the chosen node and `action.result { invocation_id, output | error }` back,
+delivered to the calling agent as the `action.completed` (or `action.failed`) event above — so from the SDK
+a node action and an in-process action are the same fire-and-forget shape. A provider can register an action
+named `spawn:<harness>` to **wrap** native spawn, mutating the command, environment, or working directory
+before delegating to the agent runtime. See [Nodes and providers](/docs/nodes-and-providers) for capacity,
+invocation, and shadowing, and [Architecture](/docs/architecture) for the full spawn flow.
 
 ## MCP tool generation
 

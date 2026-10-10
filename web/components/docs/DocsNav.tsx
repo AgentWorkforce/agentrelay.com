@@ -8,6 +8,7 @@ import {
   Activity,
   BookOpen,
   Bot,
+  ChevronDown,
   Cloud,
   Clock3,
   Compass,
@@ -24,6 +25,7 @@ import {
   Smile,
   Terminal,
   Users,
+  Workflow,
   Zap,
 } from 'lucide-react';
 import { BsChatRightText } from 'react-icons/bs';
@@ -34,11 +36,70 @@ import { RiLayout5Line } from 'react-icons/ri';
 import { SiClaude, SiPython, SiTypescript } from 'react-icons/si';
 
 import { docsNav, legacyDocsNav } from '../../lib/docs-nav';
-import { getDocsVersionForPath, legacyDocsBasePath, v8DocsBasePath } from '../../lib/docs-versions';
+import {
+  getDocsVersionForPath,
+  legacyDocsBasePath,
+  v8DocsBasePath,
+} from '../../lib/docs-versions';
+import { packageVersion } from '../../lib/package-versions';
+import { getProductSectionForPath, productBasePath, productSections } from '../../lib/product-docs-nav';
 import { DocsVersionSelect } from './DocsVersionSelect';
+import { Download, FolderOpen as FolderOpenIcon, History } from 'lucide-react';
 import styles from './docs.module.css';
 
 type NavIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
+
+const productSectionIcons: Record<string, NavIcon> = {
+  file: FolderOpenIcon,
+  relayhistory: History,
+  relayflows: Workflow,
+};
+
+const docsProductOptions = [
+  {
+    id: null,
+    label: 'Relay',
+    tagline: 'Messaging',
+    href: '/docs/introduction',
+    Icon: Mail,
+    version: packageVersion('agent-relay'),
+  },
+  ...productSections.map((section) => ({
+    id: section.id,
+    label: section.label,
+    tagline: section.tagline,
+    href: `${productBasePath(section)}/introduction`,
+    Icon: productSectionIcons[section.id] ?? BookOpen,
+    version: section.npmPackage && packageVersion(section.npmPackage),
+  })),
+];
+
+const productNavIcons: Record<string, NavIcon> = {
+  introduction: Compass,
+  quickstart: Rocket,
+  'why-files': BookOpen,
+  'mount-layout': FolderOpen,
+  'reads-and-writes': Send,
+  acls: Shield,
+  'realtime-sync': Activity,
+  'run-locally': Terminal,
+  'local-development': Terminal,
+  mounting: FolderOpen,
+  sdk: SiTypescript,
+  'python-sdk': SiPython,
+  agents: Bot,
+  build: Bot,
+  'adapters-and-providers': Plug,
+  comparison: BookOpen,
+  cloud: Cloud,
+  'api-reference': Network,
+  cli: Terminal,
+  sessions: BsChatRightText,
+  mcp: Plug,
+  handoffs: Send,
+  'remote-sources': Cloud,
+  export: Download,
+};
 
 const navIcons: Record<string, NavIcon> = {
   introduction: Compass,
@@ -89,9 +150,18 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
   const pathname = usePathname();
   const navRef = useRef<HTMLElement | null>(null);
   const isSidebar = variant === 'sidebar';
+  const productSection = getProductSectionForPath(pathname ?? '/docs');
   const docsVersion = getDocsVersionForPath(pathname ?? '/docs');
-  const navGroups = docsVersion === 'v7.1.1' ? legacyDocsNav : docsNav;
-  const docsBasePath = docsVersion === 'v8' ? v8DocsBasePath : legacyDocsBasePath;
+  const navGroups = productSection
+    ? productSection.nav
+    : docsVersion === 'v7.1.1'
+      ? legacyDocsNav
+      : docsNav;
+  const docsBasePath = productSection
+    ? productBasePath(productSection)
+    : docsVersion === 'v8'
+      ? v8DocsBasePath
+      : legacyDocsBasePath;
 
   useEffect(() => {
     if (!isSidebar) return;
@@ -140,7 +210,8 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
       className={`${styles.sidebar} ${!isSidebar ? styles.mobileSidebar : ''}`}
       aria-label="Documentation"
     >
-      {!isSidebar && <DocsVersionSelect />}
+      {!isSidebar && !productSection && <DocsVersionSelect />}
+      {(productSection || docsVersion === 'v8') && <DocsProductSwitcher activeId={productSection?.id ?? null} />}
       {navGroups.map((group) => (
         <div key={group.title} className={styles.navGroup}>
           <h4 className={styles.navGroupTitle}>{group.title}</h4>
@@ -150,8 +221,14 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
               const isActive =
                 pathname === href ||
                 (item.slug === 'introduction' &&
-                  (pathname === '/docs' || pathname === legacyDocsBasePath || pathname === v8DocsBasePath));
-              const Icon = navIcons[item.slug] ?? BookOpen;
+                  (productSection
+                    ? pathname === docsBasePath
+                    : pathname === '/docs' ||
+                      pathname === legacyDocsBasePath ||
+                      pathname === v8DocsBasePath));
+              const Icon = productSection
+                ? (productNavIcons[item.slug] ?? BookOpen)
+                : (navIcons[item.slug] ?? BookOpen);
               return (
                 <li key={item.slug}>
                   <Link href={href} className={`${styles.navLink} ${isActive ? styles.navLinkActive : ''}`}>
@@ -165,5 +242,73 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
         </div>
       ))}
     </nav>
+  );
+}
+
+export function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
+  const activeProduct =
+    docsProductOptions.find((option) => option.id === activeId) ?? docsProductOptions[0];
+  const ActiveIcon = activeProduct.Icon;
+  const detailsRef = useRef<HTMLDetailsElement | null>(null);
+  const closeSwitcher = () => {
+    if (detailsRef.current) {
+      detailsRef.current.open = false;
+    }
+  };
+  const closeSwitcherAfterNavigationStarts = () => {
+    window.setTimeout(closeSwitcher, 0);
+  };
+
+  return (
+    <div className={styles.productHeader}>
+      <details ref={detailsRef} className={styles.productSwitcher}>
+        <summary className={styles.productSwitcherSummary}>
+          <span className={styles.productSwitcherCurrent}>
+            <ActiveIcon className={styles.productHeaderIcon} aria-hidden="true" />
+            <span className={styles.productSwitcherText}>
+              <span className={styles.productSwitcherTitleRow}>
+                <span className={styles.productSwitcherLabel}>{activeProduct.label}</span>
+                {activeProduct.version && (
+                  <span className={styles.productHeaderVersion}>v{activeProduct.version}</span>
+                )}
+              </span>
+              <span className={styles.productHeaderTagline}>{activeProduct.tagline}</span>
+            </span>
+          </span>
+          <span className={styles.productSwitcherMeta}>
+            <ChevronDown className={styles.productSwitcherChevron} aria-hidden="true" />
+          </span>
+        </summary>
+        <div className={styles.productSwitcherMenu}>
+          {docsProductOptions.map((option) => {
+            const OptionIcon = option.Icon;
+            const isActive = option.id === activeId;
+            const optionContent = (
+              <>
+                <OptionIcon className={styles.productSwitcherOptionIcon} aria-hidden="true" />
+                <span className={styles.productSwitcherOptionText}>
+                  <span className={styles.productSwitcherOptionTitleRow}>
+                    <span className={styles.productSwitcherOptionLabel}>{option.label}</span>
+                  </span>
+                  <span className={styles.productSwitcherOptionTagline}>{option.tagline}</span>
+                </span>
+              </>
+            );
+            return (
+              <Link
+                key={option.id ?? 'relay'}
+                href={option.href}
+                className={`${styles.productSwitcherOption} ${
+                  isActive ? styles.productSwitcherOptionActive : ''
+                }`}
+                onClick={closeSwitcherAfterNavigationStarts}
+              >
+                {optionContent}
+              </Link>
+            );
+          })}
+        </div>
+      </details>
+    </div>
   );
 }

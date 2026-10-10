@@ -1,5 +1,5 @@
 .page {
-  min-height: 100vh;
+  min-height: 100svh;
   background:
     radial-gradient(
       circle at top left,
@@ -211,6 +211,8 @@
   text-decoration: none;
 }
 
-.backLink:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .backLink:hover {
+    color: var(--primary);
+  }
 }

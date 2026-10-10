@@ -4,6 +4,8 @@ type GitHubRepoResponse = {
   stargazers_count?: number;
 };
 
+export const DEFAULT_REPO = 'agentworkforce/relay';
+
 function GithubIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -16,9 +18,9 @@ function formatStarCount(stars: number): string {
   return stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : String(stars);
 }
 
-async function getGitHubStars(): Promise<string | null> {
+async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | null> {
   try {
-    const response = await fetch('https://api.github.com/repos/agentworkforce/relay', {
+    const response = await fetch(`https://api.github.com/repos/${repo}`, {
       headers: {
         Accept: 'application/vnd.github+json',
         'User-Agent': 'agentrelay-web',

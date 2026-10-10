@@ -1,0 +1,81 @@
+---
+title: 'Adapters and providers'
+description: 'Relayfile is a core file server plus pluggable adapters (webhook-to-path mapping, writeback) and providers (auth and proxy via Nango, Composio, Pipedream).'
+---
+
+Relayfile's architecture is deliberately split into three layers: a core file server, a set of **adapters** that map provider data into paths, and a set of **providers** that handle auth and API access. This is what lets one provider integration unlock tens of apps, and what lets you self-host only the pieces you need.
+
+## The three layers
+
+- **Core file server** ([relayfile](https://github.com/AgentWorkforce/relayfile)). The VFS API, scoped tokens, generic event ingest, the writeback queue, the operation log, and the mount layer. This is what every deployment runs.
+- **Adapters** ([relayfile-adapters](https://github.com/AgentWorkforce/relayfile-adapters)). Per-integration logic: how a provider's webhooks and objects map into Relayfile paths, how events are normalized into a consistent shape, and how writeback behaves for each resource type.
+- **Providers** ([relayfile-providers](https://github.com/AgentWorkforce/relayfile-providers)). Provider auth, token lookup, API proxying, webhook subscriptions, and connection health — backed by Nango, Composio, or Pipedream.
+
+The core server never stores third-party OAuth credentials. It receives normalized files, webhook envelopes, writeback operations, and a `connectionId` that identifies the provider connection. Credentials stay in the provider layer.
+
+## What adapters do
+
+An adapter is the integration's brain. For a given provider it defines:
+
+- **Webhook-to-path mapping.** A Linear `Issue.create` event becomes `/linear/issues/AGE-12__fix-login-bug.json`. The adapter decides the directory structure and the canonical naming.
+- **Event normalization.** Different providers fire wildly different payloads; the adapter turns each into a consistent file event so agents never see provider-specific webhook shapes.
+- **Writeback behavior.** When an agent writes a canonical path, the adapter knows how to translate that into the right provider API call (PATCH, create, delete) and what the resource schema is.
+
+An adapter alone gives you path mapping plus writeback. It does **not** by itself backfill historical data — that requires a sync definition.
+
+<Note>
+  Sync coverage matters. A provider with both an adapter and a shipped sync definition does an initial backfill plus live events. A provider with only an adapter has no backfill — you ingest just what you push. Picking a path-mapping-only provider and getting an empty tree is the common trap. The sync definitions themselves are a scoped engagement; the ingest scaffolding is OSS.
+</Note>
+
+## What providers do
+
+A provider handles getting data in and out of the SaaS tool itself:
+
+- **Auth and token lookup** — resolving the OAuth connection identified by `connectionId`.
+- **API proxying** — making the actual provider API calls for reads and writeback.
+- **Webhook subscriptions** — registering for the events the adapter maps.
+- **Connection health** — reporting whether a connection is live.
+
+Because providers are backed by aggregators (Nango, Composio, Pipedream), one provider integration unlocks the many apps that aggregator supports — you don't write a bespoke OAuth dance per SaaS tool.
+
+## Bring existing connections
+
+Relayfile tracks provider identity as `connectionId` metadata. The core server can ingest events and queue writebacks against a `connectionId`, but the provider layer must be able to use that ID. If you already have connections in an aggregator, you can bring them:
+
+<CodeGroup>
+```text Nango
+# self-hosted: point the Nango provider at your host/secret and
+# link the workspace to the existing connection before sync
+workspace_id         relayfile workspace id
+provider             e.g. notion or github
+connection_id        existing Nango connection id
+provider_config_key  Nango provider config key
+```
+
+```text Composio
+# use your Composio API key and the existing connected-account ID
+# as the Relayfile connectionId; verify with getConnectedAccount /
+# healthCheck, then proxy reads/writeback through that account
+```
+
+```text Pipedream
+# use your Pipedream Connect project credentials and the existing
+# account ID as the connectionId; proxy calls also need the external
+# user id via x-pd-external-user-id, query, or a resolver callback
+```
+</CodeGroup>
+
+Hosted `agentrelay.com` currently exposes a connect-session flow through the CLI, not a public import command for arbitrary existing Nango connections. If a connection lives in a different Nango project, re-connect through the hosted flow or run your own provider-backed stack.
+
+## Self-host vs hosted
+
+Fully self-hosting provider-backed files means running the core server, a scoped JWT issuer (relayauth or compatible), the adapters and providers for the systems you expose, and Nango for OAuth. [Relayfile Cloud](/docs/file/cloud) runs all of these for you. The OSS surface deliberately ships the VFS, scoped tokens, generic ingest, writeback queue, and mount; the polished OAuth connect flow and the provider sync definitions are either hosted or part of your self-host provider stack.
+
+<CardGroup cols={2}>
+  <Card title="Reads and writes" href="/docs/file/reads-and-writes">
+    The PATCH / CREATE / DELETE model adapters implement.
+  </Card>
+  <Card title="Relayfile Cloud" href="/docs/file/cloud">
+    The managed path that runs adapters and providers for you.
+  </Card>
+</CardGroup>

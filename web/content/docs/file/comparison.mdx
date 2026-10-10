@@ -1,0 +1,53 @@
+---
+title: 'How Relayfile compares'
+description: 'Relayfile next to MCP servers, virtual-filesystem-for-agents projects, and rolling your own — what each is good at and where they compose.'
+---
+
+"Give agents a filesystem" is a healthy direction, and Relayfile isn't the only project pointing at it. Here's an honest read of where it sits relative to the alternatives, and where they compose rather than compete.
+
+## vs MCP servers
+
+MCP gives the agent a typed tool surface per integration — a Linear server, a Notion server, a GitHub server. That's strong for single, well-defined writes: `linear.create_issue(title, priority, …)` enforces the shape at call time and can model provider-specific operations richer than a generic schema-validate-and-write.
+
+The costs show up as you scale out:
+
+| Dimension | Per-provider MCPs | Relayfile |
+|---|---|---|
+| Tool surface as providers grow | O(N) tool schemas in context | O(1) — `ls` / `cat` / write work identically everywhere |
+| Context cost | 100+ schemas loaded before any work | nothing until the agent reads a file |
+| Enumeration | API search results, paginated | exhaustive — `ls` returns what's there |
+| Cross-provider composition | bespoke glue per pair | free: `grep -r`, `cat`, `cp` across providers |
+| Multi-agent coordination | point-to-point, pull-only | shared, ACL'd, real-time filesystem |
+| Event-driven loops | request/response only | webhook → file event → many subscribers |
+
+An LLM is also more reliable reading a directory than juggling N typed APIs. **The two compose well:** Relayfile for reads, synthesis, and the stateful multi-provider substrate; MCP for typed one-shot writes that need server-side validation. A real harness can use both. The honest rule of thumb: **1 provider × 1 agent × one-shot action → use the provider MCP**; **N providers and/or N agents → Relayfile is the substrate** and the gap widens with each one. See [Agents](/docs/file/agents) for the full breakdown.
+
+## vs Mirage and other virtual-FS projects
+
+Mirage and similar virtual-filesystem-for-agents projects are doing thoughtful work in this space. The clearest distinction is the layer they operate at:
+
+- **Mirage is a pull layer.** Agents query data from S3, GDrive, Postgres, Redis, and other infrastructure backends on demand.
+- **Relayfile is an event layer.** Provider webhooks normalize into file events that wake agents, which then read, react, and write back.
+
+They're complementary: use a pull layer when your agents need to query infrastructure data; use Relayfile when your agents need to react to SaaS events. Relayfile also adds file-native writeback (PATCH / CREATE / DELETE through file ops), per-agent [ACLs](/docs/file/acls), [real-time multi-agent sync](/docs/file/realtime-sync), and centralized OAuth, retry, and rate-limit handling across providers — the last of which is an open issue in some of these projects today.
+
+## vs rolling your own
+
+A single agent against a single backend can do fine with FUSE, Mountpoint, or direct SDK calls. You don't need Relayfile for that.
+
+Relayfile becomes worth it when you need:
+
+- **Multi-agent coordination** — agents seeing each other's writes in real time, without a coordination protocol on top.
+- **Scoped capabilities** — least-privilege per agent via ACLs, not a shared all-or-nothing credential.
+- **A consistent read/write contract across many SaaS surfaces** — one interface instead of N bespoke integrations, with centralized auth, retry, dead-letter, and rate-limit handling.
+
+Below those thresholds, rolling your own is reasonable. Above them, you'd be re-implementing the [adapter and provider](/docs/file/adapters-and-providers) layers, the writeback queue, and the sync substrate that Relayfile already ships.
+
+<CardGroup cols={2}>
+  <Card title="Why files" href="/docs/file/why-files">
+    The reactive-invocation, coordination, and context arguments in depth.
+  </Card>
+  <Card title="Adapters and providers" href="/docs/file/adapters-and-providers">
+    The pluggable architecture that makes one provider unlock many apps.
+  </Card>
+</CardGroup>

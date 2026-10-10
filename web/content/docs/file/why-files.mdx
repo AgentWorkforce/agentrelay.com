@@ -1,0 +1,39 @@
+---
+title: 'Why files'
+description: 'Most agents are reactive: you call them, they answer, they go dormant. Relayfile makes them proactive by turning provider state into files an agent can watch, read, and write.'
+---
+
+The full argument lives in the blog post [Just Give the Agent Files](/blog/just-give-the-agent-files). The short version:
+
+- **MCP lets the agent pull. It is not how the world pushes a signal to the agent.** For push you need webhooks, and making a single agent proactive against Linear means a public endpoint, HMAC verification, a queue, deduplication, and retries. Then repeat per provider. Relayfile does that once and hands the agent a normalized file event instead.
+- **Stacked MCP tools bloat context.** Tool definitions can consume tens of thousands of tokens before any work begins. Files load nothing — context cost is exactly what the agent opens.
+- **The workspace is just files.** Every provider mounts at a well-known path. The agent explores with `ls`, reads with `cat`, searches with `grep` — no per-provider schema to learn.
+- **Writebacks are files too.** The agent writes a file; Relayfile handles provider auth, validation, retries, and the audit trail. No API call from the agent.
+- **Agents coordinate through the filesystem.** Writes propagate to every other agent in sub-second time, scoped by [ACL](/docs/file/acls). When agent A writes, agent B sees it on the next read. No message bus.
+
+## The benchmark
+
+We ran "what did I work on yesterday across GitHub, Linear, and Notion?" head-to-head against MCP, same prompt and accounts, across three Claude models. After adding `by-*` index directories and a pre-computed `digests/yesterday.md`, the filesystem won decisively:
+
+| Model  | MCP cost | Relayfile cost | MCP turns | RF turns |
+| ------ | -------- | -------------- | --------- | -------- |
+| Opus   | $0.44    | $0.25          | 9         | 4        |
+| Sonnet | $0.27    | $0.07          | 18        | 4        |
+| Haiku  | failed¹  | $0.06          | —         | 4        |
+
+¹ MCP Haiku asked for clarification instead of acting. Relayfile Haiku completed the task.
+
+The digest is one file read that replaces 25 individual provider queries. Every structural improvement to the mount makes every future run cheaper — with MCP you are stuck at whatever the API returns. The [full write-up](/blog/just-give-the-agent-files) shows all three rounds, including the naive first pass where files lost.
+
+## When a typed tool still wins
+
+Files are not always the answer. For a single provider, a single agent, and a one-shot action that needs server-side validation, a dedicated MCP that enforces the shape at call time is simpler. The two compose: Relayfile for reads, synthesis, and the multi-provider substrate; an MCP for typed one-shot writes. See [Comparison](/docs/file/comparison).
+
+<CardGroup cols={2}>
+  <Card title="Real-time sync" href="/docs/file/realtime-sync">
+    How write-through invalidation makes multi-agent coordination reliable.
+  </Card>
+  <Card title="Comparison" href="/docs/file/comparison">
+    Relayfile vs MCP servers, virtual-FS projects, and rolling your own.
+  </Card>
+</CardGroup>

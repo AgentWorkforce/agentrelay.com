@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { useOnScreen } from '../components/useOnScreen';
 import s from './landing.module.css';
 
 const SEARCH_QUERY = 'handoff token';
@@ -39,6 +40,9 @@ function visibleResultCount(length: number) {
 
 export function SearchPreviewAnimation() {
   const [typedLength, setTypedLength] = useState(0);
+  const typedLengthRef = useRef(0);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const onScreen = useOnScreen(rootRef);
 
   useEffect(() => {
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -47,6 +51,8 @@ export function SearchPreviewAnimation() {
       setTypedLength(SEARCH_QUERY.length);
       return;
     }
+    // Paused while offscreen; resumes from the current keystroke.
+    if (!onScreen) return;
 
     let active = true;
     let timeoutId: number | undefined;
@@ -59,25 +65,25 @@ export function SearchPreviewAnimation() {
         if (!active) return;
 
         const next = atEnd ? 0 : nextLength + 1;
+        typedLengthRef.current = next;
         setTypedLength(next);
         tick(next);
       }, delay);
     };
 
-    setTypedLength(0);
-    tick(0);
+    tick(typedLengthRef.current);
 
     return () => {
       active = false;
       window.clearTimeout(timeoutId);
     };
-  }, []);
+  }, [onScreen]);
 
   const query = SEARCH_QUERY.slice(0, typedLength);
   const resultCount = visibleResultCount(typedLength);
 
   return (
-    <div className={s.searchPreview}>
+    <div className={s.searchPreview} ref={rootRef}>
       <div className={s.searchBar}>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="2" />

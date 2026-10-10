@@ -1,18 +1,20 @@
 import { currentDocsSlugs, legacyDocsSlugs } from './docs-nav';
+import { packageVersion } from './package-versions';
 
 export type DocsVersionId = 'v8' | 'v7.1.1';
 
 export interface DocsVersion {
   id: DocsVersionId;
   label: string;
-  shortLabel: string;
 }
 
-// v8 is the default, served at the bare `/docs` path.
+const relayVersion = packageVersion('agent-relay');
+
+// The current docs are served at the bare `/docs` path.
 // v7.1.1 is archived under `/docs/7.1.1` and reachable from the version dropdown.
 export const docsVersions: DocsVersion[] = [
-  { id: 'v8', label: 'v8.0.0 (latest)', shortLabel: 'v8.0.0' },
-  { id: 'v7.1.1', label: 'v7.1.1', shortLabel: 'v7.1.1' },
+  { id: 'v8', label: relayVersion ? `v${relayVersion} (latest)` : 'Latest' },
+  { id: 'v7.1.1', label: 'v7.1.1' },
 ];
 
 export const currentDocsVersion: DocsVersionId = 'v8';

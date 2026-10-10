@@ -1,0 +1,87 @@
+---
+title: 'Remote sources'
+description: 'Add claude.ai/code sessions and Codex cloud tasks to your history with an explicitly configured source plugin, or read a custom local store.'
+---
+
+Relayhistory reads local files by default. Sessions that live elsewhere — claude.ai/code on the web, Codex cloud tasks — come in through a **source plugin** that you install and configure explicitly. Installing a package or signing in to a provider adds nothing on its own.
+
+## Provider sources
+
+```bash
+npm install @relayhistory/provider-sources
+```
+
+| Connector | Reads | Evidence |
+|---|---|---|
+| `claude-web` | Your claude.ai/code sessions, using the Claude Code CLI's stored sign-in | Full transcript events |
+| `codex-cloud` | Codex cloud tasks, through `codex cloud list --json` | The task's diff — not a full transcript, token log, or tool history |
+
+Partial evidence is reported as partial: a Codex cloud task hydrates as `partial` when its diff is indexed, or `shallow_only` when nothing richer is exposed.
+
+## Configure
+
+Write a config that names the plugin and its connectors:
+
+```json history.json
+{
+  "plugins": [
+    {
+      "module": "@relayhistory/provider-sources",
+      "options": { "connectors": ["claude-web"], "instanceId": "personal" }
+    }
+  ]
+}
+```
+
+Then pass it to acquisition commands:
+
+```bash
+ai-hist sessions discover --remote --config history.json --source-connector claude-web
+ai-hist sync --all --config history.json
+ai-hist sync --all --no-source-connectors   # local only, even with plugins configured
+```
+
+`--source-connector` is repeatable; `id:instance` selects one instance. For the [MCP server](/docs/relayhistory/mcp), set `AI_HIST_PLUGIN_CONFIG` to the config path.
+
+Once acquired, remote sessions are searchable like any other — `ai-hist search "…" --all` — and cached reads never need credentials.
+
+<Warning>
+  `--remote` with no configured connector fails rather than falling back to local. `--all` runs local acquisition plus whatever is configured, and reports in `locationsRun` what actually ran.
+</Warning>
+
+## In the SDK
+
+```ts
+import { HistoryPluginRegistry, discoverSessions, sync } from 'ai-hist';
+import { createHistoryPlugin } from '@relayhistory/provider-sources';
+
+const plugins = new HistoryPluginRegistry();
+plugins.register(createHistoryPlugin({ connectors: ['claude-web'] }));
+
+await discoverSessions({ scope: 'remote', plugins, sourceConnectors: ['claude-web'] });
+await sync({ scope: 'all', plugins, sourceConnectors: [] }); // local adapters only
+```
+
+## Local source plugins
+
+A plugin can also read files on this machine that the built-in parsers don't know about — a host application that keeps Claude Code transcripts in its own directory, for example. Declare `location: 'local'` and the absolute directories it reads:
+
+```js
+export function createHistoryPlugin({ root }) {
+  return {
+    sources: [{
+      id: 'host-app',
+      instanceId: 'default',
+      location: 'local',
+      roots: [root],
+      supportedSources: ['claude'],
+      async discover() { /* { observations: [{ source, session_id, raw_path, source_stamp }] } */ },
+      async hydrate(observation) { /* a SourceEvidenceSnapshot */ },
+    }],
+  };
+}
+```
+
+A local source runs for the `local` and `all` scopes, beside the built-in parsers. Every path it reports must sit inside its declared `roots`, or the whole discovery is rejected. Sessions it finds merge with the built-in parser's view of the same session rather than duplicating it.
+
+The [example plugin](https://github.com/AgentWorkforce/relayhistory/tree/main/sdk-ts/fixtures/local-source-plugin) is complete and dependency-free.

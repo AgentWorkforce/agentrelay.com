@@ -15,6 +15,40 @@ https://agentrelay.com/skill
 
 Give that URL to a human driver, a lead agent, or a newly spawned agent when you want them to orient themselves without a long custom prompt.
 
+## Version-Conditional Security Gate
+
+On Agent Relay 11.3.0 and earlier, `agent-relay node up` and
+`agent-relay node status` print the active workspace key. Agent Relay
+11.3.1 masks it in these two commands; it is not a guarantee about
+credential output from every command in the installed dependency tree. If
+you are on 11.3.0 or earlier, upgrade to 11.3.1 or later, or ask a human
+driver to run those commands from a trusted, non-transcribed terminal.
+
+The commands remain the correct way to start and inspect a node. The gate
+is about the vulnerable release's output, not a replacement workflow. The
+human-only quick start below is retained so an operator has the exact
+commands; do not copy its first two command lines into an agent prompt
+while 11.3.0 or earlier is installed.
+
+**On 11.3.1 or later this gate does not apply.** The orchestrator starts and
+inspects the broker itself, exactly as the linked
+[`orchestrating-agent-relay`](https://github.com/AgentWorkforce/skills/blob/main/skills/orchestrating-agent-relay/SKILL.md)
+skill describes — that skill assumes a patched install and is written for
+autonomous self-bootstrap with no human in the loop. Check your installed
+version before deciding which path applies:
+
+```bash
+agent-relay --version
+```
+
+## Sharing a Live View
+
+Never build an observer URL from a workspace key, on any version — it is an
+administrative credential and a URL query string is not a place for one. From
+Agent Relay 11.8.1, run `agent-relay observer` (or call the `get_observer_url`
+MCP tool) to mint a scoped, read-only, expiring token and print the link built
+from it. See [Observer](https://agentrelay.com/docs/observer).
+
 ## Choose the Right Skill
 
 ### Human driver or lead orchestrator
@@ -29,17 +63,19 @@ https://github.com/AgentWorkforce/skills/blob/main/skills/orchestrating-agent-re
 
 Use this role when the agent should:
 
-- start the broker with `agent-relay local up`
+- start the broker with `agent-relay node up` on Agent Relay 11.3.1 or later; on 11.3.0 or earlier, coordinate startup with a human driver instead
 - create or reuse a workspace
 - spawn workers
 - send follow-up instructions through local attach or registered Relay messages
 - read terminal output, logs, and lifecycle state
 - release workers when the run is accepted
 
-Important distinction: the orchestrator is not usually a registered Agent Relay
-participant. It should use the `agent-relay local ...` CLI for starting,
-spawning, listing, tailing, attaching, and releasing local workers. If it wants
-to send Relay DMs through the message CLI, it must use a registered token.
+Important distinction: lifecycle control — starting the broker, spawning,
+listing, tailing, attaching, releasing — goes through the `agent-relay node ...`
+CLI. Messaging goes through the relay MCP (`agent-relay mcp`) after the session
+registers itself once with the `register_agent` tool (messaging tools error
+with "Not registered" until it does); a plain shell sends with a registered
+agent token instead, while channel reads need no token.
 
 ### Spawned or registered participant
 
@@ -69,33 +105,33 @@ and `join_channel`.
 1. Start Relay from the project root:
 
    ```bash
-   agent-relay local up --verbose
-   agent-relay local status --wait-for 10
+   agent-relay node up --background --verbose
+   agent-relay node status --wait-for 10
    ```
 
 2. Spawn a lead or worker:
 
    ```bash
-   agent-relay local agent spawn claude --name Lead --task "Use https://agentrelay.com/skill. Start the workspace, coordinate workers, and report progress."
+   agent-relay node agent spawn claude --name Lead --task "Use https://agentrelay.com/skill. Start the workspace, coordinate workers, and report progress."
    ```
 
 3. Watch output from the lead:
 
    ```bash
-   agent-relay local tail --agent Lead
+   agent-relay node tail --agent Lead
    ```
 
 4. Send follow-up instructions through an interactive attach:
 
    ```bash
-   agent-relay local agent attach Lead --mode drive
+   agent-relay node agent attach Lead --mode drive
    ```
 
 5. List and inspect workers:
 
    ```bash
-   agent-relay local agent list
-   agent-relay local tail --agent Lead
+   agent-relay node agent list
+   agent-relay node tail --agent Lead
    ```
 
 ## Prompt for a Lead Agent
@@ -104,12 +140,12 @@ and `join_channel`.
 Use https://agentrelay.com/skill as your Agent Relay onboarding reference.
 
 You are the orchestrator. Use the orchestrating-agent-relay role:
-- start or verify the relay broker
+- start or verify the relay broker yourself on Agent Relay 11.3.1 or later; have a human driver do it when 11.3.0 or earlier is installed
 - spawn the workers needed for the task
 - tell each worker to use the using-agent-relay role
-- read worker output with agent-relay local tail --agent <name>
-- monitor liveness with agent-relay local agent list
-- send follow-up instructions with agent-relay local agent attach <name> --mode drive
+- read worker output with agent-relay node tail --agent <name>
+- monitor liveness with agent-relay node agent list
+- send follow-up instructions with agent-relay node agent attach <name> --mode drive
 - keep workers alive through review/fix loops
 - release workers only after final acceptance
 

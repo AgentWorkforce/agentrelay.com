@@ -15,6 +15,14 @@ export const docsNav: NavGroup[] = [
       { title: 'Introduction', slug: 'introduction' },
       { title: 'Quickstart', slug: 'quickstart' },
       { title: 'Workspaces', slug: 'workspaces' },
+      { title: 'Authentication', slug: 'authentication' },
+    ],
+  },
+  {
+    title: 'Guides',
+    items: [
+      { title: 'Relay Connect', slug: 'relay-connect' },
+      { title: 'Fleet setup', slug: 'fleet-setup' },
     ],
   },
   {
@@ -36,26 +44,27 @@ export const docsNav: NavGroup[] = [
       { title: 'Events', slug: 'events' },
       { title: 'Event handlers', slug: 'event-handlers' },
       { title: 'Webhooks', slug: 'webhooks' },
+      { title: 'Provider subscriptions', slug: 'provider-subscriptions' },
     ],
   },
   {
     title: 'Delivery and sessions',
     items: [
+      { title: 'Architecture', slug: 'architecture' },
       { title: 'Delivery', slug: 'delivery' },
+      { title: 'Nodes and providers', slug: 'nodes-and-providers' },
+      { title: 'Nodes', slug: 'nodes' },
       { title: 'Harnesses', slug: 'harnesses' },
       { title: 'Session capabilities', slug: 'session-capabilities' },
       { title: 'Harness driver package', slug: 'harness-driver' },
     ],
   },
   {
-    title: 'Fleets',
-    items: [{ title: 'Fleets', slug: 'fleets' }],
-  },
-  {
     title: 'Interfaces',
     items: [
       { title: 'TypeScript SDK', slug: 'typescript-sdk' },
       { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
+      { title: 'Observer', slug: 'observer' },
     ],
   },
   {
@@ -70,7 +79,10 @@ export const docsNav: NavGroup[] = [
   },
   {
     title: 'Reference',
-    items: [{ title: 'Migration to version 8', slug: 'migration' }],
+    items: [
+      { title: 'Relaycast API', slug: 'relaycast-api' },
+      { title: 'Migration to version 8', slug: 'migration' },
+    ],
   },
 ];
 

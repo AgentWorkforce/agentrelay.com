@@ -1,7 +1,7 @@
 /* ── Docs — theme-aware ── */
 
 .docsPage {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -24,13 +24,13 @@
   grid-template-columns: 260px 1fr;
   max-width: 1280px;
   margin: 0 auto;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100svh - 70px);
 }
 
 .sidebarCol {
   position: sticky;
-  top: 88px;
-  height: calc(100vh - 88px);
+  top: var(--nav-clearance);
+  height: calc(100dvh - var(--nav-clearance));
   overflow-y: auto;
   padding: var(--docs-rail-top-padding) 1.25rem 2rem;
   border-right: 1px solid var(--line);
@@ -69,9 +69,11 @@
   color: var(--nav-muted);
 }
 
-.mobileSidebar .navLink:hover {
-  background: var(--nav-surface);
-  color: var(--nav-fg);
+@media (hover: hover) and (pointer: fine) {
+  .mobileSidebar .navLink:hover {
+    background: var(--nav-surface);
+    color: var(--nav-fg);
+  }
 }
 
 .mobileSidebar .navLinkActive {
@@ -118,8 +120,23 @@
 }
 
 .toc {
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 100px);
   overflow-y: auto;
+}
+
+/* Rail scrollbars stay invisible until the pointer or keyboard focus is in
+   the rail. Wheel, trackpad and keyboard scrolling are unaffected. */
+.sidebarCol,
+.toc {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* Ungated :hover on purpose: a stuck hover after a tap only reveals the
+   thumb, and any attached mouse (not just a primary one) should reveal it. */
+.sidebarCol:is(:hover, :focus-within),
+.toc:is(:hover, :focus-within) {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .tocControl {
@@ -161,12 +178,6 @@
   box-shadow: none;
 }
 
-.tocSelect:focus-visible {
-  outline: none;
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
-}
-
 .tocNav {
   margin-top: 1.3rem;
 }
@@ -198,13 +209,15 @@
   transition:
     color 0.15s,
     border-color 0.15s;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tocLink:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .tocLink:hover {
+    color: var(--primary);
+  }
 }
 
 .tocIndent {
@@ -230,6 +243,20 @@
   margin: 0 0 8px;
 }
 
+.versionStatic {
+  display: inline-flex;
+  align-items: center;
+  height: 2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--fg-muted);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 0.35rem 0.85rem;
+}
+
 .versionSelectWrap {
   position: relative;
   display: block;
@@ -252,14 +279,10 @@
   cursor: pointer;
 }
 
-.versionSelect:hover {
-  color: var(--fg-muted);
-}
-
-.versionSelect:focus-visible {
-  outline: none;
-  border-color: color-mix(in srgb, var(--primary) 28%, var(--line));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 18%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .versionSelect:hover {
+    color: var(--fg-muted);
+  }
 }
 
 .versionChevron {
@@ -271,6 +294,216 @@
   color: var(--fg-muted);
   pointer-events: none;
   transform: translateY(-50%);
+}
+
+/* ── Product section sidebar header (Relayfile / Relayhistory / Flows) ── */
+
+.productHeader {
+  margin-bottom: 1.4rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+}
+
+.productSwitcher {
+  position: relative;
+}
+
+.productSwitcherSummary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.62rem 0.66rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--line));
+  border-radius: 0.55rem;
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  color: var(--fg);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+
+.productSwitcherSummary::-webkit-details-marker {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .productSwitcherSummary:hover {
+    border-color: color-mix(in srgb, var(--primary) 32%, var(--line));
+    background: color-mix(in srgb, var(--primary) 7%, transparent);
+  }
+}
+
+.productSwitcher[open] .productSwitcherSummary {
+  border-color: color-mix(in srgb, var(--primary) 36%, var(--line));
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.productSwitcherCurrent {
+  display: flex;
+  align-items: center;
+  gap: 0.58rem;
+  min-width: 0;
+}
+
+.productSwitcherText {
+  display: grid;
+  gap: 0.14rem;
+  min-width: 0;
+}
+
+.productSwitcherTitleRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  width: fit-content;
+  min-width: 0;
+}
+
+.productSwitcherLabel {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--fg);
+}
+
+.productSwitcherMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.36rem;
+  flex-shrink: 0;
+}
+
+.productHeaderIcon {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
+.productHeaderVersion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--fg-muted);
+  border: 1px solid var(--border, rgba(116, 184, 226, 0.22));
+  border-radius: 999px;
+  min-height: 1rem;
+  padding: 0 0.4rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.productHeaderTagline {
+  display: block;
+  min-width: 0;
+  overflow: clip;
+  text-overflow: ellipsis;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.productSwitcherChevron {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: var(--fg-muted);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .productSwitcherChevron {
+    transition: transform 0.15s;
+  }
+}
+
+.productSwitcher[open] .productSwitcherChevron {
+  transform: rotate(180deg);
+}
+
+.productSwitcherMenu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, var(--line));
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, var(--bg), #061a28 14%);
+  box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, 0.24);
+}
+
+.productSwitcherOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.56rem;
+  padding: 0.55rem 0.5rem;
+  border-radius: 0.42rem;
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.productSwitcherOptionActive {
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  color: var(--fg);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .productSwitcherOption:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    color: var(--fg);
+  }
+}
+
+.productSwitcherOptionIcon {
+  width: 0.95rem;
+  height: 0.95rem;
+  margin-top: 0.1rem;
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.productSwitcherOptionText {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.productSwitcherOptionTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  min-width: 0;
+}
+
+.productSwitcherOptionLabel {
+  min-width: 0;
+  overflow: clip;
+  text-overflow: ellipsis;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: currentColor;
+  white-space: nowrap;
+}
+
+.productSwitcherOptionTagline {
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--fg-faint);
 }
 
 .navGroup {
@@ -319,9 +552,11 @@
   min-width: 0;
 }
 
-.navLink:hover {
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .navLink:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+    color: var(--primary);
+  }
 }
 
 .navLinkActive {
@@ -353,8 +588,9 @@
 }
 
 .articleBody {
+  display: flow-root;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .article h1 {
@@ -385,7 +621,7 @@
   border-radius: 0.85rem;
   background: color-mix(in srgb, var(--card-bg) 98%, transparent);
   box-shadow: 0 3px 10px color-mix(in srgb, var(--fg) 4%, transparent);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .pageActionPrimary,
@@ -414,10 +650,12 @@
   border-left: 1px solid var(--line);
 }
 
-.pageActionPrimary:hover,
-.pageActionToggle:hover {
-  background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .pageActionPrimary:hover,
+  .pageActionToggle:hover {
+    background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
+    color: var(--primary);
+  }
 }
 
 .pageActionPrimary:focus-visible,
@@ -466,8 +704,10 @@
   transition: background 0.15s ease;
 }
 
-.pageActionItem:hover {
-  background: color-mix(in srgb, var(--primary) 7%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .pageActionItem:hover {
+    background: color-mix(in srgb, var(--primary) 7%, transparent);
+  }
 }
 
 .pageActionIconFrame {
@@ -552,20 +792,37 @@
   text-underline-offset: 2px;
   transition: text-decoration-color 0.15s;
 }
-.article a:hover {
-  text-decoration-color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .article a:hover {
+    text-decoration-color: var(--primary);
+  }
 }
 
-.article .pageActionItem,
-.article .pageActionItem:hover {
+.article .pageActionItem {
   color: inherit;
   text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article .pageActionItem:hover {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 .article ul,
 .article ol {
   margin: 0.75rem 0;
   padding-left: 1.5rem;
+}
+.article ul {
+  list-style-type: disc;
+}
+.article ul > li::marker {
+  color: var(--primary);
+}
+.article ol {
+  list-style-type: decimal;
 }
 .article li {
   margin: 0.3rem 0;
@@ -610,7 +867,7 @@
 }
 
 .codeWrapperWithHeader {
-  overflow: hidden;
+  overflow: clip;
   border-radius: 0.75rem;
 }
 
@@ -665,7 +922,7 @@
 
 .codeBlockFilename {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-muted);
@@ -707,14 +964,16 @@
   background: transparent;
 }
 
-.copyBtn:hover {
-  color: var(--primary);
-  background: var(--bg);
-}
+@media (hover: hover) and (pointer: fine) {
+  .copyBtn:hover {
+    color: var(--primary);
+    background: var(--bg);
+  }
 
-.copyBtnInline:hover {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  .copyBtnInline:hover {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+  }
 }
 
 .article pre {
@@ -724,6 +983,8 @@
   background: var(--code-bg);
   border: 1px solid var(--line);
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   line-height: 1.5;
 }
 
@@ -740,7 +1001,7 @@
   margin: 1rem 0;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow: clip;
   background: var(--code-bg);
 }
 
@@ -769,8 +1030,10 @@
     opacity 0.15s,
     border-color 0.15s;
 }
-.codeGroupTab:hover {
-  opacity: 0.8;
+@media (hover: hover) and (pointer: fine) {
+  .codeGroupTab:hover {
+    opacity: 0.8;
+  }
 }
 .codeGroupTabActive {
   opacity: 1;
@@ -824,17 +1087,28 @@
     color 0.15s ease;
 }
 
-.article .bannerLink,
-.article .bannerLink:hover {
+.article .bannerLink {
   color: var(--primary-fg);
   text-decoration: none;
 }
 
-.bannerLink:hover {
-  background: #4a90c2;
-  border-color: #234969;
-  transform: translateY(-1px);
-  box-shadow: none;
+@media (hover: hover) and (pointer: fine) {
+  .article .bannerLink:hover {
+    color: var(--primary-fg);
+    text-decoration: none;
+  }
+
+  .bannerLink:hover {
+    background: #4a90c2;
+    border-color: #234969;
+    box-shadow: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bannerLink:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .bannerLinkIconWrap {
@@ -901,18 +1175,31 @@
     transform 0.15s ease;
 }
 
-.card:hover {
-  border-color: var(--card-hover-border);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
-    0 4px 14px color-mix(in srgb, black 22%, transparent);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--card-hover-border);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+      0 4px 14px color-mix(in srgb, black 22%, transparent);
+  }
 }
 
-.article .card,
-.article .card:hover {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.article .card {
   color: inherit;
   text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article .card:hover {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 .cardHeader {
@@ -943,9 +1230,16 @@
     color 0.15s ease;
 }
 
-.card:hover .cardLinkIcon {
-  color: var(--primary);
-  transform: translateX(2px);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .cardLinkIcon {
+    color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover .cardLinkIcon {
+    transform: translateX(2px);
+  }
 }
 
 .cardBody {

@@ -1,15 +1,102 @@
 import Link from 'next/link';
+import { ExternalLink } from 'lucide-react';
 
 import { SITE_EMAIL } from '../lib/site';
 import { LogoIcon, LogoWordmark } from './SiteNav';
 import s from './site-footer.module.css';
+
+type FooterLink = {
+  href: string;
+  label: string;
+  showExternalIcon?: boolean;
+};
+
+type FooterColumn = {
+  links: FooterLink[];
+  title: string;
+};
+
+const footerColumns: FooterColumn[] = [
+  {
+    title: 'Products',
+    links: [
+      { label: 'Relay Cloud', href: 'https://agentrelay.com/cloud' },
+      { label: 'Flows', href: '/flows' },
+      { label: 'Skip', href: 'https://heyskip.dev' },
+      { label: 'Pear', href: '/pear' },
+    ],
+  },
+  {
+    title: 'Open Source',
+    links: [
+      { label: 'Relay', href: '/messaging' },
+      { label: 'RelayFile', href: 'https://github.com/AgentWorkforce/relayfile' },
+      { label: 'RelayAuth', href: 'https://github.com/AgentWorkforce/relayauth' },
+      { label: 'RelayFlows', href: 'https://github.com/agentworkforce/flows' },
+      { label: 'Agents', href: '/agents' },
+    ],
+  },
+  {
+    title: 'Resources',
+    links: [
+      { label: 'Relay Docs', href: '/docs' },
+      { label: 'RelayFile Docs', href: '/docs/file' },
+      { label: 'Brand', href: '/brand' },
+      { label: 'GitHub', href: 'https://github.com/agentworkforce/relay' },
+      { label: 'Proactive Agents', href: 'https://proactiveagents.dev', showExternalIcon: true },
+    ],
+  },
+  {
+    title: 'Company',
+    links: [
+      { label: 'Home', href: '/' },
+      { label: 'Blog', href: '/blog' },
+      { label: 'Careers', href: '/careers' },
+    ],
+  },
+  {
+    title: 'Help',
+    links: [
+      { label: 'Support', href: '/support' },
+      { label: 'Telemetry', href: '/telemetry' },
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
+      { label: 'Contact', href: `mailto:${SITE_EMAIL}` },
+    ],
+  },
+];
+
+function FooterTextLink({ href, label, showExternalIcon }: FooterLink) {
+  const isExternal = href.startsWith('http');
+  const isMail = href.startsWith('mailto:');
+
+  if (isExternal || isMail) {
+    return (
+      <a
+        href={href}
+        target={isExternal ? '_blank' : undefined}
+        rel={isExternal ? 'noopener noreferrer' : undefined}
+        className={s.link}
+      >
+        {label}
+        {showExternalIcon ? <ExternalLink className={s.externalIcon} aria-hidden="true" /> : null}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={s.link}>
+      {label}
+    </Link>
+  );
+}
 
 export function SiteFooter() {
   return (
     <footer className={s.footer}>
       <div className={s.inner}>
         <div className={s.brand}>
-          <Link href="/" className={s.logo}>
+          <Link href="/" className={s.logo} aria-label="Agent Relay home">
             <LogoIcon />
             <LogoWordmark />
           </Link>
@@ -17,116 +104,14 @@ export function SiteFooter() {
         </div>
 
         <div className={s.columns}>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Projects</h4>
-            <Link href="/pear" className={s.link}>
-              Pear
-            </Link>
-            <a
-              href="https://github.com/AgentWorkforce/relayfile"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Relayfile
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/relayauth"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Relayauth
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/trajectories"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Trajectories
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/burn"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Burn
-            </a>
-            <a
-              href="https://github.com/AgentWorkforce/relayflows"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Relayflows
-            </a>
-          </div>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Documentation</h4>
-            <Link href="/docs/introduction" className={s.link}>
-              Introduction
-            </Link>
-            <Link href="/docs/quickstart" className={s.link}>
-              Quickstart
-            </Link>
-            <Link href="/docs/messaging" className={s.link}>
-              Messaging
-            </Link>
-            <Link href="/docs/delivery" className={s.link}>
-              Delivery
-            </Link>
-            <Link href="/docs/actions" className={s.link}>
-              Actions
-            </Link>
-            <Link href="/docs/cli-overview" className={s.link}>
-              CLI
-            </Link>
-            <Link href="/docs/typescript-sdk" className={s.link}>
-              TypeScript SDK
-            </Link>
-          </div>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Resources</h4>
-            <Link href="/blog" className={s.link}>
-              Blog
-            </Link>
-            <Link href="/brand" className={s.link}>
-              Brand
-            </Link>
-            <a
-              href="https://proactiveagents.dev"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              Proactive Agents
-            </a>
-          </div>
-          <div className={s.col}>
-            <h4 className={s.colTitle}>Company</h4>
-            <a
-              href="https://github.com/agentworkforce/relay"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={s.link}
-            >
-              GitHub
-            </a>
-            <Link href="/telemetry" className={s.link}>
-              Telemetry
-            </Link>
-            <Link href="/privacy" className={s.link}>
-              Privacy
-            </Link>
-            <Link href="/terms" className={s.link}>
-              Terms
-            </Link>
-            <a href={`mailto:${SITE_EMAIL}`} className={s.link}>
-              Contact
-            </a>
-          </div>
+          {footerColumns.map((column) => (
+            <div className={s.col} key={column.title}>
+              <h4 className={s.colTitle}>{column.title}</h4>
+              {column.links.map((link) => (
+                <FooterTextLink key={`${column.title}-${link.label}`} {...link} />
+              ))}
+            </div>
+          ))}
         </div>
       </div>
 
@@ -142,7 +127,7 @@ export function SiteFooter() {
             aria-label="GitHub"
             className={s.social}
           >
-            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true" focusable="false">
               <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
             </svg>
           </a>
@@ -153,7 +138,7 @@ export function SiteFooter() {
             aria-label="X"
             className={s.social}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
               <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
             </svg>
           </a>
@@ -164,7 +149,7 @@ export function SiteFooter() {
             aria-label="Discord"
             className={s.social}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
               <path d="M20.317 4.369a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.078.037c-.211.375-.444.864-.608 1.249a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.249.077.077 0 0 0-.078-.037 19.736 19.791 0 0 0-4.885 1.515.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.056 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 13.83 13.83 0 0 0 1.226-1.994.076.076 0 0 0-.041-.104 13.108 13.108 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.095.252-.194.372-.295a.074.074 0 0 1 .078-.011c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.102.246.201.373.296a.077.077 0 0 1-.006.128 12.299 12.299 0 0 1-1.873.891.076.076 0 0 0-.04.105c.36.698.773 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .031-.055c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028ZM8.02 15.331c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.175 1.094 2.157 2.418 0 1.334-.956 2.419-2.157 2.419Zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.418 2.157-2.418 1.21 0 2.175 1.094 2.157 2.418 0 1.334-.947 2.419-2.157 2.419Z" />
             </svg>
           </a>

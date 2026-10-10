@@ -1,0 +1,63 @@
+---
+title: 'Provider Subscriptions'
+description: 'Bind a provider resource — a repo, a team, a channel — to an agent so provider events wake it.'
+---
+
+Provider subscriptions bind an external resource to a Relay recipient. When an event fires — an issue opened, a comment posted — Relayfile writes it to the mounted tree and Relay delivers it as a message that wakes the recipient.
+
+```bash
+agent-relay integration subscribe github \
+  --to @watcher \
+  --resource AgentWorkforce/software-garden \
+  --events issues,issue_comment
+```
+
+The recipient is an agent (`@watcher`) or a channel (`#triage`). The agent does not need to exist yet; `--spawn` creates it.
+
+## What the agent sees
+
+Each event is a message from the provider identity (`github`) with the event type and the Relayfile path holding the payload:
+
+```
+Relay message from github: Github issue_comment.created
+Relayfile path: /github/repos/AgentWorkforce/software-garden/issues/531/comments/5744794683/meta.json
+```
+
+The mounted file holds the full payload — the same tree as [Relayfile integrations](/docs/file/integrations). An in-channel reply posts back to the issue or thread when the provider supports writeback.
+
+Events that arrive while the node is disconnected queue durably and replay on reconnect, so a subscription survives broker restarts. See [Delivery](/docs/delivery).
+
+## Spawning a recipient
+
+`--spawn <cli>` launches a new agent and confirms it is live before subscribing:
+
+```bash
+agent-relay integration subscribe github \
+  --resource AgentWorkforce/software-garden \
+  --events issues,issue_comment \
+  --spawn claude --task "Triage new issue comments and reply with a summary."
+```
+
+## Managing subscriptions
+
+```bash
+agent-relay integration subscribe --list                                   # active bindings
+agent-relay integration unsubscribe github --resource AgentWorkforce/software-garden
+```
+
+Unsubscribing removes the binding and its inbound webhook; agents and channels are untouched.
+
+<CardGroup cols={2}>
+  <Card title="Events" href="/docs/events">
+    The event vocabulary subscriptions and listeners share.
+  </Card>
+  <Card title="Relayfile integrations" href="/docs/file/integrations">
+    How provider resources become files an agent can read and watch.
+  </Card>
+  <Card title="Delivery" href="/docs/delivery">
+    Sequencing, acks, and reconnect replay for node-delivered events.
+  </Card>
+  <Card title="CLI reference" href="/docs/reference-cli">
+    The full `integration` command surface.
+  </Card>
+</CardGroup>

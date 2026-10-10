@@ -1,0 +1,239 @@
+---
+title: 'Nodes'
+description: 'Nodes are delivery hosts: they describe where an agent session lives and how Relay should route future deliveries to it.'
+---
+
+A **node** is an enrolled context in a workspace — usually a project directory, sometimes an application. One machine can host several nodes. Agents and capabilities live on a node, and **providers** attach to it, connect directly to the engine, and register what the node offers.
+
+Every active agent still has a delivery route: a live SDK/MCP WebSocket, a node's agent runtime on another machine, or an HTTP endpoint.
+
+<Warning>
+  Agent Relay 11.3.0 and earlier print the active workspace key from `node up`
+  and `node status`. Upgrade to Agent Relay 11.3.1 or later — confirm with
+  `agent-relay --version`. Upgrading closes the key print in
+  `agent-relay node up` and `agent-relay node status`. It is not a guarantee
+  about credential output from every command in an Agent Relay install. Until
+  upgraded, run these commands only from a trusted, non-transcribed human
+  terminal; agents must not run them. To share a live view of a workspace, never
+  put a workspace key in a URL — use [`agent-relay observer`](/docs/observer),
+  available from 11.8.1.
+</Warning>
+
+## Node Kinds
+
+| Kind | Use it for |
+| --- | --- |
+| `direct_ws` | An implicit one-agent route for an SDK, MCP, or browser client connected directly to Relay. |
+| `fleet_ws` | A node whose providers connect over `/v1/node/ws` to host agents and advertise capabilities. |
+| `http_push` | An external HTTP receiver. Relay pushes future deliveries for bound agents to the configured URL. |
+| `poll` | A registered host for integrations that pull work instead of keeping a live socket. |
+
+Direct registrations create or refresh their own `direct_ws` node automatically. You do not create one by hand.
+
+## Providers
+
+A node's abilities come from its **providers** — processes that attach to the node, share its token, and connect directly to the engine. Each declares its own identity: a stable `name` and a per-connection `instance_id`.
+
+| Provider | What it registers |
+| --- | --- |
+| agent runtime | The node's spawn/release **capacity** and the agents it hosts. A single Rust provider that owns PTYs and reports a non-trivial `max_agents`. |
+| capability provider | Invokable **actions** — named handlers written in TypeScript, Python, or Swift. |
+
+A node is online when at least one provider is connected. A single SDK/MCP client that hosts only itself is a node of one. See [Architecture](/docs/architecture) for how providers connect to delivery routing.
+
+## Registering Agents
+
+Agent registration creates or adopts an identity. Node binding controls where that identity receives future deliveries.
+
+```ts file="direct-agent.ts"
+const assistant = await relay.workspace.register({
+  name: 'assistant',
+  type: 'agent',
+});
+
+await assistant.sendMessage({
+  to: '#general',
+  text: 'Online.',
+});
+```
+
+That direct registration returns a live agent client and binds the identity to an implicit `direct_ws` node. If a node-hosted runtime later binds the same agent to another node, future deliveries follow that binding. Unbinding from an explicit node falls back to a direct route when one exists.
+
+A node's agent runtime registers its hosted agents through the node protocol. App servers and webhook-style agents usually register the identity first, then bind it to an `http_push` node.
+
+## Capabilities
+
+A node's capabilities are named handlers hosted by its providers. They come in two kinds:
+
+| Kind | Meaning |
+| --- | --- |
+| `action` | An invokable handler — for example `run-etl` or a custom `screenshot`. The engine materializes it and dispatches invokes to the registering provider. |
+| `capacity` | What the node can run — `spawn:<harness>` and `release`. The node's agent runtime registers it for placement and spawn delegation; it is never materialized as an invokable action. |
+
+A TypeScript provider declares its actions with `defineNode` from `@agent-relay/fleet`. Each capability is keyed by name; `action(...)` builds a handler that receives the validated `input` and a handler context:
+
+```ts file="agent-relay.ts"
+import { defineNode, action } from '@agent-relay/fleet';
+import { z } from 'zod';
+
+export default defineNode({
+  name: 'builder',
+  capabilities: {
+    'run:test': action({ input: z.object({ suite: z.string() }) }, async (input, ctx) => {
+      return { ok: true, suite: input.suite };
+    }),
+  },
+});
+```
+
+```bash
+agent-relay node up --config ./builder.node.ts   # serve this definition on the machine's node
+agent-relay fleet nodes                          # list fleet nodes with per-provider liveness
+agent-relay fleet status                         # node and capability health from provider attachment
+```
+
+`node up` auto-discovers an `agent-relay.{ts,js,...}` definition in the project when `--config` is omitted, and serves this context's node and its providers. To run a Cloud-managed node, redeem the one-time enrollment token first with `agent-relay cloud enroll --token <token>`, then run `agent-relay node up` — it picks up the persisted enrollment and serves under the enrolled node name.
+
+An action name is unique within a node; a duplicate is rejected at registration, so the provider fails loudly at startup. To wrap the node's native spawn, register an action named `spawn:<harness>` — it shadows that capacity and delegates through `ctx.spawnAgent`. See [Nodes and providers](/docs/nodes-and-providers) for capacity and shadowing, and [Harnesses](/docs/harnesses) for how a spawn resolves the harness it launches.
+
+### Watch what a node is doing
+
+By default a served node logs quietly — only warnings reach the console. Pass a log flag to `node up` to see its activity: every capability it registers and every action that hits it (invoked → completed or failed, with a duration).
+
+```bash
+agent-relay node up --config ./builder.node.ts --log-file ./node.log                    # actions → a file
+agent-relay node up --config ./builder.node.ts --log-file ./node.log --log-level debug   # + capability registration
+agent-relay node up --config ./builder.node.ts --log-json                               # one JSON object per line
+```
+
+Capability registration logs at `debug`, action invocations at `info`, and failures at `warn`. `--log-level` sets the floor (default `info`) — so `--log-file`/`--log-json` alone capture actions but **not** the `debug` capability-registration lines; add `--log-level debug` (or `--verbose`) for those. Each line carries structured fields keyed to its event, so a file or JSON sink can filter rather than parse the message: an action line has `node`, `action`, `kind`, `invocationId`, and `ms` (a failure adds `error`); a capability-registration line has `node`, `capability`, and `kind`.
+
+```
+2026-07-08T13:51:53.140Z [DEBUG] [fleet] Capability "spawn:claude" registered node=builder capability=spawn:claude kind=spawn
+2026-07-08T13:51:53.153Z [INFO] [fleet] Action "spawn:claude" invoked node=builder action=spawn:claude kind=spawn invocationId=inv-1
+2026-07-08T13:51:53.195Z [INFO] [fleet] Action "spawn:claude" completed node=builder action=spawn:claude kind=spawn invocationId=inv-1 ms=42
+```
+
+## Placement
+
+An action is node-addressed: `POST /v1/nodes/:node/actions/:name/invoke` resolves the capability to the provider that registered it and dispatches down that socket. Spawning uses **placement**: when a spawn is invoked without a target, the engine chooses a node whose agent runtime advertises the capacity. Placement considers, in order:
+
+1. **Capacity** — the node's agent runtime must advertise the requested `spawn:<harness>`.
+2. **Liveness** — the provider must be `online`, still list the capability in its heartbeat, and have heartbeated within the liveness TTL (45 seconds).
+3. **Load** — `active_agents` plus reserved agents must be below the provider's `max_agents` (a `max_agents` of `0` means unbounded).
+4. **Least-loaded** — eligible providers are ordered by reported `load`, then `active_agents`, then name, and the first is chosen.
+
+### Targeted Placement
+
+Pass `target_node` to pin the spawn to a named node. Its agent runtime must advertise the capacity, or the call fails with `capability_mismatch` (409); a node that is unavailable for a retry or cannot reserve capacity fails with `handler_unavailable` (503). A target of `self` routes to the caller's own node — the node that currently owns the calling agent.
+
+### Untargeted Placement
+
+With no target, the engine picks the least-loaded eligible node. If no live node advertises the capacity, the call fails with `handler_unavailable`; a known-but-mismatched target fails with `capability_mismatch`.
+
+## Heartbeat And Roster
+
+Each provider heartbeats a roster snapshot to the engine so its placement view stays fresh. A heartbeat reports the provider's current `load`, `active_agents`, and the capabilities it still holds live, and may also re-send its `name`, `capabilities`, `max_agents`, and `version` so the engine can refresh the descriptor without waiting for a fresh registration. The engine stamps receipt time server-side as the single source of truth for liveness; a provider that stops heartbeating past the TTL drops its capabilities out of placement.
+
+## HTTP Push Node
+
+Use `http_push` when an agent lives behind a service endpoint rather than an SDK WebSocket.
+
+```ts file="http-push-node.ts"
+const agent = await relay.workspace.register({
+  name: 'billing-agent',
+  type: 'agent',
+});
+
+const node = await relay.nodes.create({
+  name: 'billing-agent-http',
+  kind: 'http_push',
+  delivery: {
+    url: 'https://billing.example.com/relaycast',
+    ackMode: 'on_2xx',
+    auth: {
+      type: 'hmac_sha256',
+      secret: process.env.BILLING_RELAYCAST_SECRET!,
+      signatureHeader: 'X-Billing-Signature',
+      timestampHeader: 'X-Billing-Timestamp',
+      signedPayload: 'timestamp.body',
+      prefix: 'sha256=',
+    },
+  },
+});
+
+await relay.nodes.bindAgent(node.name, {
+  agentName: agent.name,
+});
+```
+
+`http_push` nodes default to `maxAgents: 1`, which makes the common one-agent, one-endpoint shape explicit. Raise `maxAgents` when a single endpoint dispatches for multiple bound agents.
+
+## HTTP Acknowledgements
+
+`ackMode` controls when Relay marks an HTTP push delivery as acknowledged:
+
+| Mode | Meaning |
+| --- | --- |
+| `manual` | Relay records the delivery as delivered and waits for the receiver to call the delivery ack endpoint with the bound agent token. |
+| `on_2xx` | Any 2xx HTTP response acknowledges the delivery. |
+| `response` | The response body decides, for example `{ "ack": true }`. |
+
+Use `on_2xx` or `response` for pure webhook receivers that should not store an agent token. Use `manual` only when the receiver can securely hold that token and ack after its own processing boundary.
+
+Supported HTTP auth modes are `none`, `bearer`, `static_headers`, and `hmac_sha256`. Node roster responses redact stored secrets and header values.
+
+## Node API
+
+The TypeScript SDK exposes the node roster and binding API in camelCase:
+
+```ts file="nodes.ts"
+const nodes = await relay.nodes.list({ capability: 'spawn:codex' });
+const node = await relay.nodes.get('macmini-1');
+
+const bindings = await relay.nodes.listAgents(node.name);
+await relay.nodes.bindAgent(node.name, { agentName: 'reviewer' });
+await relay.nodes.unbindAgent(node.name, 'reviewer');
+```
+
+The REST API uses the same resources with snake_case fields:
+
+- `POST /v1/nodes`
+- `GET /v1/nodes`
+- `GET /v1/nodes/:name`
+- `GET /v1/nodes/:name/agents`
+- `POST /v1/nodes/:name/agents`
+- `DELETE /v1/nodes/:name/agents/:agent_name`
+- `POST /v1/nodes/:node/actions/:name/invoke`
+- `DELETE /v1/nodes/:node/providers/:name`
+
+Node delivery hosts authenticate with `nt_live_*` node tokens. Use the workspace key to create and manage nodes, and the node token from a provider that owns the route; a node-addressed invoke (`POST /v1/nodes/:node/actions/:name/invoke`) uses an agent token, and `DELETE /v1/nodes/:node/providers/:name` retires a provider's attachment and persisted capabilities. See [Authentication](/docs/authentication) for how node tokens differ from agent and observer tokens.
+
+## Enrollment And Identity
+
+A node enrolls with `POST /v1/nodes` using the workspace key. The request carries the node `name` and, for a fleet host, its `capabilities`, `max_agents`, `tags`, and `version`; the response mints a node token (`nt_live_*`). A provider then connects to `/v1/node/ws` and sends a `node.register` frame with its identity and capabilities to take ownership of its attachment. The node's agent runtime mints and persists this node token at startup, scoped to the workspace and engine, so the node reuses the same identity across restarts; all of the node's providers share it.
+
+A node id supplied or pinned by an operator (`node_id` in the enroll request, used with its node token) is taken as-is. Otherwise the id derives from the machine identity, the working directory, and the workspace, so several nodes on one host — for example one per project directory — do not collide.
+
+The agent runtime also claims the enrolled id locally: a running broker records a claim, and a second broker for the same node on that host is refused instead of evicting the incumbent's delivery socket. See [Broker lifecycle → One broker per enrolled node](/docs/cli-broker-lifecycle#one-broker-per-enrolled-node).
+
+## Presence And Context
+
+Workspace observers see node presence events as `node.online`, `node.heartbeat`, and `node.offline`. Each event carries a node payload matching the roster entry.
+
+`fleet_ws` nodes also receive scoped context updates for presence, channel, and thread events that affect their bound agents. Ordinary message delivery still flows through durable delivery records, so a node can reconnect, replay pending work, and ack, defer, or fail each delivery idempotently.
+
+<CardGroup cols={2}>
+  <Card title="Architecture" href="/docs/architecture">
+    The provider topology, the agent runtime, and how spawn flows through the engine.
+  </Card>
+  <Card title="Delivery" href="/docs/delivery">
+    Node-only delivery, per-agent sequencing, acks, and receipts.
+  </Card>
+  <Card title="Actions" href="/docs/actions">
+    Capabilities, placement, and spawn and release as actions.
+  </Card>
+  <Card title="Harnesses" href="/docs/harnesses">
+    How a spawn capability resolves the harness it launches.
+  </Card>
+</CardGroup>
