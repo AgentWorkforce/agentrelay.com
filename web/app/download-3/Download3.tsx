@@ -160,8 +160,13 @@ export function Download3() {
     { build: getBuild('mac-x64'), label: 'Intel Mac', detail: 'Intel processor' },
     { build: getBuild('linux-x64-deb'), label: 'Linux x64', detail: 'x64 · .deb' },
     { build: getBuild('linux-arm64-deb'), label: 'Linux arm64', detail: 'arm64 · .deb' },
+    { build: getBuild('linux-x64-tar'), label: 'Linux x64', detail: 'x64 · .tar.gz' },
+    { build: getBuild('linux-arm64-tar'), label: 'Linux arm64', detail: 'arm64 · .tar.gz' },
   ];
-  const detectedId = detected?.os === 'mac' || detected?.os === 'linux' ? (recommendedBuild(detected)?.id ?? null) : null;
+  const detectedId =
+    detected?.confident === true && (detected.os === 'mac' || detected.os === 'linux')
+      ? (recommendedBuild(detected)?.id ?? null)
+      : null;
 
   function start(id: DesktopBuildId) {
     choose(id);
@@ -180,7 +185,7 @@ export function Download3() {
       <div className={s.machines} role="group" aria-label="Choose your computer">
         {machines.map((m) => (
           <a
-            key={m.label}
+            key={m.build.id}
             href={m.build.href}
             onClick={() => start(m.build.id)}
             className={`${s.machine} ${m.build.id === build?.id ? s.machineCurrent : ''}`}
@@ -210,7 +215,7 @@ export function Download3() {
               <li key={step.title} className={`${i === active ? s.stepActive : ''} ${done ? s.stepDone : ''}`}>
                 <button type="button" onClick={() => setActive(i)} aria-current={i === active ? 'step' : undefined}>
                   <span className={s.stepMark}>{done ? <Check size={14} strokeWidth={3} aria-hidden="true" /> : i + 1}</span>
-                  <span className={s.stepTitle}>{step.title}</span>
+                  <span>{step.title}</span>
                 </button>
                 {i === active && (
                   <div className={s.stepBody}>

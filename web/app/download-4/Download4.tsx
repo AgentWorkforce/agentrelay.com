@@ -120,13 +120,13 @@ export function Download4() {
       </section>
 
       <section className={s.section}>
-        <div className={s.tabs} role="tablist" aria-label="Install from the command line">
-          <button type="button" role="tab" aria-selected={tab === 'script'} onClick={() => setTab('script')}>Install from a shell</button>
-          <button type="button" role="tab" aria-selected={tab === 'agent'} onClick={() => setTab('agent')}>Ask your agent</button>
+        <div className={s.tabs} role="group" aria-label="Install from the command line">
+          <button type="button" aria-pressed={tab === 'script'} onClick={() => setTab('script')}>Install from a shell</button>
+          <button type="button" aria-pressed={tab === 'agent'} onClick={() => setTab('agent')}>Ask your agent</button>
         </div>
         {tab === 'script' ? (
           script ? (
-            <div className={s.code} role="tabpanel">
+            <div className={s.code}>
               <div className={s.codeHead}>
                 <span>{build?.os === 'mac' ? 'zsh · verifies the checksum, then installs to /Applications' : 'bash · verifies the checksum, then installs with apt'}</span>
                 <CopyButton id="script" text={script} copied={copied} copy={copy} />
@@ -134,12 +134,12 @@ export function Download4() {
               <pre>{script}</pre>
             </div>
           ) : (
-            <div className={s.code} role="tabpanel">
+            <div className={s.code}>
               <pre>Choose a build above to see its install script.</pre>
             </div>
           )
         ) : (
-          <div className={s.code} role="tabpanel">
+          <div className={s.code}>
             <div className={s.codeHead}>
               <span>Paste into Claude Code, Codex or OpenCode</span>
               <CopyButton id="prompt" text={AGENT_PROMPT} copied={copied} copy={copy} />

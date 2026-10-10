@@ -62,7 +62,7 @@ function OtherDownloads({ choice: { build }, release }: Props) {
 function Window({ src, alt, priority }: { src: typeof agentsShot; alt: string; priority?: boolean }) {
   return (
     <div className={s.window}>
-      <Image src={src} alt={alt} priority={priority} sizes="(max-width: 900px) 100vw, 900px" className={s.shot} />
+      <Image src={src} alt={alt} priority={priority} sizes="(max-width: 900px) 100vw, 900px" className={s.shot} unoptimized />
     </div>
   );
 }
@@ -102,7 +102,10 @@ export function Download2() {
             <DownloadButton choice={choice} release={release} />
             <AgentSignup product="teams" />
           </div>
-          <p className={s.requirement}>{MAC_REQUIREMENT} · Debian and Ubuntu on Linux</p>
+          <p className={s.requirement}>
+            {!choice.build || choice.build.os === 'mac' ? <>{MAC_REQUIREMENT} · </> : null}
+            {(!choice.build || choice.build.os === 'linux') && <>Debian and Ubuntu on Linux</>}
+          </p>
           <OtherDownloads choice={choice} release={release} />
         </div>
 
