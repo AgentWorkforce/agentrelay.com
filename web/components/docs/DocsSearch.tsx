@@ -46,9 +46,12 @@ function search(query: string, index: SearchEntry[]): SearchEntry[] {
 
 export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const backdropPressRef = useRef(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -59,11 +62,14 @@ export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
   const basePath = activeScope?.basePath ?? '/docs';
   const results = search(query, activeIndex);
 
-  const close = useCallback(() => {
-    setOpen(false);
+  // The query resets on open, so the closing dialog keeps its content while it fades out.
+  const openSearch = useCallback(() => {
     setQuery('');
     setActiveIdx(0);
+    setOpen(true);
   }, []);
+
+  const close = useCallback(() => setOpen(false), []);
 
   const navigate = useCallback(
     (slug: string) => {
@@ -72,6 +78,22 @@ export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
     },
     [basePath, close, router]
   );
+
+  // The dialog renders into document.body, which only exists after mount.
+  useEffect(() => setMounted(true), []);
+
+  // Native modal: top layer, inert page, focus trap, Esc to close, and focus
+  // returns to the element that opened it.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open && !dialog.open) {
+      dialog.showModal();
+      inputRef.current?.focus();
+    } else if (!open && dialog.open) {
+      dialog.close();
+    }
+  }, [open, mounted]);
 
   // Reset active index when results change
   useEffect(() => {
@@ -83,18 +105,13 @@ export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
     function onKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        setOpen((prev) => !prev);
+        if (dialogRef.current?.open) close();
+        else openSearch();
       }
-      if (e.key === 'Escape') close();
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [close]);
-
-  // Focus input when modal opens
-  useEffect(() => {
-    if (open) setTimeout(() => inputRef.current?.focus(), 50);
-  }, [open]);
+  }, [close, openSearch]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === 'ArrowDown') {
@@ -111,7 +128,7 @@ export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
 
   return (
     <>
-      <button className={s.trigger} onClick={() => setOpen(true)}>
+      <button type="button" className={s.trigger} onClick={openSearch} aria-haspopup="dialog">
         <svg
           width="14"
           height="14"
@@ -129,10 +146,22 @@ export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
         <kbd className={s.triggerKbd}>&#8984;K</kbd>
       </button>
 
-      {open &&
+      {mounted &&
         createPortal(
-          <div className={s.overlay} onClick={close}>
-            <div className={s.modal} onClick={(e) => e.stopPropagation()} onKeyDown={handleKeyDown}>
+          <dialog
+            ref={dialogRef}
+            className={s.dialog}
+            aria-label="Search documentation"
+            onClose={close}
+            // The dialog element itself is only hit through its ::backdrop; the panel fills the box.
+            onPointerDown={(e) => {
+              backdropPressRef.current = e.target === e.currentTarget;
+            }}
+            onClick={(e) => {
+              if (backdropPressRef.current && e.target === e.currentTarget) close();
+            }}
+          >
+            <div className={s.panel} onKeyDown={handleKeyDown}>
               <div className={s.inputRow}>
                 <svg
                   width="16"
@@ -180,7 +209,7 @@ export function DocsSearch({ index, productScopes = [] }: DocsSearchProps) {
                 </div>
               )}
             </div>
-          </div>,
+          </dialog>,
           document.body
         )}
     </>

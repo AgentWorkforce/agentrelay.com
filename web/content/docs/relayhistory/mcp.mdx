@@ -1,0 +1,92 @@
+---
+title: 'MCP server'
+description: 'ai-hist-mcp gives any MCP-capable agent search over its own past sessions, structured session reads, handoffs, and Agent Relay presence.'
+---
+
+```bash
+npx -y ai-hist-mcp
+```
+
+`ai-hist-mcp` exposes Relayhistory to an agent while it works. It calls the same public SDK operations as the CLI, never opens SQLite directly, and never loads cloud credentials.
+
+## Install
+
+<CodeGroup>
+```bash Claude Code
+claude mcp add ai-hist -- npx -y ai-hist-mcp
+```
+
+```toml Codex
+[mcp_servers.ai-hist]
+command = "npx"
+args = ["-y", "ai-hist-mcp"]
+```
+
+```json Cursor
+{
+  "mcpServers": {
+    "ai-hist": { "command": "npx", "args": ["-y", "ai-hist-mcp"] }
+  }
+}
+```
+</CodeGroup>
+
+## Tools
+
+**Search and catalog**
+
+| Tool | What it does |
+|---|---|
+| `search_history` | Full-text search of indexed prompts and session events. |
+| `recent_history` | Recent indexed prompts, newest first. |
+| `list_sessions` | Cached session catalog. Never discovers or syncs. |
+| `history_stats` | How much history is indexed. |
+
+**One session** — each takes a `source` and `session_id`
+
+| Tool | What it does |
+|---|---|
+| `get_session` | The session's prompts. |
+| `get_session_events` | A bounded page of normalized events. |
+| `get_session_tool_calls` | A page of recorded tool calls. |
+| `get_session_file_edits` | A page of recorded file edits. |
+| `get_session_markers` | Non-transcript records: compaction boundaries, system rows, lifecycle events. |
+| `get_session_requests` | Per-request model usage. |
+| `get_session_usage` | Token usage rollup. |
+| `get_session_relationships` | Direct parents and children. |
+| `get_session_tree` | The full descendant tree. |
+| `get_source_capabilities` | What one provider's parser can record. |
+
+**Indexing**
+
+| Tool | What it does |
+|---|---|
+| `discover_sessions` | Shallow provider discovery; updates the catalog only. |
+| `hydrate_session` | Fully index one cataloged session. |
+| `sync` | Full ingestion. |
+
+**Handoffs** — need the workspace `cloud` source connector; see [Handoffs](/docs/relayhistory/handoffs)
+
+| Tool | What it does |
+|---|---|
+| `create_handoff` | A pointer to the caller's current session, with a self-describing resume prompt. |
+| `resume_handoff` | Acquire a handed-off session and return its prompts, events, tool calls, and edits. |
+
+**Agent Relay presence** — live participants, not history
+
+| Tool | What it does |
+|---|---|
+| `list_relay_agents` | Who is on Agent Relay right now. |
+| `relay_status` | Whether this session is reachable on the relay. |
+| `join_relay` | Make this session reachable by teammates and agents, with an optional public name and description. |
+| `leave_relay` | Take it off the relay again. |
+
+The presence tools talk to the local Agent Relay desktop app over its socket (`AGENT_RELAY_SOCKET`, then `~/.agentworkforce/desktop/relay-socket`). If the app isn't running, they return an instruction to open it rather than failing the agent's turn.
+
+## Pages and cursors
+
+Every list tool is bounded. When a result has more, it returns a cursor; pass it back unchanged for the next page. Tool-call and file-edit pages always require both `source` and `session_id` and never merge two providers' records.
+
+## Remote sources
+
+The server reads local history by default. To let it acquire from [remote sources](/docs/relayhistory/remote-sources), set `AI_HIST_PLUGIN_CONFIG` to a plugin config file. Loading a plugin adds no tools; it widens what `discover_sessions`, `hydrate_session`, and `sync` can reach. `resume_handoff` uses the same mechanism: it needs a configured source connector named `cloud`.

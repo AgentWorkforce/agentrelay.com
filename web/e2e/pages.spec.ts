@@ -34,7 +34,7 @@ function staticPageRoutes(): string[] {
 function pageRoutes(): string[] {
   const currentDocs = getAllDocSlugs();
   const legacyDocs = getAllLegacyDocSlugs();
-  const productDocs = ['agents', 'file', 'loop'].flatMap((product) =>
+  const productDocs = ['file', 'relayhistory', 'relayflows'].flatMap((product) =>
     mdxSlugs(path.join(contentDir, `docs/${product}`)).map((slug) => `/docs/${product}/${slug}`),
   );
 

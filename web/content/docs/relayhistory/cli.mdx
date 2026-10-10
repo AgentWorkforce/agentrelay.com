@@ -1,0 +1,85 @@
+---
+title: 'CLI'
+description: 'Every ai-hist command: search, resume, pack, inspect sessions, sync, and the local/remote/all scopes.'
+---
+
+`ai-hist` is the command-line front end to the Relayhistory engine. Every command takes `--json` for machine-readable output and `--db PATH` (or `AI_HIST_DB`) to point at a different database.
+
+## Find and continue work
+
+```bash
+ai-hist search "auth rewrite"                     # full-text search across every harness
+ai-hist search "flaky test" --role user --limit 20
+ai-hist recent 20                                 # the last N prompts, newest first
+ai-hist resume "auth rewrite"                     # print the native resume command
+ai-hist pack "auth rewrite" --tokens 1500         # compact, token-budgeted context
+```
+
+`search` matches prompts and session events — assistant text, tool calls, and their results. Narrow it with `--source`, `--project PATH`, `--role all|user|assistant|prompt`, and an inclusive time window with `--since-ms` / `--until-ms`. Results come back newest first; page with the cursor printed in `--json` output via `--after`.
+
+`resume` and `pack` take a query, not an id: they find the best-matching session and act on it.
+
+## Inspect sessions
+
+```bash
+ai-hist sessions list                             # most recent sessions, newest first
+ai-hist session SESSION_ID                        # the prompts of one session
+ai-hist events SESSION_ID --limit 200             # its normalized events
+ai-hist sessions tree SOURCE SESSION_ID           # the parent/subagent tree
+ai-hist sessions relationships SOURCE SESSION_ID  # which sessions spawned which
+ai-hist sessions tools SOURCE SESSION_ID          # recorded tool calls
+ai-hist sessions edits SOURCE SESSION_ID          # recorded file edits
+ai-hist sessions markers SOURCE SESSION_ID        # non-transcript records (compaction boundaries, lifecycle events…)
+ai-hist sessions usage SOURCE SESSION_ID          # token usage rollup
+ai-hist stats                                     # how much is indexed, by source and project
+```
+
+`SOURCE` is the session's harness — `claude`, `codex`, `cursor`, `grok`, `muse`, `opencode`, `devin`, or `relay`. Commands under `sessions` require it alongside the id, because session ids collide across providers; `sessions list` prints both. `session` and `events` take the id alone and accept `--source` only to disambiguate an id two harnesses share.
+
+See [Sessions](/docs/relayhistory/sessions) for what each of these returns.
+
+## Index
+
+```bash
+ai-hist                                   # first run: discover and index recent sessions
+ai-hist sessions discover --limit 100     # shallow: refresh catalog metadata only
+ai-hist sessions hydrate SOURCE SESSION_ID  # fully index one session
+ai-hist sync                              # full ingestion of every local source
+```
+
+These do different amounts of work:
+
+- **`sessions list`** reads the catalog only. It never touches provider files.
+- **`sessions discover`** does bounded, shallow reads to refresh catalog metadata.
+- **`sessions hydrate`** indexes one session as fully as its provider allows.
+- **`sync`** is full ingestion — prompts, events, tool calls, edits, usage, relationships.
+
+Commands that read local history build the index on first use. Pass `--no-bootstrap` to answer from the store exactly as it stands.
+
+## Scopes: local, remote, all
+
+Commands that select a set of sessions take exactly one location scope:
+
+| Flag | Selects |
+|---|---|
+| `--local` | Sessions found on this machine. The default. |
+| `--remote` | Sessions found through a [remote source](/docs/relayhistory/remote-sources), such as claude.ai/code or Codex cloud. |
+| `--all` | Both, deduplicated — a session seen in both places appears once. |
+
+Omitting the flag is the same as `--local`; combining flags is an error. Local and remote are where a session was *observed*, not two kinds of session or two databases.
+
+```bash
+ai-hist search "auth rewrite" --all
+ai-hist sessions list --remote --limit 20
+ai-hist sync --all --config history.json
+```
+
+Cached reads (`search`, `recent`, `sessions list`, `resume`, `pack`, `stats`) never contact a provider, whatever the scope. Acquisition with `--remote` needs a configured source plugin and fails loudly without one. Commands that address a single session by id don't take a scope.
+
+## Export
+
+```bash
+ai-hist export --selection selection.json --out history.ndjson
+```
+
+Writes a selected slice of history as NDJSON. See [Export](/docs/relayhistory/export).

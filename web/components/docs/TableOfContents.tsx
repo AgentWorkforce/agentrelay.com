@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import type { TocItem } from '../../lib/docs';
+import { packageVersion } from '../../lib/package-versions';
 import { getProductSectionForPath } from '../../lib/product-docs-nav';
 import { useDocsLanguage } from './DocsLanguageContext';
 import { DocsVersionSelect } from './DocsVersionSelect';
@@ -14,6 +15,7 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   const { language, setLanguage } = useDocsLanguage();
   const pathname = usePathname() ?? '/docs';
   const productSection = getProductSectionForPath(pathname);
+  const productVersion = productSection?.npmPackage && packageVersion(productSection.npmPackage);
   const secondaryLanguage = productSection?.id === 'relayflows' ? 'yaml' : 'python';
   const secondaryLanguageLabel = secondaryLanguage === 'yaml' ? 'YAML' : 'Python';
 
@@ -67,10 +69,10 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
         </label>
       </div>
       {!productSection && <DocsVersionSelect />}
-      {productSection?.version && (
+      {productVersion && (
         <div className={styles.versionControl}>
           <span className={styles.versionLabel}>Version</span>
-          <span className={styles.versionStatic}>v{productSection.version}</span>
+          <span className={styles.versionStatic}>v{productVersion}</span>
         </div>
       )}
 
