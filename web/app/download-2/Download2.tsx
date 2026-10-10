@@ -103,8 +103,11 @@ export function Download2() {
             <AgentSignup product="teams" />
           </div>
           <p className={s.requirement}>
-            {!choice.build || choice.build.os === 'mac' ? <>{MAC_REQUIREMENT} · </> : null}
-            {(!choice.build || choice.build.os === 'linux') && <>Debian and Ubuntu on Linux</>}
+            {choice.build?.os === 'linux'
+              ? 'Debian and Ubuntu on Linux'
+              : choice.build?.os === 'mac'
+                ? MAC_REQUIREMENT
+                : <>{MAC_REQUIREMENT} · Debian and Ubuntu on Linux</>}
           </p>
           <OtherDownloads choice={choice} release={release} />
         </div>

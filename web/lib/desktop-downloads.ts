@@ -57,6 +57,9 @@ export const MAC_REQUIREMENT = 'macOS 13 Ventura or later';
    2. The unmasked WebGL renderer: "Apple M…"/"Apple GPU" vs "Intel"/"AMD".
    3. Apple silicon GPUs lack WEBGL_compressed_texture_s3tc_srgb, which every
       Intel/AMD Mac GPU exposes (Safari masks the renderer, so this decides it).
+   Signal 3 stays unconfident: extension availability is a heuristic, and a
+   wrong-but-flagged guess beats a wrong confident one — the Intel DMG runs on
+   Apple silicon via Rosetta, while the reverse serves a binary that cannot run.
    With no signal the Mac default is Apple silicon: every Mac sold since 2023. */
 
 export type DetectedPlatform =
@@ -81,8 +84,10 @@ export function detectPlatform(signals: PlatformSignals): DetectedPlatform {
   if (/Windows/i.test(ua) || /^Win/i.test(platform)) return { os: 'windows', arch: null, confident: false };
 
   if (/Mac/i.test(platform) || /Macintosh|Mac OS X/.test(ua)) {
-    const arch = macArchFromSignals(signals);
-    return arch ? { os: 'mac', arch, confident: true } : { os: 'mac', arch: 'arm64', confident: false };
+    const found = macArchFromSignals(signals);
+    return found
+      ? { os: 'mac', arch: found.arch, confident: found.confident }
+      : { os: 'mac', arch: 'arm64', confident: false };
   }
 
   if (/Linux|X11|CrOS/i.test(ua) || /Linux/i.test(platform)) {
@@ -95,18 +100,25 @@ export function detectPlatform(signals: PlatformSignals): DetectedPlatform {
   return { os: 'unknown', arch: null, confident: false };
 }
 
-function macArchFromSignals({ uaArchitecture, webglRenderer, webglExtensions }: PlatformSignals): DesktopArch | null {
+function macArchFromSignals({
+  uaArchitecture,
+  webglRenderer,
+  webglExtensions,
+}: PlatformSignals): { arch: DesktopArch; confident: boolean } | null {
   const hint = uaArchitecture?.toLowerCase();
-  if (hint === 'arm') return 'arm64';
-  if (hint === 'x86') return 'x64';
+  if (hint === 'arm') return { arch: 'arm64', confident: true };
+  if (hint === 'x86') return { arch: 'x64', confident: true };
 
   if (webglRenderer) {
-    if (/Apple M\d/i.test(webglRenderer)) return 'arm64';
-    if (/Intel|AMD|Radeon|NVIDIA/i.test(webglRenderer)) return 'x64';
+    if (/Apple M\d/i.test(webglRenderer)) return { arch: 'arm64', confident: true };
+    if (/Intel|AMD|Radeon|NVIDIA/i.test(webglRenderer)) return { arch: 'x64', confident: true };
   }
 
   if (webglExtensions && webglExtensions.length > 0) {
-    return webglExtensions.includes('WEBGL_compressed_texture_s3tc_srgb') ? 'x64' : 'arm64';
+    return {
+      arch: webglExtensions.includes('WEBGL_compressed_texture_s3tc_srgb') ? 'x64' : 'arm64',
+      confident: false,
+    };
   }
 
   return null;

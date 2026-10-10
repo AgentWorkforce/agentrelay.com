@@ -36,13 +36,18 @@ describe('detectPlatform', () => {
   });
 
   it('reads the WebGL renderer when it is unmasked', () => {
-    expect(detectPlatform(mac({ webglRenderer: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version)' })).arch).toBe('arm64');
-    expect(detectPlatform(mac({ webglRenderer: 'ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 655, OpenGL 4.1)' })).arch).toBe('x64');
+    expect(detectPlatform(mac({ webglRenderer: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M2 Pro, Unspecified Version)' }))).toEqual({ os: 'mac', arch: 'arm64', confident: true });
+    expect(detectPlatform(mac({ webglRenderer: 'ANGLE (Intel Inc., Intel(R) Iris(TM) Plus Graphics 655, OpenGL 4.1)' }))).toEqual({ os: 'mac', arch: 'x64', confident: true });
   });
 
   it('uses S3TC sRGB support when Safari masks the renderer', () => {
     expect(detectPlatform(mac({ webglRenderer: 'Apple GPU', webglExtensions: ['OES_texture_float'] })).arch).toBe('arm64');
     expect(detectPlatform(mac({ webglRenderer: 'Apple GPU', webglExtensions: ['OES_texture_float', S3TC_SRGB] })).arch).toBe('x64');
+  });
+
+  it('marks the extension heuristic unconfident, so the guess is flagged', () => {
+    expect(detectPlatform(mac({ webglRenderer: 'Apple GPU', webglExtensions: ['OES_texture_float'] }))).toEqual({ os: 'mac', arch: 'arm64', confident: false });
+    expect(detectPlatform(mac({ webglRenderer: 'Apple GPU', webglExtensions: ['OES_texture_float', S3TC_SRGB] }))).toEqual({ os: 'mac', arch: 'x64', confident: false });
   });
 
   it('defaults an undetectable Mac to Apple silicon without claiming confidence', () => {

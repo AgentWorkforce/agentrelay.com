@@ -241,7 +241,7 @@
   cursor: pointer;
 }
 
-.tabs button[aria-selected='true'] {
+.tabs button[aria-pressed='true'] {
   border-color: var(--t-line);
   background: var(--t-panel);
   color: #fff;
