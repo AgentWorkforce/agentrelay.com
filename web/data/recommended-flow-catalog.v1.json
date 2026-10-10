@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "catalogVersion": 5,
+  "catalogVersion": 6,
   "flows": [
     {
       "id": "software-factory",
       "kind": "flow",
-      "version": 5,
+      "version": 6,
       "name": "Software Garden",
       "summary": "Turn GitHub issues into reviewed, tested pull requests.",
       "description": "Implement a ticket, run the repository checks outside the agent, put the change through adversarial review, and open a pull request for a human decision.",
@@ -62,13 +62,13 @@
         "kind": "github",
         "owner": "AgentWorkforce",
         "repo": "agentrelay.com",
-        "path": "web/public/flows/software-garden/v1.flow.ts",
-        "release": "software-garden-v1",
-        "ref": "e3f5442652edd7651225fd1f5435f0e65378ec4b",
-        "url": "https://github.com/AgentWorkforce/agentrelay.com/blob/e3f5442652edd7651225fd1f5435f0e65378ec4b/web/public/flows/software-garden/v1.flow.ts",
-        "rawUrl": "https://raw.githubusercontent.com/AgentWorkforce/agentrelay.com/e3f5442652edd7651225fd1f5435f0e65378ec4b/web/public/flows/software-garden/v1.flow.ts",
+        "path": "web/public/flows/software-garden/v3.flow.ts",
+        "release": "software-garden-v3",
+        "ref": "b6125bfdba33e15b4ad68c9d431fe5630c0894d7",
+        "url": "https://github.com/AgentWorkforce/agentrelay.com/blob/b6125bfdba33e15b4ad68c9d431fe5630c0894d7/web/public/flows/software-garden/v3.flow.ts",
+        "rawUrl": "https://raw.githubusercontent.com/AgentWorkforce/agentrelay.com/b6125bfdba33e15b4ad68c9d431fe5630c0894d7/web/public/flows/software-garden/v3.flow.ts",
         "mediaType": "text/typescript",
-        "sha256": "b89a36e2cf9054036a7fc53fba20011a42ef0275ffbaaa907b080738ab46ad27"
+        "sha256": "a54a282e0ac607bf4481aee5c3353c7a5c63178da44080ba72ff872b24fcba73"
       }
     },
     {

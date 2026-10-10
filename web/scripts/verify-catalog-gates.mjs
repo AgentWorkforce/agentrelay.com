@@ -1,5 +1,6 @@
 import { FLOW_PLUGIN_IMPLEMENTATION_PULL_REQUESTS } from '../lib/flow-plugin-implementation-prs.mjs';
 import { assertPluginArtifact } from './verify-plugin-artifacts.mjs';
+import { assertRecommendedCatalogEnvelope } from './recommended-flow-contract.mjs';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { verifyDeploymentReceipt } from './verify-deployment-receipts.mjs';
@@ -21,6 +22,7 @@ const REQUIRED_PLUGIN_DEPENDENCIES = new Map([
     ['relay-native-existing-session-delivery', 'AgentWorkforce/relay'],
   ])],
 ]);
+const BABYSITTER_CATALOG_VERSION_FLOOR = 4;
 const SHA = /^[0-9a-f]{40}$/;
 const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 
@@ -180,8 +182,16 @@ function validateActivationGate(gate, label, requiredDependencies) {
 if (pluginCatalog.version !== 3 || !Array.isArray(pluginCatalog.plugins)) {
   fail('flow plugin catalog must be version 3');
 }
-if (recommendedCatalog.schemaVersion !== 1 || recommendedCatalog.catalogVersion !== 5 || !Array.isArray(recommendedCatalog.flows)) {
-  fail('recommended flow catalog must be schemaVersion 1 and catalogVersion 5');
+try {
+  assertRecommendedCatalogEnvelope(recommendedCatalog);
+} catch (error) {
+  fail(error.message);
+}
+// Cloud strips Babysitter from any catalog older than its authority floor
+// (PUBLISHED_RECOMMENDED_FLOW_CATALOG_VERSION in cloud's
+// recommended-flow-catalog-origin.ts), so the catalog may never fall below it.
+if (recommendedCatalog.catalogVersion < BABYSITTER_CATALOG_VERSION_FLOOR) {
+  fail(`recommended flow catalogVersion must be at least ${BABYSITTER_CATALOG_VERSION_FLOOR} to publish Babysitter`);
 }
 
 const plugin = pluginCatalog.plugins.find(entry => entry.name === 'babysitter');

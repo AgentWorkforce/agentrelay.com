@@ -3,7 +3,7 @@ import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { promisify } from 'node:util';
-import { assertRecommendedFlowSourceContract } from './recommended-flow-contract.mjs';
+import { assertRecommendedCatalogEnvelope, assertRecommendedFlowSourceContract } from './recommended-flow-contract.mjs';
 
 const execFileAsync = promisify(execFile);
 const catalogUrl = new URL('../data/recommended-flow-catalog.v1.json', import.meta.url);
@@ -11,9 +11,7 @@ const catalog = JSON.parse(await readFile(catalogUrl, 'utf8'));
 const MAX_SOURCE_BYTES = 1024 * 1024;
 const gardenManifest = JSON.parse(await readFile(new URL('../public/flows/software-garden/manifest.json', import.meta.url), 'utf8'));
 
-if (catalog.schemaVersion !== 1 || catalog.catalogVersion !== 5 || !Array.isArray(catalog.flows)) {
-  throw new Error('recommended-flow catalog must be schemaVersion 1, catalogVersion 5, with a flows array');
-}
+assertRecommendedCatalogEnvelope(catalog);
 
 for (const flow of catalog.flows) {
   const { source } = flow;

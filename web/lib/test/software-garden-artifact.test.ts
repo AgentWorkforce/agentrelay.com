@@ -124,11 +124,21 @@ describe('published Software Garden artifact', () => {
     const SOURCE_BY_CATALOG_VERSION: Record<number, string> = {
       4: '3c58ee16d10a9e2400db980f5bbafac84e437f20:4339c0c45a4fc928092a3e32275c061000887ed95acdc2f898966c35aca91a2d',
       5: 'e3f5442652edd7651225fd1f5435f0e65378ec4b:b89a36e2cf9054036a7fc53fba20011a42ef0275ffbaaa907b080738ab46ad27',
+      6: 'b6125bfdba33e15b4ad68c9d431fe5630c0894d7:a54a282e0ac607bf4481aee5c3353c7a5c63178da44080ba72ff872b24fcba73',
     };
     const { source } = catalog.flows.find(flow => flow.id === 'software-factory')!;
     // A catalog-wide bump may keep this source, so a row may repeat the one
     // before it; what it may not do is change the source without a new row.
     expect(Math.max(...Object.keys(SOURCE_BY_CATALOG_VERSION).map(Number)), 'record the new source here').toBe(catalog.catalogVersion);
     expect(SOURCE_BY_CATALOG_VERSION[catalog.catalogVersion], 'the pinned source changed: advance catalogVersion and record it').toBe(`${source.ref}:${source.sha256}`);
+  });
+
+  it('advances the Software Garden entry version with catalogVersion', () => {
+    // The two have moved together since the catalog first served the
+    // generated Software Garden (#185), and the pin-move script advances both.
+    // This holds the entry's version to an independent value: the API test
+    // derives it from the same catalog, so it cannot catch a forgotten bump.
+    const entry = catalog.flows.find(flow => flow.id === 'software-factory')!;
+    expect(entry.version, 'advance the software-factory entry version with catalogVersion').toBe(catalog.catalogVersion);
   });
 });
