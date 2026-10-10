@@ -23,17 +23,24 @@ const faces = cssFiles(cssDir).flatMap((file) =>
   })),
 );
 
-const upright = faces.find((f) => f.style === 'normal' && f.src.includes('/_next/static/media/') && f.family === 'Inter');
 const italic = faces.find((f) => f.style === 'italic' && f.src.includes('/fonts/inter-italic-latin.woff2'));
 
 if (!italic) {
   console.error('verify-font-faces: Inter italic @font-face not found in built CSS.');
   process.exit(1);
 }
+
+// The italic face only pairs with next/font's upright face when the family names are identical.
+const upright = faces.find(
+  (f) => f.style === 'normal' && f.src.includes('/_next/static/media/') && f.family === italic.family,
+);
+
 if (!upright) {
-  const families = [...new Set(faces.map((f) => f.family))].join(', ');
-  console.error(`verify-font-faces: next/font no longer emits an upright face named 'Inter' (found: ${families}).`);
-  console.error("Update the italic @font-face family in app/globals.css to match.");
+  const families = [...new Set(faces.filter((f) => f.src.includes('/_next/static/media/')).map((f) => f.family))].join(', ');
+  console.error(
+    `verify-font-faces: no next/font upright face is named '${italic.family}' like the italic face (next/font families: ${families}).`,
+  );
+  console.error('Make the italic @font-face family in app/globals.css match the Inter family next/font generates.');
   process.exit(1);
 }
 console.log(`verify-font-faces: Inter italic shares family '${italic.family}' with next/font's upright face.`);
