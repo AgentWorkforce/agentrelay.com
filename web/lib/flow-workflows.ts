@@ -425,7 +425,12 @@ const CAP_FUNCTION = BLOCK_FUNCTION + '; relayflow_cap() { ' + [
  * with its exit status, a timeout with how long it ran against its budget), `baseline` (the base commit's token, empty when it
  * was not needed, or `skipped` when there was no time to check it), and
  * `implementer_timeout=yes` when the implementer was stopped at its time
- * limit, and `reference` to the closing reference line the next step adds. The base commit's output is shown whenever it ran, including when
+ * limit, and `reference` to the closing reference line the next step adds.
+ * It may set `check_setup` (where FLOW_CHECK_SCRIPT came from: `input`,
+ * `repository`, `discovered` or `default`) and `check_digest` (its `cksum`
+ * before the first repair, empty when none ran): checks that passed on a
+ * script this run discovered, defaulted or repaired get a note saying how
+ * future runs can skip that setup. The base commit's output is shown whenever it ran, including when
  * its verdict is `unknown` (it ran out of time against a branch that failed
  * outright). A reviewer reads the verdict, the
  * script that ran and the tail of each log on the pull request itself, without
@@ -453,10 +458,16 @@ export const FLOW_CHECK_REPORT_COMMAND = [
   'relayflow_number() { v=$(cat "$1" 2>/dev/null | head -n 1); case "$v" in (""|*[!0-9]*) ;; (*) printf %s "$v" ;; esac; }',
   'relayflow_duration() { if [ "$1" -ge 60 ]; then printf "%dm%02ds" $(($1 / 60)) $(($1 % 60)); else printf "%ds" "$1"; fi; }',
   'ck_exit=$(relayflow_number .relayflow/check.log.exit); ck_elapsed=$(relayflow_number .relayflow/check.log.elapsed); ck_limit=$(relayflow_number .relayflow/check.log.limit)',
+  // A script this run wrote or changed that passed is worth keeping: the next
+  // run otherwise pays for check discovery again (run 91c1a5cd: 1.5 minutes,
+  // $0.66), because .relayflow/ is never committed.
+  'relayflow_setup_note() { how=; case "${check_setup:-}" in (discovered) how="worked out from this repository\'s CI configuration" ;; (default) how="the default for this kind of project" ;; esac'
+    + `; if [ -n "\${check_digest:-}" ] && [ "$(cksum < ${FLOW_CHECK_SCRIPT} 2>/dev/null)" != "$check_digest" ]; then if [ -n "$how" ]; then how="$how, then repaired during this run"; else how="repaired during this run"; fi; fi`
+    + `; if [ -n "$how" ] && [ -s ${FLOW_CHECK_SCRIPT} ]; then printf '\\n%s\\n' "This run set up its own check script ($how); it is under \\"What ran\\" below. Commit it to the repository as \\\`${FLOW_CHECK_SCRIPT}\\\`, or set this flow's test command in Cloud, and future runs skip this setup."; fi; }`,
   '{ printf \'## Checks\\n\\n\''
     + `; if [ "\${implementer_timeout:-}" = yes ]; then printf '%s\\n\\n' "**The implementer was stopped at its time limit**, so this change may be incomplete. Its committed work is what was checked and pushed; the pull request is a draft."; fi`
     + '; case "$check" in'
-    + ` pass) printf '%s\\n' "Relayflow ran this repository's checks (${FLOW_CHECK_SCRIPT}) and they passed." ;;`
+    + ` pass) printf '%s\\n' "Relayflow ran this repository's checks (${FLOW_CHECK_SCRIPT}) and they passed."; relayflow_setup_note ;;`
     + ` skipped) printf '%s\\n' "**Relayflow ran out of time before it could run this repository's checks** (${FLOW_CHECK_SCRIPT}), so no checks ran on this change. The pull request is a draft; run the checks before merging." ;;`
     + ` unrunnable) printf '%s\\n' "**Relayflow could not run this repository's checks** (${FLOW_CHECK_SCRIPT}): the machine it ran on has no \\\`timeout\\\`, \\\`gtimeout\\\` or \\\`perl\\\`, so there was no way to stop the suite at a time limit, and starting it could have ended the run with no verdict at all. This is not a test failure, and nothing here says the change is broken. Install coreutils (for \\\`timeout\\\`) or perl and run the flow again, or run ${FLOW_CHECK_SCRIPT} by hand. The pull request is a draft; run the checks before merging." ;;`
     + ` none) printf '%s\\n' "Relayflow found no way to run this repository's tests — no check command, no CI test job it could follow, no test target and no recognised project file — so no checks ran. Review the change with that in mind." ;;`
@@ -934,6 +945,122 @@ export const FLOW_PUBLISH_CHECK_COMMAND = [
   'echo "relayflow: no commits were made on this branch, so there is nothing to push or publish." >&2 && echo no-commits && exit 0',
 ].join('; ');
 
+/**
+ * Where the implementer explains a ticket it could not act on. It sits under
+ * `.relayflow/`, so it is a working file and is never committed.
+ */
+export const FLOW_NEEDS_INPUT_FILE = '.relayflow/needs-input.md';
+
+/**
+ * Told to the implementer. Run 91c1a5cd (wepost-no/wepost-saga) could not tell
+ * which file its Linear ticket meant, asked about it in its own output, and
+ * committed nothing; the flow then spent 17 minutes checking and repairing an
+ * unchanged branch, and the question never reached the person who could answer
+ * it. A question written here ends the run at once and is relayed
+ * (FLOW_NEEDS_INPUT_COMMAND).
+ */
+export const FLOW_NEEDS_INPUT_HINT = `If the ticket is ambiguous, or you cannot identify what it refers to (a file, document, feature or component you cannot find), do not guess and do not commit. Instead write ${FLOW_NEEDS_INPUT_FILE}: the specific question or questions the ticket's author must answer, and the candidates you found, each with its path (for example "Did you mean docs/native-gamification-plan.md?"). Keep it short and plain; it is posted back to the ticket.`;
+
+/**
+ * Says whether the implementer changed the repository's content, right after
+ * it finishes, so a run with nothing to check stops before the checks, the
+ * repairs and the base-commit comparison (run 91c1a5cd spent 17 minutes and
+ * $1.63 on them for a branch with no commits). The caller prefixes
+ * `base=<commit>`.
+ *
+ *   unchanged  the tracked files hold what the base commit holds
+ *   changed    commits, or edits to tracked files (the checks run on the tree)
+ *   unknown    the base commit or the tree could not be read
+ *
+ * It compares the base commit with the working tree, so committed, staged and
+ * unstaged edits all count, an edit undone before the end does not, and a
+ * rename (compared with --no-renames) counts its source's deletion as well as
+ * its destination. These do not count, whether committed, staged or edited:
+ *
+ *  - working files the base commit does not have, the same rule
+ *    FLOW_DROP_WORKING_FILES_COMMAND uses to take them out of the branch;
+ *    untracked ones are hidden by the clone's exclude file
+ *    (FLOW_EXCLUDE_WORKING_FILES_COMMAND). A repository's own summary.md
+ *    is published, so an edit to it is a change;
+ *  - anything under `.relayflow/`, even when the repository commits it: the
+ *    flow writes `.relayflow/check.sh` there itself before the implementer
+ *    starts (a run's checkCommand), so a difference there is not its work;
+ *  - untracked files: nothing in the flow adds them to a commit, so they
+ *    could never be published, and an agent's scratch notes must not hide
+ *    its question. Up to five are named on stderr.
+ *
+ * Only `unchanged` stops the run, so anything this cannot vouch for carries on
+ * as before. One token on stdout, exit 0 on every path.
+ */
+export const FLOW_CHANGE_CHECK_COMMAND = [
+  `paths=${shq(FLOW_WORKING_FILES.join(' '))}`,
+  'if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1 || ! names=$(git diff --no-ext-diff --no-renames --name-only "$base" -- 2>/dev/null); then echo "relayflow: could not tell whether the implementer changed anything; carrying on." >&2; echo unknown; exit 0; fi',
+  'changes=$(printf \'%s\\n\' "$names" | while IFS= read -r p; do [ -n "$p" ] || continue; keep=yes; for w in $paths; do case "$p" in ("$w"|"$w"/*) if [ "$w" = .relayflow ] || ! git cat-file -e "$base:$p" 2>/dev/null; then keep=no; fi ;; esac; done; if [ "$keep" = yes ]; then printf \'%s\\n\' "$p"; fi; done)',
+  'if [ -n "$changes" ]; then echo changed; exit 0; fi',
+  'loose=$(git ls-files --others --exclude-standard 2>/dev/null | head -n 5 | tr \'\\n\' \' \')',
+  'if [ -n "$loose" ]; then echo "relayflow: untracked files were never added or committed, so they are not a change: $loose" >&2; fi',
+  'echo "relayflow: the implementer changed nothing in the repository." >&2; echo unchanged',
+].join('; ');
+
+/** The most, in bytes, of the implementer's question FLOW_NEEDS_INPUT_COMMAND prints. */
+export const FLOW_NEEDS_INPUT_LIMIT = 4000;
+/** The most lines of it FLOW_NEEDS_INPUT_COMMAND prints. */
+const NEEDS_INPUT_LINES = 60;
+/**
+ * How much of the implementer's last message, in UTF-16 code units, the flow
+ * hands FLOW_NEEDS_INPUT_COMMAND: enough to fill FLOW_NEEDS_INPUT_LIMIT bytes
+ * after sanitizing, and small enough (at most 64 KB once quoted) for one
+ * shell argument.
+ */
+export const NEEDS_INPUT_SUMMARY_WINDOW = FLOW_NEEDS_INPUT_LIMIT * 4;
+
+/**
+ * Relays why the implementer made no change, when it made none
+ * (FLOW_CHANGE_CHECK_COMMAND said `unchanged`), in a form Cloud can parse and
+ * post back to the ticket. The text is FLOW_NEEDS_INPUT_FILE when the
+ * implementer wrote one, otherwise `agent_summary` (the caller sets it to the
+ * end of the implementer's own last message, NEEDS_INPUT_SUMMARY_WINDOW
+ * characters from a line start, and `agent_summary_bytes` to the whole
+ * message's UTF-8 size when it had to cut it), otherwise nothing.
+ *
+ * The output contract, on stdout, one record per line:
+ *
+ *   relayflow needs-input-source: needs-input.md | implementer-summary | none
+ *   relayflow needs-input: <one line of the question>      (zero or more)
+ *   relayflow needs-input-truncated: <kept> of <total> bytes  (only when cut)
+ *
+ * The source line always comes first and exactly once. Content lines keep the
+ * text's order. The text is agent-written, so it is sanitized before it is
+ * printed: terminal colour sequences and control characters (carriage
+ * returns included) are removed, tabs become spaces, each line is trimmed and blank
+ * lines are dropped. It is then cut to FLOW_NEEDS_INPUT_LIMIT bytes, at a line
+ * boundary (or a character boundary when one line is all there is), and to
+ * NEEDS_INPUT_LINES lines. A needs-input.md keeps its start, where the
+ * question was written to go; the implementer's summary keeps its end, where
+ * an agent's last message asks it. `<total>` is the size before any cut,
+ * the whole message's for a summary the caller cut. Every printed line
+ * carries a prefix, so nothing in the text can forge a record. Exit 0 on
+ * every path.
+ */
+export const FLOW_NEEDS_INPUT_COMMAND = [
+  'export LC_ALL=C',
+  'mkdir -p .relayflow; out=.relayflow/needs-input.out',
+  `relayflow_clean() { sed "s/$(printf '\\033')\\[[0-9;?]*[A-Za-z]//g" | tr -d '\\000-\\010\\013-\\037\\177' | tr '\\t' ' ' | awk 'NF { sub(/^ +/, ""); sub(/ +$/, ""); print }'; }`,
+  `src=none; if [ -s ${FLOW_NEEDS_INPUT_FILE} ] && [ -n "$(relayflow_clean < ${FLOW_NEEDS_INPUT_FILE})" ]; then src=needs-input.md; relayflow_clean < ${FLOW_NEEDS_INPUT_FILE} > "$out"; elif [ -n "$(printf '%s\\n' "\${agent_summary:-}" | relayflow_clean)" ]; then src=implementer-summary; printf '%s\\n' "$agent_summary" | relayflow_clean > "$out"; else : > "$out"; fi`,
+  'echo "relayflow needs-input-source: $src"',
+  'size=$(wc -c < "$out" | tr -d " "); total=$size',
+  'case "${agent_summary_bytes:-}" in (""|*[!0-9]*) ;; (*) if [ "$src" = implementer-summary ] && [ "$agent_summary_bytes" -gt "$total" ]; then total=$agent_summary_bytes; fi ;; esac',
+  // A summary keeps its end: the whole lines that fit, or the tail of its only
+  // line from a character boundary. Anything else keeps its start the same way.
+  `if [ "$size" -gt ${FLOW_NEEDS_INPUT_LIMIT} ] && [ "$src" = implementer-summary ]; then tail -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c $((${FLOW_NEEDS_INPUT_LIMIT} + 1)) "$out" | head -c 1 | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 1 ]; then sed 1d "$out.cut" > "$out.kept"; else sed "s/^$(printf '[\\200-\\277]')*//" "$out.cut" | awk 'NF { sub(/^ +/, ""); print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"`
+    + `; elif [ "$size" -gt ${FLOW_NEEDS_INPUT_LIMIT} ]; then head -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c 1 "$out.cut" | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 0 ]; then sed '$d' "$out.cut" > "$out.kept"; else sed "s/$(printf '[\\300-\\377]')$(printf '[\\200-\\277]')*\\$//" "$out.cut" | awk 'NF { print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"; fi`,
+  `if [ "$src" = implementer-summary ]; then tail -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; else head -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; fi; mv -f "$out.kept" "$out"; kept=$(wc -c < "$out" | tr -d " ")`,
+  'sed "s/^/relayflow needs-input: /" "$out"',
+  'if [ "$kept" -lt "$total" ]; then echo "relayflow needs-input-truncated: $kept of $total bytes"; fi',
+  'rm -f "$out"',
+  'exit 0',
+].join('; ');
+
 const REVIEW_BLOCKED_HEADING ='**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
 const REVIEW_TIMEOUT_NOTE = 'The review was stopped at its %s before it finished, so it is not a clean review. What it wrote before then is below.';
 
@@ -1050,9 +1177,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const changeTitleLength = Array.from(changeTitle).length;
   const placeholderTitle = ["software factory change", "replace with your ticket title"]
     .includes(changeTitle.toLowerCase());
-  const issueSource = issue.source.trim().toLowerCase();
-  const issueIdentifier = issue.identifier?.trim() ?? "";
-  const issueUrl = issue.url?.trim() ?? "";
+  // A local input may leave ticket metadata out or give it another type: it
+  // reads as blank, where calling .trim() on it would throw.
+  const field = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const issueSource = field(issue.source).toLowerCase();
+  const issueIdentifier = field(issue.identifier);
+  const issueUrl = field(issue.url);
   if (!changeTitle || placeholderTitle) {
     console.error("Stopped: the pull-request title is empty or still a placeholder. No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
@@ -1102,13 +1232,22 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   sections.push({ id: 'discover', code: `  // Work out how this repository checks itself, before any code changes, so
   // the change and the commit it started from are checked the same way.
   // To use your own command instead, set checkCommand, for example
-  // "npm run build && npm test" or "make ci".
+  // "npm run build && npm test" or "make ci". A checkCommand in the run's
+  // input (the flow's test command in Cloud) takes precedence over it.
   const checkCommand = "";
+  const inputCheckCommand = typeof input.checkCommand === "string" ? input.checkCommand.trim() : "";
+  const chosenCheckCommand = inputCheckCommand || checkCommand.trim();
   const shellQuote = (value: string) => "'" + value.replace(/'/g, "'\\\\''") + "'";
   const checkScript = ${JSON.stringify(FLOW_CHECK_SCRIPT)};
-  if (checkCommand.trim()) {
-    await f.run("mkdir -p .relayflow && printf '%s\\\\n' 'set -e' " + shellQuote(checkCommand) + " > " + checkScript);
+  // Where the check script came from, so the pull request can say when one
+  // this run set up is worth keeping: "input", "repository" (already in the
+  // tree), "discovered", or "default" (written below from the project files).
+  let checkSetup = "repository";
+  if (chosenCheckCommand) {
+    checkSetup = "input";
+    await f.run("mkdir -p .relayflow && printf '%s\\\\n' 'set -e' " + shellQuote(chosenCheckCommand) + " > " + checkScript);
   } else if ((await f.run("test -s " + checkScript + " && echo yes || echo no")).trim() !== "yes") {
+    checkSetup = "discovered";
     // No command of yours and none committed to the repository: read how its
     // CI tests it. Anything this cannot settle falls back to a default below.
     const discovery = await f.agent("check-discovery", {
@@ -1123,6 +1262,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   }
   const resolveChecks = ${JSON.stringify(FLOW_CHECK_RESOLVE_COMMAND)};
   const checkPlan = (await f.run(resolveChecks)).trim();
+  if (checkPlan === "default") checkSetup = "default";
   // Removes build outputs the run no longer needs before a check, so a second
   // build cannot fill the sandbox's disk.
   const freeDisk = ${JSON.stringify(FLOW_FREE_DISK_COMMAND)};` });
@@ -1172,16 +1312,41 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Stopped there, its committed work is still checked, and published as a
   // draft that says so.
   const implementerLimit = Math.max(1, await allowance(${t.agentLimitMaxMinutes}, building));
+  console.error("relayflow phase: implementing");
   const implementation = await f.agent("implementer", {
-    ${options('implementer', 'builder', '', 'implementerLimit')}
+    ${options('implementer', 'builder', ` + "\\n" + ${JSON.stringify(FLOW_NEEDS_INPUT_HINT)}`, 'implementerLimit')}
   });
   const implementerTimedOut = timedOut(implementation);
   if (implementerTimedOut) console.error("implementer was stopped at its " + implementerLimit + "m limit. Its committed work is kept, and the pull request opens as a draft.");
+  // An implementer that finished without changing anything (it could not tell
+  // what the ticket meant, or found nothing to do) leaves nothing to check,
+  // repair or compare: stop now and relay its question (run 91c1a5cd spent 17
+  // minutes on an unchanged branch). Only a definite "unchanged" stops here.
+  if (!implementerTimedOut && (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_CHANGE_CHECK_COMMAND)})).trim() === "unchanged") {
+    // Its own last message stands in when it wrote no ${FLOW_NEEDS_INPUT_FILE}.
+    // The question is at its end, so the relay gets the end: from a line
+    // start, with the whole message's size in bytes when it was cut.
+    const said = (implementation as unknown as { summary?: unknown } | undefined)?.summary;
+    const message = typeof said === "string" ? said : "";
+    let agentSummary = message.slice(-${NEEDS_INPUT_SUMMARY_WINDOW});
+    let summaryBytes = "";
+    if (agentSummary.length < message.length) {
+      agentSummary = agentSummary.includes("\\n") ? agentSummary.slice(agentSummary.indexOf("\\n") + 1) : agentSummary.replace(/^[\\uDC00-\\uDFFF]/, "");
+      summaryBytes = String(Array.from(message).reduce((bytes, character) => {
+        const point = character.codePointAt(0) ?? 0;
+        return bytes + (point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4);
+      }, 0));
+    }
+    const needsInput = (await f.run("agent_summary=" + shellQuote(agentSummary) + "; agent_summary_bytes=" + summaryBytes + "; " + ${JSON.stringify(FLOW_NEEDS_INPUT_COMMAND)})).trim();
+    console.error("Stopped: the implementer made no changes, so there was nothing to check or publish. No checks ran, no branch was pushed and no pull request was opened. Its question or reason follows, when it gave one: answer it on the ticket and run again.\\n" + needsInput);
+    return f.done("needs_human");
+  }
   // A repository with no way to test itself may have gained one in this
   // change (a first package.json with a test script). Resolving only before
   // the change reported "no checks ran" on a pull request that added tests
   // (cloud-e2e-sandbox#31), so a "none" is looked at again.
-  if (checkPlan === "none") await f.run(resolveChecks);` });
+  // A script written now is the ecosystem default, so the report says so.
+  if (checkPlan === "none" && (await f.run(resolveChecks)).trim() === "default") checkSetup = "default";` });
   sections.push({ id: 'checks', code: `  // Run the checks. A failure is not the end of the run: the tests are
   // how this flow learns what is wrong, so the repair agent reads the output
   // and fixes what it can, at most twice, and whatever still fails is compared against
@@ -1235,6 +1400,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   if (checkLimit < ${t.checkFloorMinutes}) {
     console.error("Skipped the checks: too little of the flow's time budget is left to run them and still publish. The pull request opens as a draft that says no checks ran.");
   } else {
+    console.error("relayflow phase: checking");
     check = verdict(await spannedCheck(checkLimit));
     // No way to bound the suite, so it was never started: not a verdict on
     // this change, and nothing to repair or compare. The draft says so.
@@ -1245,6 +1411,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // recovery, never a longer plan.
   // The base-commit check that may follow, as compareWithBase budgets it:
   // nothing when it would be skipped anyway.
+  let checkDigest = "";
   const baseReserve = () => checkPlan === "none" || Math.ceil(checkTook) > ${t.checkMinutes - 2} ? 0 : Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook)) + 5;
   for (let round = 1; round <= ${cloud ? t.repairRounds : t.localRepairRounds} && broken(check); round++) {
     // Each round: the repair, freeing disk, the re-check, publishing and the
@@ -1259,12 +1426,19 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
         : "Skipped the second repair: too little of the flow's time budget is left to repair again and still publish and review. The checks stand as they are.");
       break;
     }
+    // The script as it was before any repair, so the report can tell when a
+    // repair changed it.
+    if (round === 1) checkDigest = (await f.run("cksum < " + checkScript + " 2>/dev/null || true")).trim();
+    console.error("relayflow phase: repairing");
     const repair = await f.agent("check-repair" + (round === 1 ? "" : "-" + round), {
       ${options('check-repair', 'builder', '', 'repairLimit')}
     });
     await f.run(freeDisk);
     const recheckLimit = await allowance(checkTotal, checkSlack + publishing + reviewing + baseHold);
-    if (recheckLimit >= 1) check = verdict(await spannedCheck(recheckLimit));
+    if (recheckLimit >= 1) {
+      console.error("relayflow phase: checking");
+      check = verdict(await spannedCheck(recheckLimit));
+    }
     else console.error("No time was left to check the repair again; the checks stand as they were before it.");
     if (timedOut(repair)) {
       // A failed attempt: what it committed was checked again above, and
@@ -1308,6 +1482,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // it edits .github/workflows/ (the run's token may lack that permission),
   // the work is pushed without those edits and the patch goes on the PR.
   const pushBranch = ${JSON.stringify(FLOW_PUSH_COMMAND)};
+  console.error("relayflow phase: publishing");
   await f.run("base=" + baseCommit + "; " + dropWorkingFiles, { timeout: "${t.forgeMinutes}m" });
   const publishCheck = ${JSON.stringify(FLOW_PUBLISH_CHECK_COMMAND)};
   const publish = (await f.run("base=" + baseCommit + "; " + publishCheck)).trim();
@@ -1323,7 +1498,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Failing, unrun or unfinished work is never thrown away: the pull request
   // opens as a draft, with the verdict, the script and the output in its body.
   const checkReport = ${JSON.stringify(FLOW_CHECK_REPORT_COMMAND)};
-  await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; implementer_timeout=" + (implementerTimedOut ? "yes" : "no") + "; reference=" + shellQuote(changeReference) + "; " + checkReport);
+  await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; implementer_timeout=" + (implementerTimedOut ? "yes" : "no") + "; check_setup=" + checkSetup + "; check_digest=" + shellQuote(checkDigest) + "; reference=" + shellQuote(changeReference) + "; " + checkReport);
   const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
   await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
   const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};
@@ -1378,6 +1553,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // The reviewer starts from nothing: a review.md left in the tree would read
   // as its findings if it is stopped before writing.
   await f.run("rm -f review.clean review.md");
+  console.error("relayflow phase: reviewing");
   const review = await f.agent("adversary", {
     ${options('adversary', 'reviewer', '', 'reviewLimit')}
   });

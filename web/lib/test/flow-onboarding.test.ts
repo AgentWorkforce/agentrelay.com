@@ -102,7 +102,7 @@ describe('software factory onboarding', () => {
     for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
       const source = factorySource({ ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow, step: 3 });
       const implementer = source.indexOf('f.agent("implementer"');
-      const again = source.indexOf('if (checkPlan === "none") await f.run(resolveChecks);');
+      const again = source.indexOf('if (checkPlan === "none" && (await f.run(resolveChecks)).trim() === "default") checkSetup = "default";');
       expect(implementer, workflow).toBeGreaterThan(-1);
       expect(again, workflow).toBeGreaterThan(implementer);
       expect(source.indexOf('await spannedCheck(checkLimit)'), workflow).toBeGreaterThan(again);

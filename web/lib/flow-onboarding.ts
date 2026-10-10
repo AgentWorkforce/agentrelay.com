@@ -166,7 +166,9 @@ const builder = "${agent}";` });
     console.error("Stopped: no ticket arrived with this run, so there was nothing to work on.");
     return f.done("needs_human");
   }`;
-  sections.push({ id: 'input', code: `type Input = { issue${hasMarkdown ? '?' : ''}: Issue; approver: string };
+  // checkCommand: the flow's test command, when Cloud or a local input sets
+  // one; it replaces check discovery (see the 'discover' section).
+  sections.push({ id: 'input', code: `type Input = { issue${hasMarkdown ? '?' : ''}: Issue; approver: string; checkCommand?: string };
 
 // Run in a connected repository, on a new branch.
 export default flow<Input>("software-factory",
