@@ -29,15 +29,21 @@ GET https://agentrelay.com/api/v1/flows/catalog/software-factory
 GET https://agentrelay.com/api/v1/flows/catalog/babysitter
 ```
 
-The list response starts with `schemaVersion: 1` and `catalogVersion: 5`. The catalog version advances whenever an entry's source changes, because Cloud upgrades an activation onto a different source only from an older catalog version. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
+The list response starts with `schemaVersion: 1` and `catalogVersion: 6`. `catalogVersion` is a positive integer that advances whenever an entry's source changes, because Cloud upgrades an activation onto a different source only from an older catalog version. Every entry has a stable `id`, its own numeric `version`, display copy, repository-host support, and an immutable source reference. Flow entries carry trigger defaults and activation inputs. Extension entries instead name their base flow and plugin contract. An extension is not activatable unless its gate is `ready` and every declared dependency has merge and deployment evidence.
 
-The catalog does not copy the flow body. `source` names the GitHub owner, repository, path, release, full commit SHA, blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch. For Software Garden the release is the published version (`software-garden-v1`) and the path is that version's file in `AgentWorkforce/agentrelay.com`:
+The catalog does not copy the flow body. `source` names the GitHub owner, repository, path, release, full commit SHA, blob and raw URLs, media type, and SHA-256 content digest. Both URLs contain the commit SHA, never a mutable branch. For Software Garden the release is the published version (currently `software-garden-v3`), the path is that version's file in `AgentWorkforce/agentrelay.com`, and the commit is the one where that file first landed on `main`:
 
 ```text
-https://github.com/AgentWorkforce/agentrelay.com/blob/<commit>/web/public/flows/software-garden/v1.flow.ts
+https://github.com/AgentWorkforce/agentrelay.com/blob/<commit>/web/public/flows/software-garden/v3.flow.ts
 ```
 
 CI and the production release workflow resolve the release (a tag for an `AgentWorkforce/flows` source, the manifest entry for a published Software Garden version), fetch the pinned raw file with a size bound, and verify the digest. A broken, moved, mutable, or drifted source therefore fails before the catalog can ship. For the direct-source deploy API, the client downloads `source.rawUrl`, verifies the bytes against `source.sha256`, and submits that source text; Cloud stores it as the deployment's source snapshot.
+
+### Moving the Software Garden pin
+
+Publishing a new Software Garden version (`publish-software-garden.mts`) does not change what the catalog serves. When a push to `main` changes `web/public/flows/software-garden/manifest.json`, the *Propose Software Garden catalog bump* workflow runs `web/scripts/propose-software-garden-catalog-bump.mjs`. If the manifest's latest version is newer than the pinned one, the script pins the commit where that version's file first landed on `main` and the file's SHA-256 there, advances `catalogVersion` and the entry's `version`, and records the new source in `SOURCE_BY_CATALOG_VERSION` (`web/lib/test/software-garden-artifact.test.ts`). It then runs `verify:recommended-flows`, the tests and the typecheck, and opens a pull request from `automation/software-garden-catalog-bump`, or updates the one already open. If the pin is current, it does nothing. It never merges; the pull request is reviewed like any other.
+
+The workflow uses its own `GITHUB_TOKEN`, scoped to `contents: write` and `pull-requests: write`. GitHub does not start other workflows for pull requests that token opens, so a maintainer starts CI on the bump pull request by running the *CI* workflow on that branch, or by closing and reopening the pull request. The same script previews the change locally: `node web/scripts/propose-software-garden-catalog-bump.mjs` reports the pending move, and `--write` applies it.
 
 ## Activation contract
 

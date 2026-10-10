@@ -1,0 +1,62 @@
+name: Propose Software Garden catalog bump
+
+# Publishing a Software Garden version moves manifest.json but not the
+# recommended-flow catalog's pin. This opens (or updates) the pull request that
+# moves the pin; it never merges. The logic and its tests live in
+# web/scripts/propose-software-garden-catalog-bump.mjs.
+#
+# Known limitation: the pull request is opened with GITHUB_TOKEN, and GitHub
+# does not start other workflows for events that token causes, so CI does not
+# run on it automatically. A maintainer runs the CI workflow on the branch (or
+# closes and reopens the pull request). This job runs the same checks first.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - web/public/flows/software-garden/manifest.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: software-garden-catalog-bump
+  cancel-in-progress: false
+
+jobs:
+  propose:
+    name: Propose catalog bump
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          # Full history to find the commit where the version first landed.
+          fetch-depth: 0
+          # Don't leave a write-capable token in git config for npm ci or the
+          # checks. The script pushes with the token it is given explicitly.
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Compare the catalog pin with the manifest
+        id: plan
+        run: node web/scripts/propose-software-garden-catalog-bump.mjs
+
+      - name: Install dependencies
+        if: steps.plan.outputs.status == 'bump'
+        run: npm ci
+
+      - name: Edit, check, and open or update the pull request
+        if: steps.plan.outputs.status == 'bump'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node web/scripts/propose-software-garden-catalog-bump.mjs --open-pr

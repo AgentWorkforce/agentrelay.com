@@ -20,3 +20,16 @@ export function assertRecommendedFlowSourceContract(flow, sourceText) {
     throw new Error(`${flow.id}: released source lacks the ticket-derived title/exact closing-reference contract (${missing.join(', ')})`);
   }
 }
+
+// Cloud parses the envelope as schemaVersion 1 with a positive-integer
+// catalogVersion (recommendedFlowCatalogEnvelopeSchema). The version itself is
+// not fixed here: it advances every time an entry's source moves, and
+// software-garden-artifact.test.ts records which source each version served.
+export function assertRecommendedCatalogEnvelope(catalog) {
+  if (!catalog || typeof catalog !== 'object' || Array.isArray(catalog)
+    || catalog.schemaVersion !== 1
+    || !Number.isSafeInteger(catalog.catalogVersion) || catalog.catalogVersion < 1
+    || !Array.isArray(catalog.flows)) {
+    throw new Error('recommended-flow catalog must be schemaVersion 1, with a positive integer catalogVersion and a flows array');
+  }
+}
