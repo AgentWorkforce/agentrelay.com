@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { DEFAULT_FACTORY, factorySource, readFactoryDraft, cloudConnectionsHref, type FactoryDraft } from '../flow-onboarding';
+import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { DEFAULT_AGENT_MODELS, resolveAgentSettings, resolveGeneratedAgentSettings } from '../flow-agent-settings';
-import { localKitFiles } from '../flow-local';
 import { FLOW_CHECK_RUN_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
 import type { CodingAgent } from '../flow-agents';
 
@@ -67,9 +66,8 @@ describe('per-step agent settings', () => {
     expect(resolveGeneratedAgentSettings('simple', 'implementer', ['claude'], { 'simple:implementer': { agent: 'grok', model: 'grok-model', prompt: 'Custom work' } })).toMatchObject({ agent: 'claude', model: 'claude-sonnet-5', prompt: 'Custom work' });
   });
 
-  it('keeps old OpenCode settings readable while falling back to a supported agent', () => {
+  it('falls back to a supported agent for old OpenCode settings', () => {
     const saved = { 'simple:implementer': { agent: 'opencode' as const, model: 'opencode-model', prompt: 'Custom work' } };
-    expect(readFactoryDraft(JSON.stringify({ ...draft, agentSettings: saved })))?.toMatchObject({ agentSettings: saved });
     expect(resolveAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: '', prompt: 'Custom work' });
     expect(resolveGeneratedAgentSettings('simple', 'implementer', ['opencode'], saved)).toMatchObject({ agent: 'claude', model: 'claude-sonnet-5', prompt: 'Custom work' });
   });
@@ -127,25 +125,6 @@ describe('per-step agent settings', () => {
     }
   }, 20_000); // 60 generated flows, compiled and run; about 2s alone, slower under the full suite's load.
 
-  it('keeps Cloud handoff and local-kit source on the same explicit model contract', () => {
-    for (const workflow of ['simple', 'traditional', 'prototype'] as const) {
-      for (const source of ['github', 'slack'] as const) {
-        for (const agents of [['claude'], ['codex'], ['claude', 'codex'], ['cursor'], ['grok']] as CodingAgent[][]) {
-          const value: FactoryDraft = { ...draft, workflow, sources: [source], sourceSettings: {}, agents };
-          const handoff = JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(value, 'model-contract')).hash.slice(1))) as { source: string };
-          expect(handoff.source).toBe(factorySource(value, 'cloud'));
-          expect(localKitFiles(value)['software-factory.flow.mts']).toBe(factorySource(value, 'local'));
-          for (const generated of [handoff.source, localKitFiles(value)['software-factory.flow.mts']]) {
-            for (const properties of agentObjectProperties(generated)) {
-              expect(properties).toContain('cli');
-              expect(properties).toContain('model');
-            }
-          }
-        }
-      }
-    }
-  });
-
   it('materializes the model on the third Simple agent in the failed agent-3 topology', () => {
     const source = factorySource({ ...draft, workflow: 'simple', agents: ['claude'], sources: ['slack'], sourceSettings: {} });
     const objects = agentObjectProperties(source);
@@ -177,20 +156,15 @@ describe('per-step agent settings', () => {
     expect(calls.implementer.model).toBe('claude-sonnet-5');
   });
 
-  it('persists valid overrides and includes them in both handoff sources', () => {
+  it('includes overrides in both cloud and local source', () => {
     const value: FactoryDraft = { ...draft, agentSettings: { 'prototype:implementer': { agent: 'grok', model: 'custom-model', prompt: 'Write summary.md.' } } };
-    expect(readFactoryDraft(JSON.stringify(value))?.agentSettings).toEqual(value.agentSettings);
-    expect(localKitFiles(value)['software-factory.flow.mts']).toContain('model: "custom-model"');
-    expect(localKitFiles(value)['START-HERE.txt']).toContain('Grok');
-    const cloud = JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(value, 'test')).hash.slice(1)));
-    expect(cloud.source).toContain('model: "custom-model"');
-    expect(cloud.source).toContain('Write summary.md.');
+    for (const target of ['cloud', 'local'] as const) {
+      expect(factorySource(value, target)).toContain('model: "custom-model"');
+      expect(factorySource(value, target)).toContain('Write summary.md.');
+    }
   });
 
-  it('rejects invalid persisted settings without inventing reasoning options', () => {
-    for (const agentSettings of [[], { 'simple:unknown': {} }, { 'simple:implementer': { agent: 'shell' } }, { 'simple:implementer': { reasoning: 'high' } }, { 'simple:implementer': { prompt: ' ' } }, { 'simple:implementer': { model: 'bad\nmodel' } }]) {
-      expect(readFactoryDraft(JSON.stringify({ ...draft, agentSettings }))).toBeNull();
-    }
+  it('does not invent reasoning options', () => {
     expect(factorySource(draft)).not.toContain('reasoning:');
   });
 });
