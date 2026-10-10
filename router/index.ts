@@ -18,6 +18,10 @@ interface Env extends AnalyticsEnv {
     fetch(request: Request): Promise<Response>;
   };
   WEBHOOK_WORKER_ORIGIN?: string;
+  RELAYFILE_CLOUD_WORKER?: {
+    fetch(request: Request): Promise<Response>;
+  };
+  RELAYFILE_CLOUD_ORIGIN?: string;
 }
 
 function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
@@ -83,6 +87,20 @@ const VANITY_REDIRECTS = new Map<string, string>([
 // the actual destination of the forward.
 const WEBHOOK_WORKER_FORWARDED_HEADER = "x-cloud-webhook-worker-forwarded";
 const WEBHOOK_WORKER_FORWARDED_VALUE = "webhook-worker";
+const WEBHOOK_ORIGIN_WORKER = "worker";
+const WEBHOOK_ORIGIN_RELAYFILE_CLOUD = "relayfile-cloud";
+const RELAYFILE_CLOUD_FORWARDED_HEADER = "x-cloud-webhook-relayfile-cloud-forwarded";
+const RELAYFILE_CLOUD_FORWARDED_VALUE = "relayfile-cloud";
+// Relayfile-cloud's Nango webhook handler path (strips the /cloud prefix).
+const RELAYFILE_CLOUD_NANGO_WEBHOOK_PATH = "/v1/nango/webhook";
+// Lifecycle events must always reach cloud-web so handleAuthEvent can run.
+const RELAYFILE_CLOUD_NANGO_LIFECYCLE_TYPES = new Set(["auth", "connection.created"]);
+const RELAYFILE_CLOUD_NANGO_INGEST_TYPES = new Set(["forward", "sync", "webhook"]);
+const RELAYFILE_CLOUD_NANGO_PROVIDER_CONFIG_KEYS = new Set([
+  "github-relay", "github-sage", "github-app", "github-app-oauth",
+  "linear-relay", "linear-sage", "notion-relay", "notion-sage",
+  "slack-relay", "slack-sage", "slack-sage-preview",
+]);
 let loggedPhase5aLambdaEliminated = false;
 
 // Exact paths the webhook worker handles. Other sub-paths under
@@ -506,6 +524,10 @@ async function shouldUseCloudWebWorker(
     return false;
   }
 
+  if (await shouldUseRelayfileCloudWebhook(pathname, request, env)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -535,7 +557,103 @@ export async function shouldUseNangoWebhookWorkerRoute(
   }
 
   const configured = await readWebhookOriginFlag(env);
-  return configured?.trim().toLowerCase() === "worker";
+  return configured?.trim().toLowerCase() === WEBHOOK_ORIGIN_WORKER;
+}
+
+export async function shouldUseNangoRelayfileCloudRoute(
+  pathname: string,
+  env: Env,
+): Promise<boolean> {
+  if (!isNangoWebhookWorkerPath(pathname)) {
+    return false;
+  }
+
+  const configured = await readWebhookOriginFlag(env);
+  return configured?.trim().toLowerCase() === WEBHOOK_ORIGIN_RELAYFILE_CLOUD;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readString(record: Record<string, unknown>, key: string): string | null {
+  const value = record[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readNangoWebhookType(record: Record<string, unknown>): string | null {
+  return (
+    readString(record, "type") ??
+    readString(record, "eventType") ??
+    readString(record, "event_type")
+  )?.toLowerCase() ?? null;
+}
+
+function readNangoProviderConfigKey(record: Record<string, unknown>): string | null {
+  return (
+    readString(record, "providerConfigKey") ??
+    readString(record, "provider_config_key") ??
+    readString(record, "from") ??
+    readString(record, "provider")
+  )?.toLowerCase() ?? null;
+}
+
+// The ingest verdict is requested twice per webhook (once from the cloud-web
+// check, once from the relayfile-cloud route), for the same Request object.
+// Memoize it so the body is cloned and parsed once.
+const ingestRequestCache = new WeakMap<Request, Promise<boolean>>();
+
+async function isRelayfileCloudNangoIngestRequest(request: Request): Promise<boolean> {
+  if (request.method !== "POST") {
+    return false;
+  }
+  let verdict = ingestRequestCache.get(request);
+  if (!verdict) {
+    verdict = (async () => {
+      let body: unknown;
+      try {
+        body = await request.clone().json();
+      } catch {
+        return false;
+      }
+      if (!isRecord(body)) return false;
+      const type = readNangoWebhookType(body);
+      if (!type || RELAYFILE_CLOUD_NANGO_LIFECYCLE_TYPES.has(type)) return false;
+      if (!RELAYFILE_CLOUD_NANGO_INGEST_TYPES.has(type)) return false;
+      const providerConfigKey = readNangoProviderConfigKey(body);
+      return providerConfigKey
+        ? RELAYFILE_CLOUD_NANGO_PROVIDER_CONFIG_KEYS.has(providerConfigKey)
+        : false;
+    })();
+    ingestRequestCache.set(request, verdict);
+  }
+  return verdict;
+}
+
+function isWebhookWorkerForward(request: Request): boolean {
+  return (
+    request.headers.get(WEBHOOK_WORKER_FORWARDED_HEADER) === WEBHOOK_WORKER_FORWARDED_VALUE
+  );
+}
+
+function isRelayfileCloudForward(request: Request): boolean {
+  return (
+    request.headers.get(RELAYFILE_CLOUD_FORWARDED_HEADER) === RELAYFILE_CLOUD_FORWARDED_VALUE
+  );
+}
+
+async function shouldUseRelayfileCloudWebhook(
+  pathname: string,
+  request: Request,
+  env: Env,
+): Promise<boolean> {
+  if (isWebhookWorkerForward(request) || isRelayfileCloudForward(request)) {
+    return false;
+  }
+  if (!(await shouldUseNangoRelayfileCloudRoute(pathname, env))) {
+    return false;
+  }
+  return isRelayfileCloudNangoIngestRequest(request);
 }
 
 async function shouldUseWebhookWorker(
@@ -549,7 +667,7 @@ async function shouldUseWebhookWorker(
   // Without this header check, the router catches that forward and redirects
   // it back to webhook-worker, which re-enqueues, ad infinitum (or until
   // `maxRetries`).
-  if (request.headers.get(WEBHOOK_WORKER_FORWARDED_HEADER) === WEBHOOK_WORKER_FORWARDED_VALUE) {
+  if (isWebhookWorkerForward(request)) {
     return false;
   }
   return shouldUseNangoWebhookWorkerRoute(pathname, env);
@@ -573,6 +691,35 @@ function buildWebhookWorkerRequest(
   const init: RequestInit & { duplex?: "half" } = {
     method: request.method,
     headers: request.headers,
+    body: request.body,
+    redirect: "manual",
+    duplex: "half",
+  };
+
+  return new Request(targetUrl.toString(), init);
+}
+
+function buildRelayfileCloudWebhookRequest(
+  request: Request,
+  requestUrl: URL,
+  cloudOrigin?: string,
+): Request {
+  const targetUrl = new URL(requestUrl.toString());
+  targetUrl.pathname = RELAYFILE_CLOUD_NANGO_WEBHOOK_PATH;
+
+  if (cloudOrigin) {
+    const originUrl = new URL(cloudOrigin);
+    targetUrl.protocol = originUrl.protocol;
+    targetUrl.hostname = originUrl.hostname;
+    targetUrl.port = originUrl.port;
+  }
+
+  const headers = new Headers(request.headers);
+  headers.set(RELAYFILE_CLOUD_FORWARDED_HEADER, RELAYFILE_CLOUD_FORWARDED_VALUE);
+
+  const init: RequestInit & { duplex?: "half" } = {
+    method: request.method,
+    headers,
     body: request.body,
     redirect: "manual",
     duplex: "half",
@@ -861,6 +1008,33 @@ const router = {
       if (workerOrigin) {
         const originResponse = await timing.measure("up", () =>
           globalThis.fetch(buildWebhookWorkerRequest(request, url, workerOrigin)),
+        );
+        if (recorderRequestClone && recorderEnv) {
+          ctx.waitUntil(
+            maybeRecord(recorderRequestClone, originResponse.clone(), recorderEnv, ctx),
+          );
+        }
+        return originResponse;
+      }
+    }
+
+    if (await shouldUseRelayfileCloudWebhook(url.pathname, request, env)) {
+      if (env.RELAYFILE_CLOUD_WORKER) {
+        const workerResponse = await env.RELAYFILE_CLOUD_WORKER.fetch(
+          buildRelayfileCloudWebhookRequest(request, url),
+        );
+        if (recorderRequestClone && recorderEnv) {
+          ctx.waitUntil(
+            maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
+          );
+        }
+        return workerResponse;
+      }
+
+      const cloudOrigin = env.RELAYFILE_CLOUD_ORIGIN?.trim();
+      if (cloudOrigin) {
+        const originResponse = await globalThis.fetch(
+          buildRelayfileCloudWebhookRequest(request, url, cloudOrigin),
         );
         if (recorderRequestClone && recorderEnv) {
           ctx.waitUntil(
