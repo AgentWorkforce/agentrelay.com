@@ -957,15 +957,17 @@
       background 0.25s;
   }
 
-  .patternCard:hover,
-  .warningCard:hover,
-  .fileTreeItem:hover,
-  .skillSignalPane p:hover,
-  .signalRow:hover,
-  .questionItem:hover {
-    transform: translateY(-2px);
-    border-color: var(--reflex-line-strong);
-    background-color: rgba(16, 39, 58, 0.82);
+  @media (hover: hover) and (pointer: fine) {
+    .patternCard:hover,
+    .warningCard:hover,
+    .fileTreeItem:hover,
+    .skillSignalPane p:hover,
+    .signalRow:hover,
+    .questionItem:hover {
+      transform: translateY(-2px);
+      border-color: var(--reflex-line-strong);
+      background-color: rgba(16, 39, 58, 0.82);
+    }
   }
 }
 
