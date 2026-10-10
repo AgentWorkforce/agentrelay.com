@@ -5,8 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import ts from 'typescript';
 import { FLOW_BASE_CHECK_COMMAND, FLOW_CHECK_RUN_COMMAND, FLOW_FREE_DISK_COMMAND, FLOW_DROP_WORKING_FILES_COMMAND, FLOW_OPEN_CHANGE_COMMAND, FLOW_PREPARE_CHANGE_METADATA_COMMAND, FLOW_PUBLISH_CHECK_COMMAND, FLOW_REPORT_REVIEW_FINDINGS_COMMAND, FLOW_REVIEW_BLOCKED_COMMAND, FLOW_VALIDATE_CHANGE_METADATA_COMMAND } from '../flow-workflows';
-import { cloudBlockedReason, cloudConnectionsHref, DEFAULT_FACTORY, factorySource, isMarkdownOnly, MARKDOWN_ONLY_CLOUD_NOTE, readFactoryDraft, canContinue, primaryAgent, onboardingPath, accessibleOnboardingStep, type FactoryDraft } from '../flow-onboarding';
-import { localInput } from '../flow-local';
+import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
 import { FLOW_PUSH_COMMAND, FLOW_REFERENCE_LIMIT } from '../flow-workflows';
 
 // Every push goes through the workflow-file guard (run 065fd98f).
@@ -67,27 +66,12 @@ async function runFactory(clean: boolean[], _approved = true, issue = matchingIs
   return { calls, finish, errors };
 }
 
-describe('software factory onboarding', () => {
-  it('gives the introduction and final handoff distinct routes', () => {
-    expect(onboardingPath(-1)).toBe('/flows/onboarding');
-    expect(onboardingPath(0)).toBe('/flows/onboarding/sources');
-    expect(onboardingPath(1)).toBe('/flows/onboarding/agents');
-    expect(onboardingPath(3)).toBe('/flows/onboarding/connections');
-  });
-
-  it('guards direct links and requires an explicit workflow choice', () => {
-    expect(accessibleOnboardingStep(DEFAULT_FACTORY, 3)).toBe(0);
-    expect(accessibleOnboardingStep({ ...completed, agents: [] }, 3)).toBe(1);
-    expect(accessibleOnboardingStep({ ...completed, task: '', step: 0 }, 3)).toBe(3);
+describe('software factory generator', () => {
+  it('emits no agents or human gate until a workflow is chosen', () => {
     expect(DEFAULT_FACTORY.workflow).toBeNull();
     const unanswered = { ...completed, workflow: null, step: 2 };
-    expect(canContinue(unanswered)).toBe(false);
-    expect(accessibleOnboardingStep(unanswered, 3)).toBe(2);
-    expect(readFactoryDraft(JSON.stringify({ ...unanswered, step: 3 }))?.step).toBe(2);
     expect(factorySource(unanswered)).not.toContain('f.agent(');
     expect(factorySource(unanswered)).not.toContain('f.human(');
-    expect(() => cloudConnectionsHref(unanswered, 'id')).toThrow('Choose a workflow');
-    expect(readFactoryDraft(JSON.stringify({ ...unanswered, workflow: 'prototype' }))?.workflow).toBe('prototype');
   });
 
   it('treats failing checks the change itself introduced as the change\'s own failure, not pre-existing', () => {
@@ -109,30 +93,20 @@ describe('software factory onboarding', () => {
     }
   });
 
-  it('rejects corrupt and unsupported persisted drafts', () => {
-    for (const raw of [null, '{', '{}', '{"version":1,"agent":"shell","rounds":3}', '{"version":1,"agent":"claude","rounds":999}']) {
-      expect(readFactoryDraft(raw)).toBeNull();
-    }
-    expect(readFactoryDraft(JSON.stringify(DEFAULT_FACTORY))).toEqual(DEFAULT_FACTORY);
-  });
-
   it('reveals the full preset at the task step', () => {
     expect(factorySource(DEFAULT_FACTORY)).not.toContain('f.agent');
     expect(factorySource({ ...completed, step: 1 })).not.toContain('implementer');
     expect(factorySource({ ...completed, step: 2 })).toContain('return f.done("needs_human")');
   });
 
-  it('lets upcoming-only selections continue using a supported example', () => {
+  it('builds upcoming-only selections with a supported example', () => {
     const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], agents: ['windsurf', 'gemini'], step: 1 };
-    expect(canContinue(draft)).toBe(true);
-    expect(primaryAgent(draft)).toBe('claude');
+    expect(factorySource(draft)).toContain('const builder = "claude"');
     expect(factorySource(draft)).not.toContain('cli: "cursor"');
-    expect(readFactoryDraft(JSON.stringify(draft))?.agents).toEqual(['windsurf', 'gemini']);
   });
 
   it.each(['grok', 'cursor'] as const)('uses %s throughout a workflow without falling back to Claude', async agent => {
     const draft = { ...completed, agents: [agent] };
-    expect(primaryAgent(draft)).toBe(agent);
     expect(factorySource(draft)).toContain(`const builder = "${agent}"`);
     const { calls } = await runFactory([true, true], true, matchingIssue, draft);
     expect(calls).toContain(`implementer:${agent}`);
@@ -150,36 +124,16 @@ describe('software factory onboarding', () => {
     expect(calls).toContain('implementer:grok');
   });
 
-  it('restores incomplete drafts to the first unanswered question', () => {
-    expect(readFactoryDraft(JSON.stringify({ ...completed, agents: [] }))?.step).toBe(1);
-    expect(readFactoryDraft(JSON.stringify({ ...completed, agents: ['unknown'] }))).toBeNull();
-    expect(canContinue(DEFAULT_FACTORY)).toBe(false);
-    expect(canContinue({ ...completed, step: 2, task: '  ' })).toBe(true);
-  });
-
-  it('remembers Pi and write-in preferences without using unsupported CLIs', () => {
+  it('builds with a supported CLI for Pi and write-in preferences', () => {
     const draft: FactoryDraft = { ...completed, agents: ['pi'], otherAgent: 'My custom agent', step: 1 };
-    expect(readFactoryDraft(JSON.stringify(draft))).toEqual(draft);
-    expect(canContinue(draft)).toBe(true);
     const writeInOnly = { ...draft, agents: [] };
-    expect(canContinue(writeInOnly)).toBe(true);
     expect(factorySource(writeInOnly)).toContain('const builder = "claude"');
     expect(factorySource(writeInOnly)).not.toContain('My custom agent');
     expect(factorySource(draft)).not.toContain('cli: "pi"');
-    expect(canContinue({ ...writeInOnly, otherAgent: '  ' })).toBe(false);
+    expect(factorySource({ ...writeInOnly, otherAgent: '  ' })).not.toContain('const builder');
     const unchecked = { ...writeInOnly, otherAgentSelected: false };
-    expect(canContinue(unchecked)).toBe(false);
     expect(factorySource(unchecked)).not.toContain('const builder');
-    expect(readFactoryDraft(JSON.stringify(unchecked))?.otherAgentSelected).toBe(false);
-    expect(canContinue({ ...unchecked, otherAgentSelected: true })).toBe(true);
-  });
-
-  it('restores older drafts and validates the write-in name', () => {
-    const { otherAgent, ...olderDraft } = completed;
-    expect(readFactoryDraft(JSON.stringify(olderDraft))?.otherAgent).toBe('');
-    for (const value of [null, 7, 'x'.repeat(101)]) {
-      expect(readFactoryDraft(JSON.stringify({ ...completed, otherAgent: value }))).toBeNull();
-    }
+    expect(factorySource({ ...unchecked, otherAgentSelected: true })).toContain('const builder');
   });
 
   it('escapes task text and keeps partial files syntactically valid', () => {
@@ -190,29 +144,13 @@ describe('software factory onboarding', () => {
     }
   });
 
-  it('migrates old drafts without losing previous answers', () => {
-    const { sources, sourceSettings, ...oldDraft } = completed;
-    const migrated = readFactoryDraft(JSON.stringify({ ...oldDraft, version: 2, step: 5 }));
-    expect(migrated?.agents).toEqual(completed.agents);
-    expect(migrated?.task).toBe(completed.task);
-    expect(migrated?.sources).toEqual([]);
-    expect(migrated?.step).toBe(0);
-  });
-
-  it('keeps source filters through a storage round trip and rejects invalid settings', () => {
-    expect(readFactoryDraft(JSON.stringify(completed))).toEqual(completed);
-    expect(readFactoryDraft(JSON.stringify({ ...completed, sourceSettings: { github: { channel: 'bad' } } }))).toBeNull();
-    expect(readFactoryDraft(JSON.stringify({ ...completed, sources: ['unknown'] }))).toBeNull();
-    expect(readFactoryDraft(JSON.stringify({ ...completed, sourceSettings: { slack: { mentioned: 'true' } } }))).toBeNull();
-  });
-
   it('leaves ticket filtering to Cloud dispatch and guards only the ticket itself', async () => {
     // A Cloud deployment is filtered before a run exists: the listener's watch
     // rules choose which tickets wake the flow, and the launcher re-checks every
     // configured field. Repeating that here only gave a run a way to cancel
     // itself with a bare "canceled" and no reason, so the deployed flow now
     // trusts dispatch. Filtering is still generated and tested for local runs
-    // (flow-sources.test.ts and flow-local.test.ts), where nothing else does it.
+    // (flow-sources.test.ts), where nothing else does it.
     const source = factorySource(completed);
     expect(source).not.toContain('issueRejection');
     expect(source).not.toContain('acme/app');
@@ -259,52 +197,13 @@ describe('software factory onboarding', () => {
     }
   });
 
-  it('carries the complete flow to Cloud without putting its contents in a query', () => {
-    const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'org/repo', labels: 'ready' } }, agents: ['codex'], task: 'Keep naïve input & labels', workflow: 'traditional', step: 3 };
-    const url = new URL(cloudConnectionsHref(draft, '00000000-0000-4000-8000-000000000001'));
-    expect(url.origin).toBe('https://agentrelay.com');
-    expect(url.pathname).toBe('/cloud/flows/deploy');
-    expect(url.search).toBe('');
-    const payload = JSON.parse(decodeURIComponent(url.hash.slice(1)));
-    expect(payload.source).toBe(factorySource(draft));
-    expect(payload.sourceSettings).toEqual(draft.sourceSettings);
-    expect(payload.agents).toEqual(['codex']);
-    expect(payload.task).toBe(draft.task);
-    expect(payload.handoffId).toBe('00000000-0000-4000-8000-000000000001');
-  });
-
-  it('stops a Markdown-only draft before Cloud, and lets a co-selected source through', () => {
-    const markdownOnly: FactoryDraft = { ...completed, sources: ['markdown'], sourceSettings: { markdown: { path: 'tasks.md' } } };
-    // Markdown is read by a run, so a Markdown-only flow has nothing to wake a
-    // Cloud listener. Cloud refuses it at the deploy step; without this the
-    // person gets there through Google sign-in, a GitHub App and a model
-    // choice first. Same words as Cloud's wizard, so the two surfaces agree.
-    expect(isMarkdownOnly(markdownOnly)).toBe(true);
-    expect(cloudBlockedReason(markdownOnly)).toBe(MARKDOWN_ONLY_CLOUD_NOTE);
-    expect(MARKDOWN_ONLY_CLOUD_NOTE).toContain('Markdown files are not a live source');
-    // The negative that matters: Markdown beside a real ticket source is a
-    // legitimate deploy. Cloud drops markdown and listens to the other source,
-    // so blocking this would refuse a configuration that works.
-    for (const sources of [['markdown', 'linear'], ['linear', 'markdown'], ['github'], []] as FactoryDraft['sources'][]) {
-      expect(cloudBlockedReason({ ...markdownOnly, sources })).toBe('');
-      expect(isMarkdownOnly({ ...markdownOnly, sources })).toBe(false);
-    }
-    const withLinear: FactoryDraft = { ...markdownOnly, sources: ['markdown', 'linear'], sourceSettings: { markdown: { path: 'tasks.md' }, linear: { team: 'Engineering' } } };
-    const payload = JSON.parse(decodeURIComponent(new URL(cloudConnectionsHref(withLinear, 'id')).hash.slice(1)));
-    expect(payload.sources).toEqual(['markdown', 'linear']);
-    expect(payload.sourceSettings.linear).toEqual({ team: 'Engineering' });
-  });
-
   it('reads a Markdown task without an external source connection and quotes the path', async () => {
     const path = "docs/team's $(touch nope).md";
     const draft: FactoryDraft = { ...DEFAULT_FACTORY, sources: ['markdown', 'github'],
       sourceSettings: { markdown: { path } }, agents: ['claude'], task: 'Implement this task', workflow: 'simple', step: 2 };
-    expect(readFactoryDraft(JSON.stringify(draft))?.sources).toEqual(['markdown', 'github']);
     // Markdown next to a ticket source is the fallback, not an override: the
-    // kit prefills GitHub's ticket, and the Markdown branch still runs when
-    // flow-input.json carries no issue. Both are executed below.
-    expect(localInput(draft).issue).toMatchObject({ source: 'github' });
-    expect(localInput({ ...draft, sources: ['markdown'] })).toEqual({ approver: 'local' });
+    // Markdown branch runs only when the input carries no issue. Both are
+    // executed below.
     const compiled = ts.transpileModule(factorySource(draft).replace('import { flow } from "@relayflows/surface";', ''), {
       compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
     });
@@ -583,7 +482,7 @@ describe('software factory onboarding', () => {
     });
   });
 
-  it('simple skips agent reviews but still hands off for human approval and all presets persist', async () => {
+  it('simple skips agent reviews but still hands off for human approval and every preset parses', async () => {
     const { calls, finish } = await runFactory([], true, matchingIssue, { ...completed, workflow: 'simple' });
     // The only agent besides the implementer works out how to run the checks.
     expect(calls.filter(call => /:(claude|codex)$/.test(call))).toEqual(['check-discovery:claude', 'implementer:claude']);
@@ -591,15 +490,8 @@ describe('software factory onboarding', () => {
     expect(finish).toBe('needs_human');
     for (const workflow of ['traditional', 'prototype', 'simple'] as const) {
       const draft = { ...completed, workflow, task: 'Quotes " and backticks `' };
-      expect(readFactoryDraft(JSON.stringify(draft))).toEqual(draft);
       const file = ts.createSourceFile('draft.ts', factorySource(draft), ts.ScriptTarget.ES2022, true);
       expect((file as unknown as { parseDiagnostics: unknown[] }).parseDiagnostics).toEqual([]);
     }
-  });
-
-  it('migrates v3 preferences without preselecting a workflow', () => {
-    expect(readFactoryDraft(JSON.stringify({ ...completed, version: 3, step: 6, reviewer: 'codex', rounds: 5, approval: true })))
-      .toEqual({ ...completed, workflow: null, step: 2 });
-    expect(readFactoryDraft(JSON.stringify({ ...completed, workflow: 'unknown' }))).toBeNull();
   });
 });

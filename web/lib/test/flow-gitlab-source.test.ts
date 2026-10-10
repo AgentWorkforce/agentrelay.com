@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
 import { DEFAULT_FACTORY, factorySource, type FactoryDraft } from '../flow-onboarding';
-import { flowPreview } from '../flow-preview';
-import { localInput } from '../flow-local';
 import { WORKFLOWS } from '../flow-workflows';
-import { ISSUE_SOURCES, issueSourceCode, repositoryHost, validSourcePreferences } from '../flow-sources';
+import { ISSUE_SOURCES, issueSourceCode } from '../flow-sources';
 
 /**
  * GitLab as a ticket source and, without a GitHub source, as the deploy target.
@@ -34,20 +32,6 @@ describe('GitLab ticket source', () => {
     expect(source.fields.map(field => field.key)).toEqual(['project', 'labels']);
   });
 
-  it('keeps GitLab settings through storage validation and refuses fields it does not have', () => {
-    expect(validSourcePreferences({ gitlab: { project: 'group/project', labels: 'ready' } })).toBe(true);
-    expect(validSourcePreferences({ gitlab: { repository: 'group/project' } })).toBe(false);
-    expect(validSourcePreferences({ gitlab: { mentioned: true } })).toBe(false);
-  });
-
-  it('makes GitLab the repository host only when no GitHub source is chosen, as Cloud infers it', () => {
-    expect(repositoryHost(['gitlab'])).toBe('gitlab');
-    expect(repositoryHost(['gitlab', 'linear'])).toBe('gitlab');
-    expect(repositoryHost(['github', 'gitlab'])).toBe('github');
-    expect(repositoryHost(['linear'])).toBe('github');
-    expect(repositoryHost([])).toBe('github');
-  });
-
   it('declares the project field Cloud delivers on a GitLab issue', () => {
     expect(issueSourceCode(['gitlab'], gitlab.sourceSettings)).toContain('project?: string;');
   });
@@ -58,19 +42,9 @@ describe('GitLab ticket source', () => {
     expect(issueRejection(ticket)).toBe('');
     expect(issueRejection({ ...ticket, project: 'other-group/app' })).toContain('project is "other-group/app"');
     expect(issueRejection({ ...ticket, labels: [] })).toContain('missing required label: garden-ready');
-    // The kit's own prefilled ticket passes its own filters.
-    expect(issueRejection(localInput(gitlab).issue!)).toBe('');
   });
 
-  it('shows the GitLab mark on the change-request step when GitLab is the host', () => {
-    const openStep = (draft: FactoryDraft) => flowPreview(draft)?.nodes.find(node => 'icons' in node && node.title === 'Open PR') as { icons: string[] } | undefined;
-    expect(openStep(gitlab)?.icons).toEqual(['gitlab']);
-    expect(openStep({ ...gitlab, sources: ['github', 'gitlab'] })?.icons).toEqual(['github']);
-  });
-
-  it('hands Cloud the settings its deploy page reads to pick the GitLab project', () => {
-    // cloudConnectionsHref passes sources/sourceSettings through untouched;
-    // Cloud's flow-handoff reads sourceSettings.gitlab.project from them.
+  it('opens the change request through relayflow-open-change', () => {
     const source = factorySource(gitlab);
     expect(source).toContain('relayflow-open-change');
   });
