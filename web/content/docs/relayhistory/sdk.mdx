@@ -1,0 +1,93 @@
+---
+title: 'TypeScript SDK'
+description: 'The ai-hist package: discover, hydrate, search, and read sessions, tool calls, file edits, and subagent trees from TypeScript.'
+---
+
+```bash
+npm install ai-hist
+```
+
+The SDK is the same engine the CLI and MCP server use: one Rust core loaded as a prebuilt Node-API addon. Every API is async.
+
+## Discover, list, read
+
+```ts
+import {
+  discoverSessions,
+  hydrateSession,
+  listSessionCatalogPage,
+  getSession,
+  getSessionEventsPage,
+  sessionEvents,
+  search,
+} from 'ai-hist';
+
+await discoverSessions({ scope: 'local', limit: 100 });
+
+const page = await listSessionCatalogPage({ scope: 'all', limit: 20 });
+const first = page.sessions[0];
+
+if (first) {
+  await hydrateSession({ source: first.source, sessionId: first.sessionId });
+
+  const prompts = await getSession(first.sessionId);
+  const events = await getSessionEventsPage(first.sessionId, { limit: 200 });
+
+  for await (const event of sessionEvents(first.sessionId)) {
+    // walks every page without holding the whole transcript in memory
+  }
+}
+
+const matches = await search('authentication', { scope: 'all' });
+```
+
+| Call | Work it does |
+|---|---|
+| `listSessionCatalog` / `listSessionCatalogPage` | Cache only. |
+| `discoverSessions` | Shallow discovery: refreshes catalog metadata. |
+| `hydrateSession` | Full indexing of one cataloged session. Returns `hydrated`, `updated`, `unchanged`, or `capability_limited`. |
+| `sync` | Full ingestion of every selected source. |
+
+Reads on a missing database return empty results; they never trigger provider I/O.
+
+## Tool calls and file edits
+
+Each comes as a page, an iterator, and a collecting convenience, and takes a source **and** a session id:
+
+```ts
+import { getSessionToolCallsPage, sessionToolCalls, sessionFileEdits } from 'ai-hist';
+
+const tools = await getSessionToolCallsPage('claude', sessionId, { limit: 200 });
+
+for await (const call of sessionToolCalls('claude', sessionId)) consume(call);
+for await (const edit of sessionFileEdits('claude', sessionId)) consume(edit);
+```
+
+A source outside the known set throws `InvalidArgumentError` rather than reading as an empty session. Use `CATALOG_SOURCES` and `isCatalogSource()` to validate input without copying the provider list.
+
+## Subagent trees
+
+```ts
+import { getSessionRelationships, getSessionTree, sessionEventsIncludingDescendants } from 'ai-hist';
+
+const { asParent, asChild } = await getSessionRelationships({ source: 'codex', sessionId: rootId });
+const tree = await getSessionTree({ source: 'codex', sessionId: rootId, maxDepth: 8 });
+
+for await (const event of sessionEventsIncludingDescendants({ source: 'codex', sessionId: rootId })) {
+  // event.sessionId is the session that produced it, never rewritten to the root
+}
+```
+
+See [Sessions](/docs/relayhistory/sessions#subagent-trees) for `observed` versus `unlinked` relationships.
+
+## Scopes
+
+Collection calls take `scope: 'local' | 'remote' | 'all'`, defaulting to `'local'`. Results echo the requested `scope`, discovery reports `locationsRun` (what actually executed), and each session row lists the `locations` it was observed in. See [Remote sources](/docs/relayhistory/remote-sources) to register plugins.
+
+## Handoffs
+
+`createHandoff()` and `resumeHandoff()` are the SDK form of the MCP handoff tools. See [Handoffs](/docs/relayhistory/handoffs).
+
+## From Rust
+
+Rust programs depend on the [`ai-hist` crate](https://crates.io/crates/ai-hist) and use `SessionStore::open`, `sync`, `sessions`, `session`, and `changes_since` — no raw database connection. See the [embedder guide](https://github.com/AgentWorkforce/relayhistory/blob/main/docs/sourcing-sdk.md).

@@ -296,7 +296,7 @@
   transform: translateY(-50%);
 }
 
-/* ── Product section sidebar header (Relayfile / Relayloop) ── */
+/* ── Product section sidebar header (Relayfile / Relayhistory / Flows) ── */
 
 .productHeader {
   margin-bottom: 1.4rem;
@@ -468,18 +468,6 @@
   }
 }
 
-.productSwitcherOptionDisabled {
-  cursor: default;
-  opacity: 0.68;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .productSwitcherOptionDisabled:hover {
-    background: transparent;
-    color: var(--fg-muted);
-  }
-}
-
 .productSwitcherOptionIcon {
   width: 0.95rem;
   height: 0.95rem;
@@ -510,19 +498,6 @@
   line-height: 1.2;
   color: currentColor;
   white-space: nowrap;
-}
-
-.productSwitcherOptionBadge {
-  flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
-  border-radius: 999px;
-  padding: 0.05rem 0.34rem;
-  color: color-mix(in srgb, var(--primary) 68%, var(--fg-muted));
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.35;
-  text-transform: uppercase;
 }
 
 .productSwitcherOptionTagline {
