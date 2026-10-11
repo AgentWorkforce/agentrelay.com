@@ -113,6 +113,27 @@ function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean 
   return hostname === PRIMARY_HOST && isFileObserverPath(pathname);
 }
 
+// The Cloud authorization server's issuer is https://agentrelay.com/cloud.
+// RFC 8414 inserts the well-known suffix before the issuer path, while RFC
+// 9728 does the same for protected-resource metadata. These canonical URLs
+// sit outside /cloud, so route them back to the Cloud app that owns the
+// metadata rather than letting the marketing app return a 404.
+const CLOUD_OAUTH_WELL_KNOWN_REWRITES: ReadonlyArray<readonly [string, string]> = [
+  ["/.well-known/oauth-authorization-server/cloud", "/cloud/.well-known/oauth-authorization-server"],
+  ["/.well-known/openid-configuration/cloud", "/cloud/.well-known/openid-configuration"],
+];
+const CLOUD_PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource/cloud/";
+
+export function rewriteCloudOAuthWellKnownPath(pathname: string): string | null {
+  for (const [from, to] of CLOUD_OAUTH_WELL_KNOWN_REWRITES) {
+    if (pathname === from) return to;
+  }
+  if (pathname.startsWith(CLOUD_PROTECTED_RESOURCE_PREFIX)) {
+    return `/cloud${pathname}`;
+  }
+  return null;
+}
+
 function isCloudPath(pathname: string): boolean {
   return isPathWithinPrefix(pathname, CLOUD_PATH_PREFIX);
 }
@@ -662,6 +683,15 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
+
+    const oauthWellKnownPath = url.hostname === PRIMARY_HOST
+      && (request.method === "GET" || request.method === "HEAD")
+      ? rewriteCloudOAuthWellKnownPath(url.pathname)
+      : null;
+    if (oauthWellKnownPath) {
+      url.pathname = oauthWellKnownPath;
+      request = new Request(url.toString(), request);
+    }
 
     const insecureShortHost = getInsecureShortHostResponse(url, request.method);
     if (insecureShortHost) {
