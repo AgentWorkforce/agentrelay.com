@@ -18,6 +18,12 @@ interface Env extends AnalyticsEnv {
     fetch(request: Request): Promise<Response>;
   };
   WEBHOOK_WORKER_ORIGIN?: string;
+  /**
+   * OpenAI's domain-verification token for the ChatGPT app (from the app's
+   * submission page). Public by design: it is served to anyone at
+   * /.well-known/openai-apps-challenge. Unset, the path is left to the site.
+   */
+  OPENAI_APPS_CHALLENGE_TOKEN?: string;
 }
 
 function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
@@ -680,9 +686,28 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
   return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
 }
 
+const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
+
+/** The bare verification token OpenAI fetches when the ChatGPT app is submitted. */
+function getOpenAiAppsChallengeResponse(url: URL, method: string, env: Env): Response | null {
+  if (url.hostname !== PRIMARY_HOST || url.pathname !== OPENAI_APPS_CHALLENGE_PATH) return null;
+  if (method !== "GET" && method !== "HEAD") return null;
+  const token = env.OPENAI_APPS_CHALLENGE_TOKEN?.trim();
+  if (!token) return null;
+  return new Response(method === "HEAD" ? null : token, {
+    status: 200,
+    headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store" },
+  });
+}
+
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
+
+    const openAiAppsChallenge = getOpenAiAppsChallengeResponse(url, request.method, env);
+    if (openAiAppsChallenge) {
+      return openAiAppsChallenge;
+    }
 
     const oauthWellKnownPath = url.hostname === PRIMARY_HOST
       && (request.method === "GET" || request.method === "HEAD")
