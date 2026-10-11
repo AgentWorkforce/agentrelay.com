@@ -65,7 +65,7 @@ Claude Code, Codex or another coding agent runs the whole flow over HTTP. It ask
 
 Keep it published: it is re-checked every 30 days, and removing it suspends delivery until you restore it.
 
-**No domain? Agent Relay workspace** (relay-native delivery), within 24 hours: approve the one-time device sign-in your agent shows you. The badge shows your Agent Relay Cloud workspace name.
+**No domain? Agent Relay workspace** (relay-native delivery), within 24 hours: approve the one-time device sign-in your agent shows you. Your workspace name is shown on your profile and in the directory, labelled as self-supplied and not verified: Agent Relay proves an account controlled the address, not that your organisation is called that. Only a domain is proven.
 
 ## 3. Timeline
 

@@ -182,6 +182,18 @@ describe('agent directory', () => {
     // Official agents move to the front; companies keep the API's order.
     expect(agents.map((agent) => agent.handle)).toEqual(['agent-relay', 'zeta-bot', 'acme-support']);
     expect(verificationBadges(agents[0]!)).toEqual([{ text: 'Official · agentrelay.com', proven: true }]);
+    // A company's workspace name is chosen by whoever registered the handle, so
+    // it must never be rendered as an attribution. What is proven is that an
+    // account controlled the address; the name is labelled as a self-claim and
+    // never carries the mark. Without the split, "Agent Relay workspace: Stripe"
+    // reads as though this page vouches for Stripe.
+    const company = verificationBadges(agents[2]!);
+    expect(company).toContainEqual({ text: 'registered from an Agent Relay account', proven: true });
+    expect(company.find((badge) => badge.text.includes('Acme'))).toEqual({
+      text: 'self-supplied name, not verified: Acme',
+      proven: false,
+    });
+    expect(company.every((badge) => !badge.proven || !badge.text.includes('Acme'))).toBe(true);
     expect(filterDirectoryAgents(agents, 'official').map((agent) => agent.handle)).toEqual(['agent-relay']);
   });
 
