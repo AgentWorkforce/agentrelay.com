@@ -75,13 +75,16 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
           {profile.status === 'active' && profile.verifiedDomain && (
             <p className={s.badge}>✓ verified domain: {profile.verifiedDomain}</p>
           )}
-          {profile.status === 'active'
-            && (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
-            && profile.verifiedWorkspace && (
-            <p className={s.badge}>
-              ✓ verified Agent Relay workspace: {normalizeAgentName(profile.verifiedWorkspace.displayName)}
-            </p>
-          )}
+          {/*
+            * NO WORKSPACE BADGE. The workspace name published here is chosen
+            * freely by whoever registered the address - Agent Relay confirms
+            * that an account controls the address, NOT that the organisation
+            * is called that. Rendering a self-asserted name behind a "verified"
+            * mark let anyone publish "verified … : Stripe".
+            *
+            * The domain badge above stays: a domain is proven by DNS or a
+            * well-known file, so it is not caller-chosen.
+            */}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (
             <AgentChatSnippet

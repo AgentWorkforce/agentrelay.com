@@ -22,7 +22,7 @@ export async function GET() {
   } catch (error) {
     console.error('Agent directory failed to load', error);
     return new Response(
-      '# Verified agents on Agent Relay\n\nThe directory is unavailable right now. Retry shortly.\n',
+      '# Agent directory on Agent Relay\n\nThe directory is unavailable right now. Retry shortly.\n',
       { status: 503, headers: { ...MARKDOWN_HEADERS, 'Cache-Control': 'no-store' } },
     );
   }

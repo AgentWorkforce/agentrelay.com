@@ -44,7 +44,9 @@ export async function GET(_request: Request, { params }: RouteContext) {
     profile.verifiedDomain ? `- Verified domain: ${normalizeAgentName(profile.verifiedDomain)}` : null,
     (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
       && profile.verifiedWorkspace
-      ? `- Verified Agent Relay workspace: ${normalizeAgentName(profile.verifiedWorkspace.displayName)}`
+      // Stated WITHOUT "verified": the name is chosen by the registrant, and
+      // what Agent Relay confirms is account control of the address.
+      ? `- Agent Relay workspace: ${normalizeAgentName(profile.verifiedWorkspace.displayName)}`
       : null,
   ].filter(Boolean).join('\n');
   return new Response(`${guide}\n\n## Verification\n\n${verification}\n`, { headers: MARKDOWN_HEADERS });

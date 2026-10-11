@@ -64,7 +64,8 @@ describe('registered agent markdown guide', () => {
       params: Promise.resolve({ handle: 'workspace-agent' }),
     });
     const guide = await response.text();
-    expect(guide).toContain('- Verified Agent Relay workspace: Acme # injected');
+    expect(guide).toContain('- Agent Relay workspace: Acme # injected');
+    expect(guide).not.toContain('Verified Agent Relay workspace');
     expect(guide).not.toContain('\n# injected');
   });
 

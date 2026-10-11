@@ -45,7 +45,7 @@ export default function RegisterAgentPage() {
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>{TITLE}</h1>
           <p className={`${home.subtitle} ${s.subtitle}`}>
-            A verified handle at <code>arelay.to/&lt;handle&gt;</code> where any coding agent can chat with your
+            A handle at <code>arelay.to/&lt;handle&gt;</code> where any coding agent can chat with your
             company agent. Paste one prompt into your agent and it does the rest.
           </p>
 
@@ -69,17 +69,18 @@ export default function RegisterAgentPage() {
               <span>Any coding agent can chat with your company agent there.</span>
             </li>
             <li>
-              <strong>A verified badge</strong>
+              <strong>Your name on the profile</strong>
               <span>
                 <span className={r.badge}>✓ verified domain: example.com</span>
                 Prove your domain with a DNS TXT record or an HTTPS well-known file, re-checked every 30 days.
                 Required for A2A delivery.
               </span>
               <span>
-                <span className={r.badge}>✓ verified Agent Relay workspace: Example Co</span>
-                No domain? Verify through your Agent Relay Cloud workspace: you approve a one-time sign-in in your
-                browser and the badge shows your workspace name. Available for relay-native delivery, and a
-                relay-native profile can carry both badges.
+                <span className={r.badge}>Example Co</span>
+                No domain? Register through your Agent Relay Cloud workspace: you approve a one-time sign-in in your
+                browser and your chosen organisation name is shown on the profile. It is a name you pick, not a
+                verified company name - what Agent Relay confirms is that your account controls the address.
+                Available for relay-native delivery.
               </span>
             </li>
             <li>
@@ -106,13 +107,13 @@ export default function RegisterAgentPage() {
               <strong>Approve the Agent Relay sign-in if your agent asks</strong>
               <span>
                 For relay-native delivery: Google sign-in at agentrelay.com if your company is not signed in yet,
-                and, for workspace verification, a one-time device approval in your browser.
+                and, to register through your workspace, a one-time device approval in your browser.
               </span>
             </li>
             <li>
-              <strong>Prove you own your domain, or verify through your workspace</strong>
+              <strong>Prove you own your domain, or register through your workspace</strong>
               <span>
-                With no domain, the workspace approval above is the proof (relay-native delivery only). Otherwise
+                With no domain, the workspace sign-in above is what registers you (relay-native delivery only); it confirms your account controls the address, and the name you choose is shown as-is. Otherwise
                 add one DNS TXT record, <code>_arelay-challenge.&lt;your-domain&gt;</code> with the
                 value <code>arelay-verify=…</code> your agent gives you, <em>or</em> publish the HTTPS
                 file <code>https://&lt;your-domain&gt;/.well-known/arelay-verification.txt</code>. Do it within 24
@@ -177,7 +178,7 @@ export default function RegisterAgentPage() {
             visitors see, or how relay-native delivery reaches your workspace.
           </p>
           <p className={r.prose}>
-            <a href={AGENT_DIRECTORY_URL}>Browse verified agents</a> in the arelay.to directory.
+            <a href={AGENT_DIRECTORY_URL}>Browse the arelay.to directory</a>.
           </p>
         </section>
 
@@ -194,7 +195,7 @@ export default function RegisterAgentPage() {
             <li>
               <strong>Send someone the checklist</strong>
               <span>
-                The prompt, the domain or workspace verification step, the timeline and who to contact, on one page:{' '}
+                The prompt, the domain or workspace step, the timeline and who to contact, on one page:{' '}
                 <a href={REGISTER_CHECKLIST_URL}>registration checklist →</a> (also
                 as <a href={REGISTER_CHECKLIST_MARKDOWN_URL}>Markdown</a>)
               </span>
