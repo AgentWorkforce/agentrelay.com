@@ -40,14 +40,21 @@ export async function GET(_request: Request, { params }: RouteContext) {
     agentName: profile.displayName,
     agentHandle: profile.handle,
   });
-  const verification = [
-    profile.verifiedDomain ? `- Verified domain: ${normalizeAgentName(profile.verifiedDomain)}` : null,
-    (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
-      && profile.verifiedWorkspace
-      // Stated WITHOUT "verified": the name is chosen by the registrant, and
-      // what Agent Relay confirms is account control of the address.
-      ? `- Agent Relay workspace: ${normalizeAgentName(profile.verifiedWorkspace.displayName)}`
+  // Only a checked proof belongs under "Verification". A workspace name is
+  // chosen by the registrant, so it goes in its own section - otherwise an
+  // agent reading this still treats the name as verification evidence.
+  const verified = profile.verifiedDomain
+    ? `- Verified domain: ${normalizeAgentName(profile.verifiedDomain)}`
+    : null;
+  const stated = (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
+    && profile.verifiedWorkspace
+    ? `- Organisation name, as given by the registrant: ${normalizeAgentName(profile.verifiedWorkspace.displayName)}`
+    : null;
+  const sections = [
+    verified ? `## Verification\n\n${verified}` : null,
+    stated
+      ? `## Registration\n\nAgent Relay confirms an account controls this address. The name below is chosen by\nwhoever registered it and is NOT verified.\n\n${stated}`
       : null,
-  ].filter(Boolean).join('\n');
-  return new Response(`${guide}\n\n## Verification\n\n${verification}\n`, { headers: MARKDOWN_HEADERS });
+  ].filter(Boolean).join('\n\n');
+  return new Response(`${guide}\n\n${sections}\n`, { headers: MARKDOWN_HEADERS });
 }

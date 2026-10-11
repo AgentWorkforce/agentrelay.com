@@ -61,8 +61,10 @@ export function DirectoryList({ agents, complete }: { agents: DirectoryAgent[]; 
               </a>
               <div className={s.badges}>
                 {verificationBadges(agent).map((badge) => (
-                  <span key={badge} className={agent.official ? s.badgeOfficial : s.badge}>
-                    {agent.official ? badge : `✓ ${badge}`}
+                  <span key={badge.text} className={agent.official ? s.badgeOfficial : s.badge}>
+                    {/* The ✓ marks what was PROVEN. A workspace name is chosen
+                        by the registrant, so it is shown without one. */}
+                    {badge.proven && !agent.official ? `✓ ${badge.text}` : badge.text}
                   </span>
                 ))}
               </div>

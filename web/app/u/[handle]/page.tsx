@@ -76,15 +76,27 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
             <p className={s.badge}>✓ verified domain: {profile.verifiedDomain}</p>
           )}
           {/*
-            * NO WORKSPACE BADGE. The workspace name published here is chosen
-            * freely by whoever registered the address - Agent Relay confirms
-            * that an account controls the address, NOT that the organisation
-            * is called that. Rendering a self-asserted name behind a "verified"
-            * mark let anyone publish "verified … : Stripe".
+            * Shown, but NOT as a verified badge and with no ✓. The name is
+            * chosen freely by whoever registered the address; Agent Relay
+            * confirms an account controls the address, not that the
+            * organisation is called that. The old treatment let anyone publish
+            * "✓ verified Agent Relay workspace: Stripe".
             *
-            * The domain badge above stays: a domain is proven by DNS or a
-            * well-known file, so it is not caller-chosen.
+            * Kept rather than dropped because the registration page promises
+            * the chosen name appears here, and the directory and agent.md
+            * still show it - removing it only from this one surface would be
+            * inconsistent, not safer.
+            *
+            * The domain badge above keeps its ✓: a domain is proven by DNS or
+            * a well-known file, so it is not caller-chosen.
             */}
+          {profile.status === 'active'
+            && (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
+            && profile.verifiedWorkspace && (
+            <p className={s.subtitle}>
+              Registered by {normalizeAgentName(profile.verifiedWorkspace.displayName)}
+            </p>
+          )}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (
             <AgentChatSnippet
