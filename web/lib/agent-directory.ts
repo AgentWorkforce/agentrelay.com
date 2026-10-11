@@ -258,8 +258,22 @@ export function verificationBadges(agent: DirectoryAgent): DirectoryBadge[] {
     agent.verifiedDomain
       ? { text: `verified domain: ${agent.verifiedDomain}`, proven: true }
       : null,
+    // Two claims, deliberately split, because exactly one of them is proven.
+    //
+    // Dropping the word "verified" and the mark was not enough: "Agent Relay
+    // workspace: Stripe" still READS as an attribution, so anyone could
+    // register the handle `stripe`, name their workspace Stripe, and have this
+    // page appear to vouch for them. The registrant chooses that string.
+    //
+    // What Agent Relay actually proves is that an account controlled the
+    // address at registration. That is worth stating, and it carries the mark.
+    // The name is a claim the registrant made about itself, so it is labelled
+    // as one and never marked.
     agent.verifiedWorkspace
-      ? { text: `Agent Relay workspace: ${agent.verifiedWorkspace}`, proven: false }
+      ? { text: `registered from an Agent Relay account`, proven: true }
+      : null,
+    agent.verifiedWorkspace
+      ? { text: `self-supplied name, not verified: ${agent.verifiedWorkspace}`, proven: false }
       : null,
   ].filter((badge): badge is DirectoryBadge => badge !== null);
 }

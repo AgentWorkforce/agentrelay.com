@@ -76,26 +76,35 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
             <p className={s.badge}>✓ verified domain: {profile.verifiedDomain}</p>
           )}
           {/*
-            * Shown, but NOT as a verified badge and with no ✓. The name is
-            * chosen freely by whoever registered the address; Agent Relay
-            * confirms an account controls the address, not that the
-            * organisation is called that. The old treatment let anyone publish
-            * "✓ verified Agent Relay workspace: Stripe".
+            * Two lines, because exactly one of these claims is proven.
+            *
+            * Removing the ✓ and the word "verified" was not enough: "Registered
+            * by Stripe" still READS as an attribution, so anyone could register
+            * the handle `stripe`, name their workspace Stripe, and have this
+            * page appear to vouch for them. The registrant chooses that string.
+            *
+            * What Agent Relay proves is that an account controlled the address
+            * at registration, so that is stated plainly on its own. The name is
+            * a claim the registrant made about itself, and is labelled as one.
             *
             * Kept rather than dropped because the registration page promises
-            * the chosen name appears here, and the directory and agent.md
-            * still show it - removing it only from this one surface would be
-            * inconsistent, not safer.
+            * the chosen name appears here, and the directory and agent.md still
+            * show it - removing it from this one surface would be inconsistent,
+            * not safer.
             *
-            * The domain badge above keeps its ✓: a domain is proven by DNS or
-            * a well-known file, so it is not caller-chosen.
+            * The domain badge above keeps its ✓: a domain is proven by DNS or a
+            * well-known file, so it is not caller-chosen.
             */}
           {profile.status === 'active'
             && (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
             && profile.verifiedWorkspace && (
-            <p className={s.subtitle}>
-              Registered by {normalizeAgentName(profile.verifiedWorkspace.displayName)}
-            </p>
+            <>
+              <p className={s.subtitle}>Registered from an Agent Relay account</p>
+              <p className={s.subtitle}>
+                Self-supplied name, not verified:{' '}
+                {normalizeAgentName(profile.verifiedWorkspace.displayName)}
+              </p>
+            </>
           )}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (
