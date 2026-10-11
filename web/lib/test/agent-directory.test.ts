@@ -181,7 +181,7 @@ describe('agent directory', () => {
     const { agents } = await fetchAgentDirectory(pages({ agents: [zeta, acme, official], nextCursor: null }));
     // Official agents move to the front; companies keep the API's order.
     expect(agents.map((agent) => agent.handle)).toEqual(['agent-relay', 'zeta-bot', 'acme-support']);
-    expect(verificationBadges(agents[0]!)).toEqual(['Official · agentrelay.com']);
+    expect(verificationBadges(agents[0]!)).toEqual([{ text: 'Official · agentrelay.com', proven: true }]);
     expect(filterDirectoryAgents(agents, 'official').map((agent) => agent.handle)).toEqual(['agent-relay']);
   });
 

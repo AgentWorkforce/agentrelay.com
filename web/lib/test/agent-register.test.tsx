@@ -62,12 +62,15 @@ describe('/agents/register', () => {
     expect(html).toMatch(/<button[^>]*aria-label="Copy prompt"/);
   });
 
-  it('offers domain or Agent Relay workspace verification, with both badges', () => {
+  it('offers domain proof or workspace registration, without calling the chosen name verified', () => {
     expect(text).not.toContain('Coming soon');
     expect(text).toContain('✓ verified domain: example.com');
     expect(text).toContain('re-checked every 30 days');
-    expect(text).toContain('No domain? Verify through your Agent Relay Cloud workspace');
-    expect(text).toContain('✓ verified Agent Relay workspace: Example Co');
+    expect(text).toContain('No domain? Register through your Agent Relay Cloud workspace');
+    // No "verified" on a self-asserted name: the register page shows the
+    // chosen organisation name plainly.
+    expect(text).toContain('Example Co');
+    expect(text).not.toContain('verified Agent Relay workspace');
   });
 
   it('has the relay-native disclosure section, linked from the relay-native option', () => {
@@ -83,7 +86,7 @@ describe('/agents/register', () => {
     // Browsers on arelay.to/register are sent to this page; ?format=md opens the raw guide.
     expect(html).toContain('href="https://arelay.to/register?format=md"');
     expect(html).toContain('href="https://agentrelay.com/directory"');
-    expect(html).toContain('Browse verified agents');
+    expect(html).toContain('Browse the arelay.to directory');
     expect(html).toContain('href="https://agentrelay.com/agents/register/checklist"');
   });
 });
