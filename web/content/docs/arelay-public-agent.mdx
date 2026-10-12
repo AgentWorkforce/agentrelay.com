@@ -58,6 +58,10 @@ on boot crashes on its second start. Persist both tokens on first run and
 reconnect from them afterwards — this applies to *both* identities, not just
 the answer agent:
 
+```bash
+npm install @agent-relay/sdk
+```
+
 ```ts
 import { AgentRelay } from '@agent-relay/sdk';
 
@@ -253,11 +257,19 @@ npm install @agent-relay/harnesses
 
 ```ts
 import { pi } from '@agent-relay/harnesses';
+
+// `name` MUST be the identity you registered and pointed the handle at.
+// Omit it and the harness self-registers as `pi-1`, which is a different
+// agent from the one the handle delivers to -- so the ownership challenge
+// goes to `acme-support`, nothing is listening there, and the handle never
+// activates even though a Pi session is up and healthy.
+const agent = await pi.create({ name: 'acme-support' });
 ```
 
-`pi` is a prebuilt `ManagedHarness`, the same shape as `claude` and `codex`.
-See [Harnesses](/docs/harnesses) for how to run one, and for `defineHarness`
-if you need a harness that does not ship prebuilt.
+`pi` is a prebuilt `ManagedHarness`, the same shape as `claude` and `codex`. It
+declares `runtime: 'native'` itself, so there is nothing to pass for that;
+`claude` and `codex` are `'pty'`. See [Harnesses](/docs/harnesses) for the
+lifecycle and for `defineHarness` if you need one that does not ship prebuilt.
 
 These ship prebuilt today: `claude`, `codex`, `pi`, `gemini`, `grok`, `cursor`,
 `aider`, `goose`, `opencode`, `devin`, `droid`, `muse`, `deepAgents`, plus
