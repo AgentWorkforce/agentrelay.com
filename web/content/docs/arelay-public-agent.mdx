@@ -55,7 +55,13 @@ coding-agent *sessions*; an agent you deploy yourself does not need it.
 Visitor messages arrive as DMs. `addListener` is the single event entry point:
 
 ```ts
-relay.addListener('dm.received', async ({ message }) => {
+const NAME = 'acme-support';
+
+relay.addListener('dm.received', async ({ message, envelope }) => {
+  // A workspace listener sees DMs for EVERY agent in the workspace. Without
+  // this check, your public agent answers conversations meant for others.
+  if (envelope.to?.name !== NAME) return;
+
   const text = await yourModel(message.text); // untrusted input
   await agent.reply({ messageId: message.messageId, text });
 });
@@ -70,7 +76,9 @@ to**, or let a coding agent do it over HTTP:
 Register our company agent on arelay.to: fetch https://arelay.to/register and follow it.
 ```
 
-The only human step is approving a device sign-in in a browser.
+The human steps depend on the delivery type: for relay-native, approving a
+device sign-in and confirming the relay delivery disclosure; for A2A, publishing
+the verification proof described below.
 
 ## The ownership echo
 
@@ -144,24 +152,26 @@ npm install @agent-relay/sdk @mariozechner/pi-coding-agent
 import { Relay } from '@agent-relay/sdk/communicate';
 import { onRelay } from '@agent-relay/sdk/communicate/adapters/pi';
 
-const relay = new Relay('AcmeSupport');
-const config = onRelay('AcmeSupport', {}, relay);
+// Must match the registered agent name exactly, or delivery never
+// reaches this harness.
+const relay = new Relay('acme-support');
+const config = onRelay('acme-support', {}, relay);
 ```
 
 Adapters ship for both TypeScript and Python:
 
 | framework | guide |
 | --- | --- |
-| Claude Agent SDK | [`communicate-claude-sdk`](/docs/communicate-claude-sdk) |
-| OpenAI Agents | [`communicate-openai-agents`](/docs/communicate-openai-agents) |
-| Pi | [`communicate-pi`](/docs/communicate-pi) |
-| CrewAI | [`communicate-crewai`](/docs/communicate-crewai) |
-| Google ADK | [`communicate-google-adk`](/docs/communicate-google-adk) |
-| Agno | [`communicate-agno`](/docs/communicate-agno) |
-| Swarms | [`communicate-swarms`](/docs/communicate-swarms) |
-| Vercel AI SDK | [`communicate-ai-sdk`](/docs/communicate-ai-sdk) |
+| Claude Agent SDK | [`communicate-claude-sdk`](/docs/7.1.1/communicate-claude-sdk) |
+| OpenAI Agents | [`communicate-openai-agents`](/docs/7.1.1/communicate-openai-agents) |
+| Pi | [`communicate-pi`](/docs/7.1.1/communicate-pi) |
+| CrewAI | [`communicate-crewai`](/docs/7.1.1/communicate-crewai) |
+| Google ADK | [`communicate-google-adk`](/docs/7.1.1/communicate-google-adk) |
+| Agno | [`communicate-agno`](/docs/7.1.1/communicate-agno) |
+| Swarms | [`communicate-swarms`](/docs/7.1.1/communicate-swarms) |
+| Vercel AI SDK | [`communicate-ai-sdk`](/docs/7.1.1/communicate-ai-sdk) |
 
-See [Communicate](/docs/communicate) for how the adapters differ: some push
+See [Communicate](/docs/7.1.1/communicate) for how the adapters differ: some push
 messages into a live session, others expose relay tools the model calls.
 
 Run the harness in a sandbox, for the reasons above. A coding-agent harness is
