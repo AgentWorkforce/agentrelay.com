@@ -44,6 +44,15 @@ jobs:
         working-directory: web
         run: node scripts/verify-font-faces.mjs
 
+      - name: Smoke test the built Worker locally
+        working-directory: web
+        run: |
+          npx opennextjs-cloudflare populateCache local
+          npx wrangler dev --local --ip 127.0.0.1 --port 8797 --inspector-port 0 > "$RUNNER_TEMP/preview-worker.log" 2>&1 &
+          worker_pid=$!
+          trap 'kill "$worker_pid" 2>/dev/null || true' EXIT
+          node scripts/verify-worker.mjs http://127.0.0.1:8797 || { cat "$RUNNER_TEMP/preview-worker.log"; exit 1; }
+
       # Copy the prerendered SSG cache into the assets bundle
       # (assets/cdn-cgi/_next_cache). The site serves blog/docs pages from the
       # static-assets incremental cache; without this the Worker falls back to
@@ -72,6 +81,13 @@ jobs:
 
           preview_url="$(grep -oE 'https://[a-z0-9][a-z0-9-]*\.[a-z0-9-]+\.workers\.dev' "$upload_log" | tail -n 1 || true)"
           echo "preview_url=${preview_url}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the uploaded preview serves pages
+        if: steps.preview.outputs.preview_url != ''
+        working-directory: web
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        run: node scripts/verify-worker.mjs "$PREVIEW_URL"
 
       - name: Comment on PR
         continue-on-error: true

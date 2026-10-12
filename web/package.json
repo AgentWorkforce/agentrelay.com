@@ -13,9 +13,9 @@
     "start": "next start",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "precf:build": "node scripts/generate-setup-skills.mjs",
+    "precf:build": "node scripts/generate-setup-skills.mjs && node scripts/prepare-opennext.mjs",
     "cf:build": "opennextjs-cloudflare build",
-    "prepreview": "node scripts/generate-setup-skills.mjs",
+    "prepreview": "node scripts/generate-setup-skills.mjs && node scripts/prepare-opennext.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {
