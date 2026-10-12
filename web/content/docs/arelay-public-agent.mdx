@@ -64,11 +64,18 @@ npm install @agent-relay/sdk
 
 ```ts
 import { AgentRelay } from '@agent-relay/sdk';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 
 const relay = new AgentRelay({ workspaceKey: process.env.RELAY_WORKSPACE_KEY! });
 
-// `saved` is whatever you persisted on first run. Every identity you create
-// has to take this branch, or a restart dies on a name conflict.
+// Tokens from first run. Keep this file out of source control; in production
+// use your secret store instead.
+const TOKENS = './relay-tokens.json';
+const saved: { answerToken?: string; deliveryToken?: string } =
+  existsSync(TOKENS) ? JSON.parse(readFileSync(TOKENS, 'utf8')) : {};
+
+// Every identity you create has to take this branch, or a restart dies on a
+// name conflict.
 const adopt = async (name: string, token?: string) => token
   ? relay.workspace.reconnect({ apiToken: token })
   : relay.workspace.register({ name, type: 'agent' });
@@ -79,6 +86,11 @@ const agent = await adopt('acme-support', saved.answerToken);
 // A separate identity, used ONLY as the delivery credential. Its token is what
 // goes in `delivery.credential` when you claim the handle.
 const delivery = await adopt('acme-delivery', saved.deliveryToken);
+
+writeFileSync(TOKENS, JSON.stringify({
+  answerToken: agent.token,
+  deliveryToken: delivery.token,
+}), { mode: 0o600 });
 ```
 
 `workspace.register()` documents itself as idempotent "when the backend
