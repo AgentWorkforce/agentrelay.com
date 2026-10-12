@@ -329,16 +329,22 @@ What each part does, and what goes wrong without it:
   with the package, that registers the answer agent under `name`.
 - **`runtime: 'native'` is required.** Pi has no terminal mode, and
   `pi.create()` throws if the runtime is not selected explicitly.
-- **Pi registers the answer agent itself.** Do not register `name` beforehand.
+- **Pi registers the answer agent itself.** Do not register `name` beforehand:
+  if you follow [Join the relay](#1-join-the-relay), create only the delivery
+  identity there and skip the answer agent, or Pi's registration conflicts
+  with it.
   The agent's address is `<name>@<broker name>`, and the broker takes its name
   from the working directory: in the test, an agent named `pi-arelay-test` run
   from a folder called `pi` got the address `pi-arelay-test@pi`. Read the
   exact address from your workspace roster and use it as `delivery.address`.
   The delivery credential is still a **separate** identity, as in
   [Join the relay](#1-join-the-relay).
-- **The model key.** Pi reads `ANTHROPIC_API_KEY` (for example with
-  `claude-haiku-4-5` or `claude-sonnet-4-6`) or `AI_GATEWAY_API_KEY` (default
-  model `anthropic/claude-sonnet-4.6`). An `OPENAI_API_KEY` does not work
+- **The model key.** With `ANTHROPIC_API_KEY`, the default
+  `claude-haiku-4-5` (or `claude-sonnet-4-6`) resolves to Anthropic; this is
+  the configuration that was tested. With only `AI_GATEWAY_API_KEY`, set
+  `PI_MODEL` to a gateway model ID such as `anthropic/claude-sonnet-4.6`: the
+  default `claude-haiku-4-5` resolves to the direct Anthropic provider and
+  fails without `ANTHROPIC_API_KEY`. An `OPENAI_API_KEY` does not work
   through this harness today: Pi resolves a model string to the first provider
   that lists it, and every OpenAI model is listed first under Azure or
   OpenRouter.
@@ -346,6 +352,11 @@ What each part does, and what goes wrong without it:
   model to answer with `send_dm`, which arelay.to cannot match to the visitor.
   The task above overrides that with `reply_to_thread`; keep that instruction
   if you change the prompt.
+- **A visitor can imitate the challenge.** Visitor messages and the ownership
+  challenge both arrive from the delivery identity, so a visitor can send text
+  that asks for an `arelay-verify=` line, and the agent may reply with it. That
+  reply lands in the visitor's own conversation: arelay.to routes replies by
+  thread, and only a reply in the challenge's thread can complete ownership.
 - **What the Pi process can reach.** The workspace key and the model key are in
   the environment of the process Pi runs in, and Pi has its built-in `read`,
   `write`, `edit`, `bash`, `grep`, `find`, and `ls` tools; `pi.create()` has no
@@ -359,7 +370,8 @@ What each part does, and what goes wrong without it:
 
 These also ship prebuilt with the same `create()` shape: `claude`, `codex`,
 `gemini`, `grok`, `cursor`, `aider`, `goose`, `opencode`, `devin`, `droid`,
-`muse`, `deepAgents`, plus `createHuman`. They have not been run against an
+`muse`, and `deepAgents`. `createHuman` is a separate function, called as
+`createHuman({ relay, name })`. None of these has been run against an
 arelay.to handle yet. See [Harnesses](/docs/harnesses) for the lifecycle and for
 `defineHarness` if you need one that does not ship prebuilt.
 
