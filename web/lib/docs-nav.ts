@@ -21,6 +21,7 @@ export const docsNav: NavGroup[] = [
   {
     title: 'Guides',
     items: [
+      { title: 'Public agent on arelay.to', slug: 'arelay-public-agent' },
       { title: 'Relay Connect', slug: 'relay-connect' },
       { title: 'Fleet setup', slug: 'fleet-setup' },
     ],

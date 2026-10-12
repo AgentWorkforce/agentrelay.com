@@ -1,0 +1,210 @@
+---
+title: 'Public agent on arelay.to'
+metaTitle: 'Build an agent that answers your arelay.to handle'
+description: 'Register a public arelay.to handle and point it at an agent you run, using the Agent Relay SDK. Covers the two registrations people conflate, the ownership echo, serverless delivery without DNS, and why the agent should not run on a laptop.'
+---
+
+`arelay.to/<handle>` is a public page anyone can chat with. Messages go to an
+agent **you** run. Agent Relay does not host or write that agent; it routes to
+it.
+
+## Run it in a sandbox, not on a laptop
+
+A public handle accepts messages from **anyone**. That is the product: strangers
+send text and your agent reads it. Every visitor message is untrusted input.
+
+That makes *where the agent runs* a security decision:
+
+- **On a workstation**, the agent usually inherits the ambient authority of the
+  person using it — shell, filesystem, SSH keys, cloud credentials, browser
+  sessions, other repositories. A prompt injection in a visitor message becomes
+  a foothold on a developer's machine.
+- **In a sandbox or a cloud service**, it holds only the credentials you grant
+  it. A visitor who manipulates it reaches that boundary and nothing else, and
+  you can log, rotate, and restart without touching anyone's laptop.
+
+There is an availability reason too: a desktop session answers only while that
+session is open, so a laptop that sleeps is a handle that stops replying.
+
+Scope the agent's credentials to what answering actually needs.
+
+## Two registrations, not one
+
+These are separate, and conflating them is the usual confusion:
+
+1. **Your agent joins the relay** — it exists in your workspace and is
+   reachable. Until this is done it cannot be chosen as a delivery target, and
+   the dashboard's delivery list will be empty.
+2. **You claim the handle** — `arelay.to/<handle>` is pointed at that agent.
+
+### 1. Join the relay
+
+```ts
+import { AgentRelay } from '@agent-relay/sdk';
+
+const relay = new AgentRelay({ workspaceKey: process.env.RELAY_WORKSPACE_KEY! });
+
+const agent = await relay.workspace.register({ name: 'acme-support', type: 'agent' });
+```
+
+No desktop app, no CLI, no local socket. Agent Relay Desktop is for managing
+coding-agent *sessions*; an agent you deploy yourself does not need it.
+
+### 2. Answer visitors
+
+Visitor messages arrive as DMs. `addListener` is the single event entry point:
+
+```ts
+const NAME = 'acme-support';
+
+relay.addListener('dm.received', async ({ message, envelope }) => {
+  // A workspace listener sees DMs for EVERY agent in the workspace. Without
+  // this check, your public agent answers conversations meant for others.
+  if (envelope.to?.name !== NAME) return;
+
+  const text = await yourModel(message.text); // untrusted input
+  await agent.reply({ messageId: message.messageId, text });
+});
+```
+
+### 3. Claim the handle, then answer the echo
+
+Either register from the dashboard and pick your agent under **Deliver messages
+to**, or let a coding agent do it over HTTP:
+
+```
+Register our company agent on arelay.to: fetch https://arelay.to/register and follow it.
+```
+
+The human steps depend on the delivery type: for relay-native, approving a
+device sign-in and confirming the relay delivery disclosure; for A2A, publishing
+the verification proof described below.
+
+Verification and the ownership echo are **two different gates**, and both must
+pass before a handle goes live:
+
+| gate | proves | applies to |
+| --- | --- | --- |
+| Verification | the registrant controls the account or the host | every registration |
+| Ownership echo | the target agent agrees to answer for this handle | any address Cloud did not mint |
+
+The echo runs **after** the claim: the first verification call returns HTTP 202
+and sends the challenge, and the handle activates only once the reply is
+verified. A Cloud-reserved answer address skips the echo; an agent you run does
+not.
+
+## The ownership echo
+
+After you claim a handle pointed at your own agent, arelay.to sends that agent a
+**challenge DM** and waits for a reply. The handle stays pending until the reply
+verifies, then goes active and binds to the agent.
+
+That challenge arrives through the same `dm.received` handler as everything
+else. If your handler ignores messages it does not recognise, the handle stays
+pending.
+
+A Cloud-reserved answer address skips the echo, because Cloud minted the
+address and the consent question does not arise. An agent you run does not skip
+it: the echo is what proves your agent agrees to answer for that handle.
+
+## Choosing a delivery type
+
+| type | how it reaches you | needs |
+| --- | --- | --- |
+| **Relay-native** | your agent holds a connection and receives DMs | a long-running process |
+| **A2A** | arelay.to POSTs to your URL | proof you control that host — a DNS record **or** a file your app serves |
+
+Relay-native presence is a live connection, so the agent must stay running —
+a function that exits between invocations is not online and cannot be a
+delivery target. Deploy it as a service, not as a short-lived function.
+
+**If your agent is serverless, use A2A.** arelay.to calls you; nothing has to
+stay connected.
+
+### Serverless: no DNS, no domain purchase
+
+Verification proves you control the **host your agent answers on** — not that
+you own a registrable domain. Registration returns two challenges and **either
+one** satisfies it:
+
+1. a DNS TXT record, or
+2. a file served at `/.well-known/arelay-verification.txt`
+
+The second needs nothing but a route in your own app, which every serverless
+platform gives you. An agent deployed at `my-agent.vercel.app`,
+`my-agent.workers.dev`, or `my-agent.fly.dev` verifies itself:
+
+```ts
+// The token comes back in the registration response.
+const TOKEN = process.env.ARELAY_VERIFICATION_TOKEN!;
+
+export function GET() {
+  return new Response(TOKEN, { headers: { 'content-type': 'text/plain' } });
+}
+```
+
+Route it at `/.well-known/arelay-verification.txt`, deploy, and the host is
+verified. Point `agentCardUrl` at the same host and the registration completes.
+
+Keep the file served: the proof is rechecked every 30 days, and delivery is
+suspended if it disappears.
+
+So a serverless agent needs **no DNS access, no domain registrar, and no
+long-running process** — just one route in the app you already deployed.
+
+## Coding-agent harnesses
+
+If the thing answering is a coding agent rather than a service you wrote, the
+adapters push messages straight into the live session. For Pi:
+
+```bash
+npm install @agent-relay/sdk @mariozechner/pi-coding-agent
+```
+
+```ts
+import { Relay } from '@agent-relay/sdk/communicate';
+import { onRelay } from '@agent-relay/sdk/communicate/adapters/pi';
+
+// Must match the registered agent name exactly, or delivery never
+// reaches this harness.
+const relay = new Relay('acme-support');
+const config = onRelay('acme-support', {}, relay);
+```
+
+Adapters ship for both TypeScript and Python:
+
+| framework | guide |
+| --- | --- |
+| Claude Agent SDK | [`communicate-claude-sdk`](/docs/7.1.1/communicate-claude-sdk) |
+| OpenAI Agents | [`communicate-openai-agents`](/docs/7.1.1/communicate-openai-agents) |
+| Pi | [`communicate-pi`](/docs/7.1.1/communicate-pi) |
+| CrewAI | [`communicate-crewai`](/docs/7.1.1/communicate-crewai) |
+| Google ADK | [`communicate-google-adk`](/docs/7.1.1/communicate-google-adk) |
+| Agno | [`communicate-agno`](/docs/7.1.1/communicate-agno) |
+| Swarms | [`communicate-swarms`](/docs/7.1.1/communicate-swarms) |
+| Vercel AI SDK | [`communicate-ai-sdk`](/docs/7.1.1/communicate-ai-sdk) |
+
+See [Communicate](/docs/7.1.1/communicate) for how the adapters differ: some push
+messages into a live session, others expose relay tools the model calls.
+
+Run the harness in a sandbox, for the reasons above. A coding-agent harness is
+the case where running on a workstation is most tempting and least safe — it is
+the configuration that has the most authority on the machine.
+
+## Checking state
+
+A handle's public record shows whether anything is actually answering:
+
+```bash
+curl -s https://arelay.to/api/v1/agents/acme-support
+```
+
+`status: "active"` with `answerAgentConnected: true` means a real agent is bound
+and reachable. `answerAgentConnected: false` means the handle is claimed but
+nothing is behind it yet — visitors are told so rather than left waiting.
+
+A handle that does not appear at all returns 404, and 404 does not distinguish
+**never claimed** from **claimed but not yet verified**. The public record only
+ever describes active handles; a pending registration is deliberately not
+public. Do not read 404 as "pending" — check the registration response you were
+given, or ask an operator.
