@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 133,
+  "count": 134,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -43,6 +43,7 @@
     "https://agentrelay.com/docs/actions",
     "https://agentrelay.com/docs/agent-relay-mcp",
     "https://agentrelay.com/docs/architecture",
+    "https://agentrelay.com/docs/arelay-public-agent",
     "https://agentrelay.com/docs/authentication",
     "https://agentrelay.com/docs/channels",
     "https://agentrelay.com/docs/cli-agent-management",
