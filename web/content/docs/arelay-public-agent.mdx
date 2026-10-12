@@ -64,33 +64,42 @@ npm install @agent-relay/sdk
 
 ```ts
 import { AgentRelay } from '@agent-relay/sdk';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 
 const relay = new AgentRelay({ workspaceKey: process.env.RELAY_WORKSPACE_KEY! });
 
-// Tokens from first run. Keep this file out of source control; in production
-// use your secret store instead.
+// Tokens from first run. Add this file to .gitignore; in production use your
+// secret store instead.
 const TOKENS = './relay-tokens.json';
 const saved: { answerToken?: string; deliveryToken?: string } =
   existsSync(TOKENS) ? JSON.parse(readFileSync(TOKENS, 'utf8')) : {};
 
+// Write a fresh 0600 file and rename it over the old one, so an interrupted
+// write never leaves half a file and a loose existing mode never survives.
+const persist = () => {
+  rmSync(`${TOKENS}.tmp`, { force: true });
+  writeFileSync(`${TOKENS}.tmp`, JSON.stringify(saved), { mode: 0o600, flag: 'wx' });
+  renameSync(`${TOKENS}.tmp`, TOKENS);
+};
+
 // Every identity you create has to take this branch, or a restart dies on a
-// name conflict.
-const adopt = async (name: string, token?: string) => token
-  ? relay.workspace.reconnect({ apiToken: token })
-  : relay.workspace.register({ name, type: 'agent' });
+// name conflict. Save each token as soon as you have it: if the second
+// registration fails, the first must not be lost.
+const adopt = async (name: string, key: 'answerToken' | 'deliveryToken') => {
+  const client = saved[key]
+    ? await relay.workspace.reconnect({ apiToken: saved[key] })
+    : await relay.workspace.register({ name, type: 'agent' });
+  saved[key] = client.token;
+  persist();
+  return client;
+};
 
 // The answer agent -- this process answers as this identity.
-const agent = await adopt('acme-support', saved.answerToken);
+const agent = await adopt('acme-support', 'answerToken');
 
 // A separate identity, used ONLY as the delivery credential. Its token is what
 // goes in `delivery.credential` when you claim the handle.
-const delivery = await adopt('acme-delivery', saved.deliveryToken);
-
-writeFileSync(TOKENS, JSON.stringify({
-  answerToken: agent.token,
-  deliveryToken: delivery.token,
-}), { mode: 0o600 });
+const delivery = await adopt('acme-delivery', 'deliveryToken');
 ```
 
 `workspace.register()` documents itself as idempotent "when the backend
