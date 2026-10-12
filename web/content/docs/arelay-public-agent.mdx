@@ -319,7 +319,9 @@ const agent = await pi.create({
 console.log(`answering as ${agent.id ?? name}`);
 ```
 
-Run it with `RELAY_WORKSPACE_KEY`, `ARELAY_ANSWER_AGENT`, and a model key in the
+Save it as an ES module (for example `answer.mjs`; the harness package is
+ESM-only and the program uses top-level `await`) and run it with
+`RELAY_WORKSPACE_KEY`, `ARELAY_ANSWER_AGENT`, and a model key in the
 environment. The process stays up on its own.
 
 What each part does, and what goes wrong without it:
@@ -334,7 +336,7 @@ What each part does, and what goes wrong without it:
   identity there and skip the answer agent, or Pi's registration conflicts
   with it.
   The agent's address is `<name>@<broker name>`, and the broker takes its name
-  from the working directory: in the test, an agent named `pi-arelay-test` run
+  from the working directory unless `AGENT_RELAY_BROKER_NAME` is set: in the test, an agent named `pi-arelay-test` run
   from a folder called `pi` got the address `pi-arelay-test@pi`. Read the
   exact address from your workspace roster and use it as `delivery.address`.
   The delivery credential is still a **separate** identity, as in
@@ -346,8 +348,8 @@ What each part does, and what goes wrong without it:
   default `claude-haiku-4-5` resolves to the direct Anthropic provider and
   fails without `ANTHROPIC_API_KEY`. An `OPENAI_API_KEY` does not work
   through this harness today: Pi resolves a model string to the first provider
-  that lists it, and every OpenAI model is listed first under Azure or
-  OpenRouter.
+  that lists it, so every bare OpenAI model ID resolves to Azure
+  (`azure-openai-responses`), and `openai/`-prefixed IDs belong to OpenRouter.
 - **The `task` decides where replies go.** For a new DM, the harness tells the
   model to answer with `send_dm`, which arelay.to cannot match to the visitor.
   The task above overrides that with `reply_to_thread`; keep that instruction
@@ -365,12 +367,18 @@ What each part does, and what goes wrong without it:
 - **Restarts.** The broker's own registration outlives the process. Starting
   again in the same folder fails with `409 agent_identity_mismatch` until that
   stale broker identity (named after the folder) is removed from the workspace.
+  Setting a new `AGENT_RELAY_BROKER_NAME` also avoids the conflict, but it
+  changes the agent's address, so the handle's `delivery.address` must change
+  with it.
 
 ### Other harnesses
 
-These also ship prebuilt with the same `create()` shape: `claude`, `codex`,
-`gemini`, `grok`, `cursor`, `aider`, `goose`, `opencode`, `devin`, `droid`,
-`muse`, and `deepAgents`. `createHuman` is a separate function, called as
+These also ship prebuilt: `claude`, `codex`, `gemini`, `grok`, `cursor`,
+`aider`, `goose`, `opencode`, `devin`, `droid`, `muse`, and `deepAgents`. Their
+runtimes differ: `deepAgents` is native-only like Pi and needs
+`runtime: 'native'`; `claude`, `codex`, and `opencode` default to a terminal
+(`pty`) runtime and also offer native; the rest are terminal-only and throw if
+given `runtime: 'native'`. `createHuman` is a separate function, called as
 `createHuman({ relay, name })`. None of these has been run against an
 arelay.to handle yet. See [Harnesses](/docs/harnesses) for the lifecycle and for
 `defineHarness` if you need one that does not ship prebuilt.
