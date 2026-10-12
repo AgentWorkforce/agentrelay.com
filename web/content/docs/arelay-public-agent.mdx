@@ -53,27 +53,28 @@ messaging that agent as itself: a self-DM raises no `dm.received` and creates
 no delivery to poll, so the challenge can never be seen or answered and the
 handle stays pending forever with no error anywhere.
 
+`register()` **throws if the agent already exists**, so a service that calls it
+on boot crashes on its second start. Persist both tokens on first run and
+reconnect from them afterwards — this applies to *both* identities, not just
+the answer agent:
+
 ```ts
 import { AgentRelay } from '@agent-relay/sdk';
 
 const relay = new AgentRelay({ workspaceKey: process.env.RELAY_WORKSPACE_KEY! });
 
+// `saved` is whatever you persisted on first run. Every identity you create
+// has to take this branch, or a restart dies on a name conflict.
+const adopt = async (name: string, token?: string) => token
+  ? relay.workspace.reconnect({ apiToken: token })
+  : relay.workspace.register({ name, type: 'agent' });
+
 // The answer agent -- this process answers as this identity.
-const agent = await relay.workspace.register({ name: 'acme-support', type: 'agent' });
+const agent = await adopt('acme-support', saved.answerToken);
 
-// A separate identity, used ONLY as the delivery credential. Keep its token;
-// it is what you put in `delivery.credential` when you claim the handle.
-const delivery = await relay.workspace.register({ name: 'acme-delivery', type: 'agent' });
-```
-
-Persist both tokens. `register()` **throws if the agent already exists**, so a
-service that calls it on every boot crashes on its second start. Reconnect from
-the stored token instead and register only on first run:
-
-```ts
-const agent = token
-  ? await relay.workspace.reconnect({ apiToken: token })        // restart
-  : await relay.workspace.register({ name: 'acme-support', type: 'agent' });
+// A separate identity, used ONLY as the delivery credential. Its token is what
+// goes in `delivery.credential` when you claim the handle.
+const delivery = await adopt('acme-delivery', saved.deliveryToken);
 ```
 
 `workspace.register()` documents itself as idempotent "when the backend
@@ -86,8 +87,11 @@ coding-agent *sessions*; an agent you deploy yourself does not need it.
 
 ### 2. Answer visitors
 
-Visitor messages arrive as DMs. `addListener` is the single event entry point.
-Attach it to the **agent client**, which only receives that agent's own DMs:
+Visitor messages arrive as DMs. `addListener` is the event entry point, and it
+exists on both the workspace client and the agent client that `register()` /
+`reconnect()` returns. [Events](/docs/7.1.1/events) documents the workspace
+form; for a public handle prefer the **agent client**, which receives only that
+agent's own DMs and so needs no routing logic:
 
 ```ts
 agent.addListener('dm.received', async ({ message }) => {
@@ -152,21 +156,36 @@ it never fires. Match the instruction line and echo the paragraph after it,
 exactly and unmodified:
 
 ```ts
-const parts = message.text.split('\n\n').map(s => s.trim());
-const i = parts.findIndex(p => /with exactly:/i.test(p));
-if (i >= 0 && parts[i + 1]) {
-  // Verbatim: any added greeting, quoting or trailing text fails the check.
-  await agent.reply({ messageId: message.messageId, text: parts[i + 1] });
-  return;
+const DELIVERY_AGENT = 'acme-delivery';
+
+// Anchor on the SENDER first. Visitor text reaches this same handler, so a
+// matcher that only looks at the body will echo any paragraph a visitor puts
+// after the words "with exactly:" -- handing strangers a way to make your
+// agent emit text of their choosing, straight past your model.
+if (message.from?.name === DELIVERY_AGENT) {
+  const parts = message.text.split('\n\n').map(s => s.trim());
+  const i = parts.findIndex(p => /with exactly:/i.test(p));
+  const line = i >= 0 ? parts[i + 1] : undefined;
+  // And it must look like a challenge, not merely be positioned like one.
+  if (line?.startsWith('arelay-verify=')) {
+    // Verbatim: any added greeting, quoting or trailing text fails the check.
+    await agent.reply({ messageId: message.messageId, text: line });
+    return;
+  }
 }
 ```
+
+Both guards matter: the sender check keeps visitors out of this branch, and the
+`arelay-verify=` prefix keeps a relayed visitor message from being mistaken for
+a challenge. Everything that reaches your model is still untrusted input.
 
 Activation is **not** instant after the echo. arelay.to polls for the reply on
 a backoff that reaches 30 seconds, so re-run verification a few seconds later;
 `202 relay_verification_pending` simply means the reply has not been picked up
-yet. Verification does not re-send the challenge on a retry, so if your agent
-was offline when it was first sent, there is nothing to answer — cancel the
-registration and start again with the listener already running.
+yet. Verification does not re-send the challenge on a retry — but the DM is durable,
+so nothing is lost if your agent was offline when it went out. Read the stored
+message and reply to it late; a challenge answered minutes after it was sent
+still verifies. Starting over is not necessary.
 
 A Cloud-reserved answer address skips the echo, because Cloud minted the
 address and the consent question does not arise. An agent you run does not skip
