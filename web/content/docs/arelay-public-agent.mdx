@@ -67,7 +67,7 @@ relay.addListener('dm.received', async ({ message, envelope }) => {
 });
 ```
 
-### 3. Claim the handle
+### 3. Claim the handle, then answer the echo
 
 Either register from the dashboard and pick your agent under **Deliver messages
 to**, or let a coding agent do it over HTTP:
@@ -79,6 +79,19 @@ Register our company agent on arelay.to: fetch https://arelay.to/register and fo
 The human steps depend on the delivery type: for relay-native, approving a
 device sign-in and confirming the relay delivery disclosure; for A2A, publishing
 the verification proof described below.
+
+Verification and the ownership echo are **two different gates**, and both must
+pass before a handle goes live:
+
+| gate | proves | applies to |
+| --- | --- | --- |
+| Verification | the registrant controls the account or the host | every registration |
+| Ownership echo | the target agent agrees to answer for this handle | any address Cloud did not mint |
+
+The echo runs **after** the claim: the first verification call returns HTTP 202
+and sends the challenge, and the handle activates only once the reply is
+verified. A Cloud-reserved answer address skips the echo; an agent you run does
+not.
 
 ## The ownership echo
 
@@ -190,5 +203,8 @@ curl -s https://arelay.to/api/v1/agents/acme-support
 and reachable. `answerAgentConnected: false` means the handle is claimed but
 nothing is behind it yet — visitors are told so rather than left waiting.
 
-A handle that does not appear at all is still pending: claimed, holding the
-name for 24 hours, waiting on verification.
+A handle that does not appear at all returns 404, and 404 does not distinguish
+**never claimed** from **claimed but not yet verified**. The public record only
+ever describes active handles; a pending registration is deliberately not
+public. Do not read 404 as "pending" — check the registration response you were
+given, or ask an operator.
