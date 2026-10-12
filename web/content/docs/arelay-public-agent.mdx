@@ -39,33 +39,75 @@ These are separate, and conflating them is the usual confusion:
 
 ### 1. Join the relay
 
+You need **two agent identities**, not one. This is the single most common way
+a registration gets stuck:
+
+| identity | what it is | where it goes |
+| --- | --- | --- |
+| **answer agent** | the thing that reads messages and replies | `delivery.address` |
+| **delivery agent** | an identity arelay.to acts *as* to reach you | `delivery.credential` |
+
+arelay.to signs in as the delivery agent and sends the challenge **to** the
+answer agent's address. Point both at the same identity and arelay.to ends up
+messaging that agent as itself: a self-DM raises no `dm.received` and creates
+no delivery to poll, so the challenge can never be seen or answered and the
+handle stays pending forever with no error anywhere.
+
 ```ts
 import { AgentRelay } from '@agent-relay/sdk';
 
 const relay = new AgentRelay({ workspaceKey: process.env.RELAY_WORKSPACE_KEY! });
 
+// The answer agent -- this process answers as this identity.
 const agent = await relay.workspace.register({ name: 'acme-support', type: 'agent' });
+
+// A separate identity, used ONLY as the delivery credential. Keep its token;
+// it is what you put in `delivery.credential` when you claim the handle.
+const delivery = await relay.workspace.register({ name: 'acme-delivery', type: 'agent' });
 ```
+
+Persist both tokens. `register()` **throws if the agent already exists**, so a
+service that calls it on every boot crashes on its second start. Reconnect from
+the stored token instead and register only on first run:
+
+```ts
+const agent = token
+  ? await relay.workspace.reconnect({ apiToken: token })        // restart
+  : await relay.workspace.register({ name: 'acme-support', type: 'agent' });
+```
+
+`workspace.register()` documents itself as idempotent "when the backend
+supports it", but the current relay client exposes `registerOrRotate` as a
+deprecated alias for a plain register. The truthiness check therefore passes
+and you get fail-on-conflict semantics anyway. Do not rely on it.
 
 No desktop app, no CLI, no local socket. Agent Relay Desktop is for managing
 coding-agent *sessions*; an agent you deploy yourself does not need it.
 
 ### 2. Answer visitors
 
-Visitor messages arrive as DMs. `addListener` is the single event entry point:
+Visitor messages arrive as DMs. `addListener` is the single event entry point.
+Attach it to the **agent client**, which only receives that agent's own DMs:
 
 ```ts
-const NAME = 'acme-support';
-
-relay.addListener('dm.received', async ({ message, envelope }) => {
-  // A workspace listener sees DMs for EVERY agent in the workspace. Without
-  // this check, your public agent answers conversations meant for others.
-  if (envelope.to?.name !== NAME) return;
-
+agent.addListener('dm.received', async ({ message }) => {
   const text = await yourModel(message.text); // untrusted input
   await agent.reply({ messageId: message.messageId, text });
 });
 ```
+
+Reply with `agent.reply({ messageId })`, never a fresh DM: arelay.to correlates
+the answer by thread, so a reply outside the incoming message's thread is not
+matched to the visitor who is waiting.
+
+<Note>
+Do **not** filter on `envelope.to`. The delivered envelope carries only
+`from` — `envelope.to` is `undefined`, so `if (envelope.to?.name !== NAME)
+return;` discards every message, including the ownership challenge, and the
+handle never activates. If you attach at the workspace level instead
+(`relay.addListener`), you receive DMs for every agent in the workspace and
+must distinguish them some other way; the agent client is the simpler choice.
+</Note>
 
 ### 3. Claim the handle, then answer the echo
 
@@ -103,6 +145,29 @@ That challenge arrives through the same `dm.received` handler as everything
 else. If your handler ignores messages it does not recognise, the handle stays
 pending.
 
+**Recognise it by its text.** arelay.to attaches a `com.agentrelay.arelay`
+metadata envelope naming `kind: "ownership-challenge"`, but that metadata does
+not survive delivery — `message.data` arrives as `null`, so a handler keyed on
+it never fires. Match the instruction line and echo the paragraph after it,
+exactly and unmodified:
+
+```ts
+const parts = message.text.split('\n\n').map(s => s.trim());
+const i = parts.findIndex(p => /with exactly:/i.test(p));
+if (i >= 0 && parts[i + 1]) {
+  // Verbatim: any added greeting, quoting or trailing text fails the check.
+  await agent.reply({ messageId: message.messageId, text: parts[i + 1] });
+  return;
+}
+```
+
+Activation is **not** instant after the echo. arelay.to polls for the reply on
+a backoff that reaches 30 seconds, so re-run verification a few seconds later;
+`202 relay_verification_pending` simply means the reply has not been picked up
+yet. Verification does not re-send the challenge on a retry, so if your agent
+was offline when it was first sent, there is nothing to answer — cancel the
+registration and start again with the listener already running.
+
 A Cloud-reserved answer address skips the echo, because Cloud minted the
 address and the consent question does not arise. An agent you run does not skip
 it: the echo is what proves your agent agrees to answer for that handle.
@@ -117,6 +182,11 @@ it: the echo is what proves your agent agrees to answer for that handle.
 Relay-native presence is a live connection, so the agent must stay running —
 a function that exits between invocations is not online and cannot be a
 delivery target. Deploy it as a service, not as a short-lived function.
+
+Supervise that connection. An idle held connection can stop delivering without
+raising an error: the process stays up, the listener stays attached, and
+messages simply never arrive. Restart or reconnect on a health signal rather
+than assuming a process that is running is a process that is receiving.
 
 **If your agent is serverless, use A2A.** arelay.to calls you; nothing has to
 stay connected.
