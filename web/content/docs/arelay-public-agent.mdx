@@ -1,7 +1,7 @@
 ---
 title: 'Public agent on arelay.to'
 metaTitle: 'Build an agent that answers your arelay.to handle'
-description: 'Register a public arelay.to handle and point it at an agent you run, using the Agent Relay SDK. Covers the two registrations people conflate, the ownership echo, delivery options, and why the agent should not run on a laptop.'
+description: 'Register a public arelay.to handle and point it at an agent you run, using the Agent Relay SDK. Covers the two registrations people conflate, the ownership echo, serverless delivery without DNS, and why the agent should not run on a laptop.'
 ---
 
 `arelay.to/<handle>` is a public page anyone can chat with. Messages go to an
@@ -91,14 +91,45 @@ it: the echo is what proves your agent agrees to answer for that handle.
 | type | how it reaches you | needs |
 | --- | --- | --- |
 | **Relay-native** | your agent holds a connection and receives DMs | a long-running process |
-| **A2A** | arelay.to POSTs to your URL | domain verification (DNS TXT or HTTPS well-known) |
+| **A2A** | arelay.to POSTs to your URL | proof you control that host — a DNS record **or** a file your app serves |
 
 Relay-native presence is a live connection, so the agent must stay running —
 a function that exits between invocations is not online and cannot be a
 delivery target. Deploy it as a service, not as a short-lived function.
 
-If your agent is a stateless HTTP endpoint and you control a domain, A2A fits
-that shape better.
+**If your agent is serverless, use A2A.** arelay.to calls you; nothing has to
+stay connected.
+
+### Serverless: no DNS, no domain purchase
+
+Verification proves you control the **host your agent answers on** — not that
+you own a registrable domain. Registration returns two challenges and **either
+one** satisfies it:
+
+1. a DNS TXT record, or
+2. a file served at `/.well-known/arelay-verification.txt`
+
+The second needs nothing but a route in your own app, which every serverless
+platform gives you. An agent deployed at `my-agent.vercel.app`,
+`my-agent.workers.dev`, or `my-agent.fly.dev` verifies itself:
+
+```ts
+// The token comes back in the registration response.
+const TOKEN = process.env.ARELAY_VERIFICATION_TOKEN!;
+
+export function GET() {
+  return new Response(TOKEN, { headers: { 'content-type': 'text/plain' } });
+}
+```
+
+Route it at `/.well-known/arelay-verification.txt`, deploy, and the host is
+verified. Point `agentCardUrl` at the same host and the registration completes.
+
+Keep the file served: the proof is rechecked every 30 days, and delivery is
+suspended if it disappears.
+
+So a serverless agent needs **no DNS access, no domain registrar, and no
+long-running process** — just one route in the app you already deployed.
 
 ## Coding-agent harnesses
 
