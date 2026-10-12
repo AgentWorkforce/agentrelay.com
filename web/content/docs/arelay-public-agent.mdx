@@ -58,6 +58,10 @@ on boot crashes on its second start. Persist both tokens on first run and
 reconnect from them afterwards — this applies to *both* identities, not just
 the answer agent:
 
+```bash
+npm install @agent-relay/sdk
+```
+
 ```ts
 import { AgentRelay } from '@agent-relay/sdk';
 
@@ -243,38 +247,44 @@ long-running process** — just one route in the app you already deployed.
 
 ## Coding-agent harnesses
 
-If the thing answering is a coding agent rather than a service you wrote, the
-adapters push messages straight into the live session. For Pi:
+If the thing answering is a coding agent rather than a service you wrote, use
+`@agent-relay/harnesses`. A harness owns the agent process and feeds relay
+messages into the live session.
 
 ```bash
-npm install @agent-relay/sdk @mariozechner/pi-coding-agent
+npm install @agent-relay/harnesses
 ```
 
 ```ts
-import { Relay } from '@agent-relay/sdk/communicate';
-import { onRelay } from '@agent-relay/sdk/communicate/adapters/pi';
+import { pi } from '@agent-relay/harnesses';
 
-// Must match the registered agent name exactly, or delivery never
-// reaches this harness.
-const relay = new Relay('acme-support');
-const config = onRelay('acme-support', {}, relay);
+// `name` MUST be the identity you registered and pointed the handle at.
+// Omit it and the harness self-registers as `pi-1`, which is a different
+// agent from the one the handle delivers to -- so the ownership challenge
+// goes to `acme-support`, nothing is listening there, and the handle never
+// activates even though a Pi session is up and healthy.
+const agent = await pi.create({ name: 'acme-support' });
 ```
 
-Adapters ship for both TypeScript and Python:
+`pi` is a prebuilt `ManagedHarness`, the same shape as `claude` and `codex`. It
+declares `runtime: 'native'` itself, so there is nothing to pass for that;
+`claude` and `codex` are `'pty'`. See [Harnesses](/docs/harnesses) for the
+lifecycle and for `defineHarness` if you need one that does not ship prebuilt.
 
-| framework | guide |
-| --- | --- |
-| Claude Agent SDK | [`communicate-claude-sdk`](/docs/7.1.1/communicate-claude-sdk) |
-| OpenAI Agents | [`communicate-openai-agents`](/docs/7.1.1/communicate-openai-agents) |
-| Pi | [`communicate-pi`](/docs/7.1.1/communicate-pi) |
-| CrewAI | [`communicate-crewai`](/docs/7.1.1/communicate-crewai) |
-| Google ADK | [`communicate-google-adk`](/docs/7.1.1/communicate-google-adk) |
-| Agno | [`communicate-agno`](/docs/7.1.1/communicate-agno) |
-| Swarms | [`communicate-swarms`](/docs/7.1.1/communicate-swarms) |
-| Vercel AI SDK | [`communicate-ai-sdk`](/docs/7.1.1/communicate-ai-sdk) |
+These ship prebuilt today: `claude`, `codex`, `pi`, `gemini`, `grok`, `cursor`,
+`aider`, `goose`, `opencode`, `devin`, `droid`, `muse`, `deepAgents`, plus
+`createHuman`.
 
-See [Communicate](/docs/7.1.1/communicate) for how the adapters differ: some push
-messages into a live session, others expose relay tools the model calls.
+<Note>
+The `@agent-relay/sdk/communicate` adapters — `Relay` from
+`@agent-relay/sdk/communicate` and `onRelay` from
+`.../communicate/adapters/<framework>` — existed only in
+`@agent-relay/sdk@7.1.1`. That subpath was removed in 8.0.0 and the current SDK
+is 13.x, so those imports now fail outright with
+`ERR_PACKAGE_PATH_NOT_EXPORTED`. The `/docs/7.1.1/communicate-*` pages document
+that old API and apply only if you pin 7.1.1, which is six majors behind.
+Use `@agent-relay/harnesses` instead.
+</Note>
 
 Run the harness in a sandbox, for the reasons above. A coding-agent harness is
 the case where running on a workstation is most tempting and least safe — it is
