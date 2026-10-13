@@ -7238,27 +7238,6 @@
    GUI agent apps (Conductor, Claude, Codex) ride the same rows as the
    terminals. They read as apps rather than shells: sans type, a sidebar,
    chat bubbles, a composer, and a toolbar in place of a mono title. */
-.heroTermBadge,
-.heroAppBadge {
-  flex: none;
-  padding: 1px 5px;
-  border: 1px solid rgba(116, 184, 226, 0.22);
-  border-radius: 4px;
-  color: rgba(160, 196, 222, 0.78);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.5rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  line-height: 1.4;
-}
-
-.heroAppBadge {
-  margin-left: auto;
-  border-color: rgba(214, 222, 232, 0.2);
-  color: rgba(226, 232, 240, 0.8);
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .heroApp {
   --app-bg: #18191b;
   --app-side: #111213;
@@ -7620,6 +7599,140 @@
 
 .heroAppDel {
   color: #f08a8a;
+}
+
+.heroHermesMark {
+  display: inline-grid;
+  place-items: center;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: #f2c14e;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.heroHermesBody {
+  padding-top: 7px;
+}
+
+.heroHermesBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-bottom: 7px;
+  padding: 4px 6px;
+  border: 1px solid rgba(242, 193, 78, 0.32);
+  border-radius: 4px;
+  font-family: var(--font-geist-mono), monospace;
+  line-height: 1.25;
+}
+
+.heroHermesBanner strong {
+  color: #f2c14e;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.heroHermesBanner span {
+  overflow: hidden;
+  color: rgba(214, 196, 150, 0.72);
+  font-size: 0.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroHermesTool {
+  color: rgba(226, 205, 150, 0.84);
+}
+
+.heroHermesState {
+  color: #f2c14e;
+}
+
+/* Devin's app is light; the one bright window in the band. */
+.heroApp[data-app='devin'] {
+  --app-bg: #fafaf9;
+  --app-side: #f2f2f0;
+  --app-line: rgba(20, 20, 20, 0.09);
+  --app-text: rgba(24, 24, 27, 0.92);
+  --app-dim: rgba(82, 82, 91, 0.72);
+  --app-accent: #2563eb;
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.heroApp[data-app='devin'] .heroAppToolbarIcon {
+  border-color: rgba(24, 24, 27, 0.3);
+}
+
+.heroApp[data-app='devin'] .heroAppSessionActive {
+  background: rgba(24, 24, 27, 0.07);
+}
+
+.heroApp[data-app='devin'] .heroAppSession {
+  color: rgba(39, 39, 42, 0.8);
+}
+
+.heroApp[data-app='devin'] .heroAppAsk {
+  background: rgba(24, 24, 27, 0.06);
+}
+
+.heroApp[data-app='devin'] .heroAppComposer {
+  border-color: rgba(24, 24, 27, 0.14);
+  background: #fff;
+}
+
+.heroApp[data-app='devin'] .heroAppRelay {
+  color: #1f6fb0;
+}
+
+.heroApp[data-app='devin'] .heroAppRelayDot {
+  background: #1f6fb0;
+}
+
+.heroApp[data-app='paseo'] {
+  --app-bg: #161817;
+  --app-side: #111312;
+  --app-accent: #8fd6a8;
+}
+
+.heroAppSpeaker {
+  display: block;
+  font-weight: 650;
+}
+
+.heroAppTabs {
+  display: flex;
+  gap: 4px;
+  font-size: 0.52rem;
+  white-space: nowrap;
+}
+
+.heroAppTabs > * {
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--app-dim);
+}
+
+.heroAppTabs b {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppStatusReview,
+.heroAppStatusWorking {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border: 1.2px solid var(--app-accent);
+  border-radius: 50%;
+}
+
+.heroAppStatusWorking {
+  border-color: #e5b45a;
+  border-right-color: transparent;
 }
 
 @media (prefers-reduced-motion: no-preference) {

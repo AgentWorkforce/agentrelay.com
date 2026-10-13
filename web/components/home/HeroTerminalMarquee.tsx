@@ -6,7 +6,7 @@ import { Grok } from '../brand-icons';
 import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
 import s from '../../app/landing.module.css';
 
-type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
+type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok' | 'hermes';
 
 type LineTone = 'prompt' | 'tool' | 'ok' | 'relay';
 
@@ -83,6 +83,16 @@ export const AGENT_META: Record<
     prompt: '>',
     session: 'Grok Code',
     state: 'Working',
+  },
+  hermes: {
+    activityGlyph: '⚕',
+    branchPrefix: 'hermes',
+    cycle: '7.6s',
+    label: 'Hermes Agent',
+    mode: 'local',
+    prompt: '❯',
+    session: 'Hermes Agent',
+    state: 'Thinking',
   },
   opencode: {
     activityGlyph: '▣',
@@ -162,8 +172,9 @@ const RELAY_ROUTES: RelayRoute[] = [
 ];
 
 /**
- * Three rows of Claude Code, Codex, Grok and OpenCode terminal sessions, with
- * Conductor, Claude and Codex desktop app windows mixed into the band. Each title bar
+ * Three rows of Claude Code, Codex, Grok, OpenCode and Hermes terminal
+ * sessions, with Conductor, Claude, Codex, Devin and Paseo desktop app windows
+ * mixed into the band. Each title bar
  * names the agent, while repository and activity context stay in the terminal.
  * The animated lines show the prompt, what the tool did, and where the result
  * went, which for Agent Relay means a channel, a DM or a PR.
@@ -364,27 +375,103 @@ const APP_CODEX_TESTS: AppWindowCard = {
   sessions: ['Unflake the ws suite', 'Bump the engine', 'Retry budget', 'Docs links'],
 };
 
+const HERMES_GATEWAY: TerminalCard = {
+  agent: 'hermes',
+  repo: 'relay/gateway',
+  size: 'md',
+  lines: [
+    { tone: 'prompt', text: '$ hermes "rotate the webhook secrets"' },
+    { tone: 'tool', text: '⎿ terminal: wrangler secret put · 1.8s' },
+    { tone: 'relay', text: '→ posted rollout plan in #ops' },
+  ],
+};
+
+const APP_DEVIN: AppWindowCard = {
+  kind: 'app',
+  app: 'devin',
+  repo: 'relay/auth',
+  title: 'Add enterprise SSO',
+  ask: 'Add SAML SSO for enterprise workspaces',
+  reply: 'SSO is wired into org settings. Tested sign-in end to end.',
+  relay: 'PR #503 open · asked Reviewer in #build-auth',
+  sessions: ['Add enterprise SSO', 'Multi-region failover', 'Upgrade Node', 'API latency spike'],
+};
+
+const APP_PASEO: AppWindowCard = {
+  kind: 'app',
+  app: 'paseo',
+  repo: 'relay/web',
+  title: 'Docs search',
+  ask: 'Add search to the docs sidebar',
+  reply: 'Search indexes every page at build time. Cmd-K opens it.',
+  relay: 'Handed to Claude Code for review via #build-web',
+  sessions: ['Docs search', 'Page titles', 'Commit safe area', 'Editor typing lag'],
+};
+
 type MarqueeCard = TerminalCard | AppWindowCard;
 
-/** Each row mixes terminal sessions with desktop app windows. */
+const APP_CONDUCTOR_PRICING: AppWindowCard = {
+  kind: 'app',
+  app: 'conductor',
+  repo: 'relay/web',
+  title: 'Pricing table',
+  ask: 'Wire the pricing table to the plans API',
+  reply: 'Plans load from the API and fall back to cached prices.',
+  relay: '#build-web · handed to Reviewer',
+  sessions: ['pricing-table', 'nav-tokens', 'docs-search'],
+};
+
+const APP_CLAUDE_AUDIT: AppWindowCard = {
+  kind: 'app',
+  app: 'claude',
+  repo: 'relay/infra',
+  title: 'Weekly dependency audit',
+  ask: 'Run the weekly dependency audit',
+  reply: 'Two advisories, both patch bumps. Opened one PR for both.',
+  relay: 'Waiting on Planner in #ship-it',
+  sessions: ['Weekly dependency audit', 'Rotate staging keys', 'Cron drift'],
+};
+
+const APP_DEVIN_FAILOVER: AppWindowCard = {
+  kind: 'app',
+  app: 'devin',
+  repo: 'relay/api',
+  title: 'Multi-region failover',
+  ask: 'Fail over to the EU region when US is down',
+  reply: 'Health checks flip traffic in under 20s. Drill passed.',
+  relay: 'DM to Hermes: update the runbook',
+  sessions: ['Multi-region failover', 'Add enterprise SSO', 'API latency spike'],
+};
+
+/**
+ * Each row alternates terminal and app, three of each, so the alternation
+ * holds across the loop seam and no two neighbours are the same tool.
+ */
 const MARQUEE_ROW_ONE: MarqueeCard[] = [
   ROW_ONE[0],
-  ROW_ONE[1],
   APP_CONDUCTOR,
+  ROW_ONE[1],
+  APP_PASEO,
   ROW_ONE[2],
-  ROW_ONE[3],
+  APP_DEVIN,
+];
+
+const MARQUEE_ROW_TWO: MarqueeCard[] = [
+  ROW_TWO[0],
+  APP_CLAUDE,
+  ROW_TWO[2],
+  APP_DEVIN_FAILOVER,
+  ROW_TWO[3],
   APP_CODEX_TESTS,
 ];
 
-const MARQUEE_ROW_TWO: MarqueeCard[] = [ROW_TWO[0], APP_CLAUDE, ROW_TWO[1], ROW_TWO[2], ROW_TWO[3]];
-
 const MARQUEE_ROW_THREE: MarqueeCard[] = [
   ROW_THREE[0],
-  ROW_THREE[1],
   APP_CODEX,
   ROW_THREE[2],
-  ROW_THREE[3],
-  ROW_THREE[4],
+  APP_CONDUCTOR_PRICING,
+  HERMES_GATEWAY,
+  APP_CLAUDE_AUDIT,
 ];
 
 const SIZE_CLASS = {
@@ -395,6 +482,7 @@ const SIZE_CLASS = {
 
 function TerminalAgentLogo({ agent, idPrefix }: { agent: TerminalAgent; idPrefix: string }) {
   if (agent === 'grok') return <Grok className={s.heroTermMark} />;
+  if (agent === 'hermes') return <span className={s.heroHermesMark}>⚕</span>;
 
   return <AgentToolLogo className={s.heroTermMark} idPrefix={idPrefix} provider={agent} />;
 }
@@ -519,6 +607,56 @@ function GrokTerminalBody({ card }: { card: TerminalCard }) {
         <span className={s.heroTermPromptGlyph}>❯</span>
         <span className={s.heroTermCursor} />
         <span className={s.heroGrokModel}>Grok Code (high)</span>
+      </div>
+    </div>
+  );
+}
+
+function HermesTerminalBody({ card }: { card: TerminalCard }) {
+  const prompt = card.lines.find((line) => line.tone === 'prompt') ?? card.lines[0];
+  const activity = card.lines.find((line) => line.tone === 'tool') ?? card.lines[1];
+  const result = card.lines.find((line) => line.tone === 'relay' || line.tone === 'ok');
+
+  return (
+    <div className={`${s.heroTermBody} ${s.heroHermesBody}`}>
+      <div className={s.heroHermesBanner}>
+        <strong>⚕ HERMES AGENT</strong>
+        <span>Hermes 4 · Nous Portal · ~/{card.repo}</span>
+      </div>
+      <div className={s.heroTermTranscript}>
+        <span
+          className={`${s.heroTermLine} ${s.heroTermPrompt}`}
+          style={{ '--line-delay': '0s' } as TerminalStyle}
+        >
+          <span className={s.heroTermLineMarker}>❯</span>
+          <span className={s.heroTermLineCopy}>{terminalLineCopy(prompt)}</span>
+        </span>
+        <span
+          className={`${s.heroTermLine} ${s.heroHermesTool}`}
+          style={{ '--line-delay': '0.58s' } as TerminalStyle}
+        >
+          <span className={s.heroTermLineMarker}>┊</span>
+          <span className={s.heroTermLineCopy}>{terminalLineCopy(activity)}</span>
+        </span>
+        {result ? (
+          <span
+            className={`${s.heroTermLine} ${TONE_CLASS[result.tone]}`}
+            style={{ '--line-delay': '1.16s' } as TerminalStyle}
+          >
+            <span className={s.heroTermLineMarker}>{LINE_MARKER[result.tone]}</span>
+            <span className={s.heroTermLineCopy}>{terminalLineCopy(result)}</span>
+          </span>
+        ) : null}
+      </div>
+      <div className={s.heroTermComposer}>
+        <span className={s.heroTermLivePrompt}>
+          <span className={s.heroTermPromptGlyph}>❯</span>
+          <span className={s.heroTermCursor} />
+        </span>
+        <span className={`${s.heroTermState} ${s.heroHermesState}`}>
+          <span className={s.heroTermActivityGlyph}>⚕</span>
+          pondering…
+        </span>
       </div>
     </div>
   );
@@ -734,7 +872,6 @@ export function HeroTerminalCard({
           <TerminalAgentLogo agent={card.agent} idPrefix={idPrefix} />
           {meta.label}
         </span>
-        <span className={s.heroTermBadge}>CLI</span>
         {showAvatar && avatar && (
           <Image
             className={s.heroTermAvatar}
@@ -750,6 +887,8 @@ export function HeroTerminalCard({
 
       {card.agent === 'grok' ? (
         <GrokTerminalBody card={card} />
+      ) : card.agent === 'hermes' ? (
+        <HermesTerminalBody card={card} />
       ) : card.agent === 'opencode' ? (
         <OpenCodeTerminalBody card={card} />
       ) : card.agent === 'codex' ? (
