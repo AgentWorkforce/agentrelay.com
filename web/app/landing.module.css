@@ -2138,9 +2138,9 @@
     animation: heroMarqueeSlide linear infinite;
   }
 
+  /* Row one starts at its first card so Claude Code leads the band. */
   .heroMarqueeTrackOne {
     animation-duration: 74s;
-    animation-delay: -11s;
   }
 
   .heroMarqueeTrackTwo {
