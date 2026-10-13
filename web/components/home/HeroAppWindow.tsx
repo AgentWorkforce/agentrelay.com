@@ -213,7 +213,7 @@ function Thread({ card }: { card: AppWindowCard }) {
 
 /**
  * A desktop agent app window: Conductor's workspaces-plus-diff layout, Devin's
- * light sessions view, Paseo's status-grouped workspaces with agent tabs, or
+ * sessions view, Paseo's status-grouped workspaces with agent tabs, or
  * the Claude and Codex apps' sidebar-and-thread. Sits in the same rows as the
  * terminal cards so the band reads as every surface agents run in, CLI and
  * GUI, all on one relay.

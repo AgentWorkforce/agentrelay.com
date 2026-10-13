@@ -450,7 +450,7 @@ const APP_DEVIN_FAILOVER: AppWindowCard = {
 const MARQUEE_ROW_ONE: MarqueeCard[] = [
   ROW_ONE[0],
   APP_CODEX_TESTS,
-  ROW_ONE[2],
+  ROW_TWO[1],
   APP_CONDUCTOR,
   ROW_ONE[1],
   APP_DEVIN,

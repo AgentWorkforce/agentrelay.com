@@ -7651,44 +7651,10 @@
   color: #f2c14e;
 }
 
-/* Devin's app is light; the one bright window in the band. */
 .heroApp[data-app='devin'] {
-  --app-bg: #fafaf9;
-  --app-side: #f2f2f0;
-  --app-line: rgba(20, 20, 20, 0.09);
-  --app-text: rgba(24, 24, 27, 0.92);
-  --app-dim: rgba(82, 82, 91, 0.72);
-  --app-accent: #2563eb;
-  border-color: rgba(255, 255, 255, 0.5);
-}
-
-.heroApp[data-app='devin'] .heroAppToolbarIcon {
-  border-color: rgba(24, 24, 27, 0.3);
-}
-
-.heroApp[data-app='devin'] .heroAppSessionActive {
-  background: rgba(24, 24, 27, 0.07);
-}
-
-.heroApp[data-app='devin'] .heroAppSession {
-  color: rgba(39, 39, 42, 0.8);
-}
-
-.heroApp[data-app='devin'] .heroAppAsk {
-  background: rgba(24, 24, 27, 0.06);
-}
-
-.heroApp[data-app='devin'] .heroAppComposer {
-  border-color: rgba(24, 24, 27, 0.14);
-  background: #fff;
-}
-
-.heroApp[data-app='devin'] .heroAppRelay {
-  color: #1f6fb0;
-}
-
-.heroApp[data-app='devin'] .heroAppRelayDot {
-  background: #1f6fb0;
+  --app-bg: #15171c;
+  --app-side: #101216;
+  --app-accent: #6b9cff;
 }
 
 .heroApp[data-app='paseo'] {
