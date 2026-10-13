@@ -58,12 +58,14 @@ export function SiteNav({
   mobileMenuContent,
   hideLinks,
   hideMobileDocsLink,
+  singleAction = false,
 }: {
   center?: React.ReactNode;
   actions?: React.ReactNode;
   mobileMenuContent?: React.ReactNode;
   hideLinks?: boolean;
   hideMobileDocsLink?: boolean;
+  singleAction?: boolean;
 } = {}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -83,7 +85,7 @@ export function SiteNav({
   return (
     <div className={s.navOuter}>
       <header className={`${s.navBar} ${scrolled ? s.navBarScrolled : ''}`}>
-        <nav className={s.nav}>
+        <nav className={`${s.nav} ${singleAction ? s.singleAction : ''}`}>
           <Link href="/" className={s.logo} aria-label="Agent Relay home">
             <LogoIcon />
             <LogoWordmark />
@@ -115,7 +117,7 @@ export function SiteNav({
           </div>
 
           {/* Mobile hamburger */}
-          <button
+          {!singleAction && <button
             className={s.hamburger}
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
@@ -150,7 +152,7 @@ export function SiteNav({
                 <line x1="3" y1="18" x2="21" y2="18" />
               </svg>
             )}
-          </button>
+          </button>}
         </nav>
 
         {/* Mobile menu dropdown */}

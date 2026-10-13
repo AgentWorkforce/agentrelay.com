@@ -14,6 +14,7 @@ import {
   WaveDivider,
 } from './index';
 import s from '../../app/landing.module.css';
+import { teamsCloudUrl } from '../../lib/teams-cloud';
 
 export function MessagingLandingPage({ showInvestors = false, showSignup = false }: { showInvestors?: boolean; showSignup?: boolean }) {
   return (
@@ -22,7 +23,15 @@ export function MessagingLandingPage({ showInvestors = false, showSignup = false
         Skip to content
       </a>
 
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav
+        hideLinks={showSignup}
+        singleAction={showSignup}
+        actions={showSignup ? (
+          <a className={`${s.ctaPrimary} ${s.homeNavAction}`} href={teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect')}>
+            Sign up for free
+          </a>
+        ) : <GitHubStarsBadge />}
+      />
 
       <main id="main">
         <Hero showInvestors={showInvestors} showSignup={showSignup} />
