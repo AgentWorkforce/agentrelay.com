@@ -90,7 +90,7 @@ function ConductorChanges({ card }: { card: AppWindowCard }) {
   return (
     <aside className={s.heroAppChanges}>
       <span className={s.heroAppMergeRow}>
-        <span className={s.heroAppReady}>✓ Ready to merge</span>
+        <span className={s.heroAppReady}>✓ Ready</span>
         <span className={s.heroAppMerge}>Merge</span>
       </span>
       <span className={s.heroAppChangesTabs}>
