@@ -7601,60 +7601,36 @@
   color: #f08a8a;
 }
 
-.heroHermesMark {
-  display: inline-grid;
-  place-items: center;
-  width: 12px;
-  height: 12px;
-  flex: none;
-  color: #f2c14e;
-  font-size: 0.8rem;
-  line-height: 1;
-}
-
-.heroHermesBody {
-  padding-top: 7px;
-}
-
-.heroHermesBanner {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  margin-bottom: 7px;
-  padding: 4px 6px;
-  border: 1px solid rgba(242, 193, 78, 0.32);
-  border-radius: 4px;
-  font-family: var(--font-geist-mono), monospace;
-  line-height: 1.25;
-}
-
-.heroHermesBanner strong {
-  color: #f2c14e;
-  font-size: 0.6rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
-.heroHermesBanner span {
-  overflow: hidden;
-  color: rgba(214, 196, 150, 0.72);
-  font-size: 0.5rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.heroHermesTool {
-  color: rgba(226, 205, 150, 0.84);
-}
-
-.heroHermesState {
-  color: #f2c14e;
-}
-
 .heroApp[data-app='devin'] {
   --app-bg: #15171c;
   --app-side: #101216;
   --app-accent: #6b9cff;
+}
+
+.heroApp[data-app='hermes'] {
+  --app-bg: #10122a;
+  --app-side: #0b0d22;
+  --app-line: rgba(120, 130, 255, 0.16);
+  --app-accent: #6d78ff;
+  border-color: rgba(109, 120, 255, 0.34);
+}
+
+.heroApp[data-app='capy'] {
+  --app-bg: #191a19;
+  --app-side: #121312;
+  --app-accent: #6fd1bf;
+}
+
+.heroAppGlyphMark {
+  display: inline-grid;
+  place-items: center;
+  color: var(--app-accent);
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.heroApp[data-app='capy'] .heroAppMark {
+  color: #6fd1bf;
 }
 
 .heroApp[data-app='paseo'] {

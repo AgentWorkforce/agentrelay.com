@@ -6,7 +6,7 @@ import { Grok } from '../brand-icons';
 import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
 import s from '../../app/landing.module.css';
 
-type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok' | 'hermes';
+type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
 
 type LineTone = 'prompt' | 'tool' | 'ok' | 'relay';
 
@@ -83,16 +83,6 @@ export const AGENT_META: Record<
     prompt: '>',
     session: 'Grok Code',
     state: 'Working',
-  },
-  hermes: {
-    activityGlyph: '⚕',
-    branchPrefix: 'hermes',
-    cycle: '7.6s',
-    label: 'Hermes Agent',
-    mode: 'local',
-    prompt: '❯',
-    session: 'Hermes Agent',
-    state: 'Thinking',
   },
   opencode: {
     activityGlyph: '▣',
@@ -172,8 +162,8 @@ const RELAY_ROUTES: RelayRoute[] = [
 ];
 
 /**
- * Three rows of Claude Code, Codex, Grok, OpenCode and Hermes terminal
- * sessions, with Conductor, Claude, Codex, Devin and Paseo desktop app windows
+ * Three rows of Claude Code, Codex, Grok and OpenCode terminal sessions, with
+ * Conductor, Claude, Codex, Devin, Paseo, Hermes and Capy desktop app windows
  * mixed into the band. Each title bar
  * names the agent, while repository and activity context stay in the terminal.
  * The animated lines show the prompt, what the tool did, and where the result
@@ -375,17 +365,6 @@ const APP_CODEX_TESTS: AppWindowCard = {
   sessions: ['Unflake the ws suite', 'Bump the engine', 'Retry budget', 'Docs links'],
 };
 
-const HERMES_GATEWAY: TerminalCard = {
-  agent: 'hermes',
-  repo: 'relay/gateway',
-  size: 'md',
-  lines: [
-    { tone: 'prompt', text: '$ hermes "rotate the webhook secrets"' },
-    { tone: 'tool', text: '⎿ terminal: wrangler secret put · 1.8s' },
-    { tone: 'relay', text: '→ posted rollout plan in #ops' },
-  ],
-};
-
 const APP_DEVIN: AppWindowCard = {
   kind: 'app',
   app: 'devin',
@@ -409,28 +388,6 @@ const APP_PASEO: AppWindowCard = {
 };
 
 type MarqueeCard = TerminalCard | AppWindowCard;
-
-const APP_CONDUCTOR_PRICING: AppWindowCard = {
-  kind: 'app',
-  app: 'conductor',
-  repo: 'relay/web',
-  title: 'Pricing table',
-  ask: 'Wire the pricing table to the plans API',
-  reply: 'Plans load from the API and fall back to cached prices.',
-  relay: '#build-web · handed to Reviewer',
-  sessions: ['pricing-table', 'nav-tokens', 'docs-search'],
-};
-
-const APP_CLAUDE_AUDIT: AppWindowCard = {
-  kind: 'app',
-  app: 'claude',
-  repo: 'relay/infra',
-  title: 'Weekly dependency audit',
-  ask: 'Run the weekly dependency audit',
-  reply: 'Two advisories, both patch bumps. Opened one PR for both.',
-  relay: 'Waiting on Planner in #ship-it',
-  sessions: ['Weekly dependency audit', 'Rotate staging keys', 'Cron drift'],
-};
 
 const APP_DEVIN_FAILOVER: AppWindowCard = {
   kind: 'app',
@@ -465,13 +422,35 @@ const MARQUEE_ROW_TWO: MarqueeCard[] = [
   APP_PASEO,
 ];
 
+const APP_HERMES: AppWindowCard = {
+  kind: 'app',
+  app: 'hermes',
+  repo: 'relay/gateway',
+  title: 'Rotate webhook secrets',
+  ask: 'Rotate the webhook secrets before Friday',
+  reply: 'Rotated all four. Saved the steps as a skill for next time.',
+  relay: 'Posted the rollout plan in #ops',
+  sessions: ['Rotate webhook secrets', 'Morning briefing', 'Backup check'],
+};
+
+const APP_CAPY: AppWindowCard = {
+  kind: 'app',
+  app: 'capy',
+  repo: 'relay/engine',
+  title: 'SCO-031 Find critical bugs',
+  ask: 'Audit recent commits for high-severity bugs',
+  reply: 'One race in the fanout ack path. Patched with a test.',
+  relay: 'Thread in #build-router · Codex picked it up',
+  sessions: ['SCO-031 Find critical bugs', 'SCO-028 Flaky e2e', 'SCO-024 Docs drift'],
+};
+
 const MARQUEE_ROW_THREE: MarqueeCard[] = [
   ROW_THREE[0],
   APP_CODEX,
   ROW_THREE[2],
-  APP_CONDUCTOR_PRICING,
-  HERMES_GATEWAY,
-  APP_CLAUDE_AUDIT,
+  APP_HERMES,
+  ROW_THREE[4],
+  APP_CAPY,
 ];
 
 const SIZE_CLASS = {
@@ -482,7 +461,6 @@ const SIZE_CLASS = {
 
 function TerminalAgentLogo({ agent, idPrefix }: { agent: TerminalAgent; idPrefix: string }) {
   if (agent === 'grok') return <Grok className={s.heroTermMark} />;
-  if (agent === 'hermes') return <span className={s.heroHermesMark}>⚕</span>;
 
   return <AgentToolLogo className={s.heroTermMark} idPrefix={idPrefix} provider={agent} />;
 }
@@ -607,56 +585,6 @@ function GrokTerminalBody({ card }: { card: TerminalCard }) {
         <span className={s.heroTermPromptGlyph}>❯</span>
         <span className={s.heroTermCursor} />
         <span className={s.heroGrokModel}>Grok Code (high)</span>
-      </div>
-    </div>
-  );
-}
-
-function HermesTerminalBody({ card }: { card: TerminalCard }) {
-  const prompt = card.lines.find((line) => line.tone === 'prompt') ?? card.lines[0];
-  const activity = card.lines.find((line) => line.tone === 'tool') ?? card.lines[1];
-  const result = card.lines.find((line) => line.tone === 'relay' || line.tone === 'ok');
-
-  return (
-    <div className={`${s.heroTermBody} ${s.heroHermesBody}`}>
-      <div className={s.heroHermesBanner}>
-        <strong>⚕ HERMES AGENT</strong>
-        <span>Hermes 4 · Nous Portal · ~/{card.repo}</span>
-      </div>
-      <div className={s.heroTermTranscript}>
-        <span
-          className={`${s.heroTermLine} ${s.heroTermPrompt}`}
-          style={{ '--line-delay': '0s' } as TerminalStyle}
-        >
-          <span className={s.heroTermLineMarker}>❯</span>
-          <span className={s.heroTermLineCopy}>{terminalLineCopy(prompt)}</span>
-        </span>
-        <span
-          className={`${s.heroTermLine} ${s.heroHermesTool}`}
-          style={{ '--line-delay': '0.58s' } as TerminalStyle}
-        >
-          <span className={s.heroTermLineMarker}>┊</span>
-          <span className={s.heroTermLineCopy}>{terminalLineCopy(activity)}</span>
-        </span>
-        {result ? (
-          <span
-            className={`${s.heroTermLine} ${TONE_CLASS[result.tone]}`}
-            style={{ '--line-delay': '1.16s' } as TerminalStyle}
-          >
-            <span className={s.heroTermLineMarker}>{LINE_MARKER[result.tone]}</span>
-            <span className={s.heroTermLineCopy}>{terminalLineCopy(result)}</span>
-          </span>
-        ) : null}
-      </div>
-      <div className={s.heroTermComposer}>
-        <span className={s.heroTermLivePrompt}>
-          <span className={s.heroTermPromptGlyph}>❯</span>
-          <span className={s.heroTermCursor} />
-        </span>
-        <span className={`${s.heroTermState} ${s.heroHermesState}`}>
-          <span className={s.heroTermActivityGlyph}>⚕</span>
-          pondering…
-        </span>
       </div>
     </div>
   );
@@ -887,8 +815,7 @@ export function HeroTerminalCard({
 
       {card.agent === 'grok' ? (
         <GrokTerminalBody card={card} />
-      ) : card.agent === 'hermes' ? (
-        <HermesTerminalBody card={card} />
+
       ) : card.agent === 'opencode' ? (
         <OpenCodeTerminalBody card={card} />
       ) : card.agent === 'codex' ? (
