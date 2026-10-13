@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import { Grok } from '../brand-icons';
 import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
+import { HeroPhone, PHONE_META, type PhoneCard } from './HeroPhone';
 import s from '../../app/landing.module.css';
 
 type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
@@ -163,8 +164,8 @@ const RELAY_ROUTES: RelayRoute[] = [
 
 /**
  * Three rows of Claude Code, Codex, Grok and OpenCode terminal sessions, with
- * Conductor, Claude, Codex, Devin, Paseo, Hermes and Capy desktop app windows
- * mixed into the band. Each title bar
+ * Conductor, Claude, Codex, Devin, Paseo, Hermes and Capy desktop app windows,
+ * and ChatGPT dots, GrokBot and Muse phones mixed into the band. Each title bar
  * names the agent, while repository and activity context stay in the terminal.
  * The animated lines show the prompt, what the tool did, and where the result
  * went, which for Agent Relay means a channel, a DM or a PR.
@@ -387,7 +388,34 @@ const APP_PASEO: AppWindowCard = {
   sessions: ['Docs search', 'Page titles', 'Commit safe area', 'Editor typing lag'],
 };
 
-type MarqueeCard = TerminalCard | AppWindowCard;
+const PHONE_DOTS: PhoneCard = {
+  kind: 'phone',
+  agent: 'dots',
+  bot: 'Release dot',
+  ask: 'Did 9.4 ship?',
+  reply: 'Shipped at 9:12. Two agents still on 9.3.',
+  relay: 'Pinged them in #ship-it',
+};
+
+const PHONE_GROKBOT: PhoneCard = {
+  kind: 'phone',
+  agent: 'grokbot',
+  bot: 'Inbox bot',
+  ask: 'Anything urgent from customers?',
+  reply: 'Three bug reports. Repro steps attached.',
+  relay: 'Filed in #support for Codex',
+};
+
+const PHONE_MUSE: PhoneCard = {
+  kind: 'phone',
+  agent: 'muse',
+  bot: 'Muse',
+  ask: 'Move my 3pm, the deploy is running late',
+  reply: 'Moved to 4:30 and told the team.',
+  relay: 'Planner updated in #ship-it',
+};
+
+type MarqueeCard = TerminalCard | AppWindowCard | PhoneCard;
 
 const APP_DEVIN_FAILOVER: AppWindowCard = {
   kind: 'app',
@@ -401,13 +429,15 @@ const APP_DEVIN_FAILOVER: AppWindowCard = {
 };
 
 /**
- * Each row alternates terminal and app, three of each, so the alternation
- * holds across the loop seam and no two neighbours are the same tool.
+ * Each row alternates terminal and app, three of each, with one phone between
+ * a terminal and an app, so no two neighbours are the same kind of surface or
+ * the same tool, across the loop seam too.
  */
 const MARQUEE_ROW_ONE: MarqueeCard[] = [
   ROW_ONE[0],
   APP_CODEX_TESTS,
   ROW_TWO[1],
+  PHONE_DOTS,
   APP_CONDUCTOR,
   ROW_ONE[1],
   APP_DEVIN,
@@ -417,6 +447,7 @@ const MARQUEE_ROW_TWO: MarqueeCard[] = [
   ROW_TWO[0],
   APP_CLAUDE,
   ROW_TWO[2],
+  PHONE_GROKBOT,
   APP_DEVIN_FAILOVER,
   ROW_TWO[3],
   APP_PASEO,
@@ -448,6 +479,7 @@ const MARQUEE_ROW_THREE: MarqueeCard[] = [
   ROW_THREE[0],
   APP_CODEX,
   ROW_THREE[2],
+  PHONE_MUSE,
   APP_HERMES,
   ROW_THREE[4],
   APP_CAPY,
@@ -889,6 +921,17 @@ function TerminalRow({
         {copies.map((copy, copyIndex) =>
           cards.map((card, index) => {
             const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
+
+            if ('kind' in card && card.kind === 'phone') {
+              return (
+                <HeroPhone
+                  card={card}
+                  idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
+                  key={`${rowKey}-${copy}-${index}`}
+                  style={{ '--term-cycle': PHONE_META[card.agent].cycle, '--term-phase': `${phase}s` }}
+                />
+              );
+            }
 
             if ('kind' in card) {
               return (

@@ -7677,6 +7677,154 @@
   border-right-color: transparent;
 }
 
+/* Phones running the labs' personal agents: a third surface in the band. */
+.heroPhone {
+  --phone-accent: #e8eaee;
+  display: flex;
+  flex: none;
+  width: 128px;
+  margin-right: 14px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  background: #0a0b0c;
+  box-shadow: 0 10px 26px rgba(2, 10, 20, 0.38);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.heroPhone[data-phone='grokbot'] {
+  --phone-accent: #f1f1f1;
+}
+
+.heroPhone[data-phone='muse'] {
+  --phone-accent: #4f8dff;
+}
+
+.heroPhoneScreen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 7px 6px;
+  border-radius: 18px;
+  background: #17181a;
+  color: rgba(236, 238, 242, 0.92);
+  font-size: 0.5rem;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.heroPhoneStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.44rem;
+  font-weight: 600;
+}
+
+.heroPhoneIsland {
+  width: 30px;
+  height: 8px;
+  border-radius: 999px;
+  background: #000;
+}
+
+.heroPhoneSignal {
+  width: 12px;
+  height: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+}
+
+.heroPhoneHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.heroPhoneMark {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--phone-accent);
+}
+
+.heroPhoneTitle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.heroPhoneTitle b {
+  overflow: hidden;
+  font-size: 0.52rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroPhoneTitle span {
+  color: rgba(176, 182, 192, 0.7);
+  font-size: 0.42rem;
+}
+
+.heroPhoneAsk {
+  align-self: flex-end;
+  max-width: 92%;
+  padding: 3px 6px;
+  border-radius: 9px 9px 2px 9px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.heroPhone[data-phone='muse'] .heroPhoneAsk {
+  background: #2f6fe4;
+  color: #fff;
+}
+
+.heroPhoneReply {
+  max-width: 96%;
+}
+
+.heroPhoneRelay {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: #85c6ec;
+  font-weight: 500;
+}
+
+.heroPhoneRelay .heroAppRelayDot {
+  margin-top: 3px;
+}
+
+.heroPhoneComposer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: 2px 2px 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: rgba(176, 182, 192, 0.7);
+  font-size: 0.46rem;
+}
+
+.heroPhoneSend {
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(236, 238, 242, 0.92);
+  color: #17181a;
+  font-size: 0.42rem;
+  font-weight: 700;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .heroAppCycleLine {
     animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
@@ -7700,5 +7848,10 @@
 
   .heroAppChanges {
     width: 96px;
+  }
+
+  .heroPhone {
+    width: 118px;
+    margin-right: 10px;
   }
 }
