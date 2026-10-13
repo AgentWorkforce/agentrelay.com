@@ -14,7 +14,7 @@ export function Hero({ showInvestors = false, showSignup = false }: { showInvest
     <div className={s.heroSection}>
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
-          <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
+          <h1 className={`${s.headline} ${s.heroCenterHeadline} ${showSignup ? s.homeSignupHeadline : ''}`}>
             {HOME_HERO_TITLE}
           </h1>
 

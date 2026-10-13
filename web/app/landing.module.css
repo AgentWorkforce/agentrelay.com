@@ -2023,6 +2023,12 @@
   text-wrap: pretty;
 }
 
+@media (min-width: 961px) {
+  .heroCenterColumn .homeSignupHeadline {
+    font-size: clamp(2.4rem, 4.8vw, 4rem);
+  }
+}
+
 .homeSignupNote {
   flex-basis: 100%;
   margin: 0;
