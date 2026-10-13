@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import { Grok } from '../brand-icons';
+import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
 import s from '../../app/landing.module.css';
 
 type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
@@ -161,7 +162,8 @@ const RELAY_ROUTES: RelayRoute[] = [
 ];
 
 /**
- * Three rows of Claude Code, Codex, Grok and OpenCode sessions. Each title bar
+ * Three rows of Claude Code, Codex, Grok and OpenCode terminal sessions, with
+ * Conductor, Claude and Codex desktop app windows mixed into the band. Each title bar
  * names the agent, while repository and activity context stay in the terminal.
  * The animated lines show the prompt, what the tool did, and where the result
  * went, which for Agent Relay means a channel, a DM or a PR.
@@ -316,6 +318,62 @@ export const ROW_THREE: TerminalCard[] = [
       { tone: 'relay', text: '↑ PR #494 → handed to Reviewer' },
     ],
   },
+];
+
+const APP_CONDUCTOR: AppWindowCard = {
+  kind: 'app',
+  app: 'conductor',
+  repo: 'relay/router',
+  title: 'Fix reconnect gap',
+  ask: 'Close the 30s reconnect gap Codex found',
+  reply: 'Retry now backs off from 250ms and resumes the cursor.',
+  relay: '#build-router · Reviewer approved',
+  sessions: ['fix-reconnect-gap', 'usage-export', 'pricing-table'],
+};
+
+const APP_CLAUDE: AppWindowCard = {
+  kind: 'app',
+  app: 'claude',
+  repo: 'relay/billing',
+  title: 'Double-charge in checkout',
+  ask: 'Customers see duplicate charges. Find and fix it?',
+  reply: 'Two POST /charges fire before the first lands. Adding an idempotency key.',
+  relay: 'DM to Coder: ship it with the backfill',
+  sessions: ['Double-charge in checkout', 'Weekly dependency audit', 'Tests for payments'],
+};
+
+const APP_CODEX: AppWindowCard = {
+  kind: 'app',
+  app: 'codex',
+  repo: 'relay/sdk',
+  title: 'Swift threads',
+  ask: 'Port py threads to the Swift SDK',
+  reply: 'Added Thread.reply and streaming. Parity with py and ts.',
+  relay: 'Posted to #sdk-parity · 3 agents acked',
+  sessions: ['Swift threads', 'Pull latest main', 'Fix corner radii', 'Accessibility pass'],
+};
+
+type MarqueeCard = TerminalCard | AppWindowCard;
+
+/** Each row mixes terminal sessions with desktop app windows. */
+const MARQUEE_ROW_ONE: MarqueeCard[] = [
+  ROW_ONE[0],
+  ROW_ONE[1],
+  APP_CONDUCTOR,
+  ROW_ONE[2],
+  ROW_ONE[3],
+  ROW_ONE[4],
+];
+
+const MARQUEE_ROW_TWO: MarqueeCard[] = [ROW_TWO[0], APP_CLAUDE, ROW_TWO[1], ROW_TWO[2], ROW_TWO[3]];
+
+const MARQUEE_ROW_THREE: MarqueeCard[] = [
+  ROW_THREE[0],
+  ROW_THREE[1],
+  ROW_THREE[2],
+  APP_CODEX,
+  ROW_THREE[3],
+  ROW_THREE[4],
 ];
 
 const SIZE_CLASS = {
@@ -665,6 +723,7 @@ export function HeroTerminalCard({
           <TerminalAgentLogo agent={card.agent} idPrefix={idPrefix} />
           {meta.label}
         </span>
+        <span className={s.heroTermBadge}>CLI</span>
         {showAvatar && avatar && (
           <Image
             className={s.heroTermAvatar}
@@ -736,7 +795,7 @@ function TerminalRow({
   rowKey,
   showAvatars,
 }: {
-  cards: TerminalCard[];
+  cards: MarqueeCard[];
   rowClass: string;
   rowKey: string;
   showAvatars: boolean;
@@ -752,9 +811,21 @@ function TerminalRow({
       <div className={`${s.heroMarqueeTrack} ${rowClass}`}>
         {copies.map((copy, copyIndex) =>
           cards.map((card, index) => {
+            const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
+
+            if ('kind' in card) {
+              return (
+                <HeroAppWindow
+                  card={card}
+                  idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
+                  key={`${rowKey}-${copy}-${index}`}
+                  style={{ '--term-cycle': APP_META[card.app].cycle, '--term-phase': `${phase}s` }}
+                />
+              );
+            }
+
             const meta = AGENT_META[card.agent];
             const avatar = TEAM_AVATARS[index % TEAM_AVATARS.length];
-            const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
             const terminalStyle: TerminalStyle = {
               '--term-cycle': meta.cycle,
               '--term-phase': `${phase}s`,
@@ -783,19 +854,19 @@ export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boo
       <RelayNetwork />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={ROW_ONE}
+        cards={MARQUEE_ROW_ONE}
         rowClass={s.heroMarqueeTrackOne}
         rowKey="one"
       />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={ROW_TWO}
+        cards={MARQUEE_ROW_TWO}
         rowClass={s.heroMarqueeTrackTwo}
         rowKey="two"
       />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={ROW_THREE}
+        cards={MARQUEE_ROW_THREE}
         rowClass={s.heroMarqueeTrackThree}
         rowKey="three"
       />

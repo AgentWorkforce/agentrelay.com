@@ -7227,3 +7227,417 @@
 @media (max-width: 600px) {
   .expandedPreviewFeature .featurePreview { padding: 12px 0 0 20px; }
 }
+
+/* ── Desktop app windows in the terminal marquee ─────────────────────────
+   GUI agent apps (Conductor, Claude, Codex) ride the same rows as the
+   terminals. They read as apps rather than shells: sans type, a sidebar,
+   chat bubbles, a composer, and a toolbar in place of a mono title. */
+.heroTermBadge,
+.heroAppBadge {
+  flex: none;
+  padding: 1px 5px;
+  border: 1px solid rgba(116, 184, 226, 0.22);
+  border-radius: 4px;
+  color: rgba(160, 196, 222, 0.78);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+}
+
+.heroAppBadge {
+  margin-left: auto;
+  border-color: rgba(214, 222, 232, 0.2);
+  color: rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.heroApp {
+  --app-bg: #18191b;
+  --app-side: #111213;
+  --app-line: rgba(255, 255, 255, 0.08);
+  --app-text: rgba(236, 238, 242, 0.92);
+  --app-dim: rgba(176, 182, 192, 0.7);
+  --app-accent: #8ab4f8;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 432px;
+  min-height: 158px;
+  margin-right: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: var(--app-bg);
+  box-shadow: 0 10px 26px rgba(2, 10, 20, 0.38);
+  color: var(--app-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.heroApp[data-app='claude'] {
+  --app-bg: #1f1e1c;
+  --app-side: #191816;
+  --app-accent: #d97757;
+}
+
+.heroApp[data-app='codex'] {
+  --app-bg: #1a1a1a;
+  --app-side: #141414;
+  --app-accent: #6aa7ff;
+}
+
+.heroApp[data-app='conductor'] {
+  --app-bg: #161616;
+  --app-side: #101010;
+  --app-accent: #7fd3a0;
+  width: 488px;
+}
+
+.heroAppBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--app-side);
+  border-bottom: 1px solid var(--app-line);
+}
+
+.heroAppToolbar {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.heroAppToolbarIcon {
+  width: 9px;
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 2px;
+}
+
+.heroAppToolbarIcon + .heroAppToolbarIcon {
+  width: 7px;
+  border-radius: 50%;
+}
+
+.heroAppTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.heroAppMark {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--app-text);
+}
+
+.heroAppBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.heroAppRail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 22px;
+  padding-top: 9px;
+  background: var(--app-side);
+  border-right: 1px solid var(--app-line);
+}
+
+.heroAppRail span {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+}
+
+.heroAppSidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 112px;
+  padding: 8px 6px;
+  background: var(--app-side);
+  border-right: 1px solid var(--app-line);
+  font-size: 0.56rem;
+}
+
+.heroAppNav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  color: var(--app-text);
+}
+
+.heroAppNavIcon {
+  width: 8px;
+  color: var(--app-dim);
+  text-align: center;
+}
+
+.heroAppSidebarHeading {
+  margin: 6px 4px 2px;
+  color: var(--app-dim);
+  font-size: 0.5rem;
+  font-weight: 600;
+}
+
+.heroAppSession {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: 4px;
+  color: rgba(220, 224, 230, 0.78);
+}
+
+.heroAppSessionActive {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppSessionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppSessionMeta {
+  color: var(--app-dim);
+  font-size: 0.48rem;
+}
+
+.heroAppUnread {
+  width: 4px;
+  height: 4px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--app-accent);
+}
+
+.heroAppThread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.58rem;
+  line-height: 1.35;
+}
+
+.heroAppCrumb {
+  overflow: hidden;
+  color: var(--app-dim);
+  font-size: 0.54rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppCrumb b {
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppCrumb span {
+  margin: 0 4px;
+}
+
+.heroAppAsk {
+  align-self: flex-end;
+  max-width: 88%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.heroApp[data-app='claude'] .heroAppAsk {
+  border: 1px solid rgba(110, 150, 220, 0.35);
+  background: rgba(60, 90, 150, 0.32);
+}
+
+.heroAppReply {
+  color: var(--app-text);
+}
+
+.heroAppTools {
+  color: var(--app-dim);
+}
+
+.heroAppRelay {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #85c6ec;
+  font-weight: 500;
+}
+
+.heroAppRelayDot {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: #85c6ec;
+  box-shadow: 0 0 6px rgba(133, 198, 236, 0.7);
+}
+
+.heroAppComposer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 4px 4px 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.52rem;
+}
+
+.heroApp[data-app='codex'] .heroAppComposer {
+  border-radius: 999px;
+}
+
+.heroAppComposerHint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppComposerModel {
+  color: var(--app-dim);
+  white-space: nowrap;
+}
+
+.heroAppSend {
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--app-text);
+  color: var(--app-bg);
+  font-size: 0.5rem;
+  font-weight: 700;
+}
+
+.heroApp[data-app='claude'] .heroAppSend {
+  border-radius: 4px;
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.heroAppChanges {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 132px;
+  padding: 7px 7px;
+  background: var(--app-side);
+  border-left: 1px solid var(--app-line);
+  font-size: 0.52rem;
+}
+
+.heroAppMergeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.heroAppReady {
+  color: var(--app-accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.heroAppMerge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #2f8f57;
+  color: #fff;
+  font-weight: 600;
+}
+
+.heroAppChangesTabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--app-line);
+  color: var(--app-dim);
+}
+
+.heroAppChangesTabs b {
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppFile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+}
+
+.heroAppFileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(220, 224, 230, 0.8);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppAdd {
+  color: #7fd3a0;
+}
+
+.heroAppDel {
+  color: #f08a8a;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroAppCycleLine {
+    animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+    animation-delay: calc(var(--term-phase) + var(--line-delay));
+  }
+}
+
+@media (max-width: 600px) {
+  .heroApp {
+    width: 356px;
+    margin-right: 10px;
+  }
+
+  .heroApp[data-app='conductor'] {
+    width: 400px;
+  }
+
+  .heroAppSidebar {
+    width: 96px;
+  }
+
+  .heroAppChanges {
+    width: 112px;
+  }
+}
