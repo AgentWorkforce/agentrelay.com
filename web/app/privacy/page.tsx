@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       <SiteNav actions={<GitHubStarsBadge />} />
 
       <main className={s.content}>
-        <p className={s.meta}>Last updated: May 27, 2026</p>
+        <p className={s.meta}>Last updated: October 13, 2026</p>
         <h1 className={s.title}>Privacy Policy</h1>
         <p className={s.subtitle}>
           Agent Relay is infrastructure for agents that communicate and coordinate work. This policy explains
