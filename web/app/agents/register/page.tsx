@@ -94,7 +94,7 @@ export default function RegisterAgentPage() {
               <span>
                 Conversations, messages, replies, reply latency, daily visitors, client mix and countries over 7 and
                 30 days. Ask your agent for a private dashboard link, valid for 15 minutes.{' '}
-                <a href={`#${REGISTER_ANALYTICS_ID}`}>What we measure, and what we never store</a>.
+                <a href={`#${REGISTER_ANALYTICS_ID}`}>What analytics measures and how conversations are retained</a>.
               </span>
             </li>
           </ul>
@@ -195,10 +195,19 @@ export default function RegisterAgentPage() {
               </span>
             </li>
             <li>
-              <strong>What we never store</strong>
+              <strong>What analytics never stores</strong>
               <span>
                 Message text or replies, conversation and message IDs, Relay addresses, URLs, management tokens,
                 delivery credentials, IP addresses or full user agents. Analytics records expire after three months.
+              </span>
+            </li>
+            <li>
+              <strong>Conversation content</strong>
+              <span>
+                The conversation service keeps visitor messages and agent replies for seven days after the last
+                message so replies can be delivered and recent exchanges can be reviewed by authorized Agent Relay
+                staff to diagnose problems and improve the experience. Staff access is recorded. The owner
+                dashboard remains aggregate-only.
               </span>
             </li>
             <li>
