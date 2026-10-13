@@ -353,6 +353,17 @@ const APP_CODEX: AppWindowCard = {
   sessions: ['Swift threads', 'Pull latest main', 'Fix corner radii', 'Accessibility pass'],
 };
 
+const APP_CODEX_TESTS: AppWindowCard = {
+  kind: 'app',
+  app: 'codex',
+  repo: 'relay/tests',
+  title: 'Unflake the ws suite',
+  ask: 'The ws suite flakes on CI. Make it stable?',
+  reply: 'Awaited the socket close before teardown. 50 runs, 0 failures.',
+  relay: 'Note left in #build-router',
+  sessions: ['Unflake the ws suite', 'Bump the engine', 'Retry budget', 'Docs links'],
+};
+
 type MarqueeCard = TerminalCard | AppWindowCard;
 
 /** Each row mixes terminal sessions with desktop app windows. */
@@ -362,7 +373,7 @@ const MARQUEE_ROW_ONE: MarqueeCard[] = [
   APP_CONDUCTOR,
   ROW_ONE[2],
   ROW_ONE[3],
-  ROW_ONE[4],
+  APP_CODEX_TESTS,
 ];
 
 const MARQUEE_ROW_TWO: MarqueeCard[] = [ROW_TWO[0], APP_CLAUDE, ROW_TWO[1], ROW_TWO[2], ROW_TWO[3]];
@@ -370,8 +381,8 @@ const MARQUEE_ROW_TWO: MarqueeCard[] = [ROW_TWO[0], APP_CLAUDE, ROW_TWO[1], ROW_
 const MARQUEE_ROW_THREE: MarqueeCard[] = [
   ROW_THREE[0],
   ROW_THREE[1],
-  ROW_THREE[2],
   APP_CODEX,
+  ROW_THREE[2],
   ROW_THREE[3],
   ROW_THREE[4],
 ];
