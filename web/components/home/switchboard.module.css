@@ -1,7 +1,15 @@
-/* The hero pins (see PaneStack) and this pane of light glass rises over it:
-   the marquee stays where it is and shows, blurred, through the glass. */
+/* The hero pins (see PaneStack) and this pane of light glass rises over its
+   marquee, which stays put and shows, blurred, through the glass. */
 .stack {
   position: relative;
+}
+
+/* In-flow spacer, not padding: a sticky box stays inside its parent's
+   content box, so the extra length must be content. */
+.track::after {
+  display: block;
+  height: var(--pin-travel, 0px);
+  content: '';
 }
 
 .pinned {
@@ -10,12 +18,18 @@
   z-index: 0;
 }
 
+.rising {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(var(--pin-travel, 0px) * -1);
+}
+
 .switchboard {
   position: relative;
   z-index: 1;
   border-top: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 36px 36px 0 0;
-  background: linear-gradient(180deg, rgba(244, 247, 250, 0.42) 0, rgba(244, 247, 250, 0.62) 520px);
+  background: linear-gradient(180deg, rgba(246, 248, 251, 0.7) 0, rgba(246, 248, 251, 0.86) 520px);
   box-shadow:
     0 -30px 80px rgba(4, 12, 20, 0.35),
     inset 0 1px 0 rgba(255, 255, 255, 0.6);
