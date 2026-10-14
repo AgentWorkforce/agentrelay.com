@@ -135,6 +135,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    ...['/trust', '/security'].map((path) => ({
+      url: absoluteUrl(path), lastModified: now, changeFrequency: 'monthly' as const, priority: 0.5,
+    })),
     {
       url: absoluteUrl('/privacy'),
       lastModified: now,

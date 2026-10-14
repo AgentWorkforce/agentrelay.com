@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   ArrowRight,
   Braces,
@@ -395,6 +396,7 @@ export default function EnterprisePage() {
         </section>
       </main>
 
+      <p style={{ textAlign: 'center', padding: '24px' }}><Link href="/trust">Review current security controls and readiness</Link></p>
       <SiteFooter />
     </div>
   );
