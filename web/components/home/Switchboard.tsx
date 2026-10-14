@@ -118,8 +118,11 @@ function Body({ reveal }: { reveal: boolean }) {
   );
 }
 
-/** `glass` rises over the hero's marquee; `white` is a plain stark-white screen. */
-export function Switchboard({ tone = 'glass' }: { tone?: 'glass' | 'white' }) {
+/**
+ * `glass` rises over the hero's marquee; `white` is a plain stark-white
+ * screen. `breaks` turns the scroll-driven glass break on.
+ */
+export function Switchboard({ tone = 'glass', breaks = true }: { tone?: 'glass' | 'white'; breaks?: boolean }) {
   const paneRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -145,7 +148,7 @@ export function Switchboard({ tone = 'glass' }: { tone?: 'glass' | 'white' }) {
   useEffect(() => {
     const track = trackRef.current;
     const stage = stageRef.current;
-    if (!track || !stage) return;
+    if (!breaks || !track || !stage) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const update = () => {
@@ -163,30 +166,34 @@ export function Switchboard({ tone = 'glass' }: { tone?: 'glass' | 'white' }) {
       window.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
     };
-  }, []);
+  }, [breaks]);
 
   return (
-    <div className={s.breakTrack} ref={trackRef}>
-      <div className={s.stage} data-tone={tone} ref={stageRef}>
+    <div className={breaks ? s.breakTrack : undefined} ref={trackRef}>
+      <div className={breaks ? s.stage : undefined} data-tone={tone} ref={stageRef}>
         <section ref={paneRef} className={s.switchboard} aria-labelledby="switchboard-title">
           <Body reveal />
         </section>
 
-        <svg className={s.cracks} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-          {CRACKS.map((d) => (
-            <path d={d} key={d} pathLength={1} />
-          ))}
-        </svg>
+        {breaks && (
+          <>
+            <svg className={s.cracks} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+              {CRACKS.map((d) => (
+                <path d={d} key={d} pathLength={1} />
+              ))}
+            </svg>
 
-        <div className={s.shards} aria-hidden="true">
-          {SHARDS.map((piece, index) => (
-            <div className={s.shard} key={index} style={{ ...piece.style, clipPath: polygon(piece.points) }}>
-              <div className={s.shardGlass}>
-                <Body reveal={false} />
-              </div>
+            <div className={s.shards} aria-hidden="true">
+              {SHARDS.map((piece, index) => (
+                <div className={s.shard} key={index} style={{ ...piece.style, clipPath: polygon(piece.points) }}>
+                  <div className={s.shardGlass}>
+                    <Body reveal={false} />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

@@ -140,8 +140,8 @@
 }
 
 /* Plain stark white: no glass, no rounded edge, nothing showing through. */
-.stage[data-tone='white'] .switchboard,
-.stage[data-tone='white'] .shardGlass {
+[data-tone='white'] .switchboard,
+[data-tone='white'] .shardGlass {
   border: 0;
   border-radius: 0;
   background: #fff;
