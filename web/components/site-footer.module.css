@@ -58,6 +58,17 @@
   margin: 0;
 }
 
+.updates {
+  max-width: 340px;
+  margin-top: 12px;
+}
+
+.updatesLabel {
+  margin: 0 0 8px;
+  color: var(--footer-muted);
+  font-size: 0.85rem;
+}
+
 .columns {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

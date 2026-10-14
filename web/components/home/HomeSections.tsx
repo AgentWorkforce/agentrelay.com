@@ -5,7 +5,6 @@ import { ArrowRight, Sparkles } from 'lucide-react';
 import { AgentSignup } from '../AgentSignup';
 import { RelayRibbons } from '../RelayRibbons';
 import { FadeIn } from '../FadeIn';
-import { WaitlistForm } from '../WaitlistForm';
 import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
 import teamDashboard from '../../public/teams/teams-dashboard-concept.webp';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
@@ -383,10 +382,6 @@ function FinalCta() {
           Sign up for free
         </a>
         <AgentSignup product="teams" />
-      </div>
-      <div className={s.updates}>
-        <p>Get product updates</p>
-        <WaitlistForm variant="updates" />
       </div>
     </section>
   );

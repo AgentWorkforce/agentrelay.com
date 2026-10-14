@@ -508,17 +508,6 @@
   margin-top: 36px;
 }
 
-.updates {
-  max-width: 420px;
-  margin: 72px auto 0;
-}
-
-.updates p {
-  margin: 0 0 10px;
-  color: var(--fg-muted);
-  font-size: 0.85rem;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .terminalLine {
     animation: terminalLine 9s ease-out infinite both;

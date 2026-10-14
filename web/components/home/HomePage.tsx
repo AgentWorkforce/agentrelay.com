@@ -26,7 +26,7 @@ export function HomeLandingPage() {
         <HomeSections />
       </main>
 
-      <SiteFooter />
+      <SiteFooter productUpdates />
     </div>
   );
 }
