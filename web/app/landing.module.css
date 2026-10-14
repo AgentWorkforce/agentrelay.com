@@ -2004,19 +2004,45 @@
    `.headline` and `.subtitle` are declared further down this file, so a bare
    class here would lose the cascade to them. */
 .heroCenterColumn .heroCenterHeadline {
-  font-size: clamp(2.6rem, 5.4vw, 4.5rem);
-  max-width: 20ch;
+  max-width: none;
+  font-size: clamp(42px, 7vw, 108px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  opacity: 1;
+}
+
+/* Each line rises out of its own clipped box, one after the other. */
+.heroTitleLine {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.heroTitleLineInner {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroTitleLineInner {
+    animation: hero-line-up 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--line, 0) * 110ms + 150ms);
+  }
+}
+
+@keyframes hero-line-up {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
 }
 
 .heroCenterColumn .heroCenterSubtitle {
   max-width: 52ch;
-  margin: -4px auto 0;
-}
-
-@media (min-width: 961px) {
-  .heroCenterColumn .homeSignupHeadline {
-    font-size: clamp(2.4rem, 4.8vw, 4rem);
-  }
+  margin: 12px auto 0;
 }
 
 .homeSignupNote {
@@ -6422,9 +6448,6 @@
     max-width: 640px;
   }
 
-  .heroCenterColumn .heroCenterHeadline {
-    font-size: clamp(2.5rem, 7.6vw, 3.9rem);
-  }
 
   .heroMarquee {
     margin-top: 52px;
@@ -6539,8 +6562,8 @@
   }
 
   .heroCenterColumn .heroCenterHeadline {
-    font-size: clamp(2.75rem, 12vw, 4rem);
-    max-width: none;
+    font-size: 8.6vw;
+    letter-spacing: -0.05em;
   }
 
   .heroCenterColumn .heroCenterSubtitle {
