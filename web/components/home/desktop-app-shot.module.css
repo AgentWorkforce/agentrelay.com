@@ -1,0 +1,729 @@
+/* Agent Relay Desktop product shots, drawn in the app's dark appearance. The
+   window fills the feature preview; the sidebar drops out when the preview is
+   narrow so the sessions table and team list keep their room. */
+.preview {
+  container-type: inline-size;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.window {
+  --bg: #1f1f1f;
+  --side: #262626;
+  --rail: #222;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: rgba(240, 240, 242, 0.94);
+  --dim: rgba(170, 172, 178, 0.82);
+  --blue: #4f8ff7;
+  --green: #4cc26b;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: var(--bg);
+  box-shadow: 0 24px 60px rgba(2, 10, 20, 0.5);
+  color: var(--text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.titleBar {
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 9px 12px;
+  background: var(--rail);
+  border-bottom: 1px solid var(--line);
+}
+
+.titleBar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff5f57;
+}
+
+.titleBar span:nth-child(2) {
+  background: #febc2e;
+}
+
+.titleBar span:nth-child(3) {
+  background: #28c840;
+}
+
+.app {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Rail */
+.rail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 52px;
+  padding: 10px 0;
+  background: var(--rail);
+  border-right: 1px solid var(--line);
+}
+
+.railMark {
+  margin-bottom: 8px;
+}
+
+.railItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 40px;
+  padding: 5px 0;
+  border-radius: 8px;
+  color: var(--dim);
+  font-size: 9px;
+}
+
+.railItemActive {
+  background: rgba(79, 143, 247, 0.16);
+  color: var(--blue);
+}
+
+.railSettings {
+  margin-top: auto;
+}
+
+.railAvatar {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(79, 143, 247, 0.2);
+  color: var(--blue);
+  font-size: 9px;
+  font-weight: 600;
+}
+
+/* Sidebar */
+.sidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 14px;
+  width: 176px;
+  padding: 10px 8px;
+  background: var(--side);
+  border-right: 1px solid var(--line);
+}
+
+.workspace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.workspace b {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.workspaceIcon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(79, 143, 247, 0.22);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.connected {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.connected::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  content: '';
+}
+
+.navGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.navHeading {
+  padding: 0 6px 4px;
+  color: var(--dim);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  color: rgba(230, 230, 234, 0.86);
+}
+
+.navItem svg {
+  flex: none;
+  color: var(--dim);
+}
+
+.navItemActive {
+  background: rgba(79, 143, 247, 0.16);
+  color: var(--text);
+}
+
+.navItemActive svg {
+  color: var(--blue);
+}
+
+.navLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.navInitials {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(79, 143, 247, 0.18);
+  color: var(--blue);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.liveDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+/* Main */
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 12px 16px;
+  overflow: hidden;
+}
+
+.mainHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mainHeader > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mainHeader b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.mainHeader > span:first-child > span {
+  overflow: hidden;
+  color: var(--dim);
+  font-size: 10.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search,
+.messageButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.search {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--dim);
+}
+
+.messageButton {
+  background: #2f63b8;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Upload pipeline */
+.pipeline {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.pipelineTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+  color: var(--blue);
+}
+
+.pipelineTitle b {
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.enabled {
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 14px auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.step b {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.step > span:last-child {
+  overflow: hidden;
+  color: var(--dim);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stepDone,
+.stepActive {
+  display: grid;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+.stepDone {
+  background: var(--green);
+  color: #0d2414;
+}
+
+.stepActive {
+  border: 2px solid rgba(79, 143, 247, 0.3);
+  border-top-color: var(--blue);
+}
+
+/* Sessions table */
+.table {
+  display: flex;
+  flex-direction: column;
+}
+
+.tableHead,
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px 40px;
+  align-items: center;
+  gap: 10px;
+}
+
+.tableHead {
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--dim);
+  font-size: 10.5px;
+}
+
+.row {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.row:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.sessionCell {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+
+.agentIcon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.agentLogo {
+  width: 14px;
+  height: 14px;
+  color: #e8eaee;
+}
+
+.sessionText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sessionText b {
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sessionText span {
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.pillUploaded {
+  background: rgba(76, 194, 107, 0.14);
+  color: #6fd38a;
+}
+
+.pillUploading {
+  background: rgba(79, 143, 247, 0.14);
+  color: #7fb0ff;
+}
+
+.pillOff {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--dim);
+}
+
+.pillProgress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 62%;
+  height: 2px;
+  background: var(--blue);
+}
+
+.toggle {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.toggle::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d9dadd;
+  content: '';
+}
+
+.toggleOn {
+  background: var(--blue);
+}
+
+.toggleOn::after {
+  left: 14px;
+  background: #fff;
+}
+
+/* Team */
+.people {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.person {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.personHead,
+.teamAgent {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.personHead + .teamAgent {
+  border-top: 1px solid var(--line);
+}
+
+.initials {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(79, 143, 247, 0.18);
+  color: var(--blue);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.personText,
+.teamAgentText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.personText b {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.personText span,
+.teamAgentText span {
+  overflow: hidden;
+  color: var(--dim);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.liveCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(76, 194, 107, 0.14);
+  color: #6fd38a;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.teamAgentIcon {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--dim);
+}
+
+.onlineDot {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--bg);
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.teamAgentText b {
+  overflow: hidden;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowButton {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 10.5px;
+  font-weight: 500;
+}
+
+/* Status bar */
+.statusBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-top: 1px solid var(--line);
+  background: var(--rail);
+  color: var(--dim);
+  font-size: 10.5px;
+}
+
+.statusLeft,
+.statusRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uploadingDot,
+.upToDateDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.uploadingDot {
+  background: var(--blue);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .spin {
+    animation: desktopSpin 1.4s linear infinite;
+  }
+
+  .stepActive {
+    animation: desktopSpin 1s linear infinite;
+  }
+
+  .pillProgress {
+    animation: desktopProgress 4.2s ease-in-out infinite;
+  }
+
+  .uploadingDot {
+    animation: desktopPulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes desktopSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes desktopProgress {
+  0% {
+    width: 8%;
+  }
+  85%,
+  100% {
+    width: 100%;
+  }
+}
+
+@keyframes desktopPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@container (max-width: 560px) {
+  .sidebar {
+    display: none;
+  }
+}
+
+@container (max-width: 400px) {
+  .rail,
+  .search,
+  .mainHeader > span:first-child > span {
+    display: none;
+  }
+
+  .tableHead,
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto 30px;
+  }
+}
+
+/* The landing preview drops to 260px on narrow screens; the app window needs
+   more room to show its table. */
+@media (max-width: 960px) {
+  .preview.preview {
+    height: 420px;
+  }
+}

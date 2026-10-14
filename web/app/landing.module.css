@@ -4076,21 +4076,23 @@
   content: none;
 }
 
-.commandsFeature {
+.desktopSessionsFeature {
   order: 6;
   --feature-band-bg: #0b1c2a;
   padding-top: 36px;
+  /* The product shot takes the wider column so the app shows its sidebar. */
+  grid-template-columns: minmax(0, 0.8fr) minmax(320px, 1.2fr);
 }
 
-.commandsFeature::before {
+.desktopSessionsFeature::before {
   border-top: 0;
 }
 
-.commandsFeature .featurePreview {
+.desktopSessionsFeature .featurePreview {
   order: 2;
 }
 
-.commandsFeature .featureCopy {
+.desktopSessionsFeature .featureCopy {
   order: 1;
   max-width: 620px;
 }
@@ -4102,25 +4104,26 @@
   order: 2;
 }
 
-.featureSeparator.a2aSeparator {
+.featureSeparator.desktopTeamSeparator {
   order: 7;
 }
 
-.a2aFeature {
+.desktopTeamFeature {
   order: 8;
   --feature-band-bg: #0b1c2a;
   padding-top: 36px;
+  grid-template-columns: minmax(320px, 1.2fr) minmax(0, 0.8fr);
 }
 
-.a2aFeature::before {
+.desktopTeamFeature::before {
   border-top: 0;
 }
 
-.a2aFeature .featurePreview {
+.desktopTeamFeature .featurePreview {
   order: 1;
 }
 
-.a2aFeature .featureCopy {
+.desktopTeamFeature .featureCopy {
   order: 2;
   max-width: 620px;
 }
@@ -4877,81 +4880,6 @@
   opacity: 0.55;
 }
 
-.actionToolBadges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.actionToolBadge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: rgba(196, 211, 226, 0.74);
-  cursor: default;
-  transition:
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.actionToolBadge:hover,
-.actionToolBadge:focus-visible {
-  color: #ffffff;
-  transform: translateY(-1px);
-}
-
-.actionToolBadge:focus-visible {
-  outline: 1px solid color-mix(in srgb, var(--primary) 48%, white 14%);
-  outline-offset: 4px;
-}
-
-.actionToolBadge svg {
-  flex: none;
-}
-
-.actionToolTooltip {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 0;
-  z-index: 8;
-  width: min(330px, calc(100vw - 48px));
-  padding: 12px 13px;
-  border: 1px solid rgba(156, 207, 255, 0.2);
-  border-radius: 10px;
-  background: rgba(7, 17, 31, 0.94);
-  box-shadow: 0 18px 42px rgba(3, 10, 20, 0.36);
-  color: rgba(214, 228, 241, 0.9);
-  font-size: 0.78rem;
-  font-weight: 500;
-  line-height: 1.45;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(5px);
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-}
-
-.actionToolTooltip strong {
-  display: block;
-  margin-bottom: 4px;
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.actionToolBadge:hover .actionToolTooltip,
-.actionToolBadge:focus-visible .actionToolTooltip {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 .featureList {
   display: grid;
   gap: 12px;
@@ -5527,130 +5455,6 @@
     transform: none;
     transition: none;
   }
-}
-
-.editorWindow {
-  align-self: center;
-  justify-self: stretch;
-  min-width: 0;
-  margin: 22px;
-  overflow: hidden;
-  border: 1px solid rgba(156, 207, 255, 0.16);
-  border-radius: 12px;
-  background: #07111e;
-}
-
-.editorTitlebar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 38px;
-  padding: 0 14px;
-  border-bottom: 1px solid rgba(156, 207, 255, 0.14);
-  background: #111a24;
-}
-
-.editorTitlebar span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.editorTitlebar span:nth-child(1) {
-  background: #ff5f57;
-}
-
-.editorTitlebar span:nth-child(2) {
-  background: #febc2e;
-}
-
-.editorTitlebar span:nth-child(3) {
-  background: #28c840;
-}
-
-.editorTitlebar strong {
-  margin-left: 6px;
-  color: rgba(226, 232, 240, 0.64);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.66rem;
-  font-weight: 750;
-}
-
-.editorCode {
-  margin: 0;
-  padding: 18px 16px 20px;
-  color: rgba(248, 250, 252, 0.9);
-  overflow: hidden;
-}
-
-.editorCode code {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 720;
-  line-height: 1.75;
-  white-space: pre-wrap;
-}
-
-.codeFunction {
-  color: #9ccfff;
-}
-
-.codeVariable {
-  color: #f2c28d;
-}
-
-.codeMuted {
-  color: rgba(226, 232, 240, 0.74);
-}
-
-.editorCode .codeKeyword {
-  color: #ff7b72;
-}
-
-.editorCode .codeString {
-  color: #f8d4af;
-}
-
-.commandsEditorPreview {
-  border: 0;
-  border-radius: 14px;
-  background: #07111f;
-  box-shadow: none;
-}
-
-.commandsEditorPreview .editorWindow {
-  position: absolute;
-  top: 0;
-  right: auto;
-  bottom: auto;
-  left: 0;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  border: 1px solid rgba(156, 207, 255, 0.16);
-  border-radius: 14px;
-  box-sizing: border-box;
-  align-self: stretch;
-  justify-self: stretch;
-}
-
-.commandsEditorPreview .editorTitlebar {
-  min-height: 46px;
-}
-
-.commandsEditorPreview .editorCode {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  padding: clamp(22px, 4vw, 36px);
-}
-
-.commandsEditorPreview .editorCode code {
-  font-size: clamp(0.68rem, 1.1vw, 0.88rem);
-  line-height: 1.9;
 }
 
 .durableTimelinePreview {
@@ -6351,11 +6155,11 @@
     order: 1;
   }
 
-  .commandsFeature .featureCopy {
+  .desktopSessionsFeature .featureCopy {
     order: 1;
   }
 
-  .commandsFeature .featurePreview {
+  .desktopSessionsFeature .featurePreview {
     order: 2;
   }
 
@@ -6393,19 +6197,6 @@
 
   .capabilityCopy p {
     font-size: 0.95rem;
-  }
-
-  .editorWindow {
-    margin: 18px;
-  }
-
-  .editorCode {
-    padding: 16px 14px 18px;
-  }
-
-  .editorCode code {
-    font-size: 0.66rem;
-    line-height: 1.7;
   }
 
   .featureTitle {

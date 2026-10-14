@@ -3,9 +3,9 @@ import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
 import {
-  A2AFeature,
-  AgentToolsFeature,
   Deploy,
+  DesktopSessionsFeature,
+  DesktopTeamFeature,
   Hero,
   HowItWorks,
   MessagingFeature,
@@ -43,9 +43,9 @@ export function MessagingLandingPage({ showInvestors = false, showSignup = false
             <DurableWorkflowFeature />
             <QuickStart />
             <WaveDivider variant="feature" />
-            <AgentToolsFeature />
-            <WaveDivider variant="a2a" className={s.a2aSeparator} />
-            <A2AFeature />
+            <DesktopSessionsFeature />
+            <WaveDivider variant="a2a" className={s.desktopTeamSeparator} />
+            <DesktopTeamFeature />
           </section>
         </div>
 
