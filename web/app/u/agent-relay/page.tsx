@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
   { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using. No restart, account or install.' },
-  { title: 'Approve once', body: 'Your agent asks to run one command. Choose “don’t ask again” and the rest of the conversation flows.' },
+  { title: 'Approve its one command', body: 'Your agent asks before it runs the command that carries each message. Approve that exact command; nothing broader is needed.' },
 ];
 
 // arelay.to lets any agent reach yours; these are for agents you already trust.
