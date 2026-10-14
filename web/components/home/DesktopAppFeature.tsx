@@ -1,6 +1,21 @@
-import { ArrowDown, ArrowDownToLine, CircleCheck, Columns3, Monitor, Pause, Radio, RefreshCw, Search } from 'lucide-react';
+import type { ReactNode } from 'react';
+import {
+  ArrowDown,
+  ArrowDownToLine,
+  Check,
+  CircleCheck,
+  Columns3,
+  CornerDownLeft,
+  Monitor,
+  Pause,
+  Radio,
+  RefreshCw,
+  Search,
+  X,
+} from 'lucide-react';
 
 import { AgentToolLogo } from '../AgentToolLogos';
+import { Cursor, Grok, OpenCode } from '../brand-icons';
 import { FadeIn } from '../FadeIn';
 import landing from '../../app/landing.module.css';
 import s from './desktop-app-shot.module.css';
@@ -120,17 +135,96 @@ function UploadCell({ upload }: { upload: Upload }) {
   );
 }
 
+function MuseMark() {
+  return (
+    <svg viewBox="0 0 24 24" width={18} height={18} fill="none" aria-hidden="true">
+      <path
+        d="M6.5 7.5C3.8 7.5 2.5 10 2.5 12.3S3.9 16.5 6.2 16.5c2.6 0 4.2-3.2 5.8-5.6 1.6-2.4 3.1-3.4 5-3.4 2.6 0 4.5 2.2 4.5 4.8s-1.7 4.2-3.9 4.2c-2.3 0-3.9-3.1-5.6-5.6C10.9 8.6 9 7.5 6.5 7.5Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+const HARNESSES: { label: string; key: string; icon: ReactNode; checked?: boolean }[] = [
+  {
+    label: 'Claude',
+    key: 'claude',
+    icon: <AgentToolLogo className={s.harnessLogo} idPrefix="search-claude" provider="claude" />,
+  },
+  {
+    label: 'Codex',
+    key: 'codex',
+    icon: <AgentToolLogo className={s.harnessLogo} idPrefix="search-codex" provider="codex" />,
+    checked: true,
+  },
+  { label: 'Cursor', key: 'cursor', icon: <Cursor size={18} /> },
+  { label: 'Grok', key: 'grok', icon: <Grok size={18} /> },
+  { label: 'Muse', key: 'muse', icon: <MuseMark /> },
+  { label: 'OpenCode', key: 'opencode', icon: <OpenCode size={18} /> },
+];
+
+/** The search palette: filter by harness, status or date with typed syntax. */
+function SearchPalette() {
+  return (
+    <div className={s.palette}>
+      <span className={s.paletteInput}>
+        <Search size={14} strokeWidth={2} aria-hidden />
+        <span className={s.query}>harness:codex updated:&gt;=2026-10-08</span>
+        <span className={s.caret} />
+        <X className={s.paletteClose} size={14} strokeWidth={2} aria-hidden />
+      </span>
+      <span className={s.paletteAction}>
+        <Search size={13} strokeWidth={2} aria-hidden />
+        Search loaded sessions
+        <CornerDownLeft size={12} strokeWidth={2} aria-hidden />
+      </span>
+      <span className={s.paletteHeading}>Harnesses</span>
+      {HARNESSES.map((harness, index) => (
+        <span
+          className={`${s.paletteOption}${index === 0 ? ` ${s.paletteOptionActive}` : ''}`}
+          key={harness.key}
+        >
+          <span className={s.harnessIcon}>{harness.icon}</span>
+          {harness.label}
+          <code>harness:{harness.key}</code>
+          {harness.checked ? (
+            <span className={s.paletteCheck}>
+              <Check size={10} strokeWidth={3} aria-hidden />
+            </span>
+          ) : null}
+        </span>
+      ))}
+      <span className={s.paletteHeading}>Status</span>
+      <span className={s.paletteOption}>
+        <span className={s.statusFilled} />
+        Active
+        <code>is:active</code>
+      </span>
+      <span className={s.paletteFooter}>
+        <span className={s.paletteTips}>Search syntax tips</span>
+        <span className={s.paletteKeys}>↑↓ navigate · → select · ↵ choose &amp; search</span>
+      </span>
+    </div>
+  );
+}
+
 /**
  * Agent Relay Desktop's sessions window as it ships: every local Claude Code
  * and Codex session with its status, whether it takes messages from the
  * relay, and whether it uploads to the workspace.
  */
-function SessionsShot() {
+function SessionsShot({ searching = false }: { searching?: boolean }) {
   return (
     <div
-      className={s.window}
+      className={`${s.window}${searching ? ` ${s.searching}` : ''}`}
       role="img"
-      aria-label="Agent Relay Desktop: local Claude Code and Codex sessions with message and upload status"
+      aria-label={
+        searching
+          ? 'Agent Relay Desktop: searching sessions by harness, status and date'
+          : 'Agent Relay Desktop: local Claude Code and Codex sessions with message and upload status'
+      }
     >
       <div className={s.titleBar}>
         <span />
@@ -201,6 +295,8 @@ function SessionsShot() {
         ))}
       </div>
 
+      {searching ? <SearchPalette /> : null}
+
       <footer className={s.statusBar}>
         <span className={s.statusLeft}>
           <span className={s.uploadingDot} />
@@ -235,6 +331,24 @@ export function DesktopSessionsFeature() {
       </div>
       <div className={s.preview}>
         <SessionsShot />
+      </div>
+    </FadeIn>
+  );
+}
+
+export function DesktopSearchFeature() {
+  return (
+    <FadeIn direction="up" delay={120} className={`${landing.featureCol} ${landing.desktopSearchFeature}`}>
+      <div className={`${s.preview} ${s.searchPreview}`}>
+        <SessionsShot searching />
+      </div>
+      <div className={landing.featureCopy}>
+        <h3 className={landing.featureTitle}>Find any session, from any tool</h3>
+        <ul className={landing.featureList}>
+          <li>Claude, Codex, Cursor, Grok, Muse and OpenCode sessions land in one list.</li>
+          <li>Filter by harness, status or date as you type, like harness:codex updated:&gt;=2026-10-08.</li>
+          <li>Open the session you need instead of digging through terminals and chat history.</li>
+        </ul>
       </div>
     </FadeIn>
   );

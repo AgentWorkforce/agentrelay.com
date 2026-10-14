@@ -4,6 +4,7 @@ import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
 import {
   Deploy,
+  DesktopSearchFeature,
   DesktopSessionsFeature,
   Hero,
   HowItWorks,
@@ -43,6 +44,7 @@ export function MessagingLandingPage({ showInvestors = false, showSignup = false
             <QuickStart />
             <WaveDivider variant="feature" />
             <DesktopSessionsFeature />
+            <DesktopSearchFeature />
           </section>
         </div>
 

@@ -4084,6 +4084,21 @@
   padding-top: 36px;
 }
 
+.desktopSearchFeature {
+  order: 7;
+  --feature-band-bg: #0b1c2a;
+  grid-template-columns: minmax(320px, 1.25fr) minmax(0, 0.75fr);
+  padding-top: 0;
+}
+
+.desktopSearchFeature::before {
+  border-top: 0;
+}
+
+.desktopSearchFeature .featureCopy {
+  order: 2;
+}
+
 .desktopSessionsFeature::before {
   border-top: 0;
 }
