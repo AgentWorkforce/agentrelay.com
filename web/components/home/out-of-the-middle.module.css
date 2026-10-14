@@ -22,9 +22,9 @@
 }
 
 .label {
-  color: rgba(214, 228, 240, 0.5);
+  color: rgba(214, 228, 240, 0.72);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
