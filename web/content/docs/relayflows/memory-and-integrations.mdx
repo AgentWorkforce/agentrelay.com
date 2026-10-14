@@ -3,7 +3,7 @@ title: 'Memory & integrations'
 description: 'Relayhistory-backed memory and Relayfile-backed integrations — the two substrates a flow reaches without hand-rolling either.'
 ---
 
-A flow doesn't carry its own database or its own Slack client. Two existing systems back it instead: [Relayloop](/docs/loop) for memory across runs, and [Relayfile](/docs/file) for everything a flow reads from or writes to outside itself.
+A flow doesn't carry its own database or its own Slack client. Two existing systems back it instead: [Relayhistory](/docs/relayhistory) for memory across runs, and [Relayfile](/docs/file) for everything a flow reads from or writes to outside itself.
 
 ## Memory
 
@@ -25,7 +25,7 @@ export default flow('triage', { memory: { script: true } }, async (f) => {
 });
 ```
 
-Under the hood this is [Relayloop](/docs/loop)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
+Under the hood this is [Relayhistory](/docs/relayhistory)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
 
 <Note>
   What this feature is judged on is retrieval quality, not the plumbing:

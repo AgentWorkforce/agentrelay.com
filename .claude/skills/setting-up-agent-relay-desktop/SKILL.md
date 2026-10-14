@@ -21,8 +21,11 @@ The finished state is:
 - sharing mode is `new` (new sessions upload automatically), unless an existing
   install already uses another mode and the human chose to keep it (section 4);
 - auto-activate is on, with every existing live session and every future session on the relay;
-- Claude Code direct delivery is on (`crossSessionInbound` is `accept`);
-- this Codex or Claude session is registered and accepts direct delivery;
+- Claude Code direct delivery is on (`crossSessionInbound` is `accept`),
+  unless the human already set `crossSessionInbound` themselves (for example
+  `hold`), which is kept and reported;
+- this Codex or Claude session is registered, and accepts direct delivery
+  unless that kept choice holds or refuses Claude Code's relayed messages;
 - the requested webhook and integration subscriptions work;
 - the human receives the session's `agent@machine` address and verification evidence.
 
@@ -104,9 +107,20 @@ fi
 test -S "${relay_socket:-/nonexistent}" && printf 'socket=%s\n' "$relay_socket"
 ```
 
+Shell variables do not survive between separate tool calls. Every later block
+uses `relay_socket`, and some use variables set earlier in the same section (the
+sign-in poll uses `sign_in`, the sign-in request's response). Run a section's
+blocks in one shell. In a new shell, re-establish every variable the next block
+reads first: re-run this discovery block for `relay_socket`, and never re-send a
+sign-in request just to restore `sign_in`; the poll falls back to a 5-second
+interval without it.
+
 If the socket exists, inspect it before installing anything:
 
 ```sh
+# Checks only that a socket file exists; the curl below is what proves the
+# app answers (a crashed app can leave a stale socket file behind).
+test -S "${relay_socket:-/nonexistent}" || { printf 'relay_socket is unset or names no socket file (%s): run the socket discovery block first.\n' "${relay_socket:-unset}" >&2; exit 1; }
 curl -sS --max-time 60 --unix-socket "$relay_socket" http://relay/setup/status | jq
 ```
 
@@ -172,18 +186,19 @@ and at least 13.0.0. Find the same user-level npm, mise, or nvm CLI the app
 discovers; never run the desktop's `/usr/bin/agent-relay` launcher as a CLI:
 
 ```sh
-relay_cli=
-for candidate in \
-  "$HOME/.local/bin/agent-relay" \
-  "$HOME/.npm-global/bin/agent-relay" \
-  "$HOME/.agentworkforce/relay/bin/agent-relay"
-do
-  if test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
-    relay_cli=$candidate
-    break
-  fi
-done
-if test -z "$relay_cli"; then
+# The installed Agent Relay CLI: user-level npm, mise or nvm, then PATH;
+# never the .deb's /usr/bin/agent-relay Desktop launcher. Section 2 and
+# section 6 define this identically; change both together.
+find_relay_cli() {
+  for candidate in \
+    "$HOME/.local/bin/agent-relay" \
+    "$HOME/.npm-global/bin/agent-relay" \
+    "$HOME/.agentworkforce/relay/bin/agent-relay"
+  do
+    if test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+      printf '%s\n' "$candidate"; return
+    fi
+  done
   for relay_root in \
     "$HOME/.local/share/mise/installs/node" \
     "$HOME/.nvm/versions/node"
@@ -192,11 +207,15 @@ if test -z "$relay_cli"; then
     candidate=$(find -L "$relay_root" -mindepth 3 -maxdepth 3 \
       -path '*/bin/agent-relay' -type f -perm -u+x -print -quit 2>/dev/null)
     if test -n "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
-      relay_cli=$candidate
-      break
+      printf '%s\n' "$candidate"; return
     fi
   done
-fi
+  candidate=$(command -v agent-relay 2>/dev/null || true)
+  if test -n "$candidate" && test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+    printf '%s\n' "$candidate"
+  fi
+}
+relay_cli=$(find_relay_cli)
 if test -n "$relay_cli"; then
   "$relay_cli" --version
   "$relay_cli" integration subscribe --help >/dev/null
@@ -452,7 +471,12 @@ while :; do
         '{sign_in: .data.sign_in, workspace: .data.workspace}'
       break
       ;;
-    preparing|pending_approval) ;;
+    preparing|pending_approval) relay_unknown=0 ;;
+    signed_out|not_signed_in)
+      # signed_out: the attempt ended or was cancelled; not_signed_in: the error code.
+      printf 'Sign-in is not in progress; send the sign-in request again (see Recovery).\n' >&2
+      exit 1
+      ;;
     denied|expired|error)
       msg=$(printf '%s' "$state" | jq -r '.data.sign_in_message // .error.message // "no message reported"')
       printf 'Sign-in %s: %s\n' "$phase" "$msg" >&2
@@ -465,8 +489,18 @@ while :; do
       esac
       exit 1
       ;;
+    *)
+      # A failed or empty status read: allow three in a row, then stop and report.
+      relay_unknown=$(( ${relay_unknown:-0} + 1 ))
+      printf 'Unexpected sign-in state: %s (attempt %s of 3)\n' "${phase:-none}" "$relay_unknown" >&2
+      if test "$relay_unknown" -ge 3; then
+        printf 'Agent Relay status is unreadable; check that the app is running, then retry sign-in.\n' >&2
+        exit 1
+      fi
+      ;;
   esac
-  sleep "$(printf '%s' "$sign_in" | jq -r '.data.interval // 5')"
+  relay_interval=$(printf '%s' "${sign_in:-}" | jq -r '.data.interval // empty' 2>/dev/null)
+  sleep "${relay_interval:-5}"
 done
 ```
 
@@ -504,7 +538,22 @@ survive between separate tool calls.
 Then set and verify all three agent-led defaults even when the app's `/setup/*`
 bootstrap already applied them. Sharing mode `new` uploads every new session;
 auto-activation puts every existing live session and every future session on
-the relay; direct delivery sets Claude Code `crossSessionInbound` to `accept`:
+the relay; direct delivery sets Claude Code `crossSessionInbound` to `accept`
+by default, the same default the app's first-run setup applies.
+
+The default never overrides a value the human set: `{"default":true}` writes
+`accept` only when `~/.claude/settings.json` does not contain the
+`crossSessionInbound` key, and answers the human's own value as `user_choice`.
+A present key with any value (`hold`, `refuse`) is an explicit choice: keep it,
+report it, and continue setup. Only POST `{"enabled":true}` over it when the
+human asks for direct delivery after being told. A build older than this
+default answers `invalid_enabled`; there the skill reads the settings file
+itself and POSTs `{"enabled":true}` only after proving the key is absent (no
+file, or exactly one JSON object without the key) or already `accept`, so an
+older build keeps an explicit choice too. A file that exists but cannot be read or parsed (blank,
+broken, not one object) proves nothing, and neither does a value other than
+`hold`, `refuse` or `accept` (even `""`): stop and ask the human rather than
+writing over it. Only `hold` and `refuse` are kept choices this skill acts on:
 
 ```sh
 # Unset keeps the current mode; set it only to the human's explicit answer.
@@ -517,10 +566,54 @@ case "$relay_sharing_mode" in
   *) printf 'Sharing mode unknown; ask the human before changing sharing.\n' >&2
      exit 1 ;;
 esac
+# absent, unreadable, or present:<value> for crossSessionInbound in the
+# user's Claude settings. Only a regular file holding exactly one JSON object
+# is readable (a dangling symlink or a directory is not); key presence is
+# tracked apart from its value ("" included). setting-up-agent-relay-sessions
+# section 2 mirrors this helper; change both together.
+claude_inbound_choice() {
+  settings_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+  if [ ! -e "$settings_file" ] && [ ! -L "$settings_file" ]; then echo absent; return; fi
+  if [ ! -f "$settings_file" ]; then echo unreadable; return; fi
+  jq -rse 'if length == 1 and (.[0] | type) == "object"
+    then (.[0] | if has("crossSessionInbound")
+      then "present:" + (.crossSessionInbound | if type == "string" then . else tojson end)
+      else "absent" end)
+    else error("not one JSON object") end' "$settings_file" 2>/dev/null || echo unreadable
+}
+file_choice=$(claude_inbound_choice)
 direct_delivery=$(curl -sS --max-time 60 --unix-socket "$relay_socket" -H 'Content-Type: application/json' \
-  -d '{"enabled":true}' http://relay/setup/direct-delivery)
+  -d '{"default":true}' http://relay/setup/direct-delivery)
+if printf '%s\n' "$direct_delivery" | jq -e '.error.code == "invalid_enabled"' >/dev/null; then
+  case "$file_choice" in
+    absent|present:accept)
+      direct_delivery=$(curl -sS --max-time 60 --unix-socket "$relay_socket" -H 'Content-Type: application/json' \
+        -d '{"enabled":true}' http://relay/setup/direct-delivery) ;;
+    present:hold|present:refuse)
+      direct_delivery=$(jq -nc --arg choice "${file_choice#present:}" \
+        '{ok: true, data: {direct_delivery: false, user_choice: $choice}}') ;;
+    *)
+      printf 'Claude Code settings are unreadable or name crossSessionInbound as something other than hold, refuse or accept (%s), so delivery was left unchanged; ask the human.\n' \
+        "$file_choice" >&2
+      exit 1 ;;
+  esac
+fi
 printf '%s\n' "$direct_delivery" | jq
-if ! printf '%s\n' "$direct_delivery" | jq -e '.ok and .data.direct_delivery'; then
+kept_choice=$(printf '%s\n' "$direct_delivery" | \
+  jq -r 'select(.ok and .data.direct_delivery == false) | .data.user_choice // empty |
+    select(. == "hold" or . == "refuse")')
+if printf '%s\n' "$direct_delivery" | jq -e '.ok and .data.direct_delivery == false and
+    .data.user_choice != null and (.data.user_choice | IN("hold", "refuse", "accept") | not)' >/dev/null; then
+  printf 'Your crossSessionInbound is set to an unrecognized value, so delivery was left unchanged; ask the human.\n' >&2
+  exit 1
+fi
+if [ -n "$kept_choice" ]; then
+  case "$kept_choice" in
+    hold) effect='relayed messages to Claude Code wait for your approval' ;;
+    refuse) effect='relayed messages to Claude Code are dropped' ;;
+  esac
+  printf 'Kept your own crossSessionInbound value "%s": %s.\n' "$kept_choice" "$effect" >&2
+elif ! printf '%s\n' "$direct_delivery" | jq -e '.ok and .data.direct_delivery'; then
   if printf '%s\n' "$direct_delivery" | jq -e '.error.code == "managed_policy"' >/dev/null; then
     printf 'Organization-managed Claude settings forbid direct delivery.\n' >&2
   fi
@@ -540,9 +633,11 @@ registration_status=$(curl -sS --max-time 60 --unix-socket "$relay_socket" \
   http://relay/setup/status)
 printf '%s\n' "$registration_status" | \
   jq '{session: .data.session, direct_delivery: .data.direct_delivery, error}'
-printf '%s\n' "$registration_status" | jq -e \
+printf '%s\n' "$registration_status" | jq -e --arg kept "$kept_choice" \
   '.ok and (.data.session.id | type == "string" and length > 0) and
-   .data.session.registered == true and .data.session.direct_delivery == true'
+   .data.session.registered == true and
+   (.data.session.direct_delivery == true or
+    (.data.session.direct_delivery == false and $kept != ""))'
 ```
 
 **Codex on macOS.** The system `curl` hides a Codex session's identity from the
@@ -562,7 +657,11 @@ another process.
 
 Direct delivery is checked first so a managed-policy refusal stops setup
 before auto-activation or upload settings are changed. Report that refusal
-clearly; never claim the three-default setup completed.
+clearly; never claim the three-default setup completed. A kept explicit
+choice is not a refusal: report it as "direct delivery kept off at your
+`crossSessionInbound` value" (with `hold`, relayed messages wait for the
+human's approval; with `refuse`, they are dropped) and finish the rest of
+setup.
 
 Sharing mode and auto-activate are different settings: the former
 controls upload eligibility and the latter controls Relay registration. The
@@ -576,10 +675,23 @@ and report the address from `/setup/status` for each session; never reuse one
 session's address for another. `/register` may omit the session id or
 direct-delivery state, so its response alone is not verification. Require the
 status response to show this session's non-empty id, `registered:true`, and
-`session.direct_delivery:true` as above. An app fix is expected to add those
+`session.direct_delivery:true`, or `session.direct_delivery:false` exactly
+when the human kept their own `crossSessionInbound` (a missing field is never
+success), as above. Do not override a kept choice to satisfy this check; only
+POST `{"enabled":true}` when the human says yes after being told. An app fix is expected to add those
 fields to `/register`, but the status check remains authoritative.
 
 ## 5. Create and test the webhook
+
+**When a kept choice holds this session's messages.** If `/setup/status`
+shows `session.direct_delivery:false` because the human kept their own
+`crossSessionInbound` (a Claude Code session; Codex is unaffected), the
+injection checks in sections 5–7 cannot complete by themselves. With `hold`,
+the test message arrives as a held message: ask the human to approve it, then
+confirm the marker and message id as below. With `refuse`, it is dropped:
+create the webhook or subscription if asked, but report its injection test as
+unverified because of the kept choice, rather than waiting for a marker that
+cannot arrive.
 
 Perform this section only when the human requested a webhook (or explicitly
 asked for the full end-to-end setup). Otherwise skip it; webhook creation is a
@@ -792,6 +904,39 @@ is set:
 
 ```sh
 pull_glob='/github/repos/OWNER/REPO/pulls/NUMBER/**'
+# Shell variables do not survive between tool calls: when relay_cli is unset
+# here, find the installed CLI again with section 2's helper, so an installed
+# CLI is not replaced by the npx fallback.
+# The installed Agent Relay CLI: user-level npm, mise or nvm, then PATH;
+# never the .deb's /usr/bin/agent-relay Desktop launcher. Section 2 and
+# section 6 define this identically; change both together.
+find_relay_cli() {
+  for candidate in \
+    "$HOME/.local/bin/agent-relay" \
+    "$HOME/.npm-global/bin/agent-relay" \
+    "$HOME/.agentworkforce/relay/bin/agent-relay"
+  do
+    if test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+      printf '%s\n' "$candidate"; return
+    fi
+  done
+  for relay_root in \
+    "$HOME/.local/share/mise/installs/node" \
+    "$HOME/.nvm/versions/node"
+  do
+    test -d "$relay_root" || continue
+    candidate=$(find -L "$relay_root" -mindepth 3 -maxdepth 3 \
+      -path '*/bin/agent-relay' -type f -perm -u+x -print -quit 2>/dev/null)
+    if test -n "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+      printf '%s\n' "$candidate"; return
+    fi
+  done
+  candidate=$(command -v agent-relay 2>/dev/null || true)
+  if test -n "$candidate" && test -x "$candidate" && test "$candidate" != /usr/bin/agent-relay; then
+    printf '%s\n' "$candidate"
+  fi
+}
+test -n "${relay_cli:-}" || relay_cli=$(find_relay_cli)
 relay_cli_major=
 if test -n "${relay_cli:-}"; then
   relay_cli_major=$("$relay_cli" --version 2>/dev/null | sed -n 's/^[^0-9]*\([0-9][0-9]*\)\..*/\1/p' | sed -n '1p')
@@ -810,7 +955,8 @@ else
 fi
 ```
 
-Use the `relay_cli` found in section 2, never a bare `agent-relay`: on a
+Use the `relay_cli` found in section 2 (re-discovered above when this runs in
+a new shell), never a bare `agent-relay`: on a
 `.deb` host `/usr/bin/agent-relay` is the Desktop launcher, and `PATH` may
 resolve to it or to a different, older CLI than the one whose version was
 checked.
@@ -830,7 +976,8 @@ review). After causing the event, do not wait or poll within the active turn:
 end the turn saying which event marker is expected. Confirm the injected event
 and record its full message id on the next turn after Relay has delivered it.
 Do not create a comment, review, or rerun without authorization. A successful
-subscribe response alone does not prove end-to-end delivery.
+subscribe response alone does not prove end-to-end delivery. With a kept
+`hold` or `refuse`, follow the note at the start of section 5.
 
 ## 7. Coexist with a REST-polling MCP
 
@@ -852,21 +999,59 @@ Read status again:
 
 ```sh
 curl -sS --max-time 60 --unix-socket "$relay_socket" http://relay/setup/status | \
-  jq '{version: .data.version, sign_in: .data.sign_in, workspace: .data.workspace, sharing_mode: .data.sharing_mode, auto_activate: .data.auto_activate, direct_delivery: .data.direct_delivery, defaults_error: .data.defaults_error, uploader: .data.uploader, session: .data.session, webhook: .data.webhook, integrations: .data.integrations}'
+  jq '{version: .data.version, sign_in: .data.sign_in, workspace: .data.workspace, sharing_mode: .data.sharing_mode, auto_activate: .data.auto_activate, direct_delivery: .data.direct_delivery, direct_delivery_user_choice: .data.direct_delivery_user_choice, defaults_error: .data.defaults_error, uploader: .data.uploader, session: .data.session, webhook: .data.webhook, integrations: .data.integrations}'
 ```
 
 Require all three defaults before declaring setup complete. Set
 `relay_sharing_mode` again to the mode chosen in section 4 (`new`, or the
-existing mode the human kept); the check refuses to guess it:
+existing mode the human kept); the check refuses to guess it. This block runs
+in a fresh shell after the turns of sections 5–7, so it also derives the
+kept direct-delivery choice again: from status's
+`direct_delivery_user_choice`, or from the settings file on a build older
+than that field:
 
 ```sh
 : "${relay_sharing_mode:?set relay_sharing_mode to the mode chosen in section 4}"
-curl -fsS --max-time 60 --unix-socket "$relay_socket" http://relay/setup/status | \
-  jq -e --arg mode "$relay_sharing_mode" '.ok and .data.sharing_mode == $mode and .data.auto_activate == true and .data.direct_delivery == true'
+# absent, unreadable, or present:<value> for crossSessionInbound in the
+# user's Claude settings. Only a regular file holding exactly one JSON object
+# is readable (a dangling symlink or a directory is not); key presence is
+# tracked apart from its value ("" included). setting-up-agent-relay-sessions
+# section 2 mirrors this helper; change both together.
+claude_inbound_choice() {
+  settings_file="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+  if [ ! -e "$settings_file" ] && [ ! -L "$settings_file" ]; then echo absent; return; fi
+  if [ ! -f "$settings_file" ]; then echo unreadable; return; fi
+  jq -rse 'if length == 1 and (.[0] | type) == "object"
+    then (.[0] | if has("crossSessionInbound")
+      then "present:" + (.crossSessionInbound | if type == "string" then . else tojson end)
+      else "absent" end)
+    else error("not one JSON object") end' "$settings_file" 2>/dev/null || echo unreadable
+}
+final_status=$(curl -fsS --max-time 60 --unix-socket "$relay_socket" http://relay/setup/status)
+kept_choice=$(printf '%s\n' "$final_status" | \
+  jq -r 'select(.data.direct_delivery == false) | .data.direct_delivery_user_choice // empty |
+    select(. == "hold" or . == "refuse")')
+# A build older than direct_delivery_user_choice: read the settings file.
+if [ -z "$kept_choice" ] && printf '%s\n' "$final_status" | \
+    jq -e '.data.direct_delivery == false and (.data | has("direct_delivery_user_choice") | not)' >/dev/null; then
+  final_choice=$(claude_inbound_choice)
+  case "$final_choice" in
+    present:hold) kept_choice=hold ;;
+    present:refuse) kept_choice=refuse ;;
+    *) printf 'Direct delivery is off and no kept hold or refuse could be confirmed (%s); do not enable it here, ask the human.\n' \
+         "$final_choice" >&2 ;;
+  esac
+fi
+printf '%s\n' "$final_status" | jq '{direct_delivery: .data.direct_delivery, direct_delivery_user_choice: .data.direct_delivery_user_choice}'
+printf '%s\n' "$final_status" | \
+  jq -e --arg mode "$relay_sharing_mode" --arg kept "$kept_choice" '.ok and .data.sharing_mode == $mode and
+    .data.auto_activate == true and
+    (.data.direct_delivery == true or (.data.direct_delivery == false and $kept != ""))'
 ```
 
 Report the exact version, `signed_in`, signed-in workspace id and name, sharing
-mode (`new`, or the existing mode the human kept), auto-activate `true`, direct-delivery `true`,
+mode (`new`, or the existing mode the human kept), auto-activate `true`,
+direct-delivery `true` (or the human's kept `crossSessionInbound` value),
 uploader health, session address, direct-delivery state, webhook test marker,
 subscriptions, real GitHub event evidence, and polling-coexistence result.
 Separate verified facts from steps that still require a human or external
@@ -956,8 +1141,11 @@ event.
   Require the final list to hold none of that pull request's resources.
 - **Undo a webhook:** `curl -sS --max-time 60 --unix-socket "$relay_socket" -X DELETE http://relay/webhooks | jq`.
 - **Undo direct delivery:** POST `{"enabled":false}` to
-  `/setup/direct-delivery`. On Claude this restores the local opt-out; managed
-  organization policy still wins.
+  `/setup/direct-delivery`. On Claude this writes `"crossSessionInbound":
+  "hold"` (Claude Code's own default) on current builds, an explicit choice
+  that no later default turns back on; older builds removed the key instead,
+  so there set `"hold"` by hand to keep it off. Managed organization policy
+  still wins.
 - **Undo sharing:** POST the human's prior mode (`selected`, `new`, or `all`) to
   `/setup/sharing`. Ask before changing it when the earlier value is unknown.
 - **Auto-activate accidentally enabled:** POST `{"enabled":false}` to

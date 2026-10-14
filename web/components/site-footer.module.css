@@ -99,9 +99,11 @@
     background 0.15s;
 }
 
-.link:hover {
-  color: var(--footer-fg);
-  background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    color: var(--footer-fg);
+    background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+  }
 }
 
 .externalIcon {
@@ -154,10 +156,12 @@
     background 0.15s;
 }
 
-.social:hover {
-  color: var(--footer-fg);
-  border-color: color-mix(in srgb, var(--footer-fg) 34%, transparent);
-  background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .social:hover {
+    color: var(--footer-fg);
+    border-color: color-mix(in srgb, var(--footer-fg) 34%, transparent);
+    background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+  }
 }
 
 @media (max-width: 960px) {

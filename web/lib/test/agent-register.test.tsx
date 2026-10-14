@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,7 +16,9 @@ import RegisterAgentPage, {
 import RegisterChecklistPage, { metadata as checklistMetadata } from '../../app/agents/register/checklist/page';
 import { GET as getChecklistMarkdown } from '../../app/agents/register/checklist.md/route';
 import { generateStaticParams as agentSlugParams } from '../../app/agents/[slug]/page';
+import { DirectoryList } from '../../app/directory/DirectoryList';
 import sitemap from '../../app/sitemap';
+import type { DirectoryAgent } from '../agent-directory';
 import {
   REGISTER_CHECKLIST_BODY,
   REGISTER_CHECKLIST_MARKDOWN,
@@ -62,10 +64,15 @@ describe('/agents/register', () => {
     expect(html).toMatch(/<button[^>]*aria-label="Copy prompt"/);
   });
 
-  it('labels account verification as coming soon and describes domain verification', () => {
-    expect(text).toContain('Agent Relay account verification<span');
-    expect(text).toContain('>Coming soon</span>');
+  it('offers domain proof or workspace registration, without calling the chosen name verified', () => {
+    expect(text).not.toContain('Coming soon');
+    expect(text).toContain('✓ verified domain: example.com');
     expect(text).toContain('re-checked every 30 days');
+    expect(text).toContain('No domain? Register through your Agent Relay Cloud workspace');
+    // No "verified" on a self-asserted name: the register page shows the
+    // chosen organisation name plainly.
+    expect(text).toContain('Example Co');
+    expect(text).not.toContain('verified Agent Relay workspace');
   });
 
   it('has the relay-native disclosure section, linked from the relay-native option', () => {
@@ -76,12 +83,60 @@ describe('/agents/register', () => {
     expect(html).toContain('href="#relay-native-access"');
   });
 
+  it('discloses analytics in human language with the owner dashboard path', () => {
+    expect(html).toContain('id="analytics"');
+    expect(html).toContain('href="#analytics"');
+    for (const phrase of [
+      'Analytics and your dashboard',
+      'median and 95th-percentile reply time',
+      'Claude Code, Codex, Grok, curl or other',
+      'changes every day at midnight UTC',
+      'is not an identity',
+      'visitor-days',
+      'Message text or replies',
+      'IP addresses or full user agents',
+      'POST /api/v1/agents/<handle>/manage/dashboard-link',
+      'works once, for 15 minutes',
+      'last 7 and 30 days',
+      'ends every open link and dashboard session',
+    ]) {
+      expect(text.replace(/\s+/g, ' ')).toContain(phrase);
+    }
+  });
+
+  it('points owners to the dashboard from the profile page', () => {
+    const profile = readFileSync(path.join(webRoot, 'app/u/[handle]/page.tsx'), 'utf8');
+    expect(profile).toContain('Own this agent? Ask your agent for your private analytics dashboard link.');
+    expect(profile).toContain('href={REGISTER_ANALYTICS_URL}');
+  });
+
+  it('links the analytics disclosure from both directory states', () => {
+    const href = 'href="https://agentrelay.com/agents/register#analytics"';
+    // Empty directory: the "first company" block.
+    expect(renderToStaticMarkup(<DirectoryList agents={[]} complete />)).toContain(href);
+    // Populated directory with a company agent: the register note.
+    const company: DirectoryAgent = {
+      handle: 'example-co',
+      displayName: 'Example Co',
+      description: 'An example company agent.',
+      verifiedDomain: 'example.com',
+      verifiedWorkspace: null,
+      verificationMethod: 'domain',
+      deliveryType: 'relay',
+      official: false,
+      chatUrl: 'https://arelay.to/example-co',
+    };
+    const populated = renderToStaticMarkup(<DirectoryList agents={[company]} complete />);
+    expect(populated).toContain(href);
+    expect(populated).toContain('what arelay.to measures');
+  });
+
   it('links the live example, the agent guide and the checklist', () => {
     expect(html).toContain('href="https://arelay.to/agent-relay"');
     // Browsers on arelay.to/register are sent to this page; ?format=md opens the raw guide.
     expect(html).toContain('href="https://arelay.to/register?format=md"');
     expect(html).toContain('href="https://agentrelay.com/directory"');
-    expect(html).toContain('Browse verified agents');
+    expect(html).toContain('Browse the arelay.to directory');
     expect(html).toContain('href="https://agentrelay.com/agents/register/checklist"');
   });
 });
@@ -98,11 +153,17 @@ describe('/agents/register/checklist', () => {
     expect(markdown).toContain('arelay-verify=');
     expect(markdown).toContain('/.well-known/arelay-verification.txt');
     expect(markdown).toContain('within 24 hours');
+    expect(markdown).toContain('No domain? Agent Relay workspace** (relay-native delivery), within 24 hours');
+    expect(markdown).toContain('Workspace: no DNS wait');
+    expect(markdown).toContain('workspace name');
     expect(markdown).toContain('About 10 minutes of agent work');
     expect(markdown).toContain('holds your handle for 24 hours');
     expect(markdown).toContain('hello@agentrelay.com');
     expect(markdown).toContain('https://arelay.to/agent-relay');
-    expect(markdown.trimEnd().split('\n').length).toBeLessThanOrEqual(25);
+    expect(markdown.trimEnd().split('\n').length).toBeLessThanOrEqual(35);
+    expect(markdown).toContain('## 4. Your analytics dashboard');
+    expect(markdown).toContain('valid once for 15 minutes');
+    expect(markdown).toContain('https://agentrelay.com/agents/register#analytics');
   });
 
   it('renders the same Markdown on the page', async () => {
@@ -112,7 +173,7 @@ describe('/agents/register/checklist', () => {
     expect(text).toContain(PROMPT);
     expect(html).toMatch(/<button[^>]*aria-label="Copy code"/);
     expect(text).toContain('<code>_arelay-challenge.<your-domain></code>');
-    expect(text).toContain('A pending registration holds your handle for 24 hours.');
+    expect(text).toContain('a pending registration holds your handle for 24 hours.');
     expect(html).toContain('href="mailto:hello@agentrelay.com"');
     expect(html).toContain('href="https://agentrelay.com/agents/register/checklist.md"');
     expect(checklistMetadata.alternates?.canonical).toBe('https://agentrelay.com/agents/register/checklist');

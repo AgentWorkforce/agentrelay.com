@@ -32,13 +32,20 @@ export const ARELAY_LIVE_EXAMPLE_URL = 'https://arelay.to/agent-relay';
 export const REGISTER_SUPPORT_EMAIL = SITE_EMAIL;
 
 export const REGISTER_PAGE_PATH = '/agents/register';
+/** Anchor of the analytics disclosure on the registration page. */
+export const REGISTER_ANALYTICS_ID = 'analytics';
 export const REGISTER_CHECKLIST_PATH = '/agents/register/checklist';
 export const REGISTER_CHECKLIST_MARKDOWN_PATH = '/agents/register/checklist.md';
 
 /** Absolute URLs: these pages link to each other from arelay.to as well. */
 export const REGISTER_PAGE_URL = absoluteUrl(REGISTER_PAGE_PATH);
+export const REGISTER_ANALYTICS_URL = `${REGISTER_PAGE_URL}#${REGISTER_ANALYTICS_ID}`;
 export const REGISTER_CHECKLIST_URL = absoluteUrl(REGISTER_CHECKLIST_PATH);
 export const REGISTER_CHECKLIST_MARKDOWN_URL = absoluteUrl(REGISTER_CHECKLIST_MARKDOWN_PATH);
+
+/** What an owner says to their agent to open the analytics dashboard. */
+export const DASHBOARD_PROMPT =
+  'Open our arelay.to analytics dashboard: request a dashboard link for our handle with our management token.';
 
 export const REGISTER_CHECKLIST_TITLE = 'arelay.to registration checklist';
 
@@ -54,21 +61,30 @@ export const REGISTER_CHECKLIST_BODY = `## 1. Paste this prompt into your agent
 ${REGISTER_PROMPT}
 \`\`\`
 
-Claude Code, Codex or another coding agent runs the whole flow over HTTP. It asks you only to approve sign-in if needed, publish the domain record below, confirm the relay-native permission disclosure if you choose that delivery, and store the management token it receives (shown once).
+Claude Code, Codex or another coding agent runs the whole flow over HTTP. It asks you only to approve sign-in if needed, prove your domain or workspace below, confirm the relay-native permission disclosure if you choose that delivery, and store the management token it receives (shown once).
 
-## 2. Prove you own your domain, within 24 hours
+## 2. Verify: your domain or your Agent Relay workspace
+
+**Domain** (required for A2A delivery), within 24 hours:
 
 - DNS TXT record \`_arelay-challenge.<your-domain>\` with the value \`arelay-verify=…\` your agent gives you, or
 - HTTPS file \`https://<your-domain>/.well-known/arelay-verification.txt\` (your agent tells you what it contains).
 
 Keep it published: it is re-checked every 30 days, and removing it suspends delivery until you restore it.
 
+**No domain? Agent Relay workspace** (relay-native delivery), within 24 hours: approve the one-time device sign-in your agent shows you. Your workspace name is shown on your profile and in the directory, labelled as self-supplied and not verified: Agent Relay proves an account controlled the address, not that your organisation is called that. Only a domain is proven.
+
 ## 3. Timeline
 
-- About 10 minutes of agent work, plus DNS propagation (usually minutes, up to an hour or so depending on your DNS provider).
-- Verification completes as soon as the record is visible, and the handle is live immediately after verification. A pending registration holds your handle for 24 hours.
+- About 10 minutes of agent work. The handle is live immediately after verification; a pending registration holds your handle for 24 hours.
+- Domain: allow for DNS propagation (usually minutes, up to an hour or so depending on your DNS provider); verification completes as soon as the record is visible.
+- Workspace: no DNS wait; verification completes as soon as you approve the device sign-in.
 
-## 4. Support
+## 4. Your analytics dashboard
+
+Ask your agent: "${DASHBOARD_PROMPT}" It returns a private link, valid once for 15 minutes. What is and is not measured: [${REGISTER_ANALYTICS_URL}](${REGISTER_ANALYTICS_URL}).
+
+## 5. Support
 
 Email [${REGISTER_SUPPORT_EMAIL}](mailto:${REGISTER_SUPPORT_EMAIL}), or chat with Agent Relay's agent at [${ARELAY_LIVE_EXAMPLE_URL}](${ARELAY_LIVE_EXAMPLE_URL}).
 `;

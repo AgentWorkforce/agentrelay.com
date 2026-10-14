@@ -158,7 +158,7 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
     // Only the tools the command needs, plus perl: no timeout, no gtimeout.
     const bin = fixture({});
     const root0 = () => fixture({});
-    for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl']) {
+    for (const tool of ['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv']) {
       const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
       if (found) symlinkSync(found, path.join(bin, tool));
     }
@@ -201,6 +201,210 @@ describe('FLOW_CHECK_RUN_COMMAND', () => {
     const { code, token } = runChecksIn(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 5\n' }), { RELAYFLOW_CHECK_TIMEOUT: '1' });
     expect(code).toBe(0);
     expect(token).toBe('timeout');
+  });
+
+  describe('across several leases (flows#626)', () => {
+    /** Calls the command as the flow does, one bounded wait after another, until it stops saying `running`. */
+    function spanned(root: string, id: string, total: number, wait = 1) {
+      const tokens: string[] = [];
+      const started = Date.now();
+      let result = { code: 0 as number | null, token: 'running', stdout: '', stderr: '' };
+      while (result.token === 'running' && Date.now() - started < 60_000) {
+        const call = Date.now();
+        result = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: id, RELAYFLOW_CHECK_TIMEOUT: String(total), RELAYFLOW_CHECK_WAIT: String(wait) });
+        // Each call returns within its wait (with a second of polling, and the
+        // 5s grace before SIGKILL when it stops a check), never holding the
+        // lease for the whole check.
+        expect(Date.now() - call).toBeLessThan((wait + 8) * 1000);
+        expect(result.code).toBe(0);
+        tokens.push(result.token);
+      }
+      return { tokens, last: result, exit: read(root, '.relayflow/check.log.exit').trim(), elapsed: Number(read(root, '.relayflow/check.log.elapsed').trim()), limit: Number(read(root, '.relayflow/check.log.limit').trim()), log: read(root, '.relayflow/check.log') };
+    }
+
+    /** Whether `pid` (a process, or with a minus a group) is gone, allowing a moment for the kernel to reap it. */
+    function gone(pid: number) {
+      const until = Date.now() + 3000;
+      for (;;) {
+        try { process.kill(pid, 0); } catch { return true; }
+        if (Date.now() > until) return false;
+        spawnSync('/bin/sleep', ['0.1']);
+      }
+    }
+
+    it('finishes a check longer than one wait across calls, and honours its exit status', () => {
+      const passing = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'echo building\nsleep 3\necho suite-ran\n' }), 'a-1', 60);
+      expect(passing.tokens.length).toBeGreaterThan(1);
+      expect(passing.tokens.slice(0, -1).every(token => token === 'running')).toBe(true);
+      expect(passing.tokens.at(-1)).toBe('pass');
+      expect(passing.exit).toBe('0');
+      expect(passing.log).toContain('suite-ran');
+
+      const failing = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 3\necho broke\nexit 3\n' }), 'a-1', 60);
+      expect(failing.tokens.length).toBeGreaterThan(1);
+      expect(failing.tokens.at(-1)).toBe('fail');
+      expect(failing.exit).toBe('3');
+      expect(failing.last.stderr).toContain('exit 3');
+      expect(failing.last.stderr).toContain('broke');
+    }, 30_000);
+
+    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v timeout || command -v gtimeout || command -v perl']).status !== 0)('reports a check that runs past its total as a timeout, not a failure', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      const stopped = spanned(root, 'b-1', 2);
+      expect(stopped.tokens.at(-1)).toBe('timeout');
+      expect(stopped.exit).toBe('124');
+      expect(stopped.limit).toBe(2);
+      expect(stopped.elapsed).toBeGreaterThanOrEqual(2);
+      expect(stopped.elapsed).toBeLessThan(10);
+    }, 30_000);
+
+    it('stops the check\'s whole process group at its total, with SIGKILL after a grace when SIGTERM is ignored', () => {
+      // The suite starts a child of its own and ignores SIGTERM: only a
+      // group-wide SIGKILL stops it all.
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: "trap '' TERM\nsleep 60 &\necho $! > .relayflow/child.pid\nwhile :; do sleep 1; done\n" });
+      const stopped = spanned(root, 'd-1', 2);
+      expect(stopped.tokens.at(-1)).toBe('timeout');
+      expect(stopped.log).toContain('stopped the checks after');
+      const group = Number(read(root, '.relayflow/check.log.group').trim());
+      const child = Number(read(root, '.relayflow/child.pid').trim());
+      expect(group).toBeGreaterThan(0);
+      expect(child).toBeGreaterThan(0);
+      expect(gone(group)).toBe(true);
+      expect(gone(child)).toBe(true);
+      expect(gone(-group)).toBe(true);
+    }, 30_000);
+
+    it('reports a suite\'s own exit 124 as a failure, not as the flow\'s timeout', () => {
+      // A CI-shaped check.sh can run `timeout 60 some-test` itself.
+      const own = spanned(fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 2\nexit 124\n' }), 'f-1', 60);
+      expect(own.tokens.at(-1)).toBe('fail');
+      expect(own.exit).toBe('124');
+    }, 30_000);
+
+    it('tells a resumed waiter that a check stopped for time timed out', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      expect(spanned(root, 'g-1', 2).tokens.at(-1)).toBe('timeout');
+      // The same ID again, as a resumed run asks: still a timeout, not a fail.
+      const again = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'g-1', RELAYFLOW_CHECK_TIMEOUT: '2', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(again.token).toBe('timeout');
+    }, 30_000);
+
+    it('stops a check an earlier attempt left running before it starts a new one', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo $$ >> .relayflow/suites\nsleep 60\n' });
+      // The first attempt starts and is abandoned while its check runs.
+      expect(sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'h-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' }).token).toBe('running');
+      const first = Number(read(root, '.relayflow/check.log.group').trim());
+      expect(gone(-first)).toBe(false);
+      const next = sh(FLOW_CHECK_RUN_COMMAND, root, { RELAYFLOW_CHECK_ID: 'h-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(next.token).toBe('running');
+      expect(next.stderr).toContain('stopped a check an earlier attempt left running');
+      expect(gone(-first)).toBe(true);
+      // Where there is no ps to identify it, a live group with no status is
+      // stopped anyway rather than left writing the same files.
+      const noPs = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'setsid', 'perl']);
+      const other = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 60\n' });
+      expect(sh(FLOW_CHECK_RUN_COMMAND, other, { PATH: noPs, RELAYFLOW_CHECK_ID: 'j-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' }).token).toBe('running');
+      const left = Number(read(other, '.relayflow/check.log.group').trim());
+      const after = sh(FLOW_CHECK_RUN_COMMAND, other, { PATH: noPs, RELAYFLOW_CHECK_ID: 'j-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '1' });
+      expect(after.stderr).toContain('no ps here to identify it');
+      expect(gone(-left)).toBe(true);
+      try { process.kill(-Number(read(other, '.relayflow/check.log.group').trim()), 'SIGKILL'); } catch { /* already gone */ }
+      // Clean up the second check.
+      const second = Number(read(root, '.relayflow/check.log.group').trim());
+      try { process.kill(-second, 'SIGKILL'); } catch { /* already gone */ }
+    }, 30_000);
+
+    /** A PATH with only `tools` on it, so a missing one is genuinely missing. */
+    function onlyTools(tools: string[]) {
+      const bin = fixture({});
+      for (const tool of tools) {
+        const found = spawnSync('/bin/sh', ['-c', `command -v ${tool}`], { encoding: 'utf8' }).stdout.trim();
+        if (found) symlinkSync(found, path.join(bin, tool));
+      }
+      return bin;
+    }
+
+    it.skipIf(spawnSync('/bin/sh', ['-c', 'command -v perl']).status !== 0)('puts the check in a group of its own where there is no setsid, as on macOS', () => {
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'perl', 'rm', 'date', 'mv', 'ps', 'grep']);
+      expect(sh('command -v setsid || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 60 &\necho $! > .relayflow/child.pid\nwait\n' });
+      let result = { token: 'running', code: 0 as number | null, stdout: '', stderr: '' };
+      for (let i = 0; i < 20 && result.token === 'running'; i++) {
+        result = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_ID: 'e-1', RELAYFLOW_CHECK_TIMEOUT: '2', RELAYFLOW_CHECK_WAIT: '1' });
+      }
+      expect(result.token).toBe('timeout');
+      const group = Number(read(root, '.relayflow/check.log.group').trim());
+      // Its own group: not this test's, and gone with everything in it.
+      expect(group).not.toBe(process.pid);
+      expect(gone(-group)).toBe(true);
+      expect(gone(Number(read(root, '.relayflow/child.pid').trim()))).toBe(true);
+    }, 30_000);
+
+    it('runs the check in the step itself where nothing can put it in a group of its own', () => {
+      // Without setsid and perl nothing could stop a detached check's
+      // descendants, so it is never detached: it runs here, within the wait,
+      // where the limiter stops it. macOS has no timeout or gtimeout, and perl
+      // is excluded here on purpose, so the fixture brings its own limiter:
+      // without one the command refuses to run the checks at all (below), and
+      // the timeout case would never exercise the timeout path.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv']);
+      writeFileSync(path.join(bin, 'timeout'), '#!/bin/sh\nsecs=$1; shift\n"$@" & c=$!\n( sleep "$secs"; kill -TERM "$c" 2>/dev/null ) & w=$!\nwait "$c"; status=$?\nkill -TERM "$w" 2>/dev/null\nif [ "$status" -ge 128 ]; then exit 124; fi\nexit "$status"\n', { mode: 0o755 });
+      expect(sh('command -v setsid || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      expect(sh('command -v timeout', fixture({}), { PATH: bin }).stdout.trim()).toBe(path.join(bin, 'timeout'));
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran\n' });
+      const passing = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '5' });
+      expect(passing.token).toBe('pass');
+      expect(passing.stderr).toContain('neither setsid nor perl');
+      // Nothing was detached, so there is no group to wait on, and the step
+      // cannot hold its lease longer than the wait it was given.
+      expect(read(root, '.relayflow/check.log.group')).toBe('');
+      expect(read(root, '.relayflow/check.log')).toContain('suite-ran');
+      // The wait, not the total, is what bounds this step: a 30s suite with a
+      // 60s total and a 2s wait is stopped at 2s and reported as a timeout.
+      const slow = fixture({ [FLOW_CHECK_SCRIPT]: 'sleep 30\n' });
+      const started = Date.now();
+      const timedOut = sh(FLOW_CHECK_RUN_COMMAND, slow, { PATH: bin, RELAYFLOW_CHECK_ID: 'i-2', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' });
+      expect(timedOut.token).toBe('timeout');
+      expect(Date.now() - started).toBeLessThan(20_000);
+      // The limit it was held to, and reports, is the wait, not the total.
+      expect(read(slow, '.relayflow/check.log.limit').trim()).toBe('2');
+    }, 30_000);
+
+    it('refuses to start the checks where nothing can stop them at a time limit', () => {
+      // No timeout, no gtimeout, no perl: a suite started here could not be
+      // stopped, would hold the step's lease until the runner killed it, and
+      // the run would end with no verdict. Cloud's image always has coreutils
+      // `timeout`, so only a local run can reach this.
+      const bin = onlyTools(['sh', 'dirname', 'mkdir', 'tail', 'cat', 'sleep', 'rm', 'date', 'mv', 'setsid']);
+      expect(sh('command -v timeout || command -v gtimeout || command -v perl || echo none', fixture({}), { PATH: bin }).stdout.trim()).toBe('none');
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo suite-ran > ran.txt\nsleep 30\n' });
+      // Both paths refuse: a branch check waited on across leases, and the
+      // single-call check the base-commit comparison uses.
+      const cases: Record<string, string>[] = [{ RELAYFLOW_CHECK_ID: 'k-1', RELAYFLOW_CHECK_TIMEOUT: '60', RELAYFLOW_CHECK_WAIT: '2' }, { RELAYFLOW_CHECK_TIMEOUT: '60' }];
+      for (const env of cases) {
+        const started = Date.now();
+        const result = sh(FLOW_CHECK_RUN_COMMAND, root, { PATH: bin, ...env });
+        // Bounded, explicit, and exit 0 like every other verdict.
+        expect(result).toMatchObject({ code: 0, token: 'unrunnable' });
+        expect(Date.now() - started).toBeLessThan(10_000);
+        expect(result.stderr).toContain('no timeout, gtimeout or perl');
+        expect(result.stderr).toContain('Install coreutils (timeout) or perl');
+        expect(read(root, '.relayflow/check.log')).toContain('they were not run');
+        // The suite never started, so nothing was detached and nothing ran.
+        expect(read(root, 'ran.txt')).toBe('');
+        expect(read(root, '.relayflow/check.log.group')).toBe('');
+      }
+    }, 30_000);
+
+    it('waits for the check an ID already started instead of starting another, so a resumed run picks it up', () => {
+      const root = fixture({ [FLOW_CHECK_SCRIPT]: 'echo started >> .relayflow/starts\nsleep 3\n' });
+      const first = spanned(root, 'c-1', 60);
+      expect(first.tokens.at(-1)).toBe('pass');
+      expect(read(root, '.relayflow/starts').trim().split('\n')).toHaveLength(1);
+      // A new ID is a new check: the re-check after a repair.
+      spanned(root, 'c-2', 60);
+      expect(read(root, '.relayflow/starts').trim().split('\n')).toHaveLength(2);
+    }, 30_000);
   });
 
   it('runs the resolved default end to end, and still fails a failing suite', () => {
@@ -715,6 +919,32 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     expect(unchecked.body).not.toContain('could not be checked for comparison');
   });
 
+  it('tells a failed check, a timed-out check and checks that never ran apart', () => {
+    // A failure: its exit status, and the end of its output.
+    const failed = report('fail', 'skipped', { '.relayflow/check.log.exit': '3\n', '.relayflow/check.log.elapsed': '200\n', '.relayflow/check.log.limit': '1800\n' });
+    expect(failed.body).toContain('**The checks failed** (exit 3). The end of their output is below.');
+    expect(failed.body).toContain('FAIL src/login.test.ts');
+    expect(failed.body).not.toContain('timed out');
+    // A timeout (flows#626): how long it ran against its budget, and what to
+    // do about it. Never "The checks failed".
+    const timedOut = report('timeout', 'skipped', { '.relayflow/check.log.exit': '124\n', '.relayflow/check.log.elapsed': '1803\n', '.relayflow/check.log.limit': '1800\n' });
+    expect(timedOut.body).toContain('**The checks timed out**: they ran for 30m03s of their 30m00s budget and were stopped before they finished, so this is a time limit, not a test failure.');
+    expect(timedOut.body).toContain('Run them locally (`sh .relayflow/check.sh`)');
+    expect(timedOut.body).toContain('raise the check budget (`checkTotal` in the flow)');
+    expect(timedOut.body).toContain('FAIL src/login.test.ts');
+    expect(timedOut.body).not.toContain('The checks failed');
+    expect(timedOut.body).toContain('base not checked');
+    // Without the timings it still says timeout, not failure.
+    const bare = report('timeout', 'unknown');
+    expect(bare.body).toContain('**The checks timed out**: they were stopped at their time budget');
+    expect(bare.body).not.toContain('The checks failed');
+    // Not run: the flow ran out of time before the checks (relaycast-cloud#216).
+    const notRun = report('skipped', '');
+    expect(notRun.body).toContain("ran out of time before it could run this repository's checks");
+    expect(notRun.body).not.toContain('timed out');
+    expect(notRun.body).not.toContain('The checks failed');
+  });
+
   it('keeps the base commit\'s output when its verdict is unknown, such as a base check that ran out of time', () => {
     const unknown = report('fail', 'unknown');
     expect(unknown.body).toContain('could not be checked for comparison');
@@ -729,6 +959,20 @@ describe('FLOW_CHECK_REPORT_COMMAND', () => {
     expect(read(root, '.relayflow/pr-body.md')).toContain('implementer was stopped at its time limit');
     expect(sh(`check=pass; baseline=; implementer_timeout=no; ${FLOW_CHECK_REPORT_COMMAND}`, root).code).toBe(0);
     expect(read(root, '.relayflow/pr-body.md')).not.toContain('implementer was stopped');
+  });
+
+  it('says the checks could not be run, not that they failed, when nothing could bound them', () => {
+    const { body, code } = report('unrunnable', '', { '.relayflow/check.log': 'relayflow: this machine has no timeout, gtimeout or perl, so there is no way to stop the checks at a time limit and they were not run.\n' });
+    expect(code).toBe(0);
+    expect(body).toContain("**Relayflow could not run this repository's checks**");
+    expect(body).toContain('no `timeout`, `gtimeout` or `perl`');
+    expect(body).toContain('This is not a test failure');
+    expect(body).toContain('Install coreutils');
+    expect(body).not.toContain('The checks failed');
+    expect(body).not.toContain('timed out');
+    // What ran is still shown; there is no suite output to show.
+    expect(body).toContain('npm test');
+    expect(body).not.toContain('Output on this branch');
   });
 
   it('says plainly when nothing could be checked', () => {

@@ -1,0 +1,98 @@
+name: Propose Software Garden catalog bump
+
+# Publishing a Software Garden version moves manifest.json but not the
+# recommended-flow catalog's pin. This opens (or updates) the pull request that
+# moves the pin; it never merges. The logic and its tests live in
+# web/scripts/propose-software-garden-catalog-bump.mjs.
+#
+# Two jobs keep the write token away from third-party code: `check` installs
+# dependencies and runs the repository's checks with a read-only token, and
+# `propose` installs nothing (the script uses only Node built-ins) and is the
+# only job that can push a branch or open a pull request.
+#
+# Known limitation: the pull request is opened with GITHUB_TOKEN, and GitHub
+# does not start other workflows for events that token causes, so CI does not
+# run on it automatically. A maintainer runs the CI workflow on the branch (or
+# closes and reopens the pull request). The `check` job runs the same checks.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - web/public/flows/software-garden/manifest.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: software-garden-catalog-bump
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Check the catalog pin
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    outputs:
+      status: ${{ steps.plan.outputs.status }}
+      sha: ${{ steps.plan.outputs.sha }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          # Full history to find the commit where the version first landed.
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Compare the catalog pin with the manifest
+        id: plan
+        run: |
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          node web/scripts/propose-software-garden-catalog-bump.mjs
+
+      - name: Install dependencies
+        if: steps.plan.outputs.status == 'bump'
+        run: npm ci
+
+      - name: Make the edit and run the checks
+        if: steps.plan.outputs.status == 'bump'
+        run: node web/scripts/propose-software-garden-catalog-bump.mjs --check
+
+  propose:
+    name: Open or update the pull request
+    needs: check
+    if: needs.check.outputs.status == 'bump'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout the checked commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          fetch-depth: 0
+          # The script hands git the token through a credential helper that
+          # reads it from the environment, never through git config or argv.
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Open or update the pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node web/scripts/propose-software-garden-catalog-bump.mjs --open-pr

@@ -26,7 +26,7 @@ export const dynamic = 'force-static';
 export const revalidate = false;
 
 const DESCRIPTION =
-  'The prompt, the DNS step, the timeline and who to contact: everything a company needs to put its agent on arelay.to.';
+  'The prompt, the domain or workspace verification step, the timeline and who to contact: everything a company needs to put its agent on arelay.to.';
 
 export const metadata: Metadata = {
   title: REGISTER_CHECKLIST_TITLE,

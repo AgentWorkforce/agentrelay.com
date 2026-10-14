@@ -1,0 +1,287 @@
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+  background: var(--bg);
+}
+@media (min-width: 960px) {
+  .page {
+    grid-template-columns: minmax(0, 1.3fr) minmax(440px, 1fr);
+  }
+}
+
+/* Showcase: decorative and always dark, whatever the theme. */
+.showcase {
+  position: relative;
+  isolation: isolate;
+  min-height: 320px;
+  overflow: clip;
+  color: #f3f8fc;
+  background:
+    radial-gradient(60% 40% at 100% 50%, rgba(74, 144, 194, 0.45), transparent 70%),
+    radial-gradient(70% 50% at 20% 40%, rgba(4, 209, 246, 0.12), transparent 70%),
+    #03070d;
+}
+.field {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.field[data-ready] {
+  opacity: 1;
+}
+.showcase::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(120% 90% at 100% 50%, transparent 55%, rgba(3, 7, 13, 0.55));
+  pointer-events: none;
+}
+/* Form side: quiet, theme-aware. */
+.formSide {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 32px;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--fg);
+}
+/* Light from the showcase's convergence point spills across the seam. */
+@media (min-width: 960px) {
+  .formSide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      radial-gradient(
+        48% 34% at 0% 50%,
+        color-mix(in srgb, var(--primary) 16%, transparent),
+        transparent 70%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 20%,
+        color-mix(in srgb, var(--primary) 55%, transparent) 50%,
+        transparent 80%
+      )
+        left / 1px 100% no-repeat;
+    pointer-events: none;
+  }
+}
+@media (min-width: 960px) {
+  .formSide {
+    padding: 32px 40px;
+  }
+}
+.learnMore {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+}
+.learnMore span {
+  color: var(--fg);
+  font-weight: 500;
+}
+.learnMore svg {
+  width: 13px;
+  height: 13px;
+  transition: transform 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .learnMore:hover svg {
+    transform: translate(2px, -2px);
+  }
+}
+
+.form {
+  align-self: center;
+  justify-self: center;
+  width: min(100%, 360px);
+  animation: rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+}
+.title > svg:first-child {
+  width: auto;
+  height: 34px;
+}
+.title > svg:nth-child(2) {
+  width: auto;
+  height: 28px;
+}
+
+.notice,
+.error {
+  margin: 24px 0 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.notice {
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+.error {
+  border: 1px solid color-mix(in srgb, #f0727f 40%, transparent);
+  background: rgba(240, 114, 127, 0.12);
+}
+
+.google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 50px;
+  margin-top: 32px;
+  border: 1px solid rgba(13, 26, 39, 0.14);
+  border-radius: 12px 12px 12px 4px;
+  background: #fff;
+  color: #0d1a27;
+  font-size: 15px;
+  font-weight: 600;
+  box-shadow:
+    0 1px 2px rgba(13, 26, 39, 0.12),
+    0 8px 24px -12px rgba(0, 0, 0, 0.45);
+  transition:
+    background 160ms ease,
+    box-shadow 200ms ease,
+    transform 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .google:hover {
+    background: #eef4f9;
+    box-shadow:
+      0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent),
+      0 12px 28px -12px rgba(0, 0, 0, 0.45);
+  }
+}
+.google:active {
+  transform: scale(0.99);
+}
+.google:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.google[aria-busy] {
+  cursor: progress;
+  color: #4b5563;
+}
+.spin {
+  width: 20px;
+  height: 20px;
+  color: #2d6a9c;
+  animation: spin 0.8s linear infinite;
+}
+
+.legal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  font-size: 12px;
+}
+.legal a {
+  color: var(--fg-faint);
+}
+@media (hover: hover) and (pointer: fine) {
+  .legal a:hover {
+    color: var(--fg);
+  }
+}
+
+/* Works with: the harness logos from the home page. */
+.worksWith {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px dashed color-mix(in srgb, var(--fg-faint) 35%, transparent);
+}
+.worksWith p {
+  margin: 0;
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.worksWith ul {
+  color: var(--fg);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.worksWith li {
+  display: grid;
+  place-items: center;
+  opacity: 0.72;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .worksWith li:hover {
+    opacity: 1;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .worksWith li:hover {
+    transform: translateY(-2px);
+  }
+}
+.worksWithLogo {
+  width: 22px;
+  height: 22px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 959px) {
+  .showcase {
+    min-height: 200px;
+  }
+  .formSide {
+    grid-template-rows: auto auto;
+  }
+  .form {
+    padding-block: 8px 16px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .field,
+  .google {
+    transition: none;
+  }
+  .form {
+    animation: none;
+  }
+  .spin {
+    animation: none;
+  }
+}

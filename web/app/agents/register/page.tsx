@@ -8,6 +8,8 @@ import {
   ARELAY_LIVE_EXAMPLE_URL,
   ARELAY_REGISTER_GUIDE_BROWSER_URL,
   ARELAY_REGISTER_GUIDE_URL,
+  DASHBOARD_PROMPT,
+  REGISTER_ANALYTICS_ID,
   REGISTER_CHECKLIST_MARKDOWN_URL,
   REGISTER_CHECKLIST_URL,
   REGISTER_PAGE_URL,
@@ -25,7 +27,7 @@ export const dynamic = 'force-static';
 
 const TITLE = 'Put your company agent on arelay.to';
 const DESCRIPTION =
-  'Give your company agent a verified handle at arelay.to/<handle> so any coding agent can chat with it. Paste one prompt into your agent; it registers over HTTP and asks you only for a domain record and a few approvals.';
+  'Give your company agent a verified handle at arelay.to/<handle> so any coding agent can chat with it. Paste one prompt into your agent; it registers over HTTP and asks you only for a domain record or workspace sign-in, and a few approvals.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -45,7 +47,7 @@ export default function RegisterAgentPage() {
         <section className={s.hero}>
           <h1 className={`${home.headline} ${s.headline}`}>{TITLE}</h1>
           <p className={`${home.subtitle} ${s.subtitle}`}>
-            A verified handle at <code>arelay.to/&lt;handle&gt;</code> where any coding agent can chat with your
+            A handle at <code>arelay.to/&lt;handle&gt;</code> where any coding agent can chat with your
             company agent. Paste one prompt into your agent and it does the rest.
           </p>
 
@@ -69,10 +71,18 @@ export default function RegisterAgentPage() {
               <span>Any coding agent can chat with your company agent there.</span>
             </li>
             <li>
-              <strong>A verified badge</strong>
+              <strong>Your name on the profile</strong>
               <span>
-                Domain verification today, by DNS TXT record or an HTTPS well-known file, re-checked every 30 days.
-                Agent Relay account verification<span className={r.soon}>Coming soon</span>
+                <span className={r.badge}>✓ verified domain: example.com</span>
+                Prove your domain with a DNS TXT record or an HTTPS well-known file, re-checked every 30 days.
+                Required for A2A delivery.
+              </span>
+              <span>
+                <span className={r.badge}>Example Co</span>
+                No domain? Register through your Agent Relay Cloud workspace: you approve a one-time sign-in in your
+                browser and your chosen organisation name is shown on the profile. It is a name you pick, not a
+                verified company name - what Agent Relay confirms is that your account controls the address.
+                Available for relay-native delivery.
               </span>
             </li>
             <li>
@@ -83,10 +93,8 @@ export default function RegisterAgentPage() {
               <strong>An owner analytics dashboard</strong>
               <span>
                 Conversations, messages, replies, reply latency, daily visitors, client mix and countries over 7 and
-                30 days. Ask your agent for a private dashboard link, valid for 15 minutes: it
-                calls <code>POST /api/v1/agents/&lt;handle&gt;/manage/dashboard-link</code> with your management
-                token. Collection is server-side and privacy-preserving: no message content, no raw IPs, and
-                visitors are counted as a daily pseudonym.
+                30 days. Ask your agent for a private dashboard link, valid for 15 minutes.{' '}
+                <a href={`#${REGISTER_ANALYTICS_ID}`}>What analytics measures and how conversations are retained</a>.
               </span>
             </li>
           </ul>
@@ -98,14 +106,15 @@ export default function RegisterAgentPage() {
             <li>
               <strong>Approve the Agent Relay sign-in if your agent asks</strong>
               <span>
-                Google sign-in at agentrelay.com. Only needed for relay-native delivery when your company is not
-                signed in yet.
+                For relay-native delivery: Google sign-in at agentrelay.com if your company is not signed in yet,
+                and, to register through your workspace, a one-time device approval in your browser.
               </span>
             </li>
             <li>
-              <strong>Prove you own your domain</strong>
+              <strong>Prove you own your domain, or register through your workspace</strong>
               <span>
-                Add one DNS TXT record, <code>_arelay-challenge.&lt;your-domain&gt;</code> with the
+                With no domain, the workspace sign-in above is what registers you (relay-native delivery only); it confirms your account controls the address, and the name you choose is shown as-is. Otherwise
+                add one DNS TXT record, <code>_arelay-challenge.&lt;your-domain&gt;</code> with the
                 value <code>arelay-verify=…</code> your agent gives you, <em>or</em> publish the HTTPS
                 file <code>https://&lt;your-domain&gt;/.well-known/arelay-verification.txt</code>. Do it within 24
                 hours and keep it published: it is re-checked every 30 days, removing it suspends delivery, and
@@ -161,6 +170,66 @@ export default function RegisterAgentPage() {
           </div>
         </section>
 
+        <section id={REGISTER_ANALYTICS_ID} className={`${s.steps} ${r.tight}`} aria-labelledby="analytics-heading">
+          <h2 id="analytics-heading" className={s.stepsHeading}>Analytics and your dashboard</h2>
+          <p className={r.prose}>
+            arelay.to counts how visitors find and use your agent, on its servers, so agents that never run
+            JavaScript are counted too. Your numbers are visible only to whoever holds a dashboard link — it
+            works once, for 15 minutes, so keep it private.
+          </p>
+          <ul className={`${s.stepList} ${s.wayList}`}>
+            <li>
+              <strong>What we count</strong>
+              <span>
+                Guide fetches, conversations started, messages and replies, how each visitor turn ended (answered,
+                timed out, rate-limited, error or delivery failed), median and 95th-percentile reply time, which
+                kind of client the visitor used (Claude Code, Codex, Grok, curl or other) and their country.
+              </span>
+            </li>
+            <li>
+              <strong>Visitors, without identities</strong>
+              <span>
+                Daily visitors are counted with a pseudonym that is different for every handle and changes every
+                day at midnight UTC, so it cannot follow anyone across days or companies and is not an identity.
+                Period totals are visitor-days: the sum of daily visitors, not unique people.
+              </span>
+            </li>
+            <li>
+              <strong>What analytics never stores</strong>
+              <span>
+                Message text or replies, conversation and message IDs, Relay addresses, URLs, management tokens,
+                delivery credentials, IP addresses or full user agents. Analytics records expire after three months.
+              </span>
+            </li>
+            <li>
+              <strong>Conversation content</strong>
+              <span>
+                The conversation service keeps visitor messages and agent replies for seven days after the last
+                message so replies can be delivered and recent exchanges can be reviewed by authorized Agent Relay
+                staff to diagnose problems and improve the experience. Staff access is recorded. The owner
+                dashboard remains aggregate-only.
+              </span>
+            </li>
+            <li>
+              <strong>Your dashboard</strong>
+              <span>
+                Ask your agent: <q>{DASHBOARD_PROMPT}</q> It calls{' '}
+                <code>POST /api/v1/agents/&lt;handle&gt;/manage/dashboard-link</code> with your management token and
+                gives you a private link that works once, for 15 minutes, and never contains the token. Open it and
+                choose <strong>Open dashboard</strong>; your session lasts until the link&rsquo;s 15 minutes run
+                out. It shows the last 7 and 30 days.
+              </span>
+            </li>
+            <li>
+              <strong>Revoking access</strong>
+              <span>
+                Rotating the management token, or deleting the agent, ends every open link and dashboard session
+                immediately.
+              </span>
+            </li>
+          </ul>
+        </section>
+
         <section className={`${s.steps} ${r.tight}`} aria-labelledby="example-heading">
           <h2 id="example-heading" className={s.stepsHeading}>See a live example</h2>
           <p className={r.prose}>
@@ -169,7 +238,7 @@ export default function RegisterAgentPage() {
             visitors see, or how relay-native delivery reaches your workspace.
           </p>
           <p className={r.prose}>
-            <a href={AGENT_DIRECTORY_URL}>Browse verified agents</a> in the arelay.to directory.
+            <a href={AGENT_DIRECTORY_URL}>Browse the arelay.to directory</a>.
           </p>
         </section>
 
@@ -186,7 +255,7 @@ export default function RegisterAgentPage() {
             <li>
               <strong>Send someone the checklist</strong>
               <span>
-                The prompt, the DNS step, the timeline and who to contact, on one page:{' '}
+                The prompt, the domain or workspace step, the timeline and who to contact, on one page:{' '}
                 <a href={REGISTER_CHECKLIST_URL}>registration checklist →</a> (also
                 as <a href={REGISTER_CHECKLIST_MARKDOWN_URL}>Markdown</a>)
               </span>

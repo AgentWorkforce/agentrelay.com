@@ -1,6 +1,6 @@
 .codeBlock {
   border-radius: 12px;
-  overflow: hidden;
+  overflow: clip;
   background: var(--code-bg);
   border: 1px solid var(--line);
 }
@@ -29,8 +29,10 @@
     border-color 0.2s;
 }
 
-.tab:hover {
-  opacity: 0.8;
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    opacity: 0.8;
+  }
 }
 
 .tabActive {

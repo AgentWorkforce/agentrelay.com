@@ -146,23 +146,118 @@ const PERL_LIMITER =
  * Every limiter stops the check's whole process group and exits 124. The
  * caller may set `check_dir` (where to run, default here) and `check_out`
  * (the log).
+ *
+ * Some suites need more than one lease: flows#626 (run b71c1687) stopped at
+ * 840s on a check.sh that rightly mirrors its CI (a kernel release build,
+ * cargo tests, the schema, the surface gate and the full SDK tests). With
+ * `RELAYFLOW_CHECK_WAIT` (seconds) set, the check runs detached (setsid, or
+ * nohup where there is none, every descriptor away from the lease) under the
+ * in a process group of its own (setsid, else perl's setpgrp), with
+ * `RELAYFLOW_CHECK_TIMEOUT` as its total, and each call waits at most
+ * `RELAYFLOW_CHECK_WAIT` for it: `running` means call again. Where neither
+ * exists nothing could stop the check's descendants, so it is not detached at
+ * all: it runs in this call under the limiter, within the wait.
+ *
+ * With no limiter at all — no `timeout`, no `gtimeout`, no `perl` — nothing
+ * could bound the suite: it would hold the step's lease until the runner
+ * killed it, and the run would end with no verdict at all, which is the
+ * failure this plan exists to prevent. So the check is not started: the
+ * command reports `unrunnable`, which the report reads as "could not run the
+ * checks", and names what to install. Cloud's image always has coreutils
+ * `timeout`, so only a local run can reach this. The waiting call enforces the total: at it, it sends the check's
+ * whole group SIGTERM, then SIGKILL after a 5s grace, and reports `timeout`.
+ * The group is the detached shell's own (it records `$$`), so the signal
+ * reaches the suite and everything it started, not just a wrapper.
+ * `RELAYFLOW_CHECK_ID` names the attempt. A call with a new ID starts a
+ * check; one with the ID already started only waits, so a resumed run picks
+ * up the check it started. One that died without an exit status is a `fail`.
+ * Without `RELAYFLOW_CHECK_WAIT` the check runs in this call under the
+ * limiter, as the base-commit check does.
+ *
+ * Every finished check leaves its exit status, the seconds it ran and its
+ * limit next to the log (`$check_out.exit`, `.elapsed`, `.limit`), so the
+ * report can say how a check failed or how long it ran before it was stopped.
  */
+const CHECK_RUNNER = 'cd "$check_dir" || { printf "%s\\n" 126 > "$check_out.status"; exit 0; }; unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM; '
+  + 'case "$limiter" in (timeout|gtimeout) "$limiter" "$limit" sh "$script" ;; (perl) perl -e "$relayflow_limiter" "$limit" sh "$script" ;; (*) sh "$script" ;; esac > "$check_out" 2>&1 < /dev/null; '
+  + 'printf "%s\\n" "$?" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"';
+
+/**
+ * The detached check: it records its own process group, runs the suite in
+ * it, and keeps a deadline of its own a minute past the total, so a check
+ * whose flow stopped waiting (an interrupted run) still ends. A check stopped
+ * for time leaves `.stopped` beside its status, so whoever reads the status,
+ * a resumed waiter included, reports a timeout.
+ */
+const DETACHED_CHECK_RUNNER = 'printf "%s\\n" "$$" > "$check_out.group"; cd "$check_dir" || { printf "%s\\n" 126 > "$check_out.status"; exit 0; }; unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM; '
+  + 'sh "$script" > "$check_out" 2>&1 < /dev/null & c=$!; '
+  + '( s=$(date +%s); while kill -0 "$c" 2>/dev/null; do if [ $(( $(date +%s) - s )) -gt $((limit + 60)) ]; then : > "$check_out.stopped"; printf "%s\\n" 124 > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"; kill -KILL "-$$" 2>/dev/null || kill -KILL "$c" 2>/dev/null; fi; sleep 5; done ) > /dev/null 2>&1 & '
+  + 'wait "$c"; st=$?; if [ ! -f "$check_out.stopped" ]; then printf "%s\\n" "$st" > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"; fi';
+
+/** Starts its arguments in a new process group, deaf to SIGHUP as nohup is. */
+const PERL_GROUP = '$SIG{HUP} = "IGNORE"; setpgrp(0, 0); exec @ARGV or exit 127';
+
 export const FLOW_CHECK_RUN_COMMAND = [
   'root="$PWD"',
   `script="\${check_script:-$root/${FLOW_CHECK_SCRIPT}}"`,
   'check_dir="${check_dir:-$root}"',
   'check_out="${check_out:-$root/.relayflow/check.log}"',
   'mkdir -p "$(dirname "$check_out")"',
+  'rm -f "$check_out.exit" "$check_out.elapsed" "$check_out.limit"',
   'if [ ! -s "$script" ]; then echo "relayflow: there is no check script, so no checks ran." > "$check_out"; echo "relayflow: there is no check script, so no checks ran." >&2; echo none'
     + '; else limit="${RELAYFLOW_CHECK_TIMEOUT:-840}"; limiter='
     + '; if command -v timeout >/dev/null 2>&1; then limiter=timeout; elif command -v gtimeout >/dev/null 2>&1; then limiter=gtimeout; elif command -v perl >/dev/null 2>&1; then limiter=perl; fi'
-    + `; run_limited() { case "$limiter" in (timeout|gtimeout) "$limiter" "$limit" "$@" ;; (perl) perl -e ${shq(PERL_LIMITER)} "$limit" "$@" ;; (*) "$@" ;; esac; }`
-    + '; echo "relayflow: running $script in $check_dir" >&2'
-    + '; ( cd "$check_dir" && unset GIT_CONFIG_COUNT GIT_CONFIG_GLOBAL GIT_CONFIG_NOSYSTEM && run_limited sh "$script" ) > "$check_out" 2>&1 < /dev/null; status=$?'
-    + '; tail -n 40 "$check_out" >&2'
-    + '; if [ "$status" -eq 0 ]; then echo "relayflow: the checks passed." >&2; echo pass'
-    + '; elif [ -n "$limiter" ] && [ "$status" -eq 124 ]; then echo "relayflow: the checks did not finish within ${limit}s." >&2; echo timeout'
-    + '; else echo "relayflow: the checks failed with exit $status; the full output is in $check_out." >&2; echo fail; fi'
+    + `; relayflow_limiter=${shq(PERL_LIMITER)}`
+    // Only these can put the check in a group of its own, which is what makes
+    // stopping it, and everything it started, possible.
+    + '; grouper=; if command -v setsid >/dev/null 2>&1; then grouper=setsid; elif command -v perl >/dev/null 2>&1; then grouper=perl; fi'
+    + '; relayflow_inline='
+    + '; relayflow_check_done() { printf \'%s\\n\' "$1" > "$check_out.exit"; printf \'%s\\n\' "$2" > "$check_out.elapsed"; printf \'%s\\n\' "$limit" > "$check_out.limit"; tail -n 40 "$check_out" >&2'
+    + '; if [ "$1" -eq 0 ]; then echo "relayflow: the checks passed." >&2; echo pass'
+    // Exit 124 is a timeout only when this flow stopped the check: the
+    // limiter's, in this call, or the total's. A suite's own 124 is a failure.
+    + '; elif [ "$1" -eq 124 ] && { { [ "$relayflow_inline" = yes ] && [ -n "$limiter" ]; } || [ "${3:-}" = stopped ]; }; then echo "relayflow: the checks did not finish within ${limit}s (they ran $2s)." >&2; echo timeout'
+    + '; else echo "relayflow: the checks failed with exit $1; the full output is in $check_out." >&2; echo fail; fi; }'
+    // No limiter, so nothing could stop the suite at any limit: it would hold
+    // this step's lease until the runner killed the step, and the run would
+    // end with no verdict. The checks are not started at all.
+    + `; if [ -z "$limiter" ]; then relayflow_unrunnable="relayflow: this machine has no timeout, gtimeout or perl, so there is no way to stop the checks at a time limit and they were not run. Install coreutils (timeout) or perl, then run again."`
+    + '; printf \'%s\\n\' "$relayflow_unrunnable" > "$check_out"; echo "$relayflow_unrunnable" >&2; echo unrunnable'
+    + '; elif [ -z "${RELAYFLOW_CHECK_WAIT:-}" ] || [ -z "$grouper" ]; then relayflow_inline=yes'
+    // Nothing here could stop a detached check's descendants, so the check
+    // runs in this call instead, within the wait this step may hold its lease,
+    // where the limiter above stops it.
+    + '; if [ -n "${RELAYFLOW_CHECK_WAIT:-}" ]; then if [ "$RELAYFLOW_CHECK_WAIT" -lt "$limit" ]; then limit="$RELAYFLOW_CHECK_WAIT"; fi; echo "relayflow: neither setsid nor perl is installed, so the checks cannot be detached; they run in this step under $limiter, limited to ${limit}s." >&2; fi'
+    + '; echo "relayflow: running $script in $check_dir" >&2; since=$(date +%s)'
+    + `; ( ${CHECK_RUNNER} ); relayflow_check_done "$(cat "$check_out.status" 2>/dev/null || echo 125)" "$(( $(date +%s) - since ))"; rm -f "$check_out.status"`
+    + '; else id="${RELAYFLOW_CHECK_ID:-1}"'
+    // The group leader is the detached shell; until it has said so, the pid
+    // that started it stands in.
+    + '; relayflow_group() { cat "$check_out.group" 2>/dev/null || cat "$check_out.pid" 2>/dev/null; }'
+    + '; relayflow_alive() { g=$(relayflow_group); [ -n "$g" ] && { kill -0 "-$g" 2>/dev/null || kill -0 "$g" 2>/dev/null; }; }'
+    + '; relayflow_stop() { g=$(relayflow_group); [ -n "$g" ] || return 0; kill -TERM "-$g" 2>/dev/null || kill -TERM "$g" 2>/dev/null; i=0; while relayflow_alive && [ "$i" -lt 5 ]; do sleep 1; i=$((i + 1)); done; kill -KILL "-$g" 2>/dev/null || kill -KILL "$g" 2>/dev/null; return 0; }'
+    + '; relayflow_status_done() { if [ -f "$check_out.stopped" ]; then relayflow_check_done "$(cat "$check_out.status")" "$1" stopped; else relayflow_check_done "$(cat "$check_out.status")" "$1"; fi; }'
+    + '; if [ "$(cat "$check_out.id" 2>/dev/null)" != "$id" ]; then'
+    // A check an earlier attempt left running (an interrupted local run, a
+    // reused workspace) would write the same files, so it is stopped first.
+    // `ps` tells the real check from a recycled pid; where there is no `ps`, a
+    // live group with no status is stopped anyway, because a second check
+    // writing these files is the worse risk.
+    + ' if [ ! -f "$check_out.status" ] && relayflow_alive; then'
+    + ' if ! command -v ps >/dev/null 2>&1; then relayflow_stop; echo "relayflow: stopped what an earlier attempt left running (no ps here to identify it)." >&2'
+    + '; elif ps -o args= -p "$(relayflow_group)" 2>/dev/null | grep -qF \'check_out.group\'; then relayflow_stop; echo "relayflow: stopped a check an earlier attempt left running." >&2; fi; fi'
+    + '; rm -f "$check_out.status" "$check_out.status.tmp" "$check_out.stopped" "$check_out.group" "$check_out.pid"; : > "$check_out"; date +%s > "$check_out.since"; printf \'%s\\n\' "$id" > "$check_out.id"'
+    + '; export check_dir check_out script limit'
+    + `; if [ "$grouper" = setsid ]; then setsid sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & else perl -e ${shq(PERL_GROUP)} sh -c ${shq(DETACHED_CHECK_RUNNER)} > /dev/null 2>&1 < /dev/null & fi`
+    + '; echo "$!" > "$check_out.pid"; echo "relayflow: started $script in $check_dir; it may run ${limit}s in all, and each step waits up to ${RELAYFLOW_CHECK_WAIT}s for it." >&2; fi'
+    + '; since=$(cat "$check_out.since" 2>/dev/null || date +%s); waited=0'
+    + '; while [ ! -f "$check_out.status" ] && [ "$waited" -lt "$RELAYFLOW_CHECK_WAIT" ] && relayflow_alive && [ $(( $(date +%s) - since )) -lt "$limit" ]; do sleep 1; waited=$((waited + 1)); done'
+    + '; elapsed=$(( $(date +%s) - since ))'
+    + '; if [ -f "$check_out.status" ]; then relayflow_status_done "$elapsed"'
+    + '; elif relayflow_alive && [ "$elapsed" -lt "$limit" ]; then echo "relayflow: the checks are still running (${elapsed}s of ${limit}s)." >&2; echo running'
+    + '; elif relayflow_alive; then : > "$check_out.stopped"; printf \'%s\\n\' 124 > "$check_out.status.tmp"; mv -f "$check_out.status.tmp" "$check_out.status"; relayflow_stop; echo "relayflow: stopped the checks after ${elapsed}s, at their ${limit}s." >> "$check_out"; relayflow_check_done 124 "$elapsed" stopped'
+    + '; else sleep 1; if [ -f "$check_out.status" ]; then relayflow_status_done "$elapsed"; else echo "relayflow: the checks stopped without reporting an exit status." >> "$check_out"; relayflow_check_done 125 "$elapsed"; fi; fi'
+    + '; fi'
     + '; fi',
 ].join('; ');
 
@@ -324,11 +419,18 @@ const CAP_FUNCTION = BLOCK_FUNCTION + '; relayflow_cap() { ' + [
  * Writes what the checks found to `.relayflow/check-report.md`, and the pull
  * request body — summary.md followed by that report — to `.relayflow/pr-body.md`.
  *
- * The caller sets `check` (the branch's token, or `skipped` when there was no
- * time to run the checks), `baseline` (the base commit's token, empty when it
+ * The caller sets `check` (the branch's token, `skipped` when there was no
+ * time to run the checks, or `unrunnable` when there was no way to bound
+ * them: failed, timed out, not run and could-not-run each say so, a failure
+ * with its exit status, a timeout with how long it ran against its budget), `baseline` (the base commit's token, empty when it
  * was not needed, or `skipped` when there was no time to check it), and
  * `implementer_timeout=yes` when the implementer was stopped at its time
- * limit, and `reference` to the closing reference line the next step adds. The base commit's output is shown whenever it ran, including when
+ * limit, and `reference` to the closing reference line the next step adds.
+ * It may set `check_setup` (where FLOW_CHECK_SCRIPT came from: `input`,
+ * `repository`, `discovered` or `default`) and `check_digest` (its `cksum`
+ * before the first repair, empty when none ran): checks that passed on a
+ * script this run discovered, defaulted or repaired get a note saying how
+ * future runs can skip that setup. The base commit's output is shown whenever it ran, including when
  * its verdict is `unknown` (it ran out of time against a branch that failed
  * outright). A reviewer reads the verdict, the
  * script that ran and the tail of each log on the pull request itself, without
@@ -351,22 +453,38 @@ export const FLOW_CHECK_REPORT_COMMAND = [
   `if [ -s .relayflow/check.log ]; then tail -n 80 .relayflow/check.log > "$parts/check"; relayflow_cap "$parts/check" ${REPORT_SECTION_LIMITS.log} tail ".relayflow/check.log in the run workspace"; fi`,
   `if [ -s .relayflow/base-check.log ]; then tail -n 80 .relayflow/base-check.log > "$parts/base"; relayflow_cap "$parts/base" ${REPORT_SECTION_LIMITS.log} tail ".relayflow/base-check.log in the run workspace"; fi`,
   `if [ -s .relayflow/repair-notes.md ]; then cp .relayflow/repair-notes.md "$parts/repair"; relayflow_cap "$parts/repair" ${REPORT_SECTION_LIMITS.repair} head ".relayflow/repair-notes.md in the run workspace"; fi`,
+  // How the last branch check ended (FLOW_CHECK_RUN_COMMAND): its exit status,
+  // and how long it ran against its limit, in whole seconds.
+  'relayflow_number() { v=$(cat "$1" 2>/dev/null | head -n 1); case "$v" in (""|*[!0-9]*) ;; (*) printf %s "$v" ;; esac; }',
+  'relayflow_duration() { if [ "$1" -ge 60 ]; then printf "%dm%02ds" $(($1 / 60)) $(($1 % 60)); else printf "%ds" "$1"; fi; }',
+  'ck_exit=$(relayflow_number .relayflow/check.log.exit); ck_elapsed=$(relayflow_number .relayflow/check.log.elapsed); ck_limit=$(relayflow_number .relayflow/check.log.limit)',
+  // A script this run wrote or changed that passed is worth keeping: the next
+  // run otherwise pays for check discovery again (run 91c1a5cd: 1.5 minutes,
+  // $0.66), because .relayflow/ is never committed.
+  'relayflow_setup_note() { how=; case "${check_setup:-}" in (discovered) how="worked out from this repository\'s CI configuration" ;; (default) how="the default for this kind of project" ;; esac'
+    + `; if [ -n "\${check_digest:-}" ] && [ "$(cksum < ${FLOW_CHECK_SCRIPT} 2>/dev/null)" != "$check_digest" ]; then if [ -n "$how" ]; then how="$how, then repaired during this run"; else how="repaired during this run"; fi; fi`
+    + `; if [ -n "$how" ] && [ -s ${FLOW_CHECK_SCRIPT} ]; then printf '\\n%s\\n' "This run set up its own check script ($how); it is under \\"What ran\\" below. Commit it to the repository as \\\`${FLOW_CHECK_SCRIPT}\\\`, or set this flow's test command in Cloud, and future runs skip this setup."; fi; }`,
   '{ printf \'## Checks\\n\\n\''
     + `; if [ "\${implementer_timeout:-}" = yes ]; then printf '%s\\n\\n' "**The implementer was stopped at its time limit**, so this change may be incomplete. Its committed work is what was checked and pushed; the pull request is a draft."; fi`
     + '; case "$check" in'
-    + ` pass) printf '%s\\n' "Relayflow ran this repository's checks (${FLOW_CHECK_SCRIPT}) and they passed." ;;`
+    + ` pass) printf '%s\\n' "Relayflow ran this repository's checks (${FLOW_CHECK_SCRIPT}) and they passed."; relayflow_setup_note ;;`
     + ` skipped) printf '%s\\n' "**Relayflow ran out of time before it could run this repository's checks** (${FLOW_CHECK_SCRIPT}), so no checks ran on this change. The pull request is a draft; run the checks before merging." ;;`
+    + ` unrunnable) printf '%s\\n' "**Relayflow could not run this repository's checks** (${FLOW_CHECK_SCRIPT}): the machine it ran on has no \\\`timeout\\\`, \\\`gtimeout\\\` or \\\`perl\\\`, so there was no way to stop the suite at a time limit, and starting it could have ended the run with no verdict at all. This is not a test failure, and nothing here says the change is broken. Install coreutils (for \\\`timeout\\\`) or perl and run the flow again, or run ${FLOW_CHECK_SCRIPT} by hand. The pull request is a draft; run the checks before merging." ;;`
     + ` none) printf '%s\\n' "Relayflow found no way to run this repository's tests — no check command, no CI test job it could follow, no test target and no recognised project file — so no checks ran. Review the change with that in mind." ;;`
-    + ' *) case "$baseline" in'
-    + ` fail|timeout) printf '%s\\n' "**The checks fail on the base commit too**, so these failures were not introduced by this change: they come from the repository itself or from the environment the checks ran in. This pull request is a draft until someone looks." ;;`
+    + ' *) if [ "$check" = timeout ]; then'
+    + `  if [ -n "$ck_elapsed" ] && [ -n "$ck_limit" ]; then printf '%s\\n\\n' "**The checks timed out**: they ran for $(relayflow_duration "$ck_elapsed") of their $(relayflow_duration "$ck_limit") budget and were stopped before they finished, so this is a time limit, not a test failure. Run them locally (\\\`sh ${FLOW_CHECK_SCRIPT}\\\`) to see how long they take, or raise the check budget (\\\`checkTotal\\\` in the flow) and run the flow again."`
+    + `; else printf '%s\\n\\n' "**The checks timed out**: they were stopped at their time budget before they finished, so this is a time limit, not a test failure. Run them locally (\\\`sh ${FLOW_CHECK_SCRIPT}\\\`) to see how long they take, or raise the check budget (\\\`checkTotal\\\` in the flow) and run the flow again."; fi`
+    + `; else if [ -n "$ck_exit" ]; then printf '%s\\n\\n' "**The checks failed** (exit $ck_exit). The end of their output is below."; else printf '%s\\n\\n' "**The checks failed.** The end of their output is below."; fi; fi`
+    + '; case "$baseline" in'
+    + ` fail|timeout) printf '%s\\n' "**The checks fail on the base commit too**, so this was not introduced by this change: it comes from the repository itself or from the environment the checks ran in. This pull request is a draft until someone looks." ;;`
     + ` pass) printf '%s\\n' "**This change breaks checks that pass on the base commit.** The flow tried to repair it and could not. The pull request is a draft so the work is not lost; it is not ready to merge." ;;`
     + ` new) printf '%s\\n' "**The checks this change adds fail.** The repository had no checks before this change, so there is no base commit to compare with; the flow tried to repair them and could not. The pull request is a draft so the work is not lost; it is not ready to merge." ;;`
-    + ` skipped) printf '%s\\n' "**The checks failed**, and there was no time left in the run to check the base commit (base not checked), so it is not known whether this change caused them. This pull request is a draft until someone looks." ;;`
-    + ` *) printf '%s\\n' "**The checks failed**, and the base commit could not be checked for comparison, so it is not known whether this change caused them. This pull request is a draft until someone looks." ;;`
+    + ` skipped) printf '%s\\n' "There was no time left in the run to check the base commit (base not checked), so it is not known whether this change caused this. This pull request is a draft until someone looks." ;;`
+    + ` *) printf '%s\\n' "The base commit could not be checked for comparison, so it is not known whether this change caused this. This pull request is a draft until someone looks." ;;`
     + ' esac ;;'
     + ' esac'
     + `; if [ -s "$parts/script" ]; then printf '\\n<details><summary>What ran (${FLOW_CHECK_SCRIPT})</summary>\\n\\n'; relayflow_block "$parts/script" sh; printf '</details>\\n'; fi`
-    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/check" ''; printf '</details>\\n'; fi`
+    + `; if [ "$check" != pass ] && [ "$check" != none ] && [ "$check" != skipped ] && [ "$check" != unrunnable ] && [ -s "$parts/check" ]; then printf '\\n<details><summary>Output on this branch (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/check" ''; printf '</details>\\n'; fi`
     + `; if [ "$baseline" = fail ] || [ "$baseline" = timeout ] || [ "$baseline" = unknown ]; then if [ -s "$parts/base" ]; then printf '\\n<details><summary>Output on the base commit (last 80 lines)</summary>\\n\\n'; relayflow_block "$parts/base" ''; printf '</details>\\n'; fi; fi`
     + `; if [ -s "$parts/repair" ]; then printf '\\n### What the repair agent found\\n\\n'; cat "$parts/repair"; fi`
     + '; } > "$report"',
@@ -413,12 +531,17 @@ export function flowCommentChangeCommand(file: string): string {
  * it only what is left once the steps behind it fit: every long step has a
  * limit, and every limit leaves room to publish.
  *
- * Cloud caps a hosted run at 60 minutes, the verified lifetime of an E2B
- * sandbox (AgentWorkforce/cloud#4235), and that budget also pays for the
- * sandbox setup. Measured Garden runs took 1.5-2h under the old 3h plan
- * (agentrelay.com#155), so the plan is cut to fit: no separate planner or plan
- * reviewer (the implementer plans), one repair round, one review and no fix
- * round. A typical run takes 30-45 minutes and the worst case fits in 60.
+ * Cloud capped a hosted run at 60 minutes (AgentWorkforce/cloud#4235), and
+ * measured Garden runs took 1.5-2h under the old 3h plan (agentrelay.com#155),
+ * so the plan was cut to fit: no separate planner or plan reviewer (the
+ * implementer plans), one review and no fix round. Cloud now honours a header
+ * of up to 180 minutes (AgentWorkforce/cloud#4270), and the plan stays the
+ * same size: the extra time is margin, not a longer plan. The implementer is
+ * done by the minute the 60-minute plan ended it (buildByMinutes), and what
+ * follows goes to recovery: a second repair round only when the checks still
+ * fail, longer limits on the steps seen to hit theirs, and room for a slow run
+ * to publish and report instead of stopping for time. A typical run still
+ * takes 30-45 minutes; only a run that goes wrong uses more.
  *
  * Since relayflows 2.0.40 (AgentWorkforce/flows#606) an agent step takes a
  * hard `timeout`, at most agentLimitMaxMinutes; the cloud flow states one for
@@ -427,32 +550,52 @@ export function flowCommentChangeCommand(file: string): string {
  * sandbox lifetime, and an unbounded agent needs the slack. See workflowCode.
  */
 export const FLOW_TIME = (() => {
-  const headerMinutes = 60; // Cloud's cap on a hosted run (AgentWorkforce/cloud#4235).
+  const headerMinutes = 120; // An hour under Cloud's 180-minute cap on a hosted run (AgentWorkforce/cloud#4270).
   const localHeaderMinutes = 180;
   // Cloud's run budget also counts the setup before the body: an E2B cold
   // start (about 3 minutes for the full template), the clone, and the agent
   // CLIs' first start.
   const setupMinutes = 8;
-  // `f.run` leases a command for at most 15 minutes; the check stops itself
-  // at 14 (FLOW_CHECK_RUN_COMMAND), or sooner when less of the run is left.
+  // `f.run` leases a command for at most 15 minutes; the base-commit check
+  // stops itself within one (FLOW_CHECK_RUN_COMMAND), and each wait for a
+  // branch check takes at most checkLimitMinutes of one.
   const checkMinutes = 15;
   const checkLimitMinutes = 14;
+  // A branch check runs detached and is waited on lease after lease, up to
+  // this in all: b71c1687's CI-shaped check.sh ran past 14 (flows#626).
+  const checkTotalMinutes = 30;
+  // The most waits one branch check takes; each may hold its lease a minute
+  // past its wait.
+  const checkPolls = Math.ceil((checkTotalMinutes + 1) / checkLimitMinutes);
   // Below these, a step is not worth starting: the run skips it and says so.
   const checkFloorMinutes = 5;
   const repairFloorMinutes = 5;
   const reviewFloorMinutes = 8;
-  const repairMinutes = 15;
+  // Repairs took 19m27s and 37m18s in bda21b91; a 15m limit would have
+  // stopped the first just short of done. Cloud only: a local run keeps 15.
+  const repairMinutes = 20;
+  const localRepairMinutes = 15;
+  // A second round runs only when the re-check still fails and the first
+  // repair finished, and only when it leaves the review and the base check
+  // their time. Cloud only: a local agent has no limit to stop it.
+  const repairRounds = 2;
+  const localRepairRounds = 1;
   const reviewMinutes = 20;
   // Check discovery reads CI configuration and writes one script; it took
-  // 6m and 9m24s in bda21b91. A discovery stopped at its limit falls back to
-  // the ecosystem default, so a hard stop costs little.
-  const discoveryMinutes = 10;
+  // 6m and 9m24s in bda21b91, against a 10m limit. A discovery stopped at its
+  // limit falls back to the ecosystem default, so a hard stop costs little.
+  // It runs inside buildByMinutes, so this never lengthens the plan.
+  const discoveryMinutes = 15;
   // The prototype workflow's parallel agents are each charged in full, so
   // three of them cost three times their wall clock.
   const prototypeMinutes = 10;
   const comparatorMinutes = 5;
   // What the steps before the implementer always leave it.
   const implementerFloorMinutes = 10;
+  // The minute of the body by which discovery, the prototypes and the
+  // implementer are done: where the 60-minute plan ended them (its 52m body
+  // less its 18m publishing reserve), so the build is no longer than before.
+  const buildByMinutes = 34;
   // relayflows refuses an agent timeout above 60m (AgentWorkforce/flows#606).
   const agentLimitMaxMinutes = 60;
   // A step with no timeout of its own gets the kernel's 30s default, and a
@@ -463,29 +606,34 @@ export const FLOW_TIME = (() => {
   // forgeMinutes; the draft-and-comment follow-ups get followUpMinutes; a push
   // gets pushMinutes, because when GitHub refuses workflow edits
   // FLOW_PUSH_COMMAND rebuilds the commits, pushes a second time and appends
-  // the withheld patch, all in the same step.
-  const forgeMinutes = 3;
+  // the withheld patch, all in the same step. A push to a large repository
+  // outran its limit in ccbc27c8; 5m (was 3m) leaves a slow one room.
+  const forgeMinutes = 5;
   const followUpMinutes = 1;
   const pushMinutes = 2 * forgeMinutes + followUpMinutes;
   const defaultStepMinutes = 0.5;
   // What can follow the review: one draft-and-comment follow-up (time stop
   // or review blocked: 1m) and the review-findings report (0.5m).
   const closeMinutes = followUpMinutes + defaultStepMinutes;
-  // Publishing at the longest each step may take: dropping working files (3m),
-  // the push (7m) and opening the change request (3m), the four local steps
+  // Publishing at the longest each step may take: dropping working files (5m),
+  // the push (11m) and opening the change request (5m), the four local steps
   // between them at the default (publish check, check report, metadata,
-  // validation: 4 x 0.5m), then closing (1.5m). 16.5m, rounded up to 17m.
+  // validation: 4 x 0.5m), then closing (1.5m). 24.5m, rounded up to 25m.
   const publishMinutes = Math.ceil(forgeMinutes + pushMinutes + forgeMinutes + 4 * defaultStepMinutes + closeMinutes);
   return Object.freeze({
     headerMinutes, localHeaderMinutes, setupMinutes,
-    checkMinutes, checkLimitMinutes, checkFloorMinutes, repairMinutes, repairFloorMinutes, reviewMinutes, reviewFloorMinutes,
-    discoveryMinutes, prototypeMinutes, comparatorMinutes, implementerFloorMinutes, agentLimitMaxMinutes,
+    checkMinutes, checkLimitMinutes, checkTotalMinutes, checkPolls, checkFloorMinutes, repairMinutes, localRepairMinutes, repairRounds, localRepairRounds, repairFloorMinutes, reviewMinutes, reviewFloorMinutes,
+    discoveryMinutes, prototypeMinutes, comparatorMinutes, implementerFloorMinutes, buildByMinutes, agentLimitMaxMinutes,
     forgeMinutes, pushMinutes, followUpMinutes, defaultStepMinutes, closeMinutes, publishMinutes,
     bodyMinutes: headerMinutes - setupMinutes,
     localBodyMinutes: localHeaderMinutes - setupMinutes,
     // What a long step before the pull request leaves behind it: publishing,
     // and the clock read and check resolution between them.
     publishReserveMinutes: publishMinutes + 2 * defaultStepMinutes,
+    // What the steps up to the implementer leave behind them: everything after
+    // buildByMinutes, which always holds a check at its whole budget,
+    // publishing and the review's floor.
+    buildReserveMinutes: headerMinutes - setupMinutes - buildByMinutes,
     // What the review leaves behind it once the pull request is open: clearing
     // the last review's files, reading review.clean, and closing.
     reviewReserveMinutes: 2 * defaultStepMinutes + closeMinutes,
@@ -797,6 +945,122 @@ export const FLOW_PUBLISH_CHECK_COMMAND = [
   'echo "relayflow: no commits were made on this branch, so there is nothing to push or publish." >&2 && echo no-commits && exit 0',
 ].join('; ');
 
+/**
+ * Where the implementer explains a ticket it could not act on. It sits under
+ * `.relayflow/`, so it is a working file and is never committed.
+ */
+export const FLOW_NEEDS_INPUT_FILE = '.relayflow/needs-input.md';
+
+/**
+ * Told to the implementer. Run 91c1a5cd (wepost-no/wepost-saga) could not tell
+ * which file its Linear ticket meant, asked about it in its own output, and
+ * committed nothing; the flow then spent 17 minutes checking and repairing an
+ * unchanged branch, and the question never reached the person who could answer
+ * it. A question written here ends the run at once and is relayed
+ * (FLOW_NEEDS_INPUT_COMMAND).
+ */
+export const FLOW_NEEDS_INPUT_HINT = `If the ticket is ambiguous, or you cannot identify what it refers to (a file, document, feature or component you cannot find), do not guess and do not commit. Instead write ${FLOW_NEEDS_INPUT_FILE}: the specific question or questions the ticket's author must answer, and the candidates you found, each with its path (for example "Did you mean docs/native-gamification-plan.md?"). Keep it short and plain; it is posted back to the ticket.`;
+
+/**
+ * Says whether the implementer changed the repository's content, right after
+ * it finishes, so a run with nothing to check stops before the checks, the
+ * repairs and the base-commit comparison (run 91c1a5cd spent 17 minutes and
+ * $1.63 on them for a branch with no commits). The caller prefixes
+ * `base=<commit>`.
+ *
+ *   unchanged  the tracked files hold what the base commit holds
+ *   changed    commits, or edits to tracked files (the checks run on the tree)
+ *   unknown    the base commit or the tree could not be read
+ *
+ * It compares the base commit with the working tree, so committed, staged and
+ * unstaged edits all count, an edit undone before the end does not, and a
+ * rename (compared with --no-renames) counts its source's deletion as well as
+ * its destination. These do not count, whether committed, staged or edited:
+ *
+ *  - working files the base commit does not have, the same rule
+ *    FLOW_DROP_WORKING_FILES_COMMAND uses to take them out of the branch;
+ *    untracked ones are hidden by the clone's exclude file
+ *    (FLOW_EXCLUDE_WORKING_FILES_COMMAND). A repository's own summary.md
+ *    is published, so an edit to it is a change;
+ *  - anything under `.relayflow/`, even when the repository commits it: the
+ *    flow writes `.relayflow/check.sh` there itself before the implementer
+ *    starts (a run's checkCommand), so a difference there is not its work;
+ *  - untracked files: nothing in the flow adds them to a commit, so they
+ *    could never be published, and an agent's scratch notes must not hide
+ *    its question. Up to five are named on stderr.
+ *
+ * Only `unchanged` stops the run, so anything this cannot vouch for carries on
+ * as before. One token on stdout, exit 0 on every path.
+ */
+export const FLOW_CHANGE_CHECK_COMMAND = [
+  `paths=${shq(FLOW_WORKING_FILES.join(' '))}`,
+  'if [ -z "$base" ] || ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null 2>&1 || ! names=$(git diff --no-ext-diff --no-renames --name-only "$base" -- 2>/dev/null); then echo "relayflow: could not tell whether the implementer changed anything; carrying on." >&2; echo unknown; exit 0; fi',
+  'changes=$(printf \'%s\\n\' "$names" | while IFS= read -r p; do [ -n "$p" ] || continue; keep=yes; for w in $paths; do case "$p" in ("$w"|"$w"/*) if [ "$w" = .relayflow ] || ! git cat-file -e "$base:$p" 2>/dev/null; then keep=no; fi ;; esac; done; if [ "$keep" = yes ]; then printf \'%s\\n\' "$p"; fi; done)',
+  'if [ -n "$changes" ]; then echo changed; exit 0; fi',
+  'loose=$(git ls-files --others --exclude-standard 2>/dev/null | head -n 5 | tr \'\\n\' \' \')',
+  'if [ -n "$loose" ]; then echo "relayflow: untracked files were never added or committed, so they are not a change: $loose" >&2; fi',
+  'echo "relayflow: the implementer changed nothing in the repository." >&2; echo unchanged',
+].join('; ');
+
+/** The most, in bytes, of the implementer's question FLOW_NEEDS_INPUT_COMMAND prints. */
+export const FLOW_NEEDS_INPUT_LIMIT = 4000;
+/** The most lines of it FLOW_NEEDS_INPUT_COMMAND prints. */
+const NEEDS_INPUT_LINES = 60;
+/**
+ * How much of the implementer's last message, in UTF-16 code units, the flow
+ * hands FLOW_NEEDS_INPUT_COMMAND: enough to fill FLOW_NEEDS_INPUT_LIMIT bytes
+ * after sanitizing, and small enough (at most 64 KB once quoted) for one
+ * shell argument.
+ */
+export const NEEDS_INPUT_SUMMARY_WINDOW = FLOW_NEEDS_INPUT_LIMIT * 4;
+
+/**
+ * Relays why the implementer made no change, when it made none
+ * (FLOW_CHANGE_CHECK_COMMAND said `unchanged`), in a form Cloud can parse and
+ * post back to the ticket. The text is FLOW_NEEDS_INPUT_FILE when the
+ * implementer wrote one, otherwise `agent_summary` (the caller sets it to the
+ * end of the implementer's own last message, NEEDS_INPUT_SUMMARY_WINDOW
+ * characters from a line start, and `agent_summary_bytes` to the whole
+ * message's UTF-8 size when it had to cut it), otherwise nothing.
+ *
+ * The output contract, on stdout, one record per line:
+ *
+ *   relayflow needs-input-source: needs-input.md | implementer-summary | none
+ *   relayflow needs-input: <one line of the question>      (zero or more)
+ *   relayflow needs-input-truncated: <kept> of <total> bytes  (only when cut)
+ *
+ * The source line always comes first and exactly once. Content lines keep the
+ * text's order. The text is agent-written, so it is sanitized before it is
+ * printed: terminal colour sequences and control characters (carriage
+ * returns included) are removed, tabs become spaces, each line is trimmed and blank
+ * lines are dropped. It is then cut to FLOW_NEEDS_INPUT_LIMIT bytes, at a line
+ * boundary (or a character boundary when one line is all there is), and to
+ * NEEDS_INPUT_LINES lines. A needs-input.md keeps its start, where the
+ * question was written to go; the implementer's summary keeps its end, where
+ * an agent's last message asks it. `<total>` is the size before any cut,
+ * the whole message's for a summary the caller cut. Every printed line
+ * carries a prefix, so nothing in the text can forge a record. Exit 0 on
+ * every path.
+ */
+export const FLOW_NEEDS_INPUT_COMMAND = [
+  'export LC_ALL=C',
+  'mkdir -p .relayflow; out=.relayflow/needs-input.out',
+  `relayflow_clean() { sed "s/$(printf '\\033')\\[[0-9;?]*[A-Za-z]//g" | tr -d '\\000-\\010\\013-\\037\\177' | tr '\\t' ' ' | awk 'NF { sub(/^ +/, ""); sub(/ +$/, ""); print }'; }`,
+  `src=none; if [ -s ${FLOW_NEEDS_INPUT_FILE} ] && [ -n "$(relayflow_clean < ${FLOW_NEEDS_INPUT_FILE})" ]; then src=needs-input.md; relayflow_clean < ${FLOW_NEEDS_INPUT_FILE} > "$out"; elif [ -n "$(printf '%s\\n' "\${agent_summary:-}" | relayflow_clean)" ]; then src=implementer-summary; printf '%s\\n' "$agent_summary" | relayflow_clean > "$out"; else : > "$out"; fi`,
+  'echo "relayflow needs-input-source: $src"',
+  'size=$(wc -c < "$out" | tr -d " "); total=$size',
+  'case "${agent_summary_bytes:-}" in (""|*[!0-9]*) ;; (*) if [ "$src" = implementer-summary ] && [ "$agent_summary_bytes" -gt "$total" ]; then total=$agent_summary_bytes; fi ;; esac',
+  // A summary keeps its end: the whole lines that fit, or the tail of its only
+  // line from a character boundary. Anything else keeps its start the same way.
+  `if [ "$size" -gt ${FLOW_NEEDS_INPUT_LIMIT} ] && [ "$src" = implementer-summary ]; then tail -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c $((${FLOW_NEEDS_INPUT_LIMIT} + 1)) "$out" | head -c 1 | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 1 ]; then sed 1d "$out.cut" > "$out.kept"; else sed "s/^$(printf '[\\200-\\277]')*//" "$out.cut" | awk 'NF { sub(/^ +/, ""); print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"`
+    + `; elif [ "$size" -gt ${FLOW_NEEDS_INPUT_LIMIT} ]; then head -c ${FLOW_NEEDS_INPUT_LIMIT} "$out" > "$out.cut"; if [ "$(tail -c 1 "$out.cut" | wc -l | tr -d " ")" -eq 1 ]; then cp "$out.cut" "$out.kept"; elif [ "$(tr -cd "\\n" < "$out.cut" | wc -c | tr -d " ")" -gt 0 ]; then sed '$d' "$out.cut" > "$out.kept"; else sed "s/$(printf '[\\300-\\377]')$(printf '[\\200-\\277]')*\\$//" "$out.cut" | awk 'NF { print }' > "$out.kept"; fi; mv -f "$out.kept" "$out"; rm -f "$out.cut"; fi`,
+  `if [ "$src" = implementer-summary ]; then tail -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; else head -n ${NEEDS_INPUT_LINES} "$out" > "$out.kept"; fi; mv -f "$out.kept" "$out"; kept=$(wc -c < "$out" | tr -d " ")`,
+  'sed "s/^/relayflow needs-input: /" "$out"',
+  'if [ "$kept" -lt "$total" ]; then echo "relayflow needs-input-truncated: $kept of $total bytes"; fi',
+  'rm -f "$out"',
+  'exit 0',
+].join('; ');
+
 const REVIEW_BLOCKED_HEADING ='**Relayflow: the adversarial review did not pass.** This branch is not approved: the flow stopped here and did not mark it ready to merge.';
 const REVIEW_TIMEOUT_NOTE = 'The review was stopped at its %s before it finished, so it is not a clean review. What it wrote before then is below.';
 
@@ -888,7 +1152,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // limit: check-discovery at its fixed allowance, because it runs first; every
   // later agent at what is left of the run once the steps behind it fit, read
   // from the clock when it starts. That is what keeps the worst case inside
-  // Cloud's 60 minutes: no step can take the time publishing needs.
+  // the header's wallclock: no step can take the time publishing needs.
   //
   // Only the cloud target states limits. Cloud runs relayflows 2.0.40 or
   // later; the local kit pins RELAYFLOWS_VERSION (2.0.26), whose runtime and
@@ -913,9 +1177,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const changeTitleLength = Array.from(changeTitle).length;
   const placeholderTitle = ["software factory change", "replace with your ticket title"]
     .includes(changeTitle.toLowerCase());
-  const issueSource = issue.source.trim().toLowerCase();
-  const issueIdentifier = issue.identifier?.trim() ?? "";
-  const issueUrl = issue.url?.trim() ?? "";
+  // A local input may leave ticket metadata out or give it another type: it
+  // reads as blank, where calling .trim() on it would throw.
+  const field = (value: unknown) => typeof value === "string" ? value.trim() : "";
+  const issueSource = field(issue.source).toLowerCase();
+  const issueIdentifier = field(issue.identifier);
+  const issueUrl = field(issue.url);
   if (!changeTitle || placeholderTitle) {
     console.error("Stopped: the pull-request title is empty or still a placeholder. No branch was pushed and no pull request was opened.");
     return f.done("needs_human");
@@ -955,6 +1222,9 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   const allowance = async (cap: number, after: number) => Math.min(cap, Math.floor(await minutesLeft() - after));
   // Publishing, and the steps between a long step and it.
   const publishing = ${t.publishReserveMinutes};
+  // What the steps up to the implementer leave: on Cloud, everything after
+  // minute ${t.buildByMinutes}, so the build takes no longer than it did in 60 minutes.
+  const building = ${cloud ? t.buildReserveMinutes : t.publishReserveMinutes};
   // A long agent step may be stopped at its time limit. Its step then resolves
   // with completionReason "timeout" instead of throwing, and what the agent
   // committed stays. That is never success: each caller says what it means.
@@ -962,13 +1232,22 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   sections.push({ id: 'discover', code: `  // Work out how this repository checks itself, before any code changes, so
   // the change and the commit it started from are checked the same way.
   // To use your own command instead, set checkCommand, for example
-  // "npm run build && npm test" or "make ci".
+  // "npm run build && npm test" or "make ci". A checkCommand in the run's
+  // input (the flow's test command in Cloud) takes precedence over it.
   const checkCommand = "";
+  const inputCheckCommand = typeof input.checkCommand === "string" ? input.checkCommand.trim() : "";
+  const chosenCheckCommand = inputCheckCommand || checkCommand.trim();
   const shellQuote = (value: string) => "'" + value.replace(/'/g, "'\\\\''") + "'";
   const checkScript = ${JSON.stringify(FLOW_CHECK_SCRIPT)};
-  if (checkCommand.trim()) {
-    await f.run("mkdir -p .relayflow && printf '%s\\\\n' 'set -e' " + shellQuote(checkCommand) + " > " + checkScript);
+  // Where the check script came from, so the pull request can say when one
+  // this run set up is worth keeping: "input", "repository" (already in the
+  // tree), "discovered", or "default" (written below from the project files).
+  let checkSetup = "repository";
+  if (chosenCheckCommand) {
+    checkSetup = "input";
+    await f.run("mkdir -p .relayflow && printf '%s\\\\n' 'set -e' " + shellQuote(chosenCheckCommand) + " > " + checkScript);
   } else if ((await f.run("test -s " + checkScript + " && echo yes || echo no")).trim() !== "yes") {
+    checkSetup = "discovered";
     // No command of yours and none committed to the repository: read how its
     // CI tests it. Anything this cannot settle falls back to a default below.
     const discovery = await f.agent("check-discovery", {
@@ -983,6 +1262,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   }
   const resolveChecks = ${JSON.stringify(FLOW_CHECK_RESOLVE_COMMAND)};
   const checkPlan = (await f.run(resolveChecks)).trim();
+  if (checkPlan === "default") checkSetup = "default";
   // Removes build outputs the run no longer needs before a check, so a second
   // build cannot fill the sandbox's disk.
   const freeDisk = ${JSON.stringify(FLOW_FREE_DISK_COMMAND)};` });
@@ -1000,8 +1280,8 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // The budget charges each step's own time, so three prototypes in parallel
   // cost up to three times the wall clock they take: count the extra two. Each
   // gets a third of what is left once the comparator, the implementer's floor
-  // and publishing fit.
-  const prototypeLimit = Math.max(1, Math.floor(await allowance(${3 * t.prototypeMinutes}, ${t.comparatorMinutes + t.implementerFloorMinutes} + publishing) / 3));
+  // and what follows the build fit.
+  const prototypeLimit = Math.max(1, Math.floor(await allowance(${3 * t.prototypeMinutes}, ${t.comparatorMinutes + t.implementerFloorMinutes} + building) / 3));
   const prototypesStartedAt = await clock();
   const prototypes = await Promise.all(paths.map((cwd, index) => f.agent("prototype-" + (index + 1), {
     cli: prototypeAgents[index],
@@ -1012,7 +1292,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   parallelMinutes += 2 * (await clock() - prototypesStartedAt) / 60;
   if (prototypes.some(timedOut)) console.error("A prototype was stopped at its " + prototypeLimit + "m limit; its committed work is compared as it is.");
   // All three implementations are finished before comparison begins.
-  const comparatorLimit = Math.max(1, await allowance(${t.comparatorMinutes}, ${t.implementerFloorMinutes} + publishing));
+  const comparatorLimit = Math.max(1, await allowance(${t.comparatorMinutes}, ${t.implementerFloorMinutes} + building));
   const comparison = await f.agent("comparator", {
     ${options('comparator', 'reviewer', ' + " Prototype worktrees: " + paths.join(", ")', 'comparatorLimit')}
   });
@@ -1028,27 +1308,53 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Where this branch started, so the publish step below can tell whether the
   // agents actually committed anything.
   const baseCommit = (await f.run("git rev-parse HEAD")).trim();
-  // The implementer may use what is left once publishing fits. Stopped there,
-  // its committed work is still checked if there is time, and published as a
+  // The implementer may use what is left once what follows the build fits.
+  // Stopped there, its committed work is still checked, and published as a
   // draft that says so.
-  const implementerLimit = Math.max(1, await allowance(${t.agentLimitMaxMinutes}, publishing));
+  const implementerLimit = Math.max(1, await allowance(${t.agentLimitMaxMinutes}, building));
+  console.error("relayflow phase: implementing");
   const implementation = await f.agent("implementer", {
-    ${options('implementer', 'builder', '', 'implementerLimit')}
+    ${options('implementer', 'builder', ` + "\\n" + ${JSON.stringify(FLOW_NEEDS_INPUT_HINT)}`, 'implementerLimit')}
   });
   const implementerTimedOut = timedOut(implementation);
   if (implementerTimedOut) console.error("implementer was stopped at its " + implementerLimit + "m limit. Its committed work is kept, and the pull request opens as a draft.");
+  // An implementer that finished without changing anything (it could not tell
+  // what the ticket meant, or found nothing to do) leaves nothing to check,
+  // repair or compare: stop now and relay its question (run 91c1a5cd spent 17
+  // minutes on an unchanged branch). Only a definite "unchanged" stops here.
+  if (!implementerTimedOut && (await f.run("base=" + baseCommit + "; " + ${JSON.stringify(FLOW_CHANGE_CHECK_COMMAND)})).trim() === "unchanged") {
+    // Its own last message stands in when it wrote no ${FLOW_NEEDS_INPUT_FILE}.
+    // The question is at its end, so the relay gets the end: from a line
+    // start, with the whole message's size in bytes when it was cut.
+    const said = (implementation as unknown as { summary?: unknown } | undefined)?.summary;
+    const message = typeof said === "string" ? said : "";
+    let agentSummary = message.slice(-${NEEDS_INPUT_SUMMARY_WINDOW});
+    let summaryBytes = "";
+    if (agentSummary.length < message.length) {
+      agentSummary = agentSummary.includes("\\n") ? agentSummary.slice(agentSummary.indexOf("\\n") + 1) : agentSummary.replace(/^[\\uDC00-\\uDFFF]/, "");
+      summaryBytes = String(Array.from(message).reduce((bytes, character) => {
+        const point = character.codePointAt(0) ?? 0;
+        return bytes + (point < 0x80 ? 1 : point < 0x800 ? 2 : point < 0x10000 ? 3 : 4);
+      }, 0));
+    }
+    const needsInput = (await f.run("agent_summary=" + shellQuote(agentSummary) + "; agent_summary_bytes=" + summaryBytes + "; " + ${JSON.stringify(FLOW_NEEDS_INPUT_COMMAND)})).trim();
+    console.error("Stopped: the implementer made no changes, so there was nothing to check or publish. No checks ran, no branch was pushed and no pull request was opened. Its question or reason follows, when it gave one: answer it on the ticket and run again.\\n" + needsInput);
+    return f.done("needs_human");
+  }
   // A repository with no way to test itself may have gained one in this
   // change (a first package.json with a test script). Resolving only before
   // the change reported "no checks ran" on a pull request that added tests
   // (cloud-e2e-sandbox#31), so a "none" is looked at again.
-  if (checkPlan === "none") await f.run(resolveChecks);` });
+  // A script written now is the ecosystem default, so the report says so.
+  if (checkPlan === "none" && (await f.run(resolveChecks)).trim() === "default") checkSetup = "default";` });
   sections.push({ id: 'checks', code: `  // Run the checks. A failure is not the end of the run: the tests are
   // how this flow learns what is wrong, so the repair agent reads the output
-  // and fixes what it can, once, and whatever still fails is compared against
+  // and fixes what it can, at most twice, and whatever still fails is compared against
   // the commit this branch started from when there is time. Every check step
   // prints one word and exits 0; the full output stays in .relayflow/ for the
-  // report. Each check gets what is left once publishing fits, and stops there.
-  const verdict = (value: string) => ["pass", "fail", "timeout", "none"].includes(value.trim()) ? value.trim() : "fail";
+  // report. Each branch check gets up to checkTotal minutes, what is left once
+  // publishing and the review's floor fit, and stops there.
+  const verdict = (value: string) => ["pass", "fail", "timeout", "none", "unrunnable"].includes(value.trim()) ? value.trim() : "fail";
   const verdictOf = (value: string) => /^[a-z]*$/.test(value) ? value : "unknown";
   const broken = (value: string) => value === "fail" || value === "timeout";
   const runChecks = ${JSON.stringify(FLOW_CHECK_RUN_COMMAND)};
@@ -1064,35 +1370,82 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     checkTook = (await clock() - from) / 60;
     return result;
   };
-  // Behind each check: the two clock reads around it, and its lease's
-  // minute beyond the limit.
+  // The most a branch check may run in all. To give a slow suite more, raise
+  // it; the run's time budget still decides what each check gets.
+  const checkTotal = ${t.checkTotalMinutes};
+  // A branch check may need more than one f.run lease (flows#626), so it runs
+  // detached and each step waits at most ${t.checkLimitMinutes} minutes for it, until it
+  // finishes or its total runs out (reported as "timeout"). Each check has its
+  // own ID, so a resumed run waits for the check it started.
+  let checkRuns = 0;
+  const spannedCheck = async (minutes: number) => {
+    const from = await clock();
+    const id = startedAt + "-" + (++checkRuns);
+    let result = "running";
+    for (let waited = 0; result === "running" && waited <= minutes; ) {
+      const wait = Math.min(${t.checkLimitMinutes}, minutes + 1 - waited);
+      waited += wait;
+      result = (await f.run("RELAYFLOW_CHECK_ID=" + id + "; RELAYFLOW_CHECK_TIMEOUT=" + minutes * 60 + "; RELAYFLOW_CHECK_WAIT=" + wait * 60 + "; " + runChecks, { timeout: wait + 1 + "m" })).trim();
+    }
+    checkTook = (await clock() - from) / 60;
+    return result === "running" ? "timeout" : result;
+  };
+  // Behind each check: the two clock reads around it and each wait's minute
+  // of lease beyond it, then publishing, and the review's floor where there
+  // is one (its whole allowance locally, where nothing stops it sooner).
+  const checkSlack = ${1 + t.checkPolls};
+  const reviewing = ${workflow === 'simple' ? 0 : `${floor(t.reviewFloorMinutes, t.reviewMinutes) + t.reviewReserveMinutes}`};
   let check = "skipped";
-  const checkLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
+  const checkLimit = await allowance(checkTotal, checkSlack + publishing + reviewing);
   if (checkLimit < ${t.checkFloorMinutes}) {
     console.error("Skipped the checks: too little of the flow's time budget is left to run them and still publish. The pull request opens as a draft that says no checks ran.");
   } else {
-    check = verdict(await timedCheck("", runChecks, checkLimit));
+    console.error("relayflow phase: checking");
+    check = verdict(await spannedCheck(checkLimit));
+    // No way to bound the suite, so it was never started: not a verdict on
+    // this change, and nothing to repair or compare. The draft says so.
+    if (check === "unrunnable") console.error("The checks could not be run: this machine has no timeout, gtimeout or perl to stop them at a time limit, so starting them could have ended the run with no verdict. The pull request opens as a draft that says so.");
   }
-  if (broken(check)) {
-    // One repair round: the repair, freeing disk, the re-check and publishing
-    // must fit in what is left.
-    const recheck = Math.min(${t.checkLimitMinutes}, Math.ceil(checkTook) + 1);
-    const repairLimit = await allowance(${t.repairMinutes}, recheck + 3 + publishing);
-    if (repairLimit < ${floor(t.repairFloorMinutes, t.repairMinutes)}) {
-      console.error("Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are.");
-    } else {
-      const repair = await f.agent("check-repair", {
-        ${options('check-repair', 'builder', '', 'repairLimit')}
-      });
-      await f.run(freeDisk);
-      const recheckLimit = await allowance(${t.checkLimitMinutes}, 2 + publishing);
-      if (recheckLimit >= 1) check = verdict(await timedCheck("", runChecks, recheckLimit));
-      else console.error("No time was left to check the repair again; the checks stand as they were before it.");
-      if (timedOut(repair)) {
-        // A failed attempt: what it committed was checked again above, and
-        // whatever still fails takes the draft-and-report path below.
-        console.error("check-repair was stopped at its " + repairLimit + "m limit, so it counts as a failed repair attempt. Its committed work is kept and was checked again (" + check + ").");
-      }
+  // A second repair round runs only for checks that still fail after the
+  // first, and leaves the review, where there is one, its floor: it is
+  // recovery, never a longer plan.
+  // The base-commit check that may follow, as compareWithBase budgets it:
+  // nothing when it would be skipped anyway.
+  let checkDigest = "";
+  const baseReserve = () => checkPlan === "none" || Math.ceil(checkTook) > ${t.checkMinutes - 2} ? 0 : Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook)) + 5;
+  for (let round = 1; round <= ${cloud ? t.repairRounds : t.localRepairRounds} && broken(check); round++) {
+    // Each round: the repair, freeing disk, the re-check, publishing and the
+    // review must fit in what is left; a second round also keeps the base
+    // check's time, and its re-check is held to what was kept for it.
+    const recheck = Math.min(checkTotal, Math.ceil(checkTook) + 1);
+    const baseHold = round > 1 ? baseReserve() : 0;
+    const repairLimit = await allowance(${cloud ? t.repairMinutes : t.localRepairMinutes}, recheck + 1 + checkSlack + publishing + reviewing + baseHold);
+    if (repairLimit < ${floor(t.repairFloorMinutes, cloud ? t.repairMinutes : t.localRepairMinutes)}) {
+      console.error(round === 1
+        ? "Skipped the repair: too little of the flow's time budget is left to repair and still publish. The checks stand as they are."
+        : "Skipped the second repair: too little of the flow's time budget is left to repair again and still publish and review. The checks stand as they are.");
+      break;
+    }
+    // The script as it was before any repair, so the report can tell when a
+    // repair changed it.
+    if (round === 1) checkDigest = (await f.run("cksum < " + checkScript + " 2>/dev/null || true")).trim();
+    console.error("relayflow phase: repairing");
+    const repair = await f.agent("check-repair" + (round === 1 ? "" : "-" + round), {
+      ${options('check-repair', 'builder', '', 'repairLimit')}
+    });
+    await f.run(freeDisk);
+    const recheckLimit = await allowance(checkTotal, checkSlack + publishing + reviewing + baseHold);
+    if (recheckLimit >= 1) {
+      console.error("relayflow phase: checking");
+      check = verdict(await spannedCheck(recheckLimit));
+    }
+    else console.error("No time was left to check the repair again; the checks stand as they were before it.");
+    if (timedOut(repair)) {
+      // A failed attempt: what it committed was checked again above, and
+      // another repair of the same failures would most likely run out too,
+      // so whatever still fails takes the draft-and-report path below.
+      console.error("check-repair was stopped at its " + repairLimit + "m limit, so it counts as a failed repair attempt. Its committed work is kept and was checked again (" + check + "); no further repair is tried.");
+      break;
     }
   }
   // Only a failure pays for the comparison: pass, fail, timeout or unknown.
@@ -1108,7 +1461,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
     // check's lease, so it gets two minutes beyond the limit, within f.run's
     // 15. It never gets less time than the branch's check took: a branch check
     // that ran to its own limit cannot be compared at all.
-    const baseLimit = await allowance(${t.checkMinutes - 2}, 4 + publishing);
+    const baseLimit = await allowance(${t.checkMinutes - 2}, 4 + publishing + reviewing);
     if (baseLimit < Math.max(${t.checkFloorMinutes}, Math.ceil(checkTook))) return "skipped";
     await f.run(freeDisk);
     const result = await timedCheck("base=" + baseCommit + "; ", ${JSON.stringify(FLOW_BASE_CHECK_COMMAND)}, baseLimit, baseLimit + 2);
@@ -1129,6 +1482,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // it edits .github/workflows/ (the run's token may lack that permission),
   // the work is pushed without those edits and the patch goes on the PR.
   const pushBranch = ${JSON.stringify(FLOW_PUSH_COMMAND)};
+  console.error("relayflow phase: publishing");
   await f.run("base=" + baseCommit + "; " + dropWorkingFiles, { timeout: "${t.forgeMinutes}m" });
   const publishCheck = ${JSON.stringify(FLOW_PUBLISH_CHECK_COMMAND)};
   const publish = (await f.run("base=" + baseCommit + "; " + publishCheck)).trim();
@@ -1144,7 +1498,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Failing, unrun or unfinished work is never thrown away: the pull request
   // opens as a draft, with the verdict, the script and the output in its body.
   const checkReport = ${JSON.stringify(FLOW_CHECK_REPORT_COMMAND)};
-  await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; implementer_timeout=" + (implementerTimedOut ? "yes" : "no") + "; reference=" + shellQuote(changeReference) + "; " + checkReport);
+  await f.run("check=" + check + "; baseline=" + verdictOf(baseline) + "; implementer_timeout=" + (implementerTimedOut ? "yes" : "no") + "; check_setup=" + checkSetup + "; check_digest=" + shellQuote(checkDigest) + "; reference=" + shellQuote(changeReference) + "; " + checkReport);
   const prepareChangeMetadata = ${JSON.stringify(FLOW_PREPARE_CHANGE_METADATA_COMMAND)};
   await f.run("reference=" + shellQuote(changeReference) + "; " + prepareChangeMetadata);
   const validateChangeMetadata = ${JSON.stringify(FLOW_VALIDATE_CHANGE_METADATA_COMMAND)};
@@ -1157,7 +1511,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // Hosted runs put relayflow-open-change on PATH: gh pr create on GitHub, a
   // merge request on GitLab. A local run has only gh.
   const openChange = ${JSON.stringify(FLOW_OPEN_CHANGE_COMMAND)};
-  const draft = broken(check) || check === "skipped" || implementerTimedOut;
+  const draft = broken(check) || check === "skipped" || check === "unrunnable" || implementerTimedOut;
   await f.run(openChange + " --title " + shellQuote(changeTitle) + " --body-file .relayflow/pr-body.md" + (draft ? " --draft" : ""), { timeout: "${t.forgeMinutes}m" });
   if (broken(check) && (baseline === "pass" || baseline === "new")) {
     // The base commit passes and this branch does not, or the checks are the
@@ -1172,11 +1526,12 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   if (broken(check)) {
     // The base commit fails too, or could not be checked: nothing here says the
     // change is at fault, so the review still runs and a person decides.
+    const outcome = check === "timeout" ? "The checks timed out (stopped at their time budget, not a test failure)" : "The checks fail";
     console.error(baseline === "skipped"
-      ? "The checks fail, and there was no time left to check the base commit (base not checked), so it is not known whether this change caused them. The pull request is a draft with the output."
+      ? outcome + ", and there was no time left to check the base commit (base not checked), so it is not known whether this change caused it. The pull request is a draft with the output."
       : baseline === "fail" || baseline === "timeout"
-        ? "The checks fail, but not because of this change as far as the base commit shows. The pull request is a draft with the output of both."
-        : "The checks fail, and the base commit could not be checked for comparison, so it is not known whether this change caused them. The pull request is a draft with the output.");
+        ? outcome + ", but not because of this change as far as the base commit shows. The pull request is a draft with the output of both."
+        : outcome + ", and the base commit could not be checked for comparison, so it is not known whether this change caused it. The pull request is a draft with the output.");
   }` });
   if (workflow !== 'simple') sections.push({ id: 'review', code: `  // ${workflow === 'traditional' ? 'One independent adversarial review. There is no fix round: what it finds goes on the pull request.' : 'Review the final implementation against the ticket and comparison findings.'}
   // A review that found problems is this flow's verdict on its own work, so it
@@ -1198,6 +1553,7 @@ export function workflowCode(workflow: WorkflowId, agents: ReturnType<typeof wor
   // The reviewer starts from nothing: a review.md left in the tree would read
   // as its findings if it is stopped before writing.
   await f.run("rm -f review.clean review.md");
+  console.error("relayflow phase: reviewing");
   const review = await f.agent("adversary", {
     ${options('adversary', 'reviewer', '', 'reviewLimit')}
   });

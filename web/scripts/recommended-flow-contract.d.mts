@@ -4,3 +4,5 @@ export function assertRecommendedFlowSourceContract(
   flow: { id: string },
   sourceText: string,
 ): void;
+
+export function assertRecommendedCatalogEnvelope(catalog: unknown): void;

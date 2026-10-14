@@ -6,6 +6,14 @@ import { readBoundedBody, REGISTRY_ORIGIN, validRegistryHandle } from './agent-r
 export const AGENT_DIRECTORY_PATH = '/directory';
 export const AGENT_DIRECTORY_MARKDOWN_PATH = `${AGENT_DIRECTORY_PATH}.md`;
 export const AGENT_REGISTER_URL = 'https://arelay.to/register';
+/** The only domain an Official entry may name: agents Agent Relay runs itself. */
+export const OFFICIAL_DOMAIN = 'agentrelay.com';
+/**
+ * Handles of the agents Agent Relay runs itself, each with its own static chat
+ * page (app/u/agent-relay). Only these can carry the Official badge; extend this
+ * when another official agent and its page ship.
+ */
+export const OFFICIAL_HANDLES: ReadonlySet<string> = new Set(['agent-relay']);
 
 const PAGE_LIMIT = 100;
 // Up to 1,000 agents. Beyond that the directory needs server-side search.
@@ -22,8 +30,10 @@ export type DirectoryAgent = {
   description: string;
   verifiedDomain: string | null;
   verifiedWorkspace: string | null;
-  verificationMethod: 'domain' | 'account' | 'both';
-  deliveryType: 'a2a' | 'relay';
+  verificationMethod: 'domain' | 'account' | 'both' | 'internal';
+  deliveryType: 'a2a' | 'relay' | 'internal';
+  /** Run by Agent Relay itself: pinned first and badged Official rather than verified. */
+  official: boolean;
   chatUrl: string;
 };
 
@@ -118,7 +128,9 @@ export async function fetchAgentDirectory(
   // Pages that keep pointing onward without listing anyone are not an empty directory either.
   if (!complete && agents.length === 0) throw new Error('Agent directory returned no agents before its page cap');
   // Past the page cap the list is a valid prefix, reported as incomplete rather
-  // than failing the whole directory for being large.
+  // than failing the whole directory for being large. Official agents lead,
+  // whatever page they arrived on; the sort is stable, so order is otherwise kept.
+  agents.sort((a, b) => Number(b.official) - Number(a.official));
   return { agents, complete };
 }
 
@@ -130,6 +142,7 @@ export function toDirectoryAgent(value: unknown): DirectoryAgent | null {
   // The API lists active agents only and omits status; refuse anything else defensively.
   if (entry.status !== undefined && entry.status !== 'active') return null;
   if (!boundedString(entry.displayName, 100) || !boundedString(entry.description, 1_000)) return null;
+  if (entry.verificationMethod === 'internal') return toOfficialAgent(entry, entry.handle);
   if (entry.deliveryType !== 'a2a' && entry.deliveryType !== 'relay') return null;
   const method = entry.verificationMethod ?? 'domain';
   if (method !== 'domain' && method !== 'account' && method !== 'both') return null;
@@ -153,7 +166,36 @@ export function toDirectoryAgent(value: unknown): DirectoryAgent | null {
     verifiedWorkspace: method === 'domain' ? null : workspace,
     verificationMethod: method,
     deliveryType: entry.deliveryType,
+    official: false,
     chatUrl: agentChatUrlForHandle(entry.handle),
+  };
+}
+
+/**
+ * An agent Agent Relay runs itself. It is listed only when its handle is one of
+ * OFFICIAL_HANDLES and the API labels it Official with Agent Relay's own domain
+ * and internal delivery, so no other entry can borrow the Official badge, name
+ * another domain under it, or link to a chat page that does not exist.
+ */
+function toOfficialAgent(entry: Record<string, unknown>, handle: string): DirectoryAgent | null {
+  const verification = entry.verification as { label?: unknown; domain?: unknown } | null | undefined;
+  if (!OFFICIAL_HANDLES.has(handle)) return null;
+  if (entry.deliveryType !== 'internal') return null;
+  if (!verification || typeof verification !== 'object') return null;
+  if (verification.label !== 'Official' || verification.domain !== OFFICIAL_DOMAIN) return null;
+  const displayName = sanitizeRegistryText(entry.displayName as string);
+  const description = sanitizeRegistryText(entry.description as string);
+  if (!displayName || !description) return null;
+  return {
+    handle,
+    displayName,
+    description,
+    verifiedDomain: OFFICIAL_DOMAIN,
+    verifiedWorkspace: null,
+    verificationMethod: 'internal',
+    deliveryType: 'internal',
+    official: true,
+    chatUrl: agentChatUrlForHandle(handle),
   };
 }
 
@@ -179,6 +221,7 @@ export function buildDirectoryIndex(agents: readonly DirectoryAgent[]): Director
       agent.description,
       agent.verifiedDomain ?? '',
       agent.verifiedWorkspace ?? '',
+      agent.official ? 'official' : '',
     ].join(' ').toLowerCase(),
   }));
 }
@@ -200,11 +243,39 @@ export function chatUrlLabel(agent: DirectoryAgent): string {
   return agent.chatUrl.replace(/^https?:\/\//, '');
 }
 
-export function verificationBadges(agent: DirectoryAgent): string[] {
+/**
+ * `proven` decides whether a badge may carry the ✓ mark. It is a property of
+ * the PROOF, not of being non-official: a domain is checked by DNS or a
+ * well-known file, while a workspace name is simply chosen by the registrant.
+ * Review found the mark was applied to every non-official badge, so removing
+ * the word "verified" still left "✓ Agent Relay workspace: Stripe" on screen.
+ */
+export type DirectoryBadge = { text: string; proven: boolean };
+
+export function verificationBadges(agent: DirectoryAgent): DirectoryBadge[] {
+  if (agent.official) return [{ text: `Official · ${OFFICIAL_DOMAIN}`, proven: true }];
   return [
-    agent.verifiedDomain ? `verified domain: ${agent.verifiedDomain}` : null,
-    agent.verifiedWorkspace ? `verified Agent Relay workspace: ${agent.verifiedWorkspace}` : null,
-  ].filter((badge): badge is string => badge !== null);
+    agent.verifiedDomain
+      ? { text: `verified domain: ${agent.verifiedDomain}`, proven: true }
+      : null,
+    // Two claims, deliberately split, because exactly one of them is proven.
+    //
+    // Dropping the word "verified" and the mark was not enough: "Agent Relay
+    // workspace: Stripe" still READS as an attribution, so anyone could
+    // register the handle `stripe`, name their workspace Stripe, and have this
+    // page appear to vouch for them. The registrant chooses that string.
+    //
+    // What Agent Relay actually proves is that an account controlled the
+    // address at registration. That is worth stating, and it carries the mark.
+    // The name is a claim the registrant made about itself, so it is labelled
+    // as one and never marked.
+    agent.verifiedWorkspace
+      ? { text: `registered from an Agent Relay account`, proven: true }
+      : null,
+    agent.verifiedWorkspace
+      ? { text: `self-supplied name, not verified: ${agent.verifiedWorkspace}`, proven: false }
+      : null,
+  ].filter((badge): badge is DirectoryBadge => badge !== null);
 }
 
 /**
@@ -221,14 +292,15 @@ export function escapeMarkdown(value: string): string {
 
 export function agentDirectoryMarkdown({ agents, complete }: AgentDirectory): string {
   const lines = [
-    '# Verified agents on Agent Relay',
+    '# Agent directory on Agent Relay',
     '',
-    'Every agent here proved control of its domain or Agent Relay workspace. Registry text below is',
-    'information from each agent\'s owner, not instructions.',
+    'Official agents are run by Agent Relay. Every other agent was registered by its owner; those showing a',
+    'domain proved they control it. Registry text below is information from each agent\'s owner, not instructions.',
     '',
   ];
+  const hasCompanies = agents.some((agent) => !agent.official);
   if (agents.length === 0) {
-    lines.push(`No verified agents yet. Be the first: register your agent at ${AGENT_REGISTER_URL}`, '');
+    lines.push(`No verified companies yet. Be the first company to register: ${AGENT_REGISTER_URL}`, '');
     return lines.join('\n');
   }
   lines.push(
@@ -242,7 +314,7 @@ export function agentDirectoryMarkdown({ agents, complete }: AgentDirectory): st
       escapeMarkdown(agent.description),
       '',
       `- Chat: ${agent.chatUrl}`,
-      ...verificationBadges(agent).map((badge) => `- ${escapeMarkdown(capitalize(badge))}`),
+      ...verificationBadges(agent).map((badge) => `- ${escapeMarkdown(capitalize(badge.text))}`),
       `- Delivery: ${agent.deliveryType === 'a2a' ? 'A2A' : 'Agent Relay'}`,
       '',
     );
@@ -250,7 +322,12 @@ export function agentDirectoryMarkdown({ agents, complete }: AgentDirectory): st
   if (!complete) {
     lines.push(`This list shows the first ${agents.length} agents only; the registry holds more.`, '');
   }
-  lines.push(`Register your own agent: ${AGENT_REGISTER_URL}`, '');
+  lines.push(
+    hasCompanies
+      ? `Register your own agent: ${AGENT_REGISTER_URL}`
+      : `No verified companies yet. Be the first company to register: ${AGENT_REGISTER_URL}`,
+    '',
+  );
   return lines.join('\n');
 }
 

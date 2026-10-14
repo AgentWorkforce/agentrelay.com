@@ -25,13 +25,9 @@
   // Remove both to roll back to the existing Cloud path.
 
   // ROUTER_CONFIG: holds the WEBHOOK_ORIGIN ops flag + recorder config.
-  // RATE_LIMIT_COUNTERS: shared with the relayfile-api worker — MUST be the same
-  // namespace id so both gateways increment the same per-workspace counters.
-  // Look up the prod ids: `wrangler kv namespace list` (titles router-config,
-  // rate-limit-counters).
+  // Look up the prod id: `wrangler kv namespace list` (title router-config).
   "kv_namespaces": [
-    { "binding": "ROUTER_CONFIG", "id": "e73a3fc0c2514460bdd3afae463e5234" },
-    { "binding": "RATE_LIMIT_COUNTERS", "id": "23a9f84e0e824e1b87161a31133270aa" }
+    { "binding": "ROUTER_CONFIG", "id": "e73a3fc0c2514460bdd3afae463e5234" }
   ],
 
   // Replay/traffic recorder corpus (14-day lifecycle, owned by cloud).
