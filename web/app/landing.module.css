@@ -1947,7 +1947,7 @@
 /* ---- HERO ---- */
 
 .heroSection {
-  --investor-strip-padding-top: 3rem;
+  --investor-strip-padding-top: 6.5rem;
   position: relative;
   background: var(--agent-tools-band-bg);
   transition: background 0.3s ease;
@@ -6549,7 +6549,7 @@
   }
 
   .heroSection {
-    --investor-strip-padding-top: 2.5rem;
+    --investor-strip-padding-top: 4.5rem;
   }
 
   /* Give the mobile headline more emphasis while keeping the copy compact. */
