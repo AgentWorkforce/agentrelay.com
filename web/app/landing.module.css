@@ -2060,6 +2060,24 @@
   overflow-y: visible;
 }
 
+/* The sign-in page's ribbons, quiet behind the cards: they show through the
+   gaps between rows and fade out at every edge of the band. */
+.heroRibbons {
+  position: absolute;
+  inset: -40px 0;
+  z-index: -1;
+  width: 100%;
+  height: calc(100% + 80px);
+  opacity: 0;
+  mask-image: radial-gradient(75% 65% at 50% 50%, #000 30%, transparent 85%);
+  transition: opacity 1.6s ease;
+  pointer-events: none;
+}
+
+.heroRibbons[data-ready] {
+  opacity: 0.55;
+}
+
 .heroRelayNetwork {
   position: absolute;
   inset: 0 0 26px;
