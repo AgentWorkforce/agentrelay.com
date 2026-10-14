@@ -13,7 +13,7 @@ import { teamsCloudUrl } from '../../lib/teams-cloud';
 
 export function Hero({ showInvestors = false, showSignup = false }: { showInvestors?: boolean; showSignup?: boolean }) {
   return (
-    <div className={s.heroSection}>
+    <div className={s.heroSection} data-hero="">
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>

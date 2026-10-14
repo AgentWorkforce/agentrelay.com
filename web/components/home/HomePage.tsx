@@ -3,6 +3,7 @@ import { SiteNav } from '../SiteNav';
 import landing from '../../app/landing.module.css';
 import { Hero } from './Hero';
 import { HomeSections, SIGNUP_HREF } from './HomeSections';
+import switchboard from './switchboard.module.css';
 
 export function HomeLandingPage() {
   return (
@@ -21,7 +22,7 @@ export function HomeLandingPage() {
         }
       />
 
-      <main id="main">
+      <main className={switchboard.stack} id="main">
         <Hero showInvestors showSignup />
         <HomeSections />
       </main>
