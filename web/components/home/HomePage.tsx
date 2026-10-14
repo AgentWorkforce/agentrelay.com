@@ -2,17 +2,7 @@ import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
 import landing from '../../app/landing.module.css';
 import { Hero } from './Hero';
-import {
-  BuildOnAgentRelay,
-  FinalCta,
-  HowItWorksSteps,
-  Outcomes,
-  SIGNUP_HREF,
-  UseCases,
-  WhyAgentRelay,
-  WorksWith,
-} from './HomeSections';
-import s from './home-sections.module.css';
+import { HomeSections, SIGNUP_HREF } from './HomeSections';
 
 export function HomeLandingPage() {
   return (
@@ -33,15 +23,7 @@ export function HomeLandingPage() {
 
       <main id="main">
         <Hero showInvestors showSignup />
-        <div className={s.page}>
-          <WorksWith />
-          <HowItWorksSteps />
-          <Outcomes />
-          <UseCases />
-          <WhyAgentRelay />
-          <BuildOnAgentRelay />
-          <FinalCta />
-        </div>
+        <HomeSections />
       </main>
 
       <SiteFooter />

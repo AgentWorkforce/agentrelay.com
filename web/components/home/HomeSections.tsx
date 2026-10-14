@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowRight, Cloud, GitBranch, Globe, Laptop, Users } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { AgentSignup } from '../AgentSignup';
 import { ChannelMessagesPreview } from '../ChannelMessagesPreview';
@@ -10,22 +10,57 @@ import { WaitlistForm } from '../WaitlistForm';
 import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
 import sessionOverview from '../../public/teams/teams-session-overview-concept.webp';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
+import flows from '../../app/flows/flows.module.css';
 import landing from '../../app/landing.module.css';
 import { SessionsShot } from './DesktopAppFeature';
-import { GitHubIcon } from './icons';
+import { ScribbleUnderline, WaveDivider } from './icons';
 import s from './home-sections.module.css';
 
 export const SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
 
 const WORKS_WITH: { label: string; icon: ReactNode }[] = [
-  { label: 'Claude Code', icon: <ClaudeCodeColor size={22} /> },
-  { label: 'Codex', icon: <Codex size={22} /> },
-  { label: 'Cursor', icon: <Cursor size={22} /> },
-  { label: 'Grok', icon: <Grok size={22} /> },
-  { label: 'OpenCode', icon: <OpenCode size={22} /> },
-  { label: 'Hermes', icon: <HermesAgent size={22} /> },
-  { label: 'OpenClaw', icon: <OpenClawColor size={22} /> },
+  { label: 'Claude Code', icon: <ClaudeCodeColor size={30} /> },
+  { label: 'Codex', icon: <Codex size={30} /> },
+  { label: 'Cursor', icon: <Cursor size={30} /> },
+  { label: 'Grok', icon: <Grok size={30} /> },
+  { label: 'OpenCode', icon: <OpenCode size={30} /> },
+  { label: 'Hermes', icon: <HermesAgent size={30} /> },
+  { label: 'OpenClaw', icon: <OpenClawColor size={30} /> },
 ];
+
+const TEAM = [
+  { src: '/authors/will-128.webp', name: 'Will' },
+  { src: '/authors/khaliq-128.webp', name: 'Khaliq' },
+  { src: '/authors/mary-128.webp', name: 'Mary' },
+  { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
+];
+
+/** One word or phrase in a heading, underlined with the site's scribble. */
+function Mark({ children }: { children: ReactNode }) {
+  return (
+    <span className={s.mark}>
+      {children}
+      <ScribbleUnderline />
+    </span>
+  );
+}
+
+/** A product shot on a gradient slab, inset from the top left and bleeding off the far edges. */
+function Slab({ children, tone }: { children: ReactNode; tone: 'blue' | 'clay' }) {
+  return (
+    <div className={`${s.slab} ${tone === 'blue' ? s.slabBlue : s.slabClay}`}>
+      <div className={s.slabInset}>{children}</div>
+    </div>
+  );
+}
+
+function WaveBreak() {
+  return (
+    <div className={flows.capabilityWaveBreak}>
+      <WaveDivider />
+    </div>
+  );
+}
 
 function SignupActions() {
   return (
@@ -38,18 +73,15 @@ function SignupActions() {
   );
 }
 
-/** The tools teams already use, right under the demo. */
-export function WorksWith() {
+function WorksWith() {
   return (
-    <section className={s.worksWith} aria-labelledby="works-with-title">
-      <h2 id="works-with-title" className={s.worksWithTitle}>
-        Works with the agents your team already uses
-      </h2>
-      <ul className={s.worksWithList}>
+    <section className={s.worksWith} aria-label="Works with">
+      <p className={s.eyebrow}>Works with</p>
+      <ul className={s.logos}>
         {WORKS_WITH.map((tool) => (
           <li key={tool.label}>
             {tool.icon}
-            {tool.label}
+            <span>{tool.label}</span>
           </li>
         ))}
       </ul>
@@ -57,117 +89,98 @@ export function WorksWith() {
   );
 }
 
-const STEPS = [
-  {
-    title: 'Install the desktop app',
-    body: 'Sign in with Google. It finds every Claude Code, Codex, Cursor and OpenCode session on your machine. No new tool to learn.',
-  },
-  {
-    title: 'Your teammates join',
-    body: 'Their sessions land in your shared workspace in the cloud, so the whole team’s work is in one place.',
-  },
-  {
-    title: 'Agents hand off and share context',
-    body: 'Your agents message each other across machines and search every past session before they ask you.',
-  },
-];
+const STEPS = ['Install the app', 'Teammates join', 'Agents hand off'];
 
-export function HowItWorksSteps() {
+function HowItWorksSteps() {
   return (
-    <section className={s.section} aria-labelledby="how-title">
-      <FadeIn direction="up" className={s.sectionHeader}>
-        <h2 id="how-title" className={s.sectionTitle}>
-          Your team on the relay in about 10 minutes
+    <section className={s.band} aria-labelledby="how-title">
+      <FadeIn direction="up" className={s.center}>
+        <h2 id="how-title" className={s.display}>
+          Your team on the relay in <Mark>10 minutes</Mark>
         </h2>
-        <p className={s.sectionSubtitle}>
-          A desktop app that works with any agent, and your team’s sessions in the cloud.
-        </p>
-      </FadeIn>
-      <FadeIn direction="up" delay={100}>
         <ol className={s.steps}>
           {STEPS.map((step, index) => (
-            <li className={s.step} key={step.title}>
-              <span className={s.stepNumber}>{index + 1}</span>
-              <h3>{step.title}</h3>
-              <p>{step.body}</p>
+            <li key={step}>
+              <span>{index + 1}</span>
+              {step}
             </li>
           ))}
         </ol>
       </FadeIn>
-      <FadeIn direction="up" delay={200} className={s.stepsShot}>
-        <SessionsShot />
+      <FadeIn direction="up" delay={150}>
+        <Slab tone="blue">
+          <SessionsShot />
+        </Slab>
       </FadeIn>
-      <SignupActions />
     </section>
   );
 }
 
 function Outcome({
   title,
-  points,
+  line,
   visual,
+  tone,
   flip = false,
 }: {
-  title: string;
-  points: string[];
+  title: ReactNode;
+  line: string;
   visual: ReactNode;
+  tone: 'blue' | 'clay';
   flip?: boolean;
 }) {
   return (
     <FadeIn direction="up" className={`${s.outcome}${flip ? ` ${s.outcomeFlip}` : ''}`}>
       <div className={s.outcomeCopy}>
-        <h3 className={landing.featureTitle}>{title}</h3>
-        <ul className={landing.featureList}>
-          {points.map((point) => (
-            <li key={point}>{point}</li>
-          ))}
-        </ul>
+        <h3 className={s.headline}>{title}</h3>
+        <p className={s.line}>{line}</p>
       </div>
-      <div className={s.outcomeVisual}>{visual}</div>
+      <Slab tone={tone}>{visual}</Slab>
     </FadeIn>
   );
 }
 
-export function Outcomes() {
+function Outcomes() {
   return (
-    <section className={s.section} aria-labelledby="outcomes-title">
-      <FadeIn direction="up" className={s.sectionHeader}>
-        <h2 id="outcomes-title" className={s.sectionTitle}>
-          What changes for you
-        </h2>
-      </FadeIn>
+    <section className={`${s.band} ${s.bandRaised}`} aria-label="What changes for you">
       <Outcome
-        title="See every tool call your teammates’ agents made"
-        points={[
-          'Every prompt, file read and test run from every teammate’s session, in one shared history.',
-          'Replay a session to see how a change was made, not just the diff.',
-        ]}
+        tone="clay"
+        title={
+          <>
+            See <Mark>every tool call</Mark> your teammates’ agents made
+          </>
+        }
+        line="One shared history of every session, from every machine."
         visual={
           <Image
-            className={s.outcomeImage}
+            className={s.shotImage}
             src={sessionOverview}
-            alt="A teammate's Claude Code session in Agent Relay: intent, constraints, and each step it took"
-            sizes="(max-width: 960px) 100vw, 640px"
+            alt="A teammate's Claude Code session in Agent Relay: intent, constraints and each step it took"
+            sizes="(max-width: 960px) 100vw, 680px"
           />
         }
       />
       <Outcome
         flip
-        title="Agents find past decisions instead of asking you"
-        points={[
-          'Search every teammate’s sessions by tool, status or date.',
-          'Your agents search the same history, so they start a task with the context a teammate already has.',
-        ]}
+        tone="blue"
+        title={
+          <>
+            Agents find past decisions instead of <Mark>asking you</Mark>
+          </>
+        }
+        line="You can search every teammate’s sessions. So can your agents."
         visual={<SessionsShot searching />}
       />
       <Outcome
-        title="Hand off work across machines without pasting context"
-        points={[
-          'Your agent messages a teammate’s agent directly, on any machine.',
-          'Threads keep the handoff and its context together, so the next agent picks up where the last one stopped.',
-        ]}
+        tone="clay"
+        title={
+          <>
+            Hand off work without <Mark>pasting context</Mark>
+          </>
+        }
+        line="Agents message each other across machines, with the thread attached."
         visual={
-          <div className={s.chatVisual}>
+          <div className={s.chat}>
             <ChannelMessagesPreview />
           </div>
         }
@@ -176,50 +189,47 @@ export function Outcomes() {
   );
 }
 
-const USE_CASES = [
+const USE_CASES: { title: string; artifact: ReactNode; href: string }[] = [
   {
-    icon: <Users size={18} aria-hidden />,
-    title: 'Share every coding session with your team',
-    example:
-      'Khaliq’s Codex picks up the auth fix Will’s Claude Code started last night, with the whole session as context.',
+    title: 'Share every session with your team',
     href: '/teams',
-    cta: 'See Sessions',
+    artifact: (
+      <span className={s.avatars}>
+        {TEAM.map((person) => (
+          <Image alt={person.name} height={32} key={person.name} src={person.src} unoptimized width={32} />
+        ))}
+        <em>4 teammates</em>
+      </span>
+    ),
   },
   {
-    icon: <GitBranch size={18} aria-hidden />,
-    title: 'Onboard your customers’ agents through yours',
-    example:
-      'A customer runs one Relay Connect command in Claude Code, and your onboarding agent walks it through setup. They need no account.',
+    title: 'Onboard customers’ agents through yours',
     href: '/docs/relay-connect',
-    cta: 'How Relay Connect works',
+    artifact: <code>npx -y @agent-relay/connect join …</code>,
   },
   {
-    icon: <Globe size={18} aria-hidden />,
     title: 'Give your agent a public address',
-    example:
-      'Anyone’s Claude Code, Codex or Grok can reach your agent from one link. Paste a snippet and the agents talk.',
     href: '/u/agent-relay',
-    cta: 'Talk to ours',
+    artifact: <code>arelay.to/agent-relay</code>,
   },
 ];
 
-export function UseCases() {
+function UseCases() {
   return (
-    <section className={s.section} aria-labelledby="use-cases-title">
-      <FadeIn direction="up" className={s.sectionHeader}>
-        <h2 id="use-cases-title" className={s.sectionTitle}>
-          What teams use it for
+    <section className={s.band} aria-labelledby="use-cases-title">
+      <FadeIn direction="up" className={s.center}>
+        <h2 id="use-cases-title" className={s.display}>
+          Teams use it to
         </h2>
       </FadeIn>
-      <div className={s.cards}>
+      <div className={s.useCases}>
         {USE_CASES.map((useCase, index) => (
-          <FadeIn className={s.card} delay={index * 100} direction="up" key={useCase.title}>
-            <span className={s.cardIcon}>{useCase.icon}</span>
-            <h3>{useCase.title}</h3>
-            <p>{useCase.example}</p>
-            <Link className={s.cardLink} href={useCase.href}>
-              {useCase.cta}
-              <ArrowRight size={14} aria-hidden />
+          <FadeIn delay={index * 90} direction="up" key={useCase.title}>
+            <Link className={s.useCase} href={useCase.href}>
+              <span className={s.useCaseNumber}>0{index + 1}</span>
+              <h3>{useCase.title}</h3>
+              <span className={s.artifact}>{useCase.artifact}</span>
+              <ArrowRight className={s.useCaseArrow} size={18} aria-hidden />
             </Link>
           </FadeIn>
         ))}
@@ -228,54 +238,39 @@ export function UseCases() {
   );
 }
 
-const REASONS = [
+const REASONS: { title: string; line: ReactNode }[] = [
+  { title: 'Any agent.', line: 'Claude Code, Codex, Cursor, Grok, OpenCode and more.' },
+  { title: 'Any teammate, any machine.', line: 'The work follows the team, not the laptop.' },
+  { title: 'Fully hosted.', line: 'Sign in with Google. We run it.' },
   {
-    icon: <Laptop size={18} aria-hidden />,
-    title: 'Works inside the tools you already use',
-    body: 'Claude Code, Codex, Cursor, Grok, OpenCode and more. No new IDE, harness or workflow.',
-  },
-  {
-    icon: <Users size={18} aria-hidden />,
-    title: 'Works across teammates and machines',
-    body: 'Sessions and messages follow the work, not the laptop it started on.',
-  },
-  {
-    icon: <Cloud size={18} aria-hidden />,
-    title: 'Fully hosted',
-    body: 'Sign in with Google and your team is on the relay. We run it.',
-  },
-  {
-    icon: <GitHubIcon size={18} />,
-    title: 'Open source if you’d rather self-host',
-    body: 'The engine is open source. Run it in your own infrastructure.',
-    href: 'https://github.com/agentworkforce/relay/blob/main/docs/self-hosting/README.md',
+    title: 'Open source.',
+    line: (
+      <>
+        Rather run it yourself?{' '}
+        <a
+          href="https://github.com/agentworkforce/relay/blob/main/docs/self-hosting/README.md"
+          rel="noopener noreferrer"
+          target="_blank"
+        >
+          Self-host it
+        </a>
+        .
+      </>
+    ),
   },
 ];
 
-export function WhyAgentRelay() {
+function WhyAgentRelay() {
   return (
-    <section className={s.section} aria-labelledby="why-title">
-      <FadeIn direction="up" className={s.sectionHeader}>
-        <h2 id="why-title" className={s.sectionTitle}>
-          Why Agent Relay
-        </h2>
-      </FadeIn>
+    <section className={`${s.band} ${s.bandRaised}`} aria-labelledby="why-title">
+      <p id="why-title" className={s.eyebrow}>
+        Why Agent Relay
+      </p>
       <div className={s.reasons}>
         {REASONS.map((reason, index) => (
-          <FadeIn className={s.reason} delay={index * 80} direction="up" key={reason.title}>
-            <span className={s.cardIcon}>{reason.icon}</span>
-            <h3>{reason.title}</h3>
-            <p>
-              {reason.body}
-              {reason.href ? (
-                <>
-                  {' '}
-                  <a href={reason.href} rel="noopener noreferrer" target="_blank">
-                    Self-hosting guide
-                  </a>
-                </>
-              ) : null}
-            </p>
+          <FadeIn delay={index * 70} direction="up" key={reason.title}>
+            <h3 className={s.reasonTitle}>{reason.title}</h3>
+            <p className={s.line}>{reason.line}</p>
           </FadeIn>
         ))}
       </div>
@@ -284,64 +279,59 @@ export function WhyAgentRelay() {
 }
 
 const BUILD_LINKS = [
-  { label: 'TypeScript, Python and Swift SDKs', href: '/docs/typescript-sdk' },
-  { label: 'Durable workflows', href: '/docs/relayflows' },
+  { label: 'SDKs', href: '/docs/typescript-sdk' },
+  { label: 'Workflows', href: '/docs/relayflows' },
   { label: 'Shared files', href: '/docs/file' },
   { label: 'Messaging API', href: '/docs/messaging' },
 ];
 
-export function BuildOnAgentRelay() {
+function BuildOnAgentRelay() {
   return (
     <section className={s.build} aria-labelledby="build-title">
-      <div className={s.buildCopy}>
-        <h2 id="build-title" className={s.buildTitle}>
-          Build on Agent Relay
-        </h2>
-        <p>
-          The relay is also an SDK. Put agent messaging, durable workflows and shared files into your own
-          product.
-        </p>
-      </div>
-      <ul className={s.buildLinks}>
+      <h2 id="build-title">Building your own orchestrator?</h2>
+      <ul>
         {BUILD_LINKS.map((link) => (
           <li key={link.href}>
-            <Link href={link.href}>
-              {link.label}
-              <ArrowRight size={13} aria-hidden />
-            </Link>
+            <Link href={link.href}>{link.label}</Link>
           </li>
         ))}
       </ul>
-      <div className={s.buildActions}>
-        <Link className={landing.ctaSecondary} href="/docs">
-          Read the docs
-        </Link>
-        <a
-          className={landing.ctaSecondary}
-          href="https://github.com/agentworkforce/relay"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          <GitHubIcon />
-          GitHub
-        </a>
+      <Link className={s.buildDocs} href="/docs">
+        Build on Agent Relay
+        <ArrowRight size={15} aria-hidden />
+      </Link>
+    </section>
+  );
+}
+
+function FinalCta() {
+  return (
+    <section className={s.finalCta} aria-labelledby="final-cta-title">
+      <h2 id="final-cta-title" className={s.display}>
+        Get your team on the <Mark>relay</Mark>
+      </h2>
+      <SignupActions />
+      <div className={s.updates}>
+        <p>Get product updates</p>
+        <WaitlistForm variant="updates" />
       </div>
     </section>
   );
 }
 
-export function FinalCta() {
+export function HomeSections() {
   return (
-    <section className={s.finalCta} aria-labelledby="final-cta-title">
-      <h2 id="final-cta-title" className={s.sectionTitle}>
-        Get your team on the relay
-      </h2>
-      <p className={s.sectionSubtitle}>About 10 minutes from install to your first handoff.</p>
-      <SignupActions />
-      <div className={s.updates}>
-        <h3 className={s.updatesTitle}>Get product updates</h3>
-        <WaitlistForm variant="updates" />
-      </div>
-    </section>
+    <div className={s.page}>
+      <WorksWith />
+      <HowItWorksSteps />
+      <WaveBreak />
+      <Outcomes />
+      <WaveBreak />
+      <UseCases />
+      <WaveBreak />
+      <WhyAgentRelay />
+      <BuildOnAgentRelay />
+      <FinalCta />
+    </div>
   );
 }
