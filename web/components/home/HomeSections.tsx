@@ -357,17 +357,16 @@ export function UseCases({
   );
 }
 
-function Why() {
+export function Why({
+  title = (
+    <>
+      No new IDE. No new <Mark>habits.</Mark>
+    </>
+  ),
+}: { title?: ReactNode } = {}) {
   return (
     <section className={s.section} aria-labelledby="why-title">
-      <SectionHeader
-        id="why-title"
-        title={
-          <>
-            No new IDE. No new <Mark>habits.</Mark>
-          </>
-        }
-      />
+      <SectionHeader id="why-title" title={title} />
       <FadeIn direction="up">
         <WhyRelay />
       </FadeIn>
@@ -408,7 +407,8 @@ function WaveBreak() {
 export function HomeSections({
   opening = <Talk />,
   showUseCases = true,
-}: { opening?: ReactNode; showUseCases?: boolean } = {}) {
+  showWhy = true,
+}: { opening?: ReactNode; showUseCases?: boolean; showWhy?: boolean } = {}) {
   return (
     <div className={s.page}>
       {opening}
@@ -423,7 +423,7 @@ export function HomeSections({
       </div>
       <div className={`${s.band} ${s.bandGrid}`}>
         {showUseCases && <UseCases />}
-        <Why />
+        {showWhy && <Why />}
       </div>
       <div className={`${s.band} ${s.bandNight}`}>
         <FinalCta />
