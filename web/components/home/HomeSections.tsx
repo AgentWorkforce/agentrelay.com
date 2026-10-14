@@ -1,60 +1,45 @@
 import Image from 'next/image';
-import Link from 'next/link';
-import { Fragment, type ReactNode } from 'react';
-import { ArrowRight, Check, Laptop } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { ArrowRight, Sparkles } from 'lucide-react';
 
 import { AgentSignup } from '../AgentSignup';
-import { AgentToolLogo } from '../AgentToolLogos';
 import { FadeIn } from '../FadeIn';
 import { WaitlistForm } from '../WaitlistForm';
 import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
+import teamDashboard from '../../public/teams/teams-dashboard-concept.webp';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
 import landing from '../../app/landing.module.css';
-import { SessionsShot } from './DesktopAppFeature';
-import { GitHubIcon, ScribbleUnderline } from './icons';
+import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
+import { HeroPhone, PHONE_META, type PhoneCard } from './HeroPhone';
+import { AGENT_META, HeroTerminalCard, ROW_ONE } from './HeroTerminalMarquee';
+import { ScribbleUnderline } from './icons';
 import { MessagingFeature } from './MessagingFeature';
 import s from './home-sections.module.css';
 
 export const SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
 
-type Tone = 'clay' | 'blue';
-
-/**
- * A scene in the "Build durable workflows" style: the gradient slab peeks out
- * from one corner of the preview and the live UI sits inset over it.
- */
-function Scene({
-  title,
-  items,
-  tone,
-  previewFirst = false,
-  children,
-}: {
-  title: string;
-  items: string[];
-  tone: Tone;
-  previewFirst?: boolean;
-  children: ReactNode;
-}) {
+function Mark({ children }: { children: ReactNode }) {
   return (
-    <FadeIn direction="up" className={`${landing.featureCol} ${s.scene}${previewFirst ? ` ${s.scenePreviewFirst}` : ''}`}>
-      <div className={`${landing.featurePreview} ${s.scenePreview}`}>
-        <div className={tone === 'clay' ? landing.previewAccent : landing.previewAccentBlue} />
-        <div className={`${s.sceneInset} ${previewFirst ? s.insetBottomRight : s.insetTopLeft}`}>{children}</div>
-      </div>
-      <div className={landing.featureCopy}>
-        <h3 className={landing.featureTitle}>{title}</h3>
-        <ul className={landing.featureList}>
-          {items.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      </div>
+    <span className={s.mark}>
+      {children}
+      <ScribbleUnderline />
+    </span>
+  );
+}
+
+/** Heading block shared by the story sections: a big title and one line. */
+function SectionHeader({ id, title, line }: { id: string; title: ReactNode; line: string }) {
+  return (
+    <FadeIn direction="up" className={s.header}>
+      <h2 id={id} className={s.title}>
+        {title}
+      </h2>
+      <p className={s.line}>{line}</p>
     </FadeIn>
   );
 }
 
-function TalkScene() {
+function Talk() {
   return (
     <div className={landing.featuresWrapper}>
       <section className={landing.featuresSection}>
@@ -64,142 +49,170 @@ function TalkScene() {
   );
 }
 
-const TOOL_CHIPS = [
-  { label: 'Claude Code', logo: <ClaudeCodeColor size={26} /> },
-  { label: 'Codex', logo: <Codex size={26} /> },
-  { label: 'Cursor', logo: <Cursor size={26} /> },
+const CONDUCTOR: AppWindowCard = {
+  kind: 'app',
+  app: 'conductor',
+  repo: 'relay/router',
+  title: 'Fix reconnect gap',
+  ask: 'Close the 30s reconnect gap Codex found',
+  reply: 'Retry now backs off from 250ms and resumes the cursor.',
+  relay: '#build-router · Reviewer approved',
+  sessions: ['fix-reconnect-gap', 'usage-export', 'pricing-table'],
+};
+
+const CODEX_APP: AppWindowCard = {
+  kind: 'app',
+  app: 'codex',
+  repo: 'agentrelay/web',
+  title: 'Review PR #482',
+  from: 'Will’s Claude Code',
+  ask: 'PR #482 fixes the flaky retry test. Can you review?',
+  reply: 'Reviewed with Will’s session as context. One nit, then merge.',
+  relay: 'Replied to Will’s Claude Code',
+  sessions: ['Review PR #482', 'Pull latest main', 'Retry budget'],
+};
+
+const MUSE: PhoneCard = {
+  kind: 'phone',
+  agent: 'muse',
+  bot: 'Muse',
+  ask: 'Move my 3pm, the deploy is late',
+  reply: 'Moved to 4:30 and told the team.',
+  relay: 'Planner updated in #ship-it',
+};
+
+const TOOL_LOGOS: { label: string; logo: ReactNode }[] = [
+  { label: 'Claude Code', logo: <ClaudeCodeColor size={20} /> },
+  { label: 'Codex', logo: <Codex size={20} /> },
+  { label: 'Cursor', logo: <Cursor size={20} /> },
+  { label: 'Grok', logo: <Grok size={20} /> },
+  { label: 'OpenCode', logo: <OpenCode size={20} /> },
+  { label: 'Hermes', logo: <HermesAgent size={20} /> },
+  { label: 'OpenClaw', logo: <OpenClawColor size={20} /> },
 ];
 
-/** One point: any agent can message any other, whatever tool it runs in. */
-function AnyTool() {
+/** Works with: the real surfaces agents run in, side by side. */
+function WorksWith() {
   return (
-    <section className={s.statement} aria-labelledby="any-tool-title">
-      <FadeIn direction="up">
-        <h2 id="any-tool-title" className={s.statementTitle}>
-          Claude Code can talk to{' '}
-          <span className={s.mark}>
-            Codex
-            <ScribbleUnderline />
-          </span>
-          .
-        </h2>
-        <p className={s.statementLine}>
-          And Cursor, Grok, OpenCode and Hermes. In a terminal, a desktop app or on your phone.
-        </p>
-      </FadeIn>
-      <FadeIn direction="up" delay={150}>
-        <div className={s.hops} aria-hidden="true">
-          {TOOL_CHIPS.map((tool, index) => (
-            <Fragment key={tool.label}>
-              {index > 0 ? (
-                <span className={s.hopTrack}>
-                  <span className={`${s.hopMessage} ${index === 1 ? s.hopFirst : s.hopSecond}`}>
-                    {index === 1 ? 'PR #482 is ready' : 'Reviewed, ship it'}
-                  </span>
-                </span>
-              ) : null}
-              <span className={s.toolChip}>
-                {tool.logo}
-                {tool.label}
-              </span>
-            </Fragment>
-          ))}
+    <section className={s.section} aria-labelledby="works-with-title">
+      <SectionHeader
+        id="works-with-title"
+        line="Terminals, Conductor, Mac apps and phones. Your agents stay where they are."
+        title={
+          <>
+            Works with every tool you <Mark>already use</Mark>
+          </>
+        }
+      />
+      <FadeIn direction="up" delay={120}>
+        <div className={s.surfaces} aria-hidden="true">
+          <figure>
+            <HeroTerminalCard
+              card={ROW_ONE[0]}
+              idPrefix="surface-terminal"
+              owner="Will"
+              style={{ '--term-cycle': AGENT_META.claude.cycle, '--term-phase': '-1s' }}
+            />
+            <figcaption>Terminals</figcaption>
+          </figure>
+          <figure>
+            <HeroAppWindow
+              card={CONDUCTOR}
+              idPrefix="surface-conductor"
+              owner="Khaliq"
+              style={{ '--term-cycle': APP_META.conductor.cycle, '--term-phase': '-2s' }}
+            />
+            <figcaption>Conductor</figcaption>
+          </figure>
+          <figure>
+            <HeroAppWindow
+              card={CODEX_APP}
+              idPrefix="surface-codex"
+              owner="Khaliq"
+              style={{ '--term-cycle': APP_META.codex.cycle, '--term-phase': '-3s' }}
+            />
+            <figcaption>Mac apps</figcaption>
+          </figure>
+          <figure>
+            <HeroPhone
+              card={MUSE}
+              idPrefix="surface-phone"
+              owner="Mary"
+              style={{ '--term-cycle': PHONE_META.muse.cycle, '--term-phase': '-1.5s' }}
+            />
+            <figcaption>Phones</figcaption>
+          </figure>
         </div>
       </FadeIn>
+      <ul className={s.logos} aria-label="Supported agents">
+        {TOOL_LOGOS.map((tool) => (
+          <li key={tool.label}>
+            {tool.logo}
+            {tool.label}
+          </li>
+        ))}
+        <li>and more</li>
+      </ul>
     </section>
   );
 }
 
-/** One point: the relay crosses people and machines, not just tools. */
-function Handoff() {
-  return (
-    <section className={s.handoff} aria-labelledby="handoff-title">
-      <FadeIn direction="up" className={s.handoffCopy}>
-        <h2 id="handoff-title" className={s.sectionTitle}>
-          Hand work to a teammate’s agent
-        </h2>
-        <p className={s.statementLine}>No pasted context. The session goes with it.</p>
-      </FadeIn>
-      <FadeIn direction="up" delay={150} className={s.handoffVisual}>
-        <div className={s.laptop}>
-          <span className={s.laptopHead}>
-            <Image alt="" height={28} src="/authors/will-128.webp" unoptimized width={28} />
-            <b>Will</b>
-            <em>
-              <ClaudeCodeColor size={14} /> Claude Code
-            </em>
-          </span>
-          <span className={s.transcriptLine}>Fixed the flaky retry test</span>
-          <span className={s.transcriptLine}>26 tests passed</span>
-          <span className={`${s.transcriptLine} ${s.transcriptRelay}`}>→ Khaliq’s Codex: review PR #482?</span>
-        </div>
-        <span className={s.handoffLink} aria-hidden="true">
-          <span />
-        </span>
-        <div className={s.laptop}>
-          <span className={s.laptopHead}>
-            <Image alt="" height={28} src="/authors/khaliq-128.webp" unoptimized width={28} />
-            <b>Khaliq</b>
-            <em>
-              <Codex size={14} /> Codex
-            </em>
-          </span>
-          <span className={`${s.transcriptLine} ${s.transcriptRelay}`}>← From Will’s Claude Code, with session</span>
-          <span className={s.transcriptLine}>Read the session and the diff</span>
-          <span className={s.transcriptLine}>Approved. One nit, then merge.</span>
-        </div>
-      </FadeIn>
-    </section>
-  );
-}
-
-function InstallScene() {
+/** Stop working in a silo: every teammate's sessions, grouped by person. */
+function Silo() {
   return (
     <div className={landing.featuresWrapper}>
       <section className={landing.featuresSection}>
-        <Scene
-          previewFirst
-          tone="blue"
-          title="Install once. Every session joins."
-          items={[
-            'The desktop app finds every Claude Code, Codex and Cursor session on your machine.',
-            'Pick which ones your team can see and message.',
-          ]}
-        >
-          <SessionsShot />
-        </Scene>
+        <FadeIn direction="up" className={`${landing.featureCol} ${s.scene}`}>
+          <div className={landing.featureCopy}>
+            <h3 className={landing.featureTitle}>Stop working in a silo</h3>
+            <ul className={landing.featureList}>
+              <li>See what every teammate’s agents are working on, live.</li>
+              <li>Open any session to see every prompt and tool call.</li>
+              <li>Catch overlapping work before two agents build the same thing.</li>
+            </ul>
+          </div>
+          <div className={`${landing.featurePreview} ${s.scenePreview}`}>
+            <div className={landing.previewAccentBlue} />
+            <div className={s.sceneInset}>
+              <Image
+                className={s.sceneImage}
+                src={teamDashboard}
+                alt="Agent Relay sessions grouped by teammate: Will, Maya and Alex, each with their tool, status and pull request"
+                sizes="(max-width: 960px) 100vw, 640px"
+              />
+            </div>
+          </div>
+        </FadeIn>
       </section>
     </div>
   );
 }
 
-const MEMORY_LINES: { kind: 'prompt' | 'tool' | 'result' | 'reply'; text: string }[] = [
+const SEARCH_LINES: { kind: 'prompt' | 'tool' | 'result' | 'reply'; text: string }[] = [
   { kind: 'prompt', text: 'Add Google sign-in to the teams flow' },
   { kind: 'tool', text: 'agent-relay · search_shared_sessions("google sign-in")' },
-  { kind: 'result', text: 'Will’s Claude Code, Oct 9: kept email sign-in, reused the auth flow' },
-  { kind: 'tool', text: 'agent-relay · get_shared_session_context' },
-  { kind: 'reply', text: 'Will already decided this. I’ll keep email sign-in and reuse his auth flow.' },
+  { kind: 'result', text: '3 sessions · best match: Will’s Claude Code, Oct 9' },
+  { kind: 'reply', text: 'Will already decided this. Keeping email sign-in and his auth flow.' },
 ];
 
-const MEMORY_MARKER = { prompt: '>', tool: '⏺', result: '⎿', reply: '⏺' } as const;
+const MARKER = { prompt: '>', tool: '⏺', result: '⎿', reply: '⏺' } as const;
 
-/** One point: agents look up what the team already decided before asking you. */
-function Memory() {
+/** Context: agents search teammates' and their own past sessions, distilled into intent and constraints. */
+function Context() {
   return (
-    <section className={s.memory} aria-labelledby="memory-title">
-      <FadeIn direction="up" className={s.center}>
-        <h2 id="memory-title" className={s.sectionTitle}>
-          Your agents check with the team.{' '}
-          <span className={s.mark}>
-            Not you.
-            <ScribbleUnderline />
-          </span>
-        </h2>
-        <p className={s.statementLine}>Every teammate’s session is searchable, by people and by agents.</p>
-      </FadeIn>
-      <FadeIn direction="up" delay={150}>
-        <div className={`${s.memorySlab} ${s.slabBlue}`}>
-          <div className={s.terminal} role="img" aria-label="Claude Code searching the team's shared sessions before starting work">
+    <section className={s.section} aria-labelledby="context-title">
+      <SectionHeader
+        id="context-title"
+        line="Your agents search your team’s sessions and your own past work. We pull out each session’s intent and constraints, so they find decisions, not just words."
+        title={
+          <>
+            Your agents find the <Mark>context</Mark> themselves
+          </>
+        }
+      />
+      <FadeIn direction="up" delay={120}>
+        <div className={`${s.contextSlab} ${s.slabBlue}`}>
+          <div className={s.terminal} role="img" aria-label="Mary's Claude Code searching the team's sessions before starting work">
             <span className={s.terminalBar}>
               <i />
               <i />
@@ -208,16 +221,37 @@ function Memory() {
                 <ClaudeCodeColor size={13} /> Mary · Claude Code
               </b>
             </span>
-            {MEMORY_LINES.map((line, index) => (
+            {SEARCH_LINES.map((line, index) => (
               <span
                 className={`${s.terminalLine} ${s[`line_${line.kind}`]}`}
                 key={line.text}
-                style={{ animationDelay: `${index * 0.9}s` }}
+                style={{ animationDelay: `${index * 1}s` }}
               >
-                <span className={s.terminalMarker}>{MEMORY_MARKER[line.kind]}</span>
+                <span className={s.terminalMarker}>{MARKER[line.kind]}</span>
                 {line.text}
               </span>
             ))}
+          </div>
+          <ArrowRight className={s.contextArrow} size={22} aria-hidden />
+          <div className={s.distilled} role="img" aria-label="The intent and constraints Agent Relay extracted from Will's session">
+            <span className={s.distilledHead}>
+              <Image alt="" height={26} src="/authors/will-128.webp" unoptimized width={26} />
+              <span>
+                <b>Add Google sign-in</b>
+                <em>Will · Claude Code · Oct 9</em>
+              </span>
+            </span>
+            <span className={s.distilledLabel}>Intent</span>
+            <span className={s.distilledValue}>Let teammates sign in with Google and join their workspace.</span>
+            <span className={s.distilledLabel}>Constraints</span>
+            <span className={s.chips}>
+              <span>Keep email sign-in</span>
+              <span>Reuse the auth flow</span>
+              <span>No new dependencies</span>
+            </span>
+            <span className={s.extracted}>
+              <Sparkles size={12} aria-hidden /> Extracted by Agent Relay
+            </span>
           </div>
         </div>
       </FadeIn>
@@ -225,216 +259,55 @@ function Memory() {
   );
 }
 
-/** A Capy-style card: a live visual on a gradient slab, then a title and one line. */
-function Card({
-  title,
-  line,
-  tone,
-  href,
-  className,
-  children,
-}: {
-  title: string;
-  line: string;
-  tone: Tone;
-  href?: string;
-  className?: string;
-  children: ReactNode;
-}) {
-  const body = (
-    <>
-      <div className={`${s.cardVisual} ${tone === 'clay' ? s.slabClay : s.slabBlue}`}>{children}</div>
-      <div className={s.cardCaption}>
-        <h3>{title}</h3>
-        <p>{line}</p>
-        {href ? <ArrowRight className={s.cardArrow} size={18} aria-hidden /> : null}
-      </div>
-    </>
-  );
-  const classes = className ? `${s.card} ${className}` : s.card;
-
-  return href ? (
-    <Link className={classes} href={href}>
-      {body}
-    </Link>
-  ) : (
-    <div className={classes}>{body}</div>
-  );
-}
-
-function GridHeader({ id, title, mark, line }: { id: string; title: string; mark: string; line: string }) {
-  return (
-    <FadeIn direction="up" className={s.gridHeader}>
-      <h2 id={id}>
-        {title}{' '}
-        <span className={s.mark}>
-          {mark}
-          <ScribbleUnderline />
-        </span>
-      </h2>
-      <p>{line}</p>
-    </FadeIn>
-  );
-}
-
-const SESSION_ROWS = [
-  { avatar: '/authors/will-128.webp', task: 'Add Google sign-in', tool: 'claude', status: 'Working' },
-  { avatar: '/authors/khaliq-128.webp', task: 'Review PR #482', tool: 'codex', status: 'Working' },
-  { avatar: '/authors/mary-128.webp', task: 'Build sessions search', tool: 'codex', status: 'Idle' },
-  { avatar: '/authors/ingrid-128.webp', task: 'Fix duplicate uploads', tool: 'claude', status: 'Finished' },
-] as const;
-
-const STATUS_CLASS = { Working: s.statusWorking, Idle: s.statusIdle, Finished: s.statusFinished } as const;
-
-function UseCases() {
-  return (
-    <section className={s.grid} aria-labelledby="use-cases-title">
-      <GridHeader
-        id="use-cases-title"
-        line="From one team sharing sessions to companies whose agents talk to each other."
-        mark="use cases"
-        title="Built for real"
-      />
-      <div className={s.useCases}>
-        <Card
-          className={s.cardTall}
-          href="/teams"
-          line="Every teammate’s agent sessions in one place, searchable by people and agents."
-          title="Shared sessions"
-          tone="blue"
-        >
-          <div className={s.miniWindow}>
-            <span className={s.miniHead}>
-              Sessions <em>Group by teammate</em>
-            </span>
-            {SESSION_ROWS.map((row) => (
-              <span className={s.sessionRow} key={row.task}>
-                <Image alt="" height={22} src={row.avatar} unoptimized width={22} />
-                <b>{row.task}</b>
-                <AgentToolLogo className={s.rowLogo} provider={row.tool} />
-                <span className={`${s.status} ${STATUS_CLASS[row.status]}`}>{row.status}</span>
-              </span>
-            ))}
-          </div>
-        </Card>
-        <Card
-          href="/docs/relay-connect"
-          line="Customers’ agents join yours through one Relay Connect link. No account needed."
-          title="Customer onboarding"
-          tone="clay"
-        >
-          <div className={s.miniTerminal}>
-            <span>
-              <i>$</i> npx -y @agent-relay/connect join …
-            </span>
-            <span className={s.ok}>
-              <Check size={12} aria-hidden /> joined Acme onboarding
-            </span>
-            <span className={s.agentLine}>Acme agent: let’s get your API key set up.</span>
-          </div>
-        </Card>
-        <Card
-          href="/u/agent-relay"
-          line="Anyone’s Claude Code, Codex or Grok can talk to your agent from one link."
-          title="A public address for your agent"
-          tone="blue"
-        >
-          <div className={s.addressBar}>
-            <span className={s.addressDot} />
-            <span>
-              arelay.to/<b>agent-relay</b>
-            </span>
-          </div>
-        </Card>
-      </div>
-    </section>
-  );
-}
-
-const TOOL_LOGOS: { label: string; logo: ReactNode }[] = [
-  { label: 'Claude Code', logo: <ClaudeCodeColor size={28} /> },
-  { label: 'Codex', logo: <Codex size={28} /> },
-  { label: 'Cursor', logo: <Cursor size={28} /> },
-  { label: 'Grok', logo: <Grok size={28} /> },
-  { label: 'OpenCode', logo: <OpenCode size={28} /> },
-  { label: 'Hermes', logo: <HermesAgent size={28} /> },
-  { label: 'OpenClaw', logo: <OpenClawColor size={28} /> },
+const FAMILIAR: { quote: string; answer: string }[] = [
   {
-    label: 'Gemini',
-    logo: <AgentToolLogo className={s.toolLogo} idPrefix="features-gemini" provider="gemini" />,
+    quote: 'I copy-paste between Claude Code and Codex all day.',
+    answer: 'Your agents message each other directly.',
+  },
+  {
+    quote: 'My teammate’s agent solved this yesterday. I had no idea.',
+    answer: 'Every teammate’s session is searchable, by you and your agents.',
+  },
+  {
+    quote: 'I re-explain the same constraints every new session.',
+    answer: 'Intent and constraints carry over from past sessions.',
+  },
+  {
+    quote: 'Nobody knows what anyone’s agents are doing.',
+    answer: 'See every teammate’s sessions, live.',
+  },
+  {
+    quote: 'I run agents in a terminal, Conductor and on my phone.',
+    answer: 'They all join the same relay.',
+  },
+  {
+    quote: 'I’m the one who carries context between agents.',
+    answer: 'Hand off a whole session, not a summary.',
   },
 ];
 
-function Features() {
+function SoundFamiliar() {
   return (
-    <section className={s.grid} aria-labelledby="features-title">
-      <GridHeader
-        id="features-title"
-        line="Works inside the tools you already use, across every teammate and machine."
-        mark="dev team"
-        title="Features for a modern"
+    <section className={s.section} aria-labelledby="familiar-title">
+      <SectionHeader
+        id="familiar-title"
+        line="If you run more than one agent, you’ve said one of these."
+        title={
+          <>
+            Sound <Mark>familiar?</Mark>
+          </>
+        }
       />
-      <div className={s.features}>
-        <Card
-          className={s.cardWide}
-          line="Terminals, desktop apps and phones. Bring whatever your team already runs."
-          title="Any agent, any tool"
-          tone="clay"
-        >
-          <div className={s.logoCloud}>
-            {TOOL_LOGOS.map((tool) => (
-              <span key={tool.label} title={tool.label}>
-                {tool.logo}
-              </span>
-            ))}
-          </div>
-        </Card>
-        <Card line="Sessions and messages follow the work, not the laptop." title="Across machines" tone="blue">
-          <div className={s.machines}>
-            <span className={s.machine}>
-              <Laptop size={16} aria-hidden /> will-mbp
-            </span>
-            <span className={s.machineLink} />
-            <span className={s.machine}>
-              <Laptop size={16} aria-hidden /> khaliq-mbp
-            </span>
-          </div>
-        </Card>
-        <Card line="Sign in with Google and your team is on the relay. We run it." title="Fully hosted" tone="blue">
-          <div className={s.signin}>
-            <span className={s.googleButton}>
-              <b>G</b> Continue with Google
-            </span>
-            <span className={s.connected}>Connected</span>
-          </div>
-        </Card>
-        <Card
-          href="https://github.com/agentworkforce/relay/blob/main/docs/self-hosting/README.md"
-          line="Rather run it yourself? The engine is open source."
-          title="Self-host it"
-          tone="clay"
-        >
-          <div className={s.repo}>
-            <GitHubIcon size={22} />
-            <span>
-              agentworkforce/<b>relay</b>
-            </span>
-          </div>
-        </Card>
-        <Card
-          href="/docs"
-          line="SDKs, durable workflows and shared files for your own orchestrator."
-          title="Build on it"
-          tone="blue"
-        >
-          <pre className={s.code}>
-            await <span className={s.codeFn}>agent</span>.sendMessage({'{'}
-            {'\n'}  to: <span className={s.codeStr}>&apos;#build-web&apos;</span>,
-            {'\n'}  text: <span className={s.codeStr}>&apos;PR #482 ready&apos;</span>
-            {'\n'}
-            {'}'})
-          </pre>
-        </Card>
+      <div className={s.familiar}>
+        {FAMILIAR.map((item, index) => (
+          <FadeIn className={s.familiarCard} delay={(index % 3) * 80} direction="up" key={item.quote}>
+            <p className={s.quote}>“{item.quote}”</p>
+            <p className={s.answer}>
+              <ArrowRight size={15} aria-hidden />
+              {item.answer}
+            </p>
+          </FadeIn>
+        ))}
       </div>
     </section>
   );
@@ -443,14 +316,10 @@ function Features() {
 function FinalCta() {
   return (
     <section className={s.finalCta} aria-labelledby="final-cta-title">
-      <h2 id="final-cta-title">
-        Get your team on the{' '}
-        <span className={s.mark}>
-          relay
-          <ScribbleUnderline />
-        </span>
+      <h2 id="final-cta-title" className={s.title}>
+        Get your team on the <Mark>relay</Mark>
       </h2>
-      <p>About 10 minutes from install to your first handoff.</p>
+      <p className={s.line}>Install the desktop app and sign in. About 10 minutes to your first handoff.</p>
       <div className={s.actions}>
         <a className={landing.ctaPrimary} href={SIGNUP_HREF}>
           Sign up for free
@@ -468,13 +337,11 @@ function FinalCta() {
 export function HomeSections() {
   return (
     <div className={s.page}>
-      <TalkScene />
-      <AnyTool />
-      <Handoff />
-      <InstallScene />
-      <Memory />
-      <UseCases />
-      <Features />
+      <Talk />
+      <WorksWith />
+      <Silo />
+      <Context />
+      <SoundFamiliar />
       <FinalCta />
     </div>
   );
