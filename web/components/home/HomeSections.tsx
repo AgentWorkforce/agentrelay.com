@@ -1,305 +1,322 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Check, Laptop } from 'lucide-react';
 
 import { AgentSignup } from '../AgentSignup';
-import { ChannelMessagesPreview } from '../ChannelMessagesPreview';
+import { AgentToolLogo } from '../AgentToolLogos';
 import { FadeIn } from '../FadeIn';
 import { WaitlistForm } from '../WaitlistForm';
 import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
 import sessionOverview from '../../public/teams/teams-session-overview-concept.webp';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
-import flows from '../../app/flows/flows.module.css';
 import landing from '../../app/landing.module.css';
 import { SessionsShot } from './DesktopAppFeature';
-import { ScribbleUnderline, WaveDivider } from './icons';
+import { GitHubIcon, ScribbleUnderline } from './icons';
+import { MessagingFeature } from './MessagingFeature';
+import { RelayFlow } from './RelayFlow';
 import s from './home-sections.module.css';
 
 export const SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
 
-const WORKS_WITH: { label: string; icon: ReactNode }[] = [
-  { label: 'Claude Code', icon: <ClaudeCodeColor size={30} /> },
-  { label: 'Codex', icon: <Codex size={30} /> },
-  { label: 'Cursor', icon: <Cursor size={30} /> },
-  { label: 'Grok', icon: <Grok size={30} /> },
-  { label: 'OpenCode', icon: <OpenCode size={30} /> },
-  { label: 'Hermes', icon: <HermesAgent size={30} /> },
-  { label: 'OpenClaw', icon: <OpenClawColor size={30} /> },
-];
+type Tone = 'clay' | 'blue';
 
-const TEAM = [
-  { src: '/authors/will-128.webp', name: 'Will' },
-  { src: '/authors/khaliq-128.webp', name: 'Khaliq' },
-  { src: '/authors/mary-128.webp', name: 'Mary' },
-  { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
-];
-
-/** One word or phrase in a heading, underlined with the site's scribble. */
-function Mark({ children }: { children: ReactNode }) {
-  return (
-    <span className={s.mark}>
-      {children}
-      <ScribbleUnderline />
-    </span>
-  );
-}
-
-/** A product shot on a gradient slab, inset from the top left and bleeding off the far edges. */
-function Slab({ children, tone }: { children: ReactNode; tone: 'blue' | 'clay' }) {
-  return (
-    <div className={`${s.slab} ${tone === 'blue' ? s.slabBlue : s.slabClay}`}>
-      <div className={s.slabInset}>{children}</div>
-    </div>
-  );
-}
-
-function WaveBreak() {
-  return (
-    <div className={flows.capabilityWaveBreak}>
-      <WaveDivider />
-    </div>
-  );
-}
-
-function SignupActions() {
-  return (
-    <div className={s.actions}>
-      <a className={landing.ctaPrimary} href={SIGNUP_HREF}>
-        Sign up for free
-      </a>
-      <AgentSignup product="teams" />
-    </div>
-  );
-}
-
-function WorksWith() {
-  return (
-    <section className={s.worksWith} aria-label="Works with">
-      <p className={s.eyebrow}>Works with</p>
-      <ul className={s.logos}>
-        {WORKS_WITH.map((tool) => (
-          <li key={tool.label}>
-            {tool.icon}
-            <span>{tool.label}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-const STEPS = ['Install the app', 'Teammates join', 'Agents hand off'];
-
-function HowItWorksSteps() {
-  return (
-    <section className={s.band} aria-labelledby="how-title">
-      <FadeIn direction="up" className={s.center}>
-        <h2 id="how-title" className={s.display}>
-          Your team on the relay in <Mark>10 minutes</Mark>
-        </h2>
-        <ol className={s.steps}>
-          {STEPS.map((step, index) => (
-            <li key={step}>
-              <span>{index + 1}</span>
-              {step}
-            </li>
-          ))}
-        </ol>
-      </FadeIn>
-      <FadeIn direction="up" delay={150}>
-        <Slab tone="blue">
-          <SessionsShot />
-        </Slab>
-      </FadeIn>
-    </section>
-  );
-}
-
-function Outcome({
+/**
+ * A scene in the "Build durable workflows" style: the gradient slab peeks out
+ * from one corner of the preview and the live UI sits inset over it.
+ */
+function Scene({
   title,
-  line,
-  visual,
+  items,
   tone,
-  flip = false,
+  previewFirst = false,
+  children,
 }: {
-  title: ReactNode;
-  line: string;
-  visual: ReactNode;
-  tone: 'blue' | 'clay';
-  flip?: boolean;
+  title: string;
+  items: string[];
+  tone: Tone;
+  previewFirst?: boolean;
+  children: ReactNode;
 }) {
   return (
-    <FadeIn direction="up" className={`${s.outcome}${flip ? ` ${s.outcomeFlip}` : ''}`}>
-      <div className={s.outcomeCopy}>
-        <h3 className={s.headline}>{title}</h3>
-        <p className={s.line}>{line}</p>
+    <FadeIn direction="up" className={`${landing.featureCol} ${s.scene}${previewFirst ? ` ${s.scenePreviewFirst}` : ''}`}>
+      <div className={`${landing.featurePreview} ${s.scenePreview}`}>
+        <div className={tone === 'clay' ? landing.previewAccent : landing.previewAccentBlue} />
+        <div className={`${s.sceneInset} ${previewFirst ? s.insetBottomRight : s.insetTopLeft}`}>{children}</div>
       </div>
-      <Slab tone={tone}>{visual}</Slab>
+      <div className={landing.featureCopy}>
+        <h3 className={landing.featureTitle}>{title}</h3>
+        <ul className={landing.featureList}>
+          {items.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </div>
     </FadeIn>
   );
 }
 
-function Outcomes() {
+function TeamScenes() {
   return (
-    <section className={`${s.band} ${s.bandRaised}`} aria-label="What changes for you">
-      <Outcome
-        tone="clay"
-        title={
-          <>
-            See <Mark>every tool call</Mark> your teammates’ agents made
-          </>
-        }
-        line="One shared history of every session, from every machine."
-        visual={
+    <div className={landing.featuresWrapper}>
+      <section className={`${landing.featuresSection} ${s.scenes}`}>
+        <MessagingFeature />
+        <Scene
+          previewFirst
+          tone="blue"
+          title="Every session, on the relay"
+          items={[
+            'The desktop app finds every Claude Code, Codex and Cursor session.',
+            'Turn on messages and your teammates’ agents can reach it.',
+            'Choose what uploads. The rest stays local.',
+          ]}
+        >
+          <SessionsShot />
+        </Scene>
+        <Scene
+          tone="clay"
+          title="Your agents read the team’s history"
+          items={[
+            'Every teammate’s session lands in the cloud.',
+            'Search it by tool, status or date.',
+            'Your agents search it too, before they ask you.',
+          ]}
+        >
+          <SessionsShot searching />
+        </Scene>
+        <Scene
+          previewFirst
+          tone="blue"
+          title="Pick up where a teammate left off"
+          items={[
+            'See every prompt and tool call their agent made.',
+            'Replay how a change happened, not just the diff.',
+            'Hand the session to your agent as context.',
+          ]}
+        >
           <Image
-            className={s.shotImage}
+            className={s.sceneImage}
             src={sessionOverview}
             alt="A teammate's Claude Code session in Agent Relay: intent, constraints and each step it took"
-            sizes="(max-width: 960px) 100vw, 680px"
+            sizes="(max-width: 960px) 100vw, 600px"
           />
-        }
-      />
-      <Outcome
-        flip
-        tone="blue"
-        title={
-          <>
-            Agents find past decisions instead of <Mark>asking you</Mark>
-          </>
-        }
-        line="You can search every teammate’s sessions. So can your agents."
-        visual={<SessionsShot searching />}
-      />
-      <Outcome
-        tone="clay"
-        title={
-          <>
-            Hand off work without <Mark>pasting context</Mark>
-          </>
-        }
-        line="Agents message each other across machines, with the thread attached."
-        visual={
-          <div className={s.chat}>
-            <ChannelMessagesPreview />
-          </div>
-        }
-      />
-    </section>
+        </Scene>
+      </section>
+    </div>
   );
 }
 
-const USE_CASES: { title: string; artifact: ReactNode; href: string }[] = [
-  {
-    title: 'Share every session with your team',
-    href: '/teams',
-    artifact: (
-      <span className={s.avatars}>
-        {TEAM.map((person) => (
-          <Image alt={person.name} height={32} key={person.name} src={person.src} unoptimized width={32} />
-        ))}
-        <em>4 teammates</em>
-      </span>
-    ),
-  },
-  {
-    title: 'Onboard customers’ agents through yours',
-    href: '/docs/relay-connect',
-    artifact: <code>npx -y @agent-relay/connect join …</code>,
-  },
-  {
-    title: 'Give your agent a public address',
-    href: '/u/agent-relay',
-    artifact: <code>arelay.to/agent-relay</code>,
-  },
-];
+/** A Capy-style card: a live visual on a gradient slab, then a title and one line. */
+function Card({
+  title,
+  line,
+  tone,
+  href,
+  className,
+  children,
+}: {
+  title: string;
+  line: string;
+  tone: Tone;
+  href?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const body = (
+    <>
+      <div className={`${s.cardVisual} ${tone === 'clay' ? s.slabClay : s.slabBlue}`}>{children}</div>
+      <div className={s.cardCaption}>
+        <h3>{title}</h3>
+        <p>{line}</p>
+        {href ? <ArrowRight className={s.cardArrow} size={18} aria-hidden /> : null}
+      </div>
+    </>
+  );
+  const classes = className ? `${s.card} ${className}` : s.card;
+
+  return href ? (
+    <Link className={classes} href={href}>
+      {body}
+    </Link>
+  ) : (
+    <div className={classes}>{body}</div>
+  );
+}
+
+function GridHeader({ id, title, mark, line }: { id: string; title: string; mark: string; line: string }) {
+  return (
+    <FadeIn direction="up" className={s.gridHeader}>
+      <h2 id={id}>
+        {title}{' '}
+        <span className={s.mark}>
+          {mark}
+          <ScribbleUnderline />
+        </span>
+      </h2>
+      <p>{line}</p>
+    </FadeIn>
+  );
+}
+
+const SESSION_ROWS = [
+  { avatar: '/authors/will-128.webp', task: 'Add Google sign-in', tool: 'claude', status: 'Working' },
+  { avatar: '/authors/khaliq-128.webp', task: 'Review PR #482', tool: 'codex', status: 'Working' },
+  { avatar: '/authors/mary-128.webp', task: 'Build sessions search', tool: 'codex', status: 'Idle' },
+  { avatar: '/authors/ingrid-128.webp', task: 'Fix duplicate uploads', tool: 'claude', status: 'Finished' },
+] as const;
+
+const STATUS_CLASS = { Working: s.statusWorking, Idle: s.statusIdle, Finished: s.statusFinished } as const;
 
 function UseCases() {
   return (
-    <section className={s.band} aria-labelledby="use-cases-title">
-      <FadeIn direction="up" className={s.center}>
-        <h2 id="use-cases-title" className={s.display}>
-          Teams use it to
-        </h2>
-      </FadeIn>
+    <section className={s.grid} aria-labelledby="use-cases-title">
+      <GridHeader
+        id="use-cases-title"
+        line="From one team sharing sessions to companies whose agents talk to each other."
+        mark="use cases"
+        title="Built for real"
+      />
       <div className={s.useCases}>
-        {USE_CASES.map((useCase, index) => (
-          <FadeIn delay={index * 90} direction="up" key={useCase.title}>
-            <Link className={s.useCase} href={useCase.href}>
-              <span className={s.useCaseNumber}>0{index + 1}</span>
-              <h3>{useCase.title}</h3>
-              <span className={s.artifact}>{useCase.artifact}</span>
-              <ArrowRight className={s.useCaseArrow} size={18} aria-hidden />
-            </Link>
-          </FadeIn>
-        ))}
+        <Card
+          className={s.cardTall}
+          href="/teams"
+          line="Every teammate’s agent sessions in one place, searchable by people and agents."
+          title="Shared sessions"
+          tone="blue"
+        >
+          <div className={s.miniWindow}>
+            <span className={s.miniHead}>
+              Sessions <em>Group by teammate</em>
+            </span>
+            {SESSION_ROWS.map((row) => (
+              <span className={s.sessionRow} key={row.task}>
+                <Image alt="" height={22} src={row.avatar} unoptimized width={22} />
+                <b>{row.task}</b>
+                <AgentToolLogo className={s.rowLogo} provider={row.tool} />
+                <span className={`${s.status} ${STATUS_CLASS[row.status]}`}>{row.status}</span>
+              </span>
+            ))}
+          </div>
+        </Card>
+        <Card
+          href="/docs/relay-connect"
+          line="Customers’ agents join yours through one Relay Connect link. No account needed."
+          title="Customer onboarding"
+          tone="clay"
+        >
+          <div className={s.miniTerminal}>
+            <span>
+              <i>$</i> npx -y @agent-relay/connect join …
+            </span>
+            <span className={s.ok}>
+              <Check size={12} aria-hidden /> joined Acme onboarding
+            </span>
+            <span className={s.agentLine}>Acme agent: let’s get your API key set up.</span>
+          </div>
+        </Card>
+        <Card
+          href="/u/agent-relay"
+          line="Anyone’s Claude Code, Codex or Grok can talk to your agent from one link."
+          title="A public address for your agent"
+          tone="blue"
+        >
+          <div className={s.addressBar}>
+            <span className={s.addressDot} />
+            <span>
+              arelay.to/<b>agent-relay</b>
+            </span>
+          </div>
+        </Card>
       </div>
     </section>
   );
 }
 
-const REASONS: { title: string; line: ReactNode }[] = [
-  { title: 'Any agent.', line: 'Claude Code, Codex, Cursor, Grok, OpenCode and more.' },
-  { title: 'Any teammate, any machine.', line: 'The work follows the team, not the laptop.' },
-  { title: 'Fully hosted.', line: 'Sign in with Google. We run it.' },
+const TOOL_LOGOS: { label: string; logo: ReactNode }[] = [
+  { label: 'Claude Code', logo: <ClaudeCodeColor size={28} /> },
+  { label: 'Codex', logo: <Codex size={28} /> },
+  { label: 'Cursor', logo: <Cursor size={28} /> },
+  { label: 'Grok', logo: <Grok size={28} /> },
+  { label: 'OpenCode', logo: <OpenCode size={28} /> },
+  { label: 'Hermes', logo: <HermesAgent size={28} /> },
+  { label: 'OpenClaw', logo: <OpenClawColor size={28} /> },
   {
-    title: 'Open source.',
-    line: (
-      <>
-        Rather run it yourself?{' '}
-        <a
-          href="https://github.com/agentworkforce/relay/blob/main/docs/self-hosting/README.md"
-          rel="noopener noreferrer"
-          target="_blank"
-        >
-          Self-host it
-        </a>
-        .
-      </>
-    ),
+    label: 'Gemini',
+    logo: <AgentToolLogo className={s.toolLogo} idPrefix="features-gemini" provider="gemini" />,
   },
 ];
 
-function WhyAgentRelay() {
+function Features() {
   return (
-    <section className={`${s.band} ${s.bandRaised}`} aria-labelledby="why-title">
-      <p id="why-title" className={s.eyebrow}>
-        Why Agent Relay
-      </p>
-      <div className={s.reasons}>
-        {REASONS.map((reason, index) => (
-          <FadeIn delay={index * 70} direction="up" key={reason.title}>
-            <h3 className={s.reasonTitle}>{reason.title}</h3>
-            <p className={s.line}>{reason.line}</p>
-          </FadeIn>
-        ))}
+    <section className={s.grid} aria-labelledby="features-title">
+      <GridHeader
+        id="features-title"
+        line="Works inside the tools you already use, across every teammate and machine."
+        mark="dev team"
+        title="Features for a modern"
+      />
+      <div className={s.features}>
+        <Card
+          className={s.cardWide}
+          line="Terminals, desktop apps and phones. Bring whatever your team already runs."
+          title="Any agent, any tool"
+          tone="clay"
+        >
+          <div className={s.logoCloud}>
+            {TOOL_LOGOS.map((tool) => (
+              <span key={tool.label} title={tool.label}>
+                {tool.logo}
+              </span>
+            ))}
+          </div>
+        </Card>
+        <Card line="Sessions and messages follow the work, not the laptop." title="Across machines" tone="blue">
+          <div className={s.machines}>
+            <span className={s.machine}>
+              <Laptop size={16} aria-hidden /> will-mbp
+            </span>
+            <span className={s.machineLink} />
+            <span className={s.machine}>
+              <Laptop size={16} aria-hidden /> khaliq-mbp
+            </span>
+          </div>
+        </Card>
+        <Card line="Sign in with Google and your team is on the relay. We run it." title="Fully hosted" tone="blue">
+          <div className={s.signin}>
+            <span className={s.googleButton}>
+              <b>G</b> Continue with Google
+            </span>
+            <span className={s.connected}>Connected</span>
+          </div>
+        </Card>
+        <Card
+          href="https://github.com/agentworkforce/relay/blob/main/docs/self-hosting/README.md"
+          line="Rather run it yourself? The engine is open source."
+          title="Self-host it"
+          tone="clay"
+        >
+          <div className={s.repo}>
+            <GitHubIcon size={22} />
+            <span>
+              agentworkforce/<b>relay</b>
+            </span>
+          </div>
+        </Card>
+        <Card
+          href="/docs"
+          line="SDKs, durable workflows and shared files for your own orchestrator."
+          title="Build on it"
+          tone="blue"
+        >
+          <pre className={s.code}>
+            await <span className={s.codeFn}>agent</span>.sendMessage({'{'}
+            {'\n'}  to: <span className={s.codeStr}>&apos;#build-web&apos;</span>,
+            {'\n'}  text: <span className={s.codeStr}>&apos;PR #482 ready&apos;</span>
+            {'\n'}
+            {'}'})
+          </pre>
+        </Card>
       </div>
-    </section>
-  );
-}
-
-const BUILD_LINKS = [
-  { label: 'SDKs', href: '/docs/typescript-sdk' },
-  { label: 'Workflows', href: '/docs/relayflows' },
-  { label: 'Shared files', href: '/docs/file' },
-  { label: 'Messaging API', href: '/docs/messaging' },
-];
-
-function BuildOnAgentRelay() {
-  return (
-    <section className={s.build} aria-labelledby="build-title">
-      <h2 id="build-title">Building your own orchestrator?</h2>
-      <ul>
-        {BUILD_LINKS.map((link) => (
-          <li key={link.href}>
-            <Link href={link.href}>{link.label}</Link>
-          </li>
-        ))}
-      </ul>
-      <Link className={s.buildDocs} href="/docs">
-        Build on Agent Relay
-        <ArrowRight size={15} aria-hidden />
-      </Link>
     </section>
   );
 }
@@ -307,10 +324,20 @@ function BuildOnAgentRelay() {
 function FinalCta() {
   return (
     <section className={s.finalCta} aria-labelledby="final-cta-title">
-      <h2 id="final-cta-title" className={s.display}>
-        Get your team on the <Mark>relay</Mark>
+      <h2 id="final-cta-title">
+        Get your team on the{' '}
+        <span className={s.mark}>
+          relay
+          <ScribbleUnderline />
+        </span>
       </h2>
-      <SignupActions />
+      <p>About 10 minutes from install to your first handoff.</p>
+      <div className={s.actions}>
+        <a className={landing.ctaPrimary} href={SIGNUP_HREF}>
+          Sign up for free
+        </a>
+        <AgentSignup product="teams" />
+      </div>
       <div className={s.updates}>
         <p>Get product updates</p>
         <WaitlistForm variant="updates" />
@@ -322,15 +349,10 @@ function FinalCta() {
 export function HomeSections() {
   return (
     <div className={s.page}>
-      <WorksWith />
-      <HowItWorksSteps />
-      <WaveBreak />
-      <Outcomes />
-      <WaveBreak />
+      <RelayFlow />
+      <TeamScenes />
       <UseCases />
-      <WaveBreak />
-      <WhyAgentRelay />
-      <BuildOnAgentRelay />
+      <Features />
       <FinalCta />
     </div>
   );
