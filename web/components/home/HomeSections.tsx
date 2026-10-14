@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import { ArrowRight, Check, Laptop } from 'lucide-react';
 
 import { AgentSignup } from '../AgentSignup';
@@ -8,13 +8,11 @@ import { AgentToolLogo } from '../AgentToolLogos';
 import { FadeIn } from '../FadeIn';
 import { WaitlistForm } from '../WaitlistForm';
 import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
-import sessionOverview from '../../public/teams/teams-session-overview-concept.webp';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
 import landing from '../../app/landing.module.css';
 import { SessionsShot } from './DesktopAppFeature';
 import { GitHubIcon, ScribbleUnderline } from './icons';
 import { MessagingFeature } from './MessagingFeature';
-import { RelayFlow } from './RelayFlow';
 import s from './home-sections.module.css';
 
 export const SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
@@ -56,53 +54,174 @@ function Scene({
   );
 }
 
-function TeamScenes() {
+function TalkScene() {
   return (
     <div className={landing.featuresWrapper}>
-      <section className={`${landing.featuresSection} ${s.scenes}`}>
+      <section className={landing.featuresSection}>
         <MessagingFeature />
+      </section>
+    </div>
+  );
+}
+
+const TOOL_CHIPS = [
+  { label: 'Claude Code', logo: <ClaudeCodeColor size={26} /> },
+  { label: 'Codex', logo: <Codex size={26} /> },
+  { label: 'Cursor', logo: <Cursor size={26} /> },
+];
+
+/** One point: any agent can message any other, whatever tool it runs in. */
+function AnyTool() {
+  return (
+    <section className={s.statement} aria-labelledby="any-tool-title">
+      <FadeIn direction="up">
+        <h2 id="any-tool-title" className={s.statementTitle}>
+          Claude Code can talk to{' '}
+          <span className={s.mark}>
+            Codex
+            <ScribbleUnderline />
+          </span>
+          .
+        </h2>
+        <p className={s.statementLine}>
+          And Cursor, Grok, OpenCode and Hermes. In a terminal, a desktop app or on your phone.
+        </p>
+      </FadeIn>
+      <FadeIn direction="up" delay={150}>
+        <div className={s.hops} aria-hidden="true">
+          {TOOL_CHIPS.map((tool, index) => (
+            <Fragment key={tool.label}>
+              {index > 0 ? (
+                <span className={s.hopTrack}>
+                  <span className={`${s.hopMessage} ${index === 1 ? s.hopFirst : s.hopSecond}`}>
+                    {index === 1 ? 'PR #482 is ready' : 'Reviewed, ship it'}
+                  </span>
+                </span>
+              ) : null}
+              <span className={s.toolChip}>
+                {tool.logo}
+                {tool.label}
+              </span>
+            </Fragment>
+          ))}
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+/** One point: the relay crosses people and machines, not just tools. */
+function Handoff() {
+  return (
+    <section className={s.handoff} aria-labelledby="handoff-title">
+      <FadeIn direction="up" className={s.handoffCopy}>
+        <h2 id="handoff-title" className={s.sectionTitle}>
+          Hand work to a teammate’s agent
+        </h2>
+        <p className={s.statementLine}>No pasted context. The session goes with it.</p>
+      </FadeIn>
+      <FadeIn direction="up" delay={150} className={s.handoffVisual}>
+        <div className={s.laptop}>
+          <span className={s.laptopHead}>
+            <Image alt="" height={28} src="/authors/will-128.webp" unoptimized width={28} />
+            <b>Will</b>
+            <em>
+              <ClaudeCodeColor size={14} /> Claude Code
+            </em>
+          </span>
+          <span className={s.transcriptLine}>Fixed the flaky retry test</span>
+          <span className={s.transcriptLine}>26 tests passed</span>
+          <span className={`${s.transcriptLine} ${s.transcriptRelay}`}>→ Khaliq’s Codex: review PR #482?</span>
+        </div>
+        <span className={s.handoffLink} aria-hidden="true">
+          <span />
+        </span>
+        <div className={s.laptop}>
+          <span className={s.laptopHead}>
+            <Image alt="" height={28} src="/authors/khaliq-128.webp" unoptimized width={28} />
+            <b>Khaliq</b>
+            <em>
+              <Codex size={14} /> Codex
+            </em>
+          </span>
+          <span className={`${s.transcriptLine} ${s.transcriptRelay}`}>← From Will’s Claude Code, with session</span>
+          <span className={s.transcriptLine}>Read the session and the diff</span>
+          <span className={s.transcriptLine}>Approved. One nit, then merge.</span>
+        </div>
+      </FadeIn>
+    </section>
+  );
+}
+
+function InstallScene() {
+  return (
+    <div className={landing.featuresWrapper}>
+      <section className={landing.featuresSection}>
         <Scene
           previewFirst
           tone="blue"
-          title="Every session, on the relay"
+          title="Install once. Every session joins."
           items={[
-            'The desktop app finds every Claude Code, Codex and Cursor session.',
-            'Turn on messages and your teammates’ agents can reach it.',
-            'Choose what uploads. The rest stays local.',
+            'The desktop app finds every Claude Code, Codex and Cursor session on your machine.',
+            'Pick which ones your team can see and message.',
           ]}
         >
           <SessionsShot />
         </Scene>
-        <Scene
-          tone="clay"
-          title="Your agents read the team’s history"
-          items={[
-            'Every teammate’s session lands in the cloud.',
-            'Search it by tool, status or date.',
-            'Your agents search it too, before they ask you.',
-          ]}
-        >
-          <SessionsShot searching />
-        </Scene>
-        <Scene
-          previewFirst
-          tone="blue"
-          title="Pick up where a teammate left off"
-          items={[
-            'See every prompt and tool call their agent made.',
-            'Replay how a change happened, not just the diff.',
-            'Hand the session to your agent as context.',
-          ]}
-        >
-          <Image
-            className={s.sceneImage}
-            src={sessionOverview}
-            alt="A teammate's Claude Code session in Agent Relay: intent, constraints and each step it took"
-            sizes="(max-width: 960px) 100vw, 600px"
-          />
-        </Scene>
       </section>
     </div>
+  );
+}
+
+const MEMORY_LINES: { kind: 'prompt' | 'tool' | 'result' | 'reply'; text: string }[] = [
+  { kind: 'prompt', text: 'Add Google sign-in to the teams flow' },
+  { kind: 'tool', text: 'agent-relay · search_shared_sessions("google sign-in")' },
+  { kind: 'result', text: 'Will’s Claude Code, Oct 9: kept email sign-in, reused the auth flow' },
+  { kind: 'tool', text: 'agent-relay · get_shared_session_context' },
+  { kind: 'reply', text: 'Will already decided this. I’ll keep email sign-in and reuse his auth flow.' },
+];
+
+const MEMORY_MARKER = { prompt: '>', tool: '⏺', result: '⎿', reply: '⏺' } as const;
+
+/** One point: agents look up what the team already decided before asking you. */
+function Memory() {
+  return (
+    <section className={s.memory} aria-labelledby="memory-title">
+      <FadeIn direction="up" className={s.center}>
+        <h2 id="memory-title" className={s.sectionTitle}>
+          Your agents check with the team.{' '}
+          <span className={s.mark}>
+            Not you.
+            <ScribbleUnderline />
+          </span>
+        </h2>
+        <p className={s.statementLine}>Every teammate’s session is searchable, by people and by agents.</p>
+      </FadeIn>
+      <FadeIn direction="up" delay={150}>
+        <div className={`${s.memorySlab} ${s.slabBlue}`}>
+          <div className={s.terminal} role="img" aria-label="Claude Code searching the team's shared sessions before starting work">
+            <span className={s.terminalBar}>
+              <i />
+              <i />
+              <i />
+              <b>
+                <ClaudeCodeColor size={13} /> Mary · Claude Code
+              </b>
+            </span>
+            {MEMORY_LINES.map((line, index) => (
+              <span
+                className={`${s.terminalLine} ${s[`line_${line.kind}`]}`}
+                key={line.text}
+                style={{ animationDelay: `${index * 0.9}s` }}
+              >
+                <span className={s.terminalMarker}>{MEMORY_MARKER[line.kind]}</span>
+                {line.text}
+              </span>
+            ))}
+          </div>
+        </div>
+      </FadeIn>
+    </section>
   );
 }
 
@@ -349,8 +468,11 @@ function FinalCta() {
 export function HomeSections() {
   return (
     <div className={s.page}>
-      <RelayFlow />
-      <TeamScenes />
+      <TalkScene />
+      <AnyTool />
+      <Handoff />
+      <InstallScene />
+      <Memory />
       <UseCases />
       <Features />
       <FinalCta />
