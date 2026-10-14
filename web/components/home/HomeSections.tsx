@@ -408,11 +408,12 @@ export function HomeSections({
   opening = <Talk />,
   showUseCases = true,
   showWhy = true,
-}: { opening?: ReactNode; showUseCases?: boolean; showWhy?: boolean } = {}) {
+  showMiddle = true,
+}: { opening?: ReactNode; showUseCases?: boolean; showWhy?: boolean; showMiddle?: boolean } = {}) {
   return (
     <div className={s.page}>
       {opening}
-      <Middle />
+      {showMiddle && <Middle />}
       <div className={`${s.band} ${s.bandRaised}`}>
         <WorksWith />
       </div>
