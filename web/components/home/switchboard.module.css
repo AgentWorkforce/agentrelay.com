@@ -98,20 +98,6 @@
   object-fit: cover;
 }
 
-.caption {
-  max-width: 60ch;
-  margin-top: 12px;
-  color: #4b5563;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.caption a {
-  color: #26557e;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .switchboard[data-motion='on'] [data-reveal] {
     opacity: 0;

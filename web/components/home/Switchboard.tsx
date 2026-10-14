@@ -6,9 +6,6 @@ import { useEffect, useRef } from 'react';
 import switchboard from '../../public/home/bell-switchboard.jpg';
 import s from './switchboard.module.css';
 
-const PHOTO_SOURCE =
-  'https://commons.wikimedia.org/wiki/File:Photograph_of_Women_Working_at_a_Bell_System_Telephone_Switchboard_(3660047829).jpg';
-
 /**
  * The pain, named: you connect every handoff by hand, like an operator.
  * Content is visible without script; once mounted, `[data-reveal]` blocks
@@ -56,12 +53,6 @@ export function Switchboard() {
               className={s.img}
             />
           </div>
-          <figcaption className={s.caption}>
-            <a href={PHOTO_SOURCE} rel="noopener noreferrer" target="_blank">
-              Operators at a Bell System switchboard
-            </a>
-            , connecting every call by hand.
-          </figcaption>
         </figure>
       </div>
     </section>
