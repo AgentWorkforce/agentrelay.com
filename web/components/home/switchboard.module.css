@@ -139,6 +139,113 @@
   }
 }
 
+/* ── Breaking the glass ─────────────────────────────────────────────── */
+.breakTrack {
+  overflow-x: clip;
+}
+
+.stage {
+  position: relative;
+}
+
+.cracks,
+.shards {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cracks {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: min(1, calc(var(--p, 0) * 12));
+}
+
+.cracks path {
+  fill: none;
+  stroke: rgba(13, 22, 34, 0.55);
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - min(1, calc(var(--p, 0) / 0.22)));
+  stroke-linejoin: bevel;
+  /* In viewBox units (the box is 100 wide): about 1.5px across a desktop
+     pane. Not non-scaling-stroke, which breaks pathLength dashes in Chrome. */
+  stroke-width: 0.11;
+}
+
+.shards {
+  visibility: hidden;
+}
+
+/* Past the crack, the shards take the pane's place: they part along the
+   cracks, then fall away one by one with a little spin. */
+.stage[data-broken] .switchboard,
+.stage[data-broken] .cracks {
+  visibility: hidden;
+}
+
+.stage[data-broken] .shards {
+  visibility: visible;
+}
+
+/* The pane still overlaps the marquee when it breaks; the opaque shards hide
+   the hero going away, so the gaps open onto the next section, not the old
+   terminals. */
+.stack:has(.stage[data-broken]) .pinned {
+  visibility: hidden;
+}
+
+.shard {
+  --s: clamp(0, calc((var(--p, 0) - 0.25) / 0.06), 1);
+  --t: clamp(0, calc((var(--p, 0) - var(--d)) / 0.34), 1);
+  position: absolute;
+  inset: 0;
+  opacity: calc(1 - var(--t) * var(--t));
+  transform: translate(
+      calc(var(--sx) * var(--s) * 1px + var(--dx) * var(--t) * 1px),
+      calc(var(--sy) * var(--s) * 1px + var(--t) * var(--t) * 110vh)
+    )
+    rotate(calc(var(--r) * var(--t) * 1deg));
+  will-change: transform;
+}
+
+.shardGlass {
+  height: 100%;
+  border-top: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 36px 36px 0 0;
+  background: rgba(244, 247, 250, 0.96);
+  color: #0d1622;
+}
+
+/* The pane pins for one screen of scroll while it breaks; the next section
+   is pulled up by the same screen so it rises behind the falling glass. */
+@media (prefers-reduced-motion: no-preference) {
+  .breakTrack::after {
+    display: block;
+    height: 100svh;
+    content: '';
+  }
+
+  .stage {
+    position: sticky;
+    top: var(--stage-stick, 0px);
+  }
+
+  .afterBreak {
+    position: relative;
+    z-index: 0;
+    margin-top: -100svh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cracks,
+  .shards {
+    display: none;
+  }
+}
+
 @media (max-width: 900px) {
   .inner {
     grid-template-columns: minmax(0, 1fr);
