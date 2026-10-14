@@ -23,7 +23,7 @@ export function Hero({
   showMarquee?: boolean;
   /** Replaces the default two-line h1; it must render its own h1. */
   headline?: ReactNode;
-  description?: string;
+  description?: ReactNode;
 }) {
   return (
     <div className={s.heroSection}>
