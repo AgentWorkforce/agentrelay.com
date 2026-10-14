@@ -197,7 +197,8 @@ const nextConfig = {
       { source: '/relaycast/:path*', destination: '/primitives#message', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
-      // The Reflex docs described the relayhistory repository; Relayhistory's docs replace them.
+      // Session history is documented under Relayhistory; retired product pages point to Sessions.
+      { source: '/reflex', destination: '/teams', permanent: true },
       { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
       { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
     ];
