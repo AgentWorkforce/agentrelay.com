@@ -49,10 +49,13 @@ function cycleLine(delay: string): TerminalStyle {
 export function HeroPhone({
   card,
   idPrefix,
+  owner,
   style,
 }: {
   card: PhoneCard;
   idPrefix: string;
+  /** Whose phone this is, shown under the agent's name. */
+  owner?: string;
   style?: TerminalStyle;
 }) {
   const meta = PHONE_META[card.agent];
@@ -69,7 +72,7 @@ export function HeroPhone({
           <PhoneMark agent={card.agent} idPrefix={idPrefix} />
           <span className={s.heroPhoneTitle}>
             <b>{card.bot}</b>
-            <span>{meta.label}</span>
+            <span>{owner ? `${owner} · ${meta.label}` : meta.label}</span>
           </span>
         </span>
         <span className={`${s.heroPhoneAsk} ${s.heroAppCycleLine}`} style={cycleLine('0s')}>

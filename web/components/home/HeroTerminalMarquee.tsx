@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import type { CSSProperties } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import { Grok } from '../brand-icons';
@@ -181,7 +181,7 @@ export const ROW_ONE: TerminalCard[] = [
     lines: [
       { tone: 'prompt', text: '$ claude "fix the flaky retry test"' },
       { tone: 'tool', text: '⎿ ran 26 tests - 26 passed' },
-      { tone: 'relay', text: '↑ pushed fix-retry → PR #482' },
+      { tone: 'relay', text: '→ handed PR #482 to Khaliq’s Codex' },
     ],
   },
   {
@@ -355,15 +355,16 @@ const APP_CODEX: AppWindowCard = {
   sessions: ['Swift threads', 'Pull latest main', 'Fix corner radii', 'Accessibility pass'],
 };
 
-const APP_CODEX_TESTS: AppWindowCard = {
+const APP_CODEX_HANDOFF: AppWindowCard = {
   kind: 'app',
   app: 'codex',
-  repo: 'relay/tests',
-  title: 'Unflake the ws suite',
-  ask: 'The ws suite flakes on CI. Make it stable?',
-  reply: 'Awaited the socket close before teardown. 50 runs, 0 failures.',
-  relay: 'Note left in #build-router',
-  sessions: ['Unflake the ws suite', 'Bump the engine', 'Retry budget', 'Docs links'],
+  repo: 'agentrelay/web',
+  title: 'Review PR #482',
+  from: 'Will’s Claude Code',
+  ask: 'PR #482 fixes the flaky retry test. Can you review?',
+  reply: 'Reviewed with Will’s session as context. One nit, then merge.',
+  relay: 'Replied to Will’s Claude Code',
+  sessions: ['Review PR #482', 'Pull latest main', 'Retry budget', 'Docs links'],
 };
 
 const APP_DEVIN: AppWindowCard = {
@@ -417,6 +418,18 @@ const PHONE_MUSE: PhoneCard = {
 
 type MarqueeCard = TerminalCard | AppWindowCard | PhoneCard;
 
+type Teammate = 'Will' | 'Khaliq' | 'Mary' | 'Ingrid';
+
+/** A card in a row, labelled with whose agent it is. */
+type Seat = {
+  card: MarqueeCard;
+  owner: Teammate;
+  /** Draws the relay hop into this card from the card before it. */
+  handoff?: boolean;
+};
+
+const seat = (card: MarqueeCard, owner: Teammate, handoff = false): Seat => ({ card, owner, handoff });
+
 const APP_DEVIN_FAILOVER: AppWindowCard = {
   kind: 'app',
   app: 'devin',
@@ -431,26 +444,28 @@ const APP_DEVIN_FAILOVER: AppWindowCard = {
 /**
  * Each row alternates terminal and app, three of each, with one phone between
  * a terminal and an app, so no two neighbours are the same kind of surface or
- * the same tool, across the loop seam too.
+ * the same tool, across the loop seam too. Every card names the teammate it
+ * belongs to; row one opens on Will's Claude Code handing a PR to Khaliq's
+ * Codex.
  */
-const MARQUEE_ROW_ONE: MarqueeCard[] = [
-  ROW_ONE[0],
-  APP_CODEX_TESTS,
-  ROW_TWO[1],
-  PHONE_DOTS,
-  APP_CONDUCTOR,
-  ROW_ONE[1],
-  APP_DEVIN,
+const MARQUEE_ROW_ONE: Seat[] = [
+  seat(ROW_ONE[0], 'Will'),
+  seat(APP_CODEX_HANDOFF, 'Khaliq', true),
+  seat(ROW_TWO[1], 'Mary'),
+  seat(PHONE_DOTS, 'Ingrid'),
+  seat(APP_CONDUCTOR, 'Khaliq'),
+  seat(ROW_ONE[1], 'Will'),
+  seat(APP_DEVIN, 'Mary'),
 ];
 
-const MARQUEE_ROW_TWO: MarqueeCard[] = [
-  ROW_TWO[0],
-  APP_CLAUDE,
-  ROW_TWO[2],
-  PHONE_GROKBOT,
-  APP_DEVIN_FAILOVER,
-  ROW_TWO[3],
-  APP_PASEO,
+const MARQUEE_ROW_TWO: Seat[] = [
+  seat(ROW_TWO[0], 'Ingrid'),
+  seat(APP_CLAUDE, 'Will'),
+  seat(ROW_TWO[2], 'Khaliq'),
+  seat(PHONE_GROKBOT, 'Mary'),
+  seat(APP_DEVIN_FAILOVER, 'Ingrid'),
+  seat(ROW_TWO[3], 'Will'),
+  seat(APP_PASEO, 'Khaliq'),
 ];
 
 const APP_HERMES: AppWindowCard = {
@@ -475,14 +490,14 @@ const APP_CAPY: AppWindowCard = {
   sessions: ['SCO-031 Find critical bugs', 'SCO-028 Flaky e2e', 'SCO-024 Docs drift'],
 };
 
-const MARQUEE_ROW_THREE: MarqueeCard[] = [
-  ROW_THREE[0],
-  APP_CODEX,
-  ROW_THREE[2],
-  PHONE_MUSE,
-  APP_HERMES,
-  ROW_THREE[4],
-  APP_CAPY,
+const MARQUEE_ROW_THREE: Seat[] = [
+  seat(ROW_THREE[0], 'Mary'),
+  seat(APP_CODEX, 'Khaliq'),
+  seat(ROW_THREE[2], 'Ingrid'),
+  seat(PHONE_MUSE, 'Will'),
+  seat(APP_HERMES, 'Mary'),
+  seat(ROW_THREE[4], 'Khaliq'),
+  seat(APP_CAPY, 'Ingrid'),
 ];
 
 const SIZE_CLASS = {
@@ -804,6 +819,7 @@ export function HeroTerminalCard({
   card,
   className,
   idPrefix,
+  owner,
   showAvatar = false,
   style,
 }: {
@@ -811,6 +827,8 @@ export function HeroTerminalCard({
   card: TerminalCard;
   className?: string;
   idPrefix: string;
+  /** Whose session this is, shown before the tool name. */
+  owner?: string;
   showAvatar?: boolean;
   style?: TerminalStyle;
 }) {
@@ -830,7 +848,7 @@ export function HeroTerminalCard({
         </span>
         <span className={s.heroTermTitle}>
           <TerminalAgentLogo agent={card.agent} idPrefix={idPrefix} />
-          {meta.label}
+          {owner ? `${owner} · ${meta.label}` : meta.label}
         </span>
         {showAvatar && avatar && (
           <Image
@@ -891,20 +909,29 @@ export function HeroTerminalCard({
 
 // Display-sized copies (scripts/generate-web-images.mjs): the originals are
 // 150–800 KB each and production serves /_next/image sources untouched.
-const TEAM_AVATARS = [
-  { src: '/authors/will-128.webp', name: 'Will Washburn' },
-  { src: '/authors/khaliq-128.webp', name: 'Khaliq Gant' },
-  { src: '/authors/mary-128.webp', name: 'Mary' },
-  { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
-];
+const TEAM_AVATARS: Record<Teammate, { src: string; name: string }> = {
+  Will: { src: '/authors/will-128.webp', name: 'Will Washburn' },
+  Khaliq: { src: '/authors/khaliq-128.webp', name: 'Khaliq Gant' },
+  Mary: { src: '/authors/mary-128.webp', name: 'Mary' },
+  Ingrid: { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
+};
+
+/** The relay hop between two neighbouring cards: a packet crossing the gap. */
+function HandoffBridge() {
+  return (
+    <span className={s.heroHandoffBridge}>
+      <span className={s.heroHandoffPacket} />
+    </span>
+  );
+}
 
 function TerminalRow({
-  cards,
+  seats,
   rowClass,
   rowKey,
   showAvatars,
 }: {
-  cards: MarqueeCard[];
+  seats: Seat[];
   rowClass: string;
   rowKey: string;
   showAvatars: boolean;
@@ -919,47 +946,48 @@ function TerminalRow({
     <div className={s.heroMarqueeRow}>
       <div className={`${s.heroMarqueeTrack} ${rowClass}`}>
         {copies.map((copy, copyIndex) =>
-          cards.map((card, index) => {
+          seats.map(({ card, owner, handoff }, index) => {
             const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
+            const key = `${rowKey}-${copy}-${index}`;
+            const idPrefix = `hero-mq-${key}`;
+            let rendered;
 
             if ('kind' in card && card.kind === 'phone') {
-              return (
+              rendered = (
                 <HeroPhone
                   card={card}
-                  idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                  key={`${rowKey}-${copy}-${index}`}
+                  idPrefix={idPrefix}
+                  owner={owner}
                   style={{ '--term-cycle': PHONE_META[card.agent].cycle, '--term-phase': `${phase}s` }}
                 />
               );
-            }
-
-            if ('kind' in card) {
-              return (
+            } else if ('kind' in card) {
+              rendered = (
                 <HeroAppWindow
                   card={card}
-                  idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                  key={`${rowKey}-${copy}-${index}`}
+                  idPrefix={idPrefix}
+                  owner={owner}
                   style={{ '--term-cycle': APP_META[card.app].cycle, '--term-phase': `${phase}s` }}
+                />
+              );
+            } else {
+              rendered = (
+                <HeroTerminalCard
+                  avatar={TEAM_AVATARS[owner]}
+                  card={card}
+                  idPrefix={idPrefix}
+                  owner={owner}
+                  showAvatar={showAvatars}
+                  style={{ '--term-cycle': AGENT_META[card.agent].cycle, '--term-phase': `${phase}s` }}
                 />
               );
             }
 
-            const meta = AGENT_META[card.agent];
-            const avatar = TEAM_AVATARS[index % TEAM_AVATARS.length];
-            const terminalStyle: TerminalStyle = {
-              '--term-cycle': meta.cycle,
-              '--term-phase': `${phase}s`,
-            };
-
             return (
-              <HeroTerminalCard
-                card={card}
-                idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                key={`${rowKey}-${copy}-${index}`}
-                showAvatar={showAvatars}
-                avatar={avatar}
-                style={terminalStyle}
-              />
+              <Fragment key={key}>
+                {handoff ? <HandoffBridge /> : null}
+                {rendered}
+              </Fragment>
             );
           }),
         )}
@@ -974,19 +1002,19 @@ export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boo
       <RelayNetwork />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={MARQUEE_ROW_ONE}
+        seats={MARQUEE_ROW_ONE}
         rowClass={s.heroMarqueeTrackOne}
         rowKey="one"
       />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={MARQUEE_ROW_TWO}
+        seats={MARQUEE_ROW_TWO}
         rowClass={s.heroMarqueeTrackTwo}
         rowKey="two"
       />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={MARQUEE_ROW_THREE}
+        seats={MARQUEE_ROW_THREE}
         rowClass={s.heroMarqueeTrackThree}
         rowKey="three"
       />

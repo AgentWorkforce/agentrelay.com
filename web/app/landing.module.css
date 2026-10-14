@@ -4076,103 +4076,11 @@
   content: none;
 }
 
-.desktopSessionsFeature {
-  order: 6;
-  --feature-band-bg: #0b1c2a;
-  grid-template-columns: 1fr;
-  gap: 40px;
-  padding-top: 36px;
-}
-
-.desktopSearchFeature {
-  order: 7;
-  --feature-band-bg: #0b1c2a;
-  grid-template-columns: minmax(320px, 1.25fr) minmax(0, 0.75fr);
-  padding-top: 0;
-}
-
-.desktopSearchFeature::before {
-  border-top: 0;
-}
-
-.desktopSearchFeature .featureCopy {
-  order: 2;
-}
-
-.desktopSessionsFeature::before {
-  border-top: 0;
-}
-
-.desktopSessionsFeature .featurePreview {
-  order: 2;
-}
-
-.desktopSessionsFeature .featureCopy {
-  order: 1;
-  max-width: 620px;
-}
-
 /* The "works with every agent" band takes the slot between the messaging
    feature (order 1) and the delivery feature (order 3), carrying its own band
    borders. */
 .howItWorks {
   order: 2;
-}
-
-.featureSeparator {
-  position: relative;
-  order: 5;
-  grid-column: 1 / -1;
-  width: 100vw;
-  height: 70px;
-  margin: -56px calc(50% - 50vw) -72px;
-  isolation: isolate;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.featureSeparator::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 128vw;
-  height: 1px;
-  transform: translate(-50%, -50%) rotate(2deg);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(116, 184, 226, 0.05) 18%,
-    rgba(116, 184, 226, 0.2) 50%,
-    rgba(116, 184, 226, 0.05) 82%,
-    transparent 100%
-  );
-  z-index: 0;
-}
-
-.featureSeparatorWaves {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  width: 128vw;
-  height: 78px;
-  color: #74b8e2;
-  opacity: 0.4;
-  overflow: visible;
-  transform: translate(-50%, -50%) rotate(2deg);
-  transform-origin: center;
-}
-
-.featureSeparatorWaves path {
-  stroke: currentColor;
-  stroke-width: 1.2;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.featureSeparatorWaves path:nth-child(2) {
-  opacity: 0.5;
 }
 
 .messagingFeature .featurePreview {
@@ -6087,24 +5995,6 @@
     order: 1;
   }
 
-  .desktopSessionsFeature .featureCopy {
-    order: 1;
-  }
-
-  .desktopSessionsFeature .featurePreview {
-    order: 2;
-  }
-
-  .featureSeparator {
-    height: 56px;
-    margin: -34px calc(50% - 50vw) -50px;
-  }
-
-  .featureSeparatorWaves {
-    width: 130vw;
-    height: 78px;
-  }
-
   .featureCopy {
     max-width: none;
   }
@@ -7546,6 +7436,73 @@
   color: #17181a;
   font-size: 0.42rem;
   font-weight: 700;
+}
+
+/* The handoff between two neighbouring cards: a packet crossing the gap. The
+   bridge overlaps each card by 7px and nets zero width, so the track's
+   one-copy loop distance is unchanged. */
+.heroHandoffBridge {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  align-self: center;
+  width: 28px;
+  height: 2px;
+  margin: 0 -7px 0 -21px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(133, 198, 236, 0.2), rgba(133, 198, 236, 0.9), rgba(133, 198, 236, 0.2));
+  box-shadow: 0 0 8px rgba(133, 198, 236, 0.6);
+}
+
+.heroHandoffPacket {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a6dbf7;
+  box-shadow: 0 0 10px rgba(166, 219, 247, 0.95);
+}
+
+.heroAppAskRelay {
+  align-self: flex-start;
+  border: 1px solid rgba(133, 198, 236, 0.4);
+  background: rgba(133, 198, 236, 0.12);
+}
+
+.heroAppFrom {
+  display: block;
+  color: #85c6ec;
+  font-size: 0.5rem;
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroHandoffPacket {
+    animation: heroHandoffPacket 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes heroHandoffPacket {
+  0% {
+    left: -4px;
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 24px;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .heroHandoffBridge {
+    margin-left: -17px;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {

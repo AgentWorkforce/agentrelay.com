@@ -77,7 +77,7 @@ function SharedFileMountPreview() {
 export function ContextCapabilities({ title = 'Everything agents need to collaborate' }: { title?: string }) {
   return (
     <div className={s.capabilityBand}>
-      <WaveDivider variant="capability" />
+      <WaveDivider />
       <div className={s.capabilityHeader}>
         <h3>{title}</h3>
         <p>

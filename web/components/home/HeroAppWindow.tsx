@@ -11,7 +11,9 @@ export type AppWindowCard = {
   repo: string;
   /** Session or thread title shown in the window. */
   title: string;
-  /** What the human asked for, as a chat bubble. */
+  /** Set when another agent sent the ask over the relay, rather than a person. */
+  from?: string;
+  /** What was asked, as a chat bubble. */
   ask: string;
   /** The agent's reply, then the relay hop that ties it to the rest of the band. */
   reply: string;
@@ -233,7 +235,11 @@ function Thread({ card }: { card: AppWindowCard }) {
   return (
     <div className={s.heroAppThread}>
       <ThreadHeader card={card} />
-      <span className={`${s.heroAppAsk} ${s.heroAppCycleLine}`} style={cycleLine('0s')}>
+      <span
+        className={`${s.heroAppAsk}${card.from ? ` ${s.heroAppAskRelay}` : ''} ${s.heroAppCycleLine}`}
+        style={cycleLine('0s')}
+      >
+        {card.from ? <b className={s.heroAppFrom}>↪ {card.from}</b> : null}
         {card.ask}
       </span>
       <span className={`${s.heroAppReply} ${s.heroAppCycleLine}`} style={cycleLine('0.45s')}>
@@ -263,10 +269,13 @@ function Thread({ card }: { card: AppWindowCard }) {
 export function HeroAppWindow({
   card,
   idPrefix,
+  owner,
   style,
 }: {
   card: AppWindowCard;
   idPrefix: string;
+  /** Whose app this is, shown before the app name. */
+  owner?: string;
   style?: TerminalStyle;
 }) {
   const meta = APP_META[card.app];
@@ -285,7 +294,7 @@ export function HeroAppWindow({
         </span>
         <span className={s.heroAppTitle}>
           <AppMark app={card.app} idPrefix={idPrefix} />
-          {meta.label}
+          {owner ? `${owner} · ${meta.label}` : meta.label}
         </span>
       </header>
       <div className={s.heroAppBody}>

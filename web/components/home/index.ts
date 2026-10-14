@@ -4,7 +4,6 @@ export { MessagingFeature } from './MessagingFeature';
 export { WorksWithEveryAgent } from './WorksWithEveryAgent';
 export { DeliveryFeature } from './DeliveryFeature';
 export { ContextCapabilities } from './ContextCapabilities';
-export { DesktopSearchFeature, DesktopSessionsFeature } from './DesktopAppFeature';
 export { Deploy } from './Deploy';
 export { QuickStart } from './QuickStart';
 export { Waitlist } from './Waitlist';

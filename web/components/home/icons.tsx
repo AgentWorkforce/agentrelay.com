@@ -152,29 +152,18 @@ export function ScribbleUnderline() {
  * `feature` is the thin two-stroke rule between feature blocks; `capability`
  * is the taller three-stroke band that opens the context-capabilities group.
  */
-export function WaveDivider({ variant }: { variant: 'feature' | 'capability' }) {
-  if (variant === 'capability') {
-    return (
-      <div className={s.capabilityDivider} aria-hidden="true">
-        <svg
-          className={s.capabilityDividerWaves}
-          viewBox="0 0 1200 120"
-          fill="none"
-          preserveAspectRatio="none"
-        >
-          <path d="M-120 84 C120 42 318 46 560 70 S928 106 1320 24" />
-          <path d="M-120 104 C136 60 336 66 580 88 S948 122 1320 46" />
-          <path d="M-120 64 C112 24 310 28 540 52 S902 86 1320 8" />
-        </svg>
-      </div>
-    );
-  }
-
+export function WaveDivider() {
   return (
-    <div className={s.featureSeparator} aria-hidden="true">
-      <svg className={s.featureSeparatorWaves} viewBox="0 0 1200 60" fill="none" preserveAspectRatio="none">
-        <path d="M-120 26 C160 42 360 40 600 30 S1040 16 1320 34" />
-        <path d="M-120 34 C176 50 376 48 620 38 S1060 24 1320 42" />
+    <div className={s.capabilityDivider} aria-hidden="true">
+      <svg
+        className={s.capabilityDividerWaves}
+        viewBox="0 0 1200 120"
+        fill="none"
+        preserveAspectRatio="none"
+      >
+        <path d="M-120 84 C120 42 318 46 560 70 S928 106 1320 24" />
+        <path d="M-120 104 C136 60 336 66 580 88 S948 122 1320 46" />
+        <path d="M-120 64 C112 24 310 28 540 52 S902 86 1320 8" />
       </svg>
     </div>
   );

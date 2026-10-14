@@ -16,8 +16,6 @@ import {
 
 import { AgentToolLogo } from '../AgentToolLogos';
 import { Cursor, Grok, OpenCode } from '../brand-icons';
-import { FadeIn } from '../FadeIn';
-import landing from '../../app/landing.module.css';
 import s from './desktop-app-shot.module.css';
 
 type Upload = 'uploaded' | 'uploading' | 'local';
@@ -215,7 +213,7 @@ function SearchPalette() {
  * and Codex session with its status, whether it takes messages from the
  * relay, and whether it uploads to the workspace.
  */
-function SessionsShot({ searching = false }: { searching?: boolean }) {
+export function SessionsShot({ searching = false }: { searching?: boolean }) {
   return (
     <div
       className={`${s.window}${searching ? ` ${s.searching}` : ''}`}
@@ -311,45 +309,5 @@ function SessionsShot({ searching = false }: { searching?: boolean }) {
         </span>
       </footer>
     </div>
-  );
-}
-
-export function DesktopSessionsFeature() {
-  return (
-    <FadeIn direction="up" delay={180} className={`${landing.featureCol} ${landing.desktopSessionsFeature}`}>
-      <div className={landing.featureCopy}>
-        <h3 className={landing.featureTitle}>Your sessions, shared with your team</h3>
-        <ul className={landing.featureList}>
-          <li>
-            Agent Relay Desktop finds every local Claude Code and Codex session and shows what each one is
-            doing.
-          </li>
-          <li>Turn on messages to let your teammates&apos; agents reach a session over the relay.</li>
-          <li>Choose which sessions upload to your workspace. The rest stay local only.</li>
-          <li>No terminal required: install the app, sign in with Google, done.</li>
-        </ul>
-      </div>
-      <div className={s.preview}>
-        <SessionsShot />
-      </div>
-    </FadeIn>
-  );
-}
-
-export function DesktopSearchFeature() {
-  return (
-    <FadeIn direction="up" delay={120} className={`${landing.featureCol} ${landing.desktopSearchFeature}`}>
-      <div className={`${s.preview} ${s.searchPreview}`}>
-        <SessionsShot searching />
-      </div>
-      <div className={landing.featureCopy}>
-        <h3 className={landing.featureTitle}>Find any session, from any tool</h3>
-        <ul className={landing.featureList}>
-          <li>Claude, Codex, Cursor, Grok, Muse and OpenCode sessions land in one list.</li>
-          <li>Filter by harness, status or date as you type, like harness:codex updated:&gt;=2026-10-08.</li>
-          <li>Open the session you need instead of digging through terminals and chat history.</li>
-        </ul>
-      </div>
-    </FadeIn>
   );
 }

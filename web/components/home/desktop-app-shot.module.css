@@ -1,11 +1,6 @@
-/* Agent Relay Desktop's sessions window, drawn in its dark appearance. The shot
-   spans the feature band; narrower screens drop the less essential columns. */
-.preview {
-  container-type: inline-size;
-  order: 2;
-  grid-column: 1 / -1;
-  width: 100%;
-}
+/* Agent Relay Desktop's sessions window, drawn in its dark appearance. Its
+   parent is a size container; narrower containers drop the less essential
+   columns. */
 
 .window {
   --row: #222831;
@@ -428,10 +423,6 @@
   opacity: 0.45;
 }
 
-.searchPreview {
-  order: 1;
-  grid-column: auto;
-}
 
 .palette {
   position: absolute;

@@ -7,7 +7,14 @@ import s from './waitlist.module.css';
 const WAITLIST_ENDPOINT =
   process.env.NEXT_PUBLIC_WAITLIST_API_URL?.trim() || 'https://agentrelay.com/cloud/api/waitlist';
 
-export function WaitlistForm() {
+const COPY = {
+  waitlist: { submit: 'Join Waitlist', submitting: 'Joining...', success: 'You’re on the list!' },
+  updates: { submit: 'Subscribe', submitting: 'Subscribing...', success: 'You’re subscribed' },
+} as const;
+
+/** `updates` is the same list, framed as product news rather than early access. */
+export function WaitlistForm({ variant = 'waitlist' }: { variant?: keyof typeof COPY } = {}) {
+  const copy = COPY[variant];
   const [email, setEmail] = useState('');
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [submittedEmail, setSubmittedEmail] = useState('');
@@ -55,7 +62,7 @@ export function WaitlistForm() {
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
         </div>
-        <h3 className={s.successTitle}>You&apos;re on the list!</h3>
+        <h3 className={s.successTitle}>{copy.success}</h3>
         <p className={s.successText}>
           We&apos;ll send updates about new features, SDK releases, and early access to{' '}
           <strong>{submittedEmail}</strong>
@@ -80,7 +87,7 @@ export function WaitlistForm() {
         disabled={state === 'loading'}
       />
       <button type="submit" className={s.button} disabled={state === 'loading'}>
-        {state === 'loading' ? 'Joining...' : 'Join Waitlist'}
+        {state === 'loading' ? copy.submitting : copy.submit}
       </button>
       {state === 'error' && <p className={s.error}>Something went wrong. Please try again.</p>}
     </form>
