@@ -11,7 +11,15 @@ import { GitHubIcon } from './icons';
 import { AgentSignup } from '../AgentSignup';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
 
-export function Hero({ showInvestors = false, showSignup = false }: { showInvestors?: boolean; showSignup?: boolean }) {
+export function Hero({
+  showInvestors = false,
+  showSignup = false,
+  showMarquee = true,
+}: {
+  showInvestors?: boolean;
+  showSignup?: boolean;
+  showMarquee?: boolean;
+}) {
   return (
     <div className={s.heroSection}>
       <section className={s.heroCenter}>
@@ -59,7 +67,7 @@ export function Hero({ showInvestors = false, showSignup = false }: { showInvest
       </section>
 
       {showInvestors && <InvestorStrip />}
-      <HeroTerminalMarquee />
+      {showMarquee && <HeroTerminalMarquee />}
     </div>
   );
 }

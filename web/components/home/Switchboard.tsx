@@ -118,7 +118,8 @@ function Body({ reveal }: { reveal: boolean }) {
   );
 }
 
-export function Switchboard() {
+/** `glass` rises over the hero's marquee; `white` is a plain stark-white screen. */
+export function Switchboard({ tone = 'glass' }: { tone?: 'glass' | 'white' }) {
   const paneRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -166,7 +167,7 @@ export function Switchboard() {
 
   return (
     <div className={s.breakTrack} ref={trackRef}>
-      <div className={s.stage} ref={stageRef}>
+      <div className={s.stage} data-tone={tone} ref={stageRef}>
         <section ref={paneRef} className={s.switchboard} aria-labelledby="switchboard-title">
           <Body reveal />
         </section>
