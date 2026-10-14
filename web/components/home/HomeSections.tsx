@@ -15,6 +15,7 @@ import { ScribbleUnderline, WaveDivider } from './icons';
 import { MessagingFeature } from './MessagingFeature';
 import { OutOfTheMiddle } from './OutOfTheMiddle';
 import { UseCaseBento } from './UseCaseBento';
+import { WhyRelay } from './WhyRelay';
 import s from './home-sections.module.css';
 
 export const SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
@@ -354,6 +355,24 @@ function UseCases() {
   );
 }
 
+function Why() {
+  return (
+    <section className={s.section} aria-labelledby="why-title">
+      <SectionHeader
+        id="why-title"
+        title={
+          <>
+            No new IDE. No new <Mark>habits.</Mark>
+          </>
+        }
+      />
+      <FadeIn direction="up">
+        <WhyRelay />
+      </FadeIn>
+    </section>
+  );
+}
+
 function FinalCta() {
   return (
     <section className={s.finalCta} aria-labelledby="final-cta-title">
@@ -399,6 +418,7 @@ export function HomeSections() {
       </div>
       <div className={`${s.band} ${s.bandGrid}`}>
         <UseCases />
+        <Why />
       </div>
       <div className={`${s.band} ${s.bandNight}`}>
         <FinalCta />
