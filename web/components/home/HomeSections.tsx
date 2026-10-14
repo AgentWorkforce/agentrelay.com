@@ -336,17 +336,19 @@ function Context() {
   );
 }
 
-function UseCases() {
+export function UseCases({
+  title = (
+    <>
+      Every handoff you do by hand, <Mark>handled.</Mark>
+    </>
+  ),
+}: { title?: ReactNode } = {}) {
   return (
     <section className={s.section} aria-labelledby="use-cases-title">
       <SectionHeader
         id="use-cases-title"
         line="Your agents pass the work between themselves. You read the result."
-        title={
-          <>
-            Every handoff you do by hand, <Mark>handled.</Mark>
-          </>
-        }
+        title={title}
       />
       <FadeIn direction="up">
         <UseCaseBento />
@@ -403,7 +405,10 @@ function WaveBreak() {
  * Each section sits on its own band so the page steps between tones instead
  * of running one flat color; wave breaks mark the larger shifts.
  */
-export function HomeSections({ opening = <Talk /> }: { opening?: ReactNode } = {}) {
+export function HomeSections({
+  opening = <Talk />,
+  showUseCases = true,
+}: { opening?: ReactNode; showUseCases?: boolean } = {}) {
   return (
     <div className={s.page}>
       {opening}
@@ -417,7 +422,7 @@ export function HomeSections({ opening = <Talk /> }: { opening?: ReactNode } = {
         <Context />
       </div>
       <div className={`${s.band} ${s.bandGrid}`}>
-        <UseCases />
+        {showUseCases && <UseCases />}
         <Why />
       </div>
       <div className={`${s.band} ${s.bandNight}`}>
