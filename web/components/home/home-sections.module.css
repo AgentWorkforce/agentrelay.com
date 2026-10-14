@@ -48,57 +48,140 @@
   opacity: 0.85;
 }
 
-/* The sign-in page's ribbons of light, faded into the page at top and bottom
-   so a band never ends in a hard edge. */
-.ribbons {
+/* Bands: each section steps to its own tone, so the page has depth. */
+.band {
+  position: relative;
+  isolation: isolate;
+}
+
+.bandRaised {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(116, 184, 226, 0.12), transparent 70%),
+    linear-gradient(180deg, #102639 0%, #0d2132 60%, #0b1c2a 100%);
+  border-top: 1px solid rgba(116, 184, 226, 0.1);
+}
+
+.bandDeep {
+  background:
+    radial-gradient(50% 40% at 50% 62%, rgba(74, 144, 194, 0.16), transparent 70%),
+    linear-gradient(180deg, #0b1c2a 0%, #071521 30%, #061220 100%);
+}
+
+.bandGrid {
+  background:
+    linear-gradient(180deg, #061220 0%, #0c1e2e 40%, #0d2132 100%);
+}
+
+/* A faint grid, masked to the middle of the band. */
+.bandGrid::before {
   position: absolute;
   inset: 0;
   z-index: -1;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  mask-image: linear-gradient(180deg, transparent, #000 22%, #000 78%, transparent);
-  transition: opacity 1.4s ease;
+  background-image:
+    linear-gradient(rgba(116, 184, 226, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(116, 184, 226, 0.05) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(70% 60% at 50% 50%, #000, transparent);
+  content: '';
 }
 
-.ribbons[data-ready] {
-  opacity: 1;
+.bandNight {
+  overflow: hidden;
+  background: linear-gradient(180deg, #0d2132 0%, #050c16 45%, #040a12 100%);
 }
 
-.ribbonBand {
+.waveBreak {
   position: relative;
-  isolation: isolate;
-  margin: -48px calc(50% - 50vw) 0;
-  padding: 120px max(24px, calc(50vw - 600px));
+  z-index: 3;
+  height: 84px;
+  margin: -42px 0;
+  pointer-events: none;
 }
 
-/* Works with: real surfaces, each captioned. */
-.surfaces {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 18px;
-}
-
-.surfaces figure {
-  display: grid;
-  justify-items: center;
-  gap: 14px;
+.waveBreak > div {
+  height: 84px;
   margin: 0;
 }
 
-.surfaces figure > * {
-  margin-right: 0;
+/* Works with: a deck of real surfaces, all one size. Slot 0 is the front
+   card; the rest recede left and off the page. Each card spends 3s in a slot, glides
+   forward, and the front card is dealt off to the right and reshuffled to
+   the back. Delays start every card in its own slot. */
+.deck {
+  position: relative;
+  width: 100vw;
+  height: 360px;
+  margin: 8px calc(50% - 50vw) 0;
 }
 
-.surfaces figcaption {
-  color: #8ec9ee;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+.deckSlot {
+  position: absolute;
+  right: 22%;
+  bottom: 56px;
+  transform-origin: 100% 100%;
+  transform: translateX(0px) translateY(0px) scale(1.08);
+  opacity: 1;
+  filter: blur(0px) brightness(1);
+  z-index: 60;
+  will-change: transform, opacity, filter;
 }
+
+/* A soft floor under the deck. */
+.deck::after {
+  position: absolute;
+  right: 0;
+  bottom: 40px;
+  left: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(116, 184, 226, 0.35) 62%, transparent 92%);
+  content: '';
+}
+
+/* Every card in the deck is the same size, so the shuffle reads as a deck. */
+.deckSlot > [data-agent],
+.deckSlot > [data-app] {
+  width: 400px;
+  height: 236px;
+}
+
+.deckSlot > * {
+  margin: 0;
+  box-shadow: 0 30px 60px rgba(2, 7, 18, 0.6);
+  -webkit-box-reflect: below 6px linear-gradient(transparent 72%, rgba(255, 255, 255, 0.1));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .deckSlot {
+    animation: deckShuffle 18s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+    animation-delay: var(--deck-delay);
+  }
+}
+
+/* Reduced motion: a still, fanned deck at the same slots. */
+@media (prefers-reduced-motion: reduce) {
+  .deckSlot {
+    animation: deckShuffle 18s linear infinite paused;
+    animation-delay: var(--deck-delay);
+  }
+}
+
+@keyframes deckShuffle {
+  0% { transform: translateX(-1000px) translateY(-76px) scale(0.62); opacity: 0; filter: blur(2.4px) brightness(0.5); z-index: 10; }
+  2.778% { transform: translateX(-1000px) translateY(-76px) scale(0.62); opacity: 0.16; filter: blur(2.4px) brightness(0.5); z-index: 10; }
+  12.778% { transform: translateX(-1000px) translateY(-76px) scale(0.62); opacity: 0.16; filter: blur(2.4px) brightness(0.5); z-index: 10; }
+  16.667% { transform: translateX(-830px) translateY(-67px) scale(0.68); opacity: 0.32; filter: blur(1.9px) brightness(0.56); z-index: 20; }
+  29.444% { transform: translateX(-830px) translateY(-67px) scale(0.68); opacity: 0.32; filter: blur(1.9px) brightness(0.56); z-index: 20; }
+  33.333% { transform: translateX(-650px) translateY(-55px) scale(0.75); opacity: 0.5; filter: blur(1.4px) brightness(0.63); z-index: 30; }
+  46.111% { transform: translateX(-650px) translateY(-55px) scale(0.75); opacity: 0.5; filter: blur(1.4px) brightness(0.63); z-index: 30; }
+  50.000% { transform: translateX(-450px) translateY(-40px) scale(0.84); opacity: 0.7; filter: blur(0.9px) brightness(0.72); z-index: 40; }
+  62.778% { transform: translateX(-450px) translateY(-40px) scale(0.84); opacity: 0.7; filter: blur(0.9px) brightness(0.72); z-index: 40; }
+  66.667% { transform: translateX(-230px) translateY(-22px) scale(0.94); opacity: 0.88; filter: blur(0.4px) brightness(0.82); z-index: 50; }
+  79.444% { transform: translateX(-230px) translateY(-22px) scale(0.94); opacity: 0.88; filter: blur(0.4px) brightness(0.82); z-index: 50; }
+  83.333% { transform: translateX(0px) translateY(0px) scale(1.08); opacity: 1; filter: blur(0px) brightness(1); z-index: 60; }
+  96.111% { transform: translateX(0px) translateY(0px) scale(1.08); opacity: 1; filter: blur(0px) brightness(1); z-index: 60; }
+  100% { transform: translateX(240px) translateY(-36px) rotate(7deg) scale(1.1); opacity: 0; filter: blur(2px) brightness(1.2); z-index: 70; }
+}
+
 
 .logos {
   display: flex;
@@ -150,10 +233,14 @@
 /* Context: the agent's search beside what Agent Relay distilled. */
 .contextSlab {
   position: relative;
-  isolation: isolate;
   overflow: hidden;
-  border: 1px solid rgba(116, 184, 226, 0.16);
-  background: #030710;
+  border: 1px solid rgba(116, 184, 226, 0.18);
+  background:
+    radial-gradient(40% 70% at 56% 50%, rgba(116, 184, 226, 0.16), transparent 70%),
+    linear-gradient(160deg, #0a1a29, #050c15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 40px 80px rgba(2, 7, 18, 0.45);
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) auto minmax(0, 0.85fr);
   align-items: center;
@@ -395,10 +482,21 @@
   pointer-events: none;
 }
 
-/* Full-bleed behind the centered call to action, ribbons meeting at its heading. */
+/* The only ribbons on the page: quiet, full-bleed, meeting at the heading. */
 .ctaRibbons {
+  position: absolute;
+  top: 0;
   left: calc(50% - 50vw);
+  z-index: -2;
   width: 100vw;
+  height: 100%;
+  opacity: 0;
+  mask-image: radial-gradient(70% 70% at 50% 50%, #000 20%, transparent 80%);
+  transition: opacity 1.6s ease;
+}
+
+.ctaRibbons[data-ready] {
+  opacity: 0.45;
 }
 
 .actions {
@@ -444,9 +542,9 @@
   }
 }
 
-@media (max-width: 1240px) {
-  .surfaces figure:nth-child(3) {
-    display: none;
+@media (max-width: 1100px) {
+  .deck {
+    zoom: 0.85;
   }
 }
 
@@ -455,12 +553,19 @@
     padding: 88px 24px 24px;
   }
 
-  .surfaces {
-    flex-wrap: wrap;
+  .deck {
+    height: 300px;
+    zoom: 1;
   }
 
-  .surfaces figure:nth-child(2) {
-    display: none;
+  .deckSlot {
+    right: 7%;
+  }
+
+  .deckSlot > [data-agent],
+  .deckSlot > [data-app] {
+    width: min(300px, 78vw);
+    height: 188px;
   }
 
   .scene {

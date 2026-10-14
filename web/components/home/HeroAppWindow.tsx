@@ -1,4 +1,5 @@
 import { AgentToolLogo } from '../AgentToolLogos';
+import { HermesAgent } from '../brand-icons';
 import type { TerminalStyle } from './HeroTerminalMarquee';
 import s from '../../app/landing.module.css';
 
@@ -85,11 +86,7 @@ function PaseoMark() {
 }
 
 function HermesMark() {
-  return (
-    <span className={`${s.heroAppMark} ${s.heroAppGlyphMark}`} aria-hidden="true">
-      ⚕
-    </span>
-  );
+  return <HermesAgent className={s.heroAppMark} size={12} />;
 }
 
 function CapyMark() {

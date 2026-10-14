@@ -7242,25 +7242,15 @@
 }
 
 .heroApp[data-app='hermes'] {
-  --app-bg: #10122a;
-  --app-side: #0b0d22;
-  --app-line: rgba(120, 130, 255, 0.16);
-  --app-accent: #6d78ff;
-  border-color: rgba(109, 120, 255, 0.34);
+  --app-bg: #16181d;
+  --app-side: #111317;
+  --app-accent: #9fb3d1;
 }
 
 .heroApp[data-app='capy'] {
   --app-bg: #191a19;
   --app-side: #121312;
   --app-accent: #6fd1bf;
-}
-
-.heroAppGlyphMark {
-  display: inline-grid;
-  place-items: center;
-  color: var(--app-accent);
-  font-size: 0.8rem;
-  line-height: 1;
 }
 
 .heroApp[data-app='capy'] .heroAppMark {
