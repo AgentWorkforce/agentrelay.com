@@ -403,10 +403,10 @@ function WaveBreak() {
  * Each section sits on its own band so the page steps between tones instead
  * of running one flat color; wave breaks mark the larger shifts.
  */
-export function HomeSections() {
+export function HomeSections({ opening = <Talk /> }: { opening?: ReactNode } = {}) {
   return (
     <div className={s.page}>
-      <Talk />
+      {opening}
       <Middle />
       <div className={`${s.band} ${s.bandRaised}`}>
         <WorksWith />
