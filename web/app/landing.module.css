@@ -2060,8 +2060,9 @@
   overflow-y: visible;
 }
 
-/* The sign-in page's ribbons, quiet behind the cards: they show through the
-   gaps between rows and fade out at every edge of the band. */
+/* The sign-in page's ribbons, quiet behind the cards. The focus sits far off
+   to the right, so the ribbons stay spread across all three rows instead of
+   converging in the middle; they fade out only at the band's edges. */
 .heroRibbons {
   position: absolute;
   inset: -40px 0;
@@ -2069,55 +2070,13 @@
   width: 100%;
   height: calc(100% + 80px);
   opacity: 0;
-  mask-image: radial-gradient(75% 65% at 50% 50%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(130% 120% at 50% 50%, #000 50%, transparent 100%);
   transition: opacity 1.6s ease;
   pointer-events: none;
 }
 
 .heroRibbons[data-ready] {
   opacity: 0.55;
-}
-
-.heroRelayNetwork {
-  position: absolute;
-  inset: 0 0 26px;
-  z-index: 0;
-  width: 100%;
-  height: calc(100% - 26px);
-  overflow: visible;
-  pointer-events: none;
-}
-
-.heroRelayRoute {
-  fill: none;
-  stroke: none;
-}
-
-.heroRelayPacket,
-.heroRelayOrigin,
-.heroRelayArrival {
-  display: none;
-}
-
-.heroRelayPacketTail {
-  fill: none;
-  stroke: rgba(125, 194, 233, 0.82);
-  stroke-linecap: round;
-  stroke-width: 2.1;
-  vector-effect: non-scaling-stroke;
-}
-
-.heroRelayPacketHalo,
-.heroRelayOrigin,
-.heroRelayArrival {
-  fill: none;
-  stroke: rgba(125, 194, 233, 0.58);
-  stroke-width: 1.4;
-  vector-effect: non-scaling-stroke;
-}
-
-.heroRelayPacketCore {
-  fill: rgba(166, 219, 247, 0.96);
 }
 
 .heroMarqueeRow {
@@ -2135,12 +2094,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .heroRelayPacket,
-  .heroRelayOrigin,
-  .heroRelayArrival {
-    display: inline;
-  }
-
   .heroMarqueeTrack {
     will-change: transform;
     animation: heroMarqueeSlide linear infinite;

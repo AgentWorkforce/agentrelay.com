@@ -34,15 +34,6 @@ export type TerminalStyle = CSSProperties & {
   '--term-phase'?: string;
 };
 
-type RelayRoute = {
-  d: string;
-  delay: string;
-  duration: string;
-  id: string;
-  origin: { x: number; y: number };
-  target: { x: number; y: number };
-};
-
 export const AGENT_META: Record<
   TerminalAgent,
   {
@@ -119,49 +110,6 @@ function terminalLineCopy(line: TerminalLine) {
 
   return line.text.replace(/^(?:⎿|✓|↑|→)\s*/, '');
 }
-
-const RELAY_ROUTES: RelayRoute[] = [
-  {
-    id: 'hero-relay-route-one',
-    d: 'M 318 62 C 410 62 438 202 552 202',
-    duration: '10.6s',
-    delay: '-1.4s',
-    origin: { x: 318, y: 62 },
-    target: { x: 552, y: 202 },
-  },
-  {
-    id: 'hero-relay-route-two',
-    d: 'M 654 202 C 758 202 782 344 904 344',
-    duration: '12.2s',
-    delay: '-6.8s',
-    origin: { x: 654, y: 202 },
-    target: { x: 904, y: 344 },
-  },
-  {
-    id: 'hero-relay-route-three',
-    d: 'M 956 344 C 1078 344 1080 62 1206 62',
-    duration: '11.3s',
-    delay: '-4.1s',
-    origin: { x: 956, y: 344 },
-    target: { x: 1206, y: 62 },
-  },
-  {
-    id: 'hero-relay-route-four',
-    d: 'M 1184 62 C 1088 62 1030 202 872 202',
-    duration: '13.1s',
-    delay: '-9.3s',
-    origin: { x: 1184, y: 62 },
-    target: { x: 872, y: 202 },
-  },
-  {
-    id: 'hero-relay-route-five',
-    d: 'M 338 344 C 450 344 476 62 624 62',
-    duration: '11.8s',
-    delay: '-11.1s',
-    origin: { x: 338, y: 344 },
-    target: { x: 624, y: 62 },
-  },
-];
 
 /**
  * Three rows of Claude Code, Codex, Grok and OpenCode terminal sessions, with
@@ -511,79 +459,6 @@ function TerminalAgentLogo({ agent, idPrefix }: { agent: TerminalAgent; idPrefix
   if (agent === 'grok') return <Grok className={s.heroTermMark} />;
 
   return <AgentToolLogo className={s.heroTermMark} idPrefix={idPrefix} provider={agent} />;
-}
-
-function RelayNetwork() {
-  return (
-    <svg
-      className={s.heroRelayNetwork}
-      focusable="false"
-      preserveAspectRatio="none"
-      viewBox="0 0 1280 410"
-    >
-      {RELAY_ROUTES.map((route) => (
-        <g key={route.id}>
-          <path className={s.heroRelayRoute} d={route.d} id={route.id} />
-          <circle
-            className={s.heroRelayOrigin}
-            cx={route.origin.x}
-            cy={route.origin.y}
-            opacity="0"
-            r="7"
-          >
-            <animate
-              attributeName="opacity"
-              begin={route.delay}
-              dur={route.duration}
-              keyTimes="0;0.14;0.16;0.2;1"
-              repeatCount="indefinite"
-              values="0;0;0.68;0;0"
-            />
-          </circle>
-          <g className={s.heroRelayPacket} opacity="0">
-            <path className={s.heroRelayPacketTail} d="M -19 0 H -5" />
-            <circle className={s.heroRelayPacketHalo} r="7" />
-            <circle className={s.heroRelayPacketCore} r="3.1" />
-            <animateMotion
-              begin={route.delay}
-              calcMode="linear"
-              dur={route.duration}
-              keyPoints="0;0;1;1"
-              keyTimes="0;0.16;0.42;1"
-              repeatCount="indefinite"
-              rotate="auto"
-            >
-              <mpath href={`#${route.id}`} />
-            </animateMotion>
-            <animate
-              attributeName="opacity"
-              begin={route.delay}
-              dur={route.duration}
-              keyTimes="0;0.15;0.17;0.39;0.42;1"
-              repeatCount="indefinite"
-              values="0;0;1;1;0;0"
-            />
-          </g>
-          <circle
-            className={s.heroRelayArrival}
-            cx={route.target.x}
-            cy={route.target.y}
-            opacity="0"
-            r="9"
-          >
-            <animate
-              attributeName="opacity"
-              begin={route.delay}
-              dur={route.duration}
-              keyTimes="0;0.4;0.42;0.48;1"
-              repeatCount="indefinite"
-              values="0;0;0.78;0;0"
-            />
-          </circle>
-        </g>
-      ))}
-    </svg>
-  );
 }
 
 function GrokTerminalBody({ card }: { card: TerminalCard }) {
@@ -1000,8 +875,7 @@ function TerminalRow({
 export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boolean }) {
   return (
     <div aria-hidden="true" className={s.heroMarquee} data-marquee-band="">
-      <RelayRibbons className={s.heroRibbons} focus={[0.5, 0.5]} />
-      <RelayNetwork />
+      <RelayRibbons className={s.heroRibbons} focus={[3, 0.5]} />
       <TerminalRow
         showAvatars={showAvatars}
         seats={MARQUEE_ROW_ONE}
