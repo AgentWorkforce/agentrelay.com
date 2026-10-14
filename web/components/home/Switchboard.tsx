@@ -43,9 +43,15 @@ export function Switchboard() {
             Right now, you are the switchboard.
           </h2>
           <div className={s.copy} data-reveal>
-            <p className={s.lead}>Claude Code finishes the migration. You copy its summary and paste it into Codex.</p>
-            <p>Codex has a question. You copy that back.</p>
-            <p>Your teammate’s agent fixed the same bug yesterday. You find out at standup.</p>
+            <p className={s.lead}>Some days it feels like you work for your agents, not the other way around.</p>
+            <p>
+              You copy context out of one, paste it into another, and carry the answer back. If you’re tired of it,
+              you’re not alone.
+            </p>
+            <p>
+              And that’s before your team gets involved. Your teammate’s agent fixed the same bug yesterday. You find
+              out at standup.
+            </p>
             <p className={s.turn}>Every handoff waits for you.</p>
           </div>
         </div>
@@ -59,11 +65,10 @@ export function Switchboard() {
             />
           </div>
           <figcaption className={s.caption}>
-            Operators at a Bell System switchboard, connecting every call by hand.{' '}
             <a href={PHOTO_SOURCE} rel="noopener noreferrer" target="_blank">
-              U.S. National Archives
+              Operators at a Bell System switchboard
             </a>
-            , no known copyright restrictions.
+            , connecting every call by hand.
           </figcaption>
         </figure>
       </div>
