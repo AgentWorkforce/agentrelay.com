@@ -1,73 +1,66 @@
-/* Text left, archive photo right; the photo is toned toward the page's navy
-   so it reads as part of the page rather than a pasted-in stock image. */
+/* A full-bleed light band: the one bright surface on the page, so the pain
+   reads as a break from the product story around it. */
 .switchboard {
+  background: #f9fafb;
+  color: #111827;
+}
+
+.inner {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: clamp(32px, 5vw, 80px);
+  gap: clamp(32px, 5vw, 96px);
   align-items: end;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 120px 40px 40px;
+  padding: clamp(96px, 12vw, 180px) clamp(16px, 2.2vw, 32px);
 }
 
 .text {
   display: grid;
-  gap: 32px;
+  gap: 40px;
 }
 
 .title {
   margin: 0;
-  color: var(--fg);
   font-family: var(--font-heading), sans-serif;
-  font-size: clamp(2.2rem, 4.2vw, 3.4rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
+  font-size: clamp(32px, 3.9vw, 58px);
+  font-weight: 600;
+  letter-spacing: -0.03em;
   line-height: 1.04;
+  text-wrap: balance;
 }
 
 .copy {
   display: grid;
-  gap: 14px;
+  gap: 18px;
   max-width: 40ch;
-  color: rgba(214, 228, 240, 0.78);
-  font-size: 1.06rem;
+  font-size: 17px;
   line-height: 1.55;
 }
 
 .copy p {
   margin: 0;
+  text-wrap: pretty;
 }
 
 .lead {
-  color: var(--fg);
   font-weight: 600;
 }
 
 .turn {
-  color: #8ec9ee;
+  color: #26557e;
   font-weight: 600;
 }
 
-.figure figure {
+.figure {
   margin: 0;
 }
 
 .photo {
-  position: relative;
   overflow: hidden;
-  border: 1px solid rgba(160, 205, 235, 0.16);
   border-radius: 20px;
   aspect-ratio: 1920 / 1525;
-  background: #102435;
-}
-
-.photo::after {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(11, 28, 42, 0) 55%, rgba(11, 28, 42, 0.55) 100%);
-  content: '';
-  mix-blend-mode: multiply;
-  pointer-events: none;
+  background: #eef3f8;
 }
 
 .img {
@@ -75,26 +68,65 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: grayscale(1) sepia(0.25) hue-rotate(170deg) saturate(0.9) brightness(0.88) contrast(1.05);
 }
 
 .caption {
+  max-width: 60ch;
   margin-top: 12px;
-  color: rgba(214, 228, 240, 0.6);
-  font-size: 0.84rem;
+  color: #4b5563;
+  font-size: 14px;
   line-height: 1.5;
 }
 
 .caption a {
-  color: rgba(214, 228, 240, 0.8);
+  color: #26557e;
   text-decoration: underline;
-  text-decoration-color: rgba(214, 228, 240, 0.3);
   text-underline-offset: 3px;
 }
 
-@media (max-width: 860px) {
-  .switchboard {
+@media (prefers-reduced-motion: no-preference) {
+  .switchboard[data-motion='on'] [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .switchboard[data-motion='on'] .copy {
+    transition-delay: 80ms;
+  }
+
+  .switchboard[data-motion='on'] .figure {
+    transition-delay: 160ms;
+  }
+
+  .switchboard[data-motion='on'] [data-reveal].isIn {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* The photo drifts slightly against the scroll. */
+  @supports (animation-timeline: view()) {
+    .img {
+      animation: switchboard-drift linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+}
+
+@keyframes switchboard-drift {
+  from {
+    transform: scale(1.06) translateY(-2%);
+  }
+  to {
+    transform: scale(1.06) translateY(2%);
+  }
+}
+
+@media (max-width: 900px) {
+  .inner {
     grid-template-columns: minmax(0, 1fr);
-    padding: 88px 16px 24px;
   }
 }

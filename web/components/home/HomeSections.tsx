@@ -407,8 +407,8 @@ function WaveBreak() {
 export function HomeSections() {
   return (
     <div className={s.page}>
-      <Talk />
       <Switchboard />
+      <Talk />
       <Middle />
       <div className={`${s.band} ${s.bandRaised}`}>
         <WorksWith />
