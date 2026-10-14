@@ -119,6 +119,20 @@
   height: 16px;
 }
 
+/* The open seat: anyone else who joins. */
+.more {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(116, 184, 226, 0.45);
+  border-radius: 9px;
+  background: rgba(116, 184, 226, 0.08);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.78rem;
+}
+
 .link {
   width: 22px;
   height: 2px;

@@ -37,6 +37,8 @@ export function WhyRelay() {
           <Teammate photo="/authors/will-128.webp" name="Will" agent="claude" />
           <span className={s.link} />
           <Teammate photo="/authors/khaliq-128.webp" name="Khaliq" agent="codex" />
+          <span className={s.link} />
+          <span className={s.more}>+</span>
         </span>
         <h3>Works across teammates and machines</h3>
         <p>Your laptop, your teammate’s, a box in the cloud. One workspace.</p>
