@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
 import { AgentSignup } from '../AgentSignup';
+import { RelayRibbons } from '../RelayRibbons';
 import { FadeIn } from '../FadeIn';
 import { WaitlistForm } from '../WaitlistForm';
 import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
@@ -104,7 +105,8 @@ function WorksWith() {
           </>
         }
       />
-      <FadeIn direction="up" delay={120}>
+      <FadeIn direction="up" delay={120} className={s.ribbonBand}>
+        <RelayRibbons className={s.ribbons} focus={[0.5, 0.5]} />
         <div className={s.surfaces} aria-hidden="true">
           <figure>
             <HeroTerminalCard
@@ -211,7 +213,8 @@ function Context() {
         }
       />
       <FadeIn direction="up" delay={120}>
-        <div className={`${s.contextSlab} ${s.slabBlue}`}>
+        <div className={s.contextSlab}>
+          <RelayRibbons className={s.ribbons} focus={[0.56, 0.5]} />
           <div className={s.terminal} role="img" aria-label="Mary's Claude Code searching the team's sessions before starting work">
             <span className={s.terminalBar}>
               <i />
@@ -316,6 +319,7 @@ function SoundFamiliar() {
 function FinalCta() {
   return (
     <section className={s.finalCta} aria-labelledby="final-cta-title">
+      <RelayRibbons className={`${s.ribbons} ${s.ctaRibbons}`} focus={[0.5, 0.62]} />
       <h2 id="final-cta-title" className={s.title}>
         Get your team on the <Mark>relay</Mark>
       </h2>
