@@ -414,50 +414,6 @@
   font-size: 0.76rem;
 }
 
-/* Sound familiar: first-person pains, each with the fix. */
-.familiar {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
-}
-
-.familiarCard {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 22px;
-  height: 100%;
-  padding: 28px;
-  border: 1px solid rgba(116, 184, 226, 0.16);
-  border-radius: 18px;
-  background: linear-gradient(160deg, rgba(116, 184, 226, 0.08), rgba(116, 184, 226, 0.01) 70%);
-}
-
-.quote {
-  margin: 0;
-  color: var(--fg);
-  font-family: var(--font-heading), sans-serif;
-  font-size: 1.45rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  line-height: 1.25;
-}
-
-.answer {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  color: #8ec9ee;
-  font-weight: 500;
-  line-height: 1.45;
-}
-
-.answer svg {
-  flex: none;
-  margin-top: 4px;
-}
-
 /* Final call to action */
 .finalCta {
   position: relative;
@@ -572,10 +528,6 @@
   .contextArrow {
     justify-self: center;
     transform: rotate(90deg);
-  }
-
-  .familiar {
-    grid-template-columns: 1fr;
   }
 
   .finalCta {

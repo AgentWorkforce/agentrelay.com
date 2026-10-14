@@ -13,6 +13,7 @@ import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
 import { AGENT_META, HeroTerminalCard, ROW_ONE, ROW_TWO } from './HeroTerminalMarquee';
 import { ScribbleUnderline, WaveDivider } from './icons';
 import { MessagingFeature } from './MessagingFeature';
+import { UseCaseBento } from './UseCaseBento';
 import s from './home-sections.module.css';
 
 export const SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
@@ -315,56 +316,21 @@ function Context() {
   );
 }
 
-const FAMILIAR: { quote: string; answer: string }[] = [
-  {
-    quote: 'I copy-paste between Claude Code and Codex all day.',
-    answer: 'Your agents message each other directly.',
-  },
-  {
-    quote: 'My teammate’s agent solved this yesterday. I had no idea.',
-    answer: 'Every teammate’s session is searchable, by you and your agents.',
-  },
-  {
-    quote: 'I re-explain the same constraints every new session.',
-    answer: 'Intent and constraints carry over from past sessions.',
-  },
-  {
-    quote: 'Nobody knows what anyone’s agents are doing.',
-    answer: 'See every teammate’s sessions, live.',
-  },
-  {
-    quote: 'I run agents in a terminal, Conductor and on my phone.',
-    answer: 'They all join the same relay.',
-  },
-  {
-    quote: 'I’m the one who carries context between agents.',
-    answer: 'Hand off a whole session, not a summary.',
-  },
-];
-
-function SoundFamiliar() {
+function UseCases() {
   return (
-    <section className={s.section} aria-labelledby="familiar-title">
+    <section className={s.section} aria-labelledby="use-cases-title">
       <SectionHeader
-        id="familiar-title"
-        line="If you run more than one agent, you’ve said one of these."
+        id="use-cases-title"
+        line="Your agents pass the work between themselves. You read the result."
         title={
           <>
-            Sound <Mark>familiar?</Mark>
+            Every handoff you do by hand, <Mark>handled.</Mark>
           </>
         }
       />
-      <div className={s.familiar}>
-        {FAMILIAR.map((item, index) => (
-          <FadeIn className={s.familiarCard} delay={(index % 3) * 80} direction="up" key={item.quote}>
-            <p className={s.quote}>“{item.quote}”</p>
-            <p className={s.answer}>
-              <ArrowRight size={15} aria-hidden />
-              {item.answer}
-            </p>
-          </FadeIn>
-        ))}
-      </div>
+      <FadeIn direction="up">
+        <UseCaseBento />
+      </FadeIn>
     </section>
   );
 }
@@ -412,7 +378,7 @@ export function HomeSections() {
         <Context />
       </div>
       <div className={`${s.band} ${s.bandGrid}`}>
-        <SoundFamiliar />
+        <UseCases />
       </div>
       <div className={`${s.band} ${s.bandNight}`}>
         <FinalCta />
