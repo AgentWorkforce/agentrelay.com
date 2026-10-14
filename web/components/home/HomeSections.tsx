@@ -14,7 +14,6 @@ import { AGENT_META, HeroTerminalCard, ROW_ONE, ROW_TWO } from './HeroTerminalMa
 import { ScribbleUnderline, WaveDivider } from './icons';
 import { MessagingFeature } from './MessagingFeature';
 import { OutOfTheMiddle } from './OutOfTheMiddle';
-import { Switchboard } from './Switchboard';
 import { UseCaseBento } from './UseCaseBento';
 import { WhyRelay } from './WhyRelay';
 import s from './home-sections.module.css';
@@ -407,7 +406,6 @@ function WaveBreak() {
 export function HomeSections() {
   return (
     <div className={s.page}>
-      <Switchboard />
       <Talk />
       <Middle />
       <div className={`${s.band} ${s.bandRaised}`}>

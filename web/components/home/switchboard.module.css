@@ -1,45 +1,27 @@
-/* A light glass pane, the one bright surface on the page. It rides up over
-   the agent marquee as the page scrolls: the marquee lags behind (see
-   .stack below), slides under the pane and shows blurred through it. */
+/* The hero pins (see PaneStack) and this pane of light glass rises over it:
+   the marquee stays where it is and shows, blurred, through the glass. */
+.stack {
+  position: relative;
+}
+
+.pinned {
+  position: sticky;
+  top: var(--hero-stick, 0px);
+  z-index: 0;
+}
+
 .switchboard {
   position: relative;
-  z-index: 2;
-  border-top: 1px solid rgba(255, 255, 255, 0.7);
+  z-index: 1;
+  border-top: 1px solid rgba(255, 255, 255, 0.55);
   border-radius: 36px 36px 0 0;
-  background: linear-gradient(180deg, rgba(249, 250, 251, 0.72) 0, rgba(249, 250, 251, 0.96) 360px);
-  box-shadow: 0 -24px 80px rgba(4, 12, 20, 0.35);
-  color: #111827;
-  backdrop-filter: blur(22px) saturate(1.3);
-}
-
-/* The hero lets the marquee travel below its own edge, so the marquee can
-   pass under the pane instead of being cut off. */
-.stack :global([data-hero]) {
-  overflow-x: clip;
-  overflow-y: visible;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: scroll()) {
-    /* Parallax: over the first 1200px of scroll the marquee moves at half
-       speed and recedes, so the pane overtakes it. */
-    .stack :global([data-marquee-band]) {
-      animation: marquee-recede linear both;
-      animation-timeline: scroll(root);
-      animation-range: 0 1200px;
-    }
-  }
-}
-
-@keyframes marquee-recede {
-  from {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  to {
-    opacity: 0.55;
-    transform: translateY(600px) scale(0.94);
-  }
+  background: linear-gradient(180deg, rgba(244, 247, 250, 0.42) 0, rgba(244, 247, 250, 0.62) 520px);
+  box-shadow:
+    0 -30px 80px rgba(4, 12, 20, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  color: #0d1622;
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
 }
 
 .inner {
