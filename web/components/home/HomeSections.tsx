@@ -13,6 +13,7 @@ import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
 import { AGENT_META, HeroTerminalCard, ROW_ONE, ROW_TWO } from './HeroTerminalMarquee';
 import { ScribbleUnderline, WaveDivider } from './icons';
 import { MessagingFeature } from './MessagingFeature';
+import { OutOfTheMiddle } from './OutOfTheMiddle';
 import { UseCaseBento } from './UseCaseBento';
 import s from './home-sections.module.css';
 
@@ -28,13 +29,13 @@ function Mark({ children }: { children: ReactNode }) {
 }
 
 /** Heading block shared by the story sections: a big title and one line. */
-function SectionHeader({ id, title, line }: { id: string; title: ReactNode; line: string }) {
+function SectionHeader({ id, title, line }: { id: string; title: ReactNode; line?: string }) {
   return (
     <FadeIn direction="up" className={s.header}>
       <h2 id={id} className={s.title}>
         {title}
       </h2>
-      <p className={s.line}>{line}</p>
+      {line ? <p className={s.line}>{line}</p> : null}
     </FadeIn>
   );
 }
@@ -46,6 +47,24 @@ function Talk() {
         <MessagingFeature />
       </section>
     </div>
+  );
+}
+
+function Middle() {
+  return (
+    <section className={s.section} aria-labelledby="middle-title">
+      <SectionHeader
+        id="middle-title"
+        title={
+          <>
+            Take yourself out of the <Mark>middle.</Mark>
+          </>
+        }
+      />
+      <FadeIn direction="up">
+        <OutOfTheMiddle />
+      </FadeIn>
+    </section>
   );
 }
 
@@ -369,6 +388,7 @@ export function HomeSections() {
   return (
     <div className={s.page}>
       <Talk />
+      <Middle />
       <div className={`${s.band} ${s.bandRaised}`}>
         <WorksWith />
       </div>
