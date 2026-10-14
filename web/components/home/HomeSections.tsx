@@ -1,11 +1,12 @@
 import Image from 'next/image';
 import type { CSSProperties, ReactNode } from 'react';
+import { OpenAILogo } from '../AgentToolLogos';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
 import { AgentSignup } from '../AgentSignup';
 import { RelayRibbons } from '../RelayRibbons';
 import { FadeIn } from '../FadeIn';
-import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
+import { ClaudeCodeColor, Cursor, Grok, HermesAgent, OpenClawColor, OpenCode } from '../brand-icons';
 import teamDashboard from '../../public/teams/teams-dashboard-concept.webp';
 import { teamsCloudUrl } from '../../lib/teams-cloud';
 import landing from '../../app/landing.module.css';
@@ -94,7 +95,7 @@ const CODEX_APP: AppWindowCard = {
 
 const TOOL_LOGOS: { label: string; logo: ReactNode }[] = [
   { label: 'Claude Code', logo: <ClaudeCodeColor size={20} /> },
-  { label: 'Codex', logo: <Codex size={20} /> },
+  { label: 'Codex', logo: <OpenAILogo size={20} /> },
   { label: 'Cursor', logo: <Cursor size={20} /> },
   { label: 'Grok', logo: <Grok size={20} /> },
   { label: 'OpenCode', logo: <OpenCode size={20} /> },

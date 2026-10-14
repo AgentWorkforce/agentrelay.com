@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 
-import { ClaudeCodeColor, Codex } from '../brand-icons';
+import { OpenAILogo } from '../AgentToolLogos';
+import { ClaudeCodeColor } from '../brand-icons';
 import s from './out-of-the-middle.module.css';
 
 /**
@@ -18,7 +19,7 @@ const YOU: Point = { x: 200, y: 122 };
 
 const NODES: { at: Point; label: string; icon: ReactNode }[] = [
   { at: CLAUDE, label: 'Claude Code', icon: <ClaudeCodeColor size={14} /> },
-  { at: CODEX, label: 'Codex', icon: <Codex size={14} /> },
+  { at: CODEX, label: 'Codex', icon: <OpenAILogo size={14} /> },
   { at: MAYA, label: 'Maya’s agent', icon: <span className={s.initial}>M</span> },
 ];
 

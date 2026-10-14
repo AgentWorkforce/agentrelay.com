@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { ClaudeCodeColor, Codex, Cursor, Grok, HermesAgent, MuseColor, OpenClawColor, OpenCode } from '../brand-icons';
+import { OpenAILogo } from '../AgentToolLogos';
+import { ClaudeCodeColor, Cursor, Grok, HermesAgent, MuseColor, OpenClawColor, OpenCode } from '../brand-icons';
 
 export type AgentTool =
   | 'claude'
@@ -74,7 +75,7 @@ function AntigravityMark() {
 /** Every agent tool we show, with its name and logo. Logos size to their container. */
 export const AGENT_TOOLS: Record<AgentTool, { name: string; logo: ReactNode }> = {
   claude: { name: 'Claude Code', logo: <ClaudeCodeColor /> },
-  codex: { name: 'Codex', logo: <Codex /> },
+  codex: { name: 'Codex', logo: <OpenAILogo /> },
   conductor: { name: 'Conductor', logo: <ConductorMark /> },
   cursor: { name: 'Cursor', logo: <Cursor /> },
   opencode: { name: 'OpenCode', logo: <OpenCode /> },

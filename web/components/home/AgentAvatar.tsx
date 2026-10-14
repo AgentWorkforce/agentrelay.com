@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 
-import { AgentToolLogo } from '../AgentToolLogos';
-import { ClaudeCodeColor, Codex, Cursor, OpenCode } from '../brand-icons';
+import { AgentToolLogo, OpenAILogo } from '../AgentToolLogos';
+import { ClaudeCodeColor, Cursor, OpenCode } from '../brand-icons';
 import s from './use-case-bento.module.css';
 
 export type Tool = 'claude' | 'codex' | 'cursor' | 'gemini' | 'opencode';
@@ -18,7 +18,7 @@ export type Teammate = keyof typeof TEAMMATES;
 
 function ToolMark({ tool, size }: { tool: Tool; size: number }) {
   if (tool === 'claude') return <ClaudeCodeColor size={size} />;
-  if (tool === 'codex') return <Codex size={size} />;
+  if (tool === 'codex') return <OpenAILogo size={size} />;
   if (tool === 'cursor') return <Cursor size={size} />;
   if (tool === 'opencode') return <OpenCode size={size} />;
   return (
