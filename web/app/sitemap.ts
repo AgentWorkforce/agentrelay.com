@@ -160,12 +160,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
-      url: absoluteUrl('/reflex'),
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
       url: absoluteUrl('/process'),
       lastModified: now,
       changeFrequency: 'monthly',

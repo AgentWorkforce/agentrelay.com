@@ -254,22 +254,22 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .hero::after {
-    animation: reflexHeroDrift 15s ease-in-out infinite alternate;
+    animation: flowsHeroDrift 15s ease-in-out infinite alternate;
     will-change: transform;
   }
 
   .waveBreak svg {
-    animation: reflexWaveDrift 9s ease-in-out infinite alternate;
+    animation: flowsWaveDrift 9s ease-in-out infinite alternate;
     will-change: transform;
   }
 
   .sectionBand::after {
-    animation: reflexBandDrift 18s ease-in-out infinite alternate;
+    animation: flowsBandDrift 18s ease-in-out infinite alternate;
     will-change: transform;
   }
 }
 
-@keyframes reflexHeroDrift {
+@keyframes flowsHeroDrift {
   from {
     transform: skewY(-3deg) translate3d(-18px, 18%, 0);
   }
@@ -278,7 +278,7 @@
   }
 }
 
-@keyframes reflexWaveDrift {
+@keyframes flowsWaveDrift {
   from {
     transform: translate(-51%, -50%) rotate(2deg);
   }
@@ -287,7 +287,7 @@
   }
 }
 
-@keyframes reflexBandDrift {
+@keyframes flowsBandDrift {
   from {
     transform: translate3d(-18px, 0, 0);
   }

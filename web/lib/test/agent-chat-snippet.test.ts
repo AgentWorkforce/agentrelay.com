@@ -82,7 +82,19 @@ describe('agent chat snippet', () => {
 
   it('points the file bridge fallback at the hosted script by default', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test' });
-    expect(snippet).toContain('`curl -fsSL https://arelay.to/agent-relay/bridge.sh | sh -s -- https://example.test/abc123`');
+    const lines = snippet.split('\n');
+    // Downloaded to a file the visitor can read first, never piped into a shell.
+    expect(lines).toContain('curl -fsSL https://arelay.to/agent-relay/bridge.sh -o arelay-bridge.sh');
+    expect(lines).toContain('sh arelay-bridge.sh https://example.test/abc123');
+    expect(snippet).toContain('read it (it installs nothing)');
+    expect(snippet).not.toMatch(/\|\s*sh\b/);
+    expect(snippet).toContain('/tmp/agent-relay/abc123/out/next.tmp');
+  });
+
+  it('asks for approval of the one send command only, never a standing broad rule', () => {
+    const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test' });
+    expect(snippet).toContain('approve only this command, never a broader rule');
+    expect(snippet.toLowerCase()).not.toContain("don't ask again");
   });
 
   it('adds the file bridge fallback only when a bridge command is configured', () => {
