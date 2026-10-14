@@ -16,12 +16,14 @@ export function Hero({
   showSignup = false,
   showMarquee = true,
   headline,
+  description = HOME_HERO_DESCRIPTION,
 }: {
   showInvestors?: boolean;
   showSignup?: boolean;
   showMarquee?: boolean;
   /** Replaces the default two-line h1; it must render its own h1. */
   headline?: ReactNode;
+  description?: string;
 }) {
   return (
     <div className={s.heroSection}>
@@ -39,7 +41,7 @@ export function Hero({
             </h1>
           )}
 
-          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
+          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{description}</p>
 
           <div className={s.heroCenterCtas}>
             {showSignup ? (
