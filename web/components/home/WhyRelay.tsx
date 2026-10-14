@@ -1,13 +1,19 @@
 import { AgentToolLogo } from '../AgentToolLogos';
-import { ClaudeCodeColor, Cursor } from '../brand-icons';
+import { AGENT_TOOLS } from './AgentMarks';
 import { GitHubIcon } from './icons';
 import s from './why-relay.module.css';
 
-function ConductorMark() {
+/** A teammate's photo with their agent on a small stacked card beside it. */
+function Teammate({ photo, name, agent }: { photo: string; name: string; agent: 'claude' | 'codex' }) {
   return (
-    <svg width={16} height={16} viewBox="0 0 12 12" aria-hidden="true">
-      <path d="M1 1h10v3H4v4h7v3H1z" fill="currentColor" />
-    </svg>
+    <span className={s.teammate}>
+      <img className={s.photo} src={photo} alt={name} width={36} height={36} />
+      <span className={s.stack}>
+        <span className={s.agent} title={agent === 'claude' ? 'Claude' : 'ChatGPT'}>
+          <AgentToolLogo provider={agent} idPrefix={`why-${agent}`} className={s.agentLogo} />
+        </span>
+      </span>
+    </span>
   );
 }
 
@@ -16,22 +22,21 @@ export function WhyRelay() {
   return (
     <div className={s.why}>
       <div className={s.item}>
-        <span className={s.art} aria-hidden="true">
-          <ClaudeCodeColor size={20} />
-          <AgentToolLogo provider="codex" className={s.logo} idPrefix="why-relay" />
-          <Cursor size={20} />
-          <ConductorMark />
+        <span className={`${s.art} ${s.logos}`} aria-hidden="true">
+          {Object.values(AGENT_TOOLS).map((tool) => (
+            <span className={s.logo} key={tool.name} title={tool.name}>
+              {tool.logo}
+            </span>
+          ))}
         </span>
         <h3>Works inside the tools you already use</h3>
         <p>Terminal agents, desktop apps, even agents on your phone. Keep your setup.</p>
       </div>
       <div className={s.item}>
         <span className={s.art} aria-hidden="true">
-          <span className={s.machine}>W</span>
+          <Teammate photo="/authors/will-128.webp" name="Will" agent="claude" />
           <span className={s.link} />
-          <span className={s.machine}>K</span>
-          <span className={s.link} />
-          <span className={s.machine}>+</span>
+          <Teammate photo="/authors/khaliq-128.webp" name="Khaliq" agent="codex" />
         </span>
         <h3>Works across teammates and machines</h3>
         <p>Your laptop, your teammate’s, a box in the cloud. One workspace.</p>
