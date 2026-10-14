@@ -3,7 +3,6 @@ import { Fragment, type CSSProperties } from 'react';
 
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import { Grok } from '../brand-icons';
-import { RelayRibbons } from '../RelayRibbons';
 import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
 import { HeroPhone, PHONE_META, type PhoneCard } from './HeroPhone';
 import s from '../../app/landing.module.css';
@@ -875,7 +874,6 @@ function TerminalRow({
 export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boolean }) {
   return (
     <div aria-hidden="true" className={s.heroMarquee} data-marquee-band="">
-      <RelayRibbons className={s.heroRibbons} focus={[3, 0.5]} />
       <TerminalRow
         showAvatars={showAvatars}
         seats={MARQUEE_ROW_ONE}

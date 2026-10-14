@@ -2046,7 +2046,6 @@
    different numbers of cards, so their tracks are different lengths and the
    seams drift instead of beating in step. */
 .heroMarquee {
-  /* No isolation: the ribbons blend onto the hero background behind the band. */
   position: relative;
   display: flex;
   flex-direction: column;
@@ -2058,28 +2057,6 @@
      still breathe above and below the row. */
   overflow-x: clip;
   overflow-y: visible;
-}
-
-/* The sign-in page's ribbons, quiet behind the cards. The focus sits far off
-   to the right, so the ribbons stay spread across all three rows instead of
-   converging in the middle; they fade out only at the band's edges. Screen
-   blending drops the shader's dark base, so only the light of the ribbons
-   lands on the hero and the band keeps the hero's faded color. */
-.heroRibbons {
-  position: absolute;
-  inset: -40px 0;
-  z-index: 0;
-  mix-blend-mode: screen;
-  width: 100%;
-  height: calc(100% + 80px);
-  opacity: 0;
-  mask-image: radial-gradient(130% 120% at 50% 50%, #000 50%, transparent 100%);
-  transition: opacity 1.6s ease;
-  pointer-events: none;
-}
-
-.heroRibbons[data-ready] {
-  opacity: 0.55;
 }
 
 .heroMarqueeRow {
