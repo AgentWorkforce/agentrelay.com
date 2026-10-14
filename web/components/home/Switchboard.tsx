@@ -43,16 +43,8 @@ export function Switchboard() {
             Right now, you are the switchboard.
           </h2>
           <div className={s.copy} data-reveal>
-            <p className={s.lead}>Some days it feels like you work for your agents, not the other way around.</p>
-            <p>
-              You copy context out of one, paste it into another, and carry the answer back. If you’re tired of it,
-              you’re not alone.
-            </p>
-            <p>
-              And that’s before your team gets involved. Your teammate’s agent fixed the same bug yesterday. You find
-              out at standup.
-            </p>
-            <p className={s.turn}>Every handoff waits for you.</p>
+            <p className={s.lead}>Some days you work for your agents, not the other way around.</p>
+            <p>You carry context between them all day. Then at standup you learn a teammate’s agent already fixed it.</p>
           </div>
         </div>
         <figure className={s.figure} data-reveal>
