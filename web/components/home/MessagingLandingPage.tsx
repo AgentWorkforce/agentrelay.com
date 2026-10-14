@@ -5,7 +5,6 @@ import { SiteNav } from '../SiteNav';
 import {
   Deploy,
   DesktopSessionsFeature,
-  DesktopTeamFeature,
   Hero,
   HowItWorks,
   MessagingFeature,
@@ -44,8 +43,6 @@ export function MessagingLandingPage({ showInvestors = false, showSignup = false
             <QuickStart />
             <WaveDivider variant="feature" />
             <DesktopSessionsFeature />
-            <WaveDivider variant="a2a" className={s.desktopTeamSeparator} />
-            <DesktopTeamFeature />
           </section>
         </div>
 
