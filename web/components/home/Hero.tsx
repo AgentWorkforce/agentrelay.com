@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { InvestorStrip } from '../InvestorStrip';
 import { ArrowRight } from 'lucide-react';
 
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
 import { HeroTerminalMarquee } from './HeroTerminalMarquee';
@@ -15,24 +15,29 @@ export function Hero({
   showInvestors = false,
   showSignup = false,
   showMarquee = true,
+  headline,
 }: {
   showInvestors?: boolean;
   showSignup?: boolean;
   showMarquee?: boolean;
+  /** Replaces the default two-line h1; it must render its own h1. */
+  headline?: ReactNode;
 }) {
   return (
     <div className={s.heroSection}>
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
-          <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
-            {HOME_HERO_TITLE_LINES.map((line, index) => (
-              <span className={s.heroTitleLine} key={line}>
-                <span className={s.heroTitleLineInner} style={{ '--line': index } as CSSProperties}>
-                  {line}
+          {headline ?? (
+            <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
+              {HOME_HERO_TITLE_LINES.map((line, index) => (
+                <span className={s.heroTitleLine} key={line}>
+                  <span className={s.heroTitleLineInner} style={{ '--line': index } as CSSProperties}>
+                    {line}
+                  </span>
                 </span>
-              </span>
-            ))}
-          </h1>
+              ))}
+            </h1>
+          )}
 
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
 
