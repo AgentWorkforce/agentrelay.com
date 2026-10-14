@@ -1,0 +1,76 @@
+/* A full-width break after the three side-by-side sections: centred copy,
+   then the globe rising from the bottom of the band, cut off below its
+   middle and fading into the page. */
+.section {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 112px 16px 0;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-top: 1px solid rgba(116, 184, 226, 0.12);
+  border-bottom: 1px solid rgba(116, 184, 226, 0.12);
+  /* Night sky: a deeper band than the sections around it, a horizon glow
+     behind the globe, and a faint field of stars. */
+  background:
+    radial-gradient(55% 45% at 50% 100%, rgba(74, 144, 194, 0.32), transparent 72%),
+    linear-gradient(180deg, #03080f 0%, #050d18 55%, #081a2a 100%);
+}
+
+.section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, rgba(255, 255, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 27% 62%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1.5px 1.5px at 38% 9%, rgba(207, 234, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 63% 24%, rgba(255, 255, 255, 0.45), transparent),
+    radial-gradient(1px 1px at 78% 71%, rgba(255, 255, 255, 0.3), transparent),
+    radial-gradient(1.5px 1.5px at 86% 14%, rgba(207, 234, 255, 0.55), transparent),
+    radial-gradient(1px 1px at 92% 46%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(1px 1px at 6% 48%, rgba(255, 255, 255, 0.35), transparent),
+    radial-gradient(1px 1px at 52% 4%, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 520px 420px;
+  pointer-events: none;
+}
+
+.copy {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.title {
+  composes: title from './middle-options.module.css';
+}
+
+.line {
+  composes: line from './middle-options.module.css';
+  max-width: 44ch;
+  text-wrap: balance;
+}
+
+.globe {
+  width: min(680px, 100%);
+  aspect-ratio: 1 / 0.68;
+  overflow: hidden;
+  mask-image: linear-gradient(180deg, #000 70%, transparent 100%);
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  font-family: var(--font-geist-sans), sans-serif;
+}
+
+@media (max-width: 900px) {
+  .section {
+    gap: 12px;
+    padding-top: 72px;
+  }
+}

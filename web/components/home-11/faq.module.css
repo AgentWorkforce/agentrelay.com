@@ -1,0 +1,88 @@
+/* Sits under the final call to action, on the same night background the
+   page ends on. Native <details>, so each answer opens without script. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: clamp(32px, 6vw, 96px);
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 96px 40px 120px;
+  background: #040a12;
+  box-shadow: 0 0 0 100vmax #040a12;
+  clip-path: inset(0 -100vmax);
+}
+
+.title {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.2rem, 3.8vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.list {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.item {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.question {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 22px 0;
+  color: var(--fg);
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.question::-webkit-details-marker {
+  display: none;
+}
+
+.question::after {
+  content: '+';
+  flex: none;
+  color: rgba(214, 228, 240, 0.55);
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1;
+  transition: transform 200ms ease;
+}
+
+.item[open] .question::after {
+  transform: rotate(45deg);
+}
+
+.question:hover::after,
+.question:focus-visible::after {
+  color: #8ec9ee;
+}
+
+.answer {
+  max-width: 60ch;
+  margin: 0;
+  padding: 0 0 24px;
+  color: rgba(214, 228, 240, 0.72);
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 900px) {
+  .section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    padding: 64px 16px 88px;
+  }
+
+  .question {
+    font-size: 1rem;
+  }
+}

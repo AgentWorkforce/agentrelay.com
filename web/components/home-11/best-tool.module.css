@@ -1,0 +1,224 @@
+/* Third in the run after "Move faster" and "Unblock automatically": copy on
+   the left, and on the blue card a handoff that lands on a different agent
+   each pass. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  align-items: center;
+  gap: clamp(40px, 6vw, 96px);
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 0 40px 104px;
+}
+
+.copy {
+  display: grid;
+  gap: 18px;
+}
+
+.title {
+  composes: title from './middle-options.module.css';
+}
+
+.line {
+  composes: line from './middle-options.module.css';
+}
+
+.stage {
+  position: relative;
+  height: 360px;
+  overflow: clip;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+}
+
+.panel {
+  position: absolute;
+  inset: 28px 28px 28px 28px;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid rgba(156, 207, 255, 0.16);
+  border-radius: 12px;
+  background: #07111f;
+  box-shadow: 0 16px 36px rgba(2, 7, 18, 0.45);
+  color: #e8eef4;
+}
+
+.from,
+.route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.from {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.from b,
+.info b {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.from small,
+.info small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(232, 238, 244, 0.5);
+  font-size: 0.76rem;
+}
+
+.info b,
+.info small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.logo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(160, 205, 235, 0.18);
+  border-radius: 10px;
+  background: #0f2132;
+  color: #fff;
+}
+
+.logo svg {
+  width: 18px;
+  height: 18px;
+}
+
+.routes {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.route {
+  padding: 9px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reason {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid rgba(116, 184, 226, 0.4);
+  border-radius: 999px;
+  background: rgba(116, 184, 226, 0.12);
+  color: #cfeaff;
+  font-size: 0.74rem;
+  font-weight: 500;
+  opacity: 0;
+}
+
+/* Without motion, the first route stays picked. */
+.route:first-child {
+  border-color: rgba(116, 184, 226, 0.5);
+  background: rgba(116, 184, 226, 0.1);
+}
+
+.route:first-child .reason {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* One 9s cycle, a third per route: each row lights up, shows why it was
+     picked, then hands the highlight to the next. */
+  .route,
+  .route:first-child {
+    animation: route-row 9s ease infinite both;
+  }
+
+  .route .reason,
+  .route:first-child .reason {
+    animation: route-reason 9s ease infinite both;
+  }
+
+  .route:nth-child(2),
+  .route:nth-child(2) .reason {
+    animation-delay: -6s;
+  }
+
+  .route:nth-child(3),
+  .route:nth-child(3) .reason {
+    animation-delay: -3s;
+  }
+}
+
+@keyframes route-row {
+  0%,
+  29% {
+    border-color: rgba(116, 184, 226, 0.5);
+    background: rgba(116, 184, 226, 0.1);
+    box-shadow: 0 0 22px rgba(116, 184, 226, 0.16);
+  }
+  34%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: none;
+  }
+}
+
+@keyframes route-reason {
+  0% {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  4%,
+  29% {
+    opacity: 1;
+    transform: none;
+  }
+  33%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 16px 56px;
+  }
+
+  .stage {
+    height: 340px;
+  }
+
+  .panel {
+    inset: 18px;
+    padding: 14px 12px;
+  }
+
+  .route {
+    gap: 10px;
+    padding: 8px 10px;
+  }
+
+  .reason {
+    padding: 3px 8px;
+    font-size: 0.7rem;
+  }
+}
