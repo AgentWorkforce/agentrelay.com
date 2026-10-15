@@ -34,7 +34,10 @@ describe('docs markdown export for MDX components', () => {
     const doc = getDocMarkdown('relay-connect');
 
     expect(doc).not.toBeNull();
-    expect(doc?.markdown).toContain('npx -y @agent-relay/connect join');
+    expect(doc?.markdown).toContain('personal Agent Relay Cloud sign-in');
+    expect(doc?.markdown).toContain('https://agentrelay.com/connect');
+    expect(doc?.markdown).toContain('Guests do not sign in');
+    expect(doc?.markdown).not.toContain('npx -y @agent-relay/connect');
     expect(doc?.markdown).toContain('## Privacy and safety');
     expect(doc?.markdown).toContain('`connect_expired`');
     expect(doc?.markdown).toContain('`connect_full`');
