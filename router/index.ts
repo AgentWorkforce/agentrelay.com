@@ -64,11 +64,15 @@ const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
 export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
 const VIRTUAL_OFFICE_URL = "https://meet.google.com/ijx-gpfb-brt";
-const VANITY_REDIRECTS = new Map<string, string>([
+// A vanity path maps to one destination, or to several that are chosen from
+// uniformly at random per request (/founder splits meetings between the two
+// founders' calendars).
+const VANITY_REDIRECTS = new Map<string, string | readonly string[]>([
   ["/meet-with-will", WILL_CALENDAR_URL],
   ["/will", WILL_CALENDAR_URL],
   ["/meet-with-khaliq", KHALIQ_CALENDAR_URL],
   ["/khaliq", KHALIQ_CALENDAR_URL],
+  ["/founder", [WILL_CALENDAR_URL, KHALIQ_CALENDAR_URL]],
   ["/virtual-office", VIRTUAL_OFFICE_URL],
 ]);
 
@@ -371,7 +375,11 @@ export function getVanityRedirect(hostname: string, pathname: string): string | 
   const normalizedPathname = (pathname.length > 1
     ? pathname.replace(/\/$/, "")
     : pathname).toLowerCase();
-  return VANITY_REDIRECTS.get(normalizedPathname);
+  const destination = VANITY_REDIRECTS.get(normalizedPathname);
+  if (typeof destination === "string" || destination === undefined) {
+    return destination;
+  }
+  return destination[Math.floor(Math.random() * destination.length)];
 }
 
 // True only for the exact paths the webhook worker knows how to handle. Used
