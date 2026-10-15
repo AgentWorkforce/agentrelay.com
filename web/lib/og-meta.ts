@@ -49,7 +49,7 @@ export function ogImage(path: string, alt: string): OgImage {
 export const DEFAULT_OG_ALT = 'Agent Relay — Headless Slack for Agents';
 
 /** Static public card paths. Change the version suffix when the visual changes to bust social caches. */
-export const HOME_OG_ALT = 'Agent Relay — Stop copy/pasting between your agents';
+export const HOME_OG_ALT = 'Agent Relay — Let Claude Code talk to Codex. Stop copy/pasting between your agents.';
 export const HOME_OG_IMAGE_PATH = '/og/agent-relay-home-v20261014.png';
 export const FLOWS_OG_ALT = 'Agent Relay Flows — a TypeScript script that runs agents and checks their work';
 export const FLOWS_OG_IMAGE_PATH = '/og/agent-relay-flows-v20260913.png';
