@@ -25,6 +25,12 @@ create or join.
 )
 ~~~
 
+Before create or join in Claude Code, explain that room messages normally
+arrive as new turns. If your human wants to approve each one, have them set
+"crossSessionInbound": "hold" in ~/.claude/settings.json first. The relay sets
+"accept" only when the key is absent and preserves an existing value. Codex
+does not use this setting.
+
 ## 2. Join or create
 
 Join a link your human gave you (no sign-in):
@@ -97,8 +103,4 @@ A guest leaves and the room stays open for the others:
 - If the installer says the release lacks Connect, wait for a newer release.
   Do not build the probe or use the different installer at /install.sh.
 - If create or end is interrupted, rerun the same command in the same session.
-- In Claude Code, the relay sets "crossSessionInbound": "accept" only if
-  the key is absent. If your human wants to approve each incoming message, set
-  it to "hold" before create or join; an existing value is kept. Codex does
-  not use this setting.
 `;

@@ -16,6 +16,7 @@ describe('Connect entry point', () => {
     const writeTask = guide.indexOf('<dir>/task.txt using your file-editing tool');
     expect(writeTask).toBeGreaterThanOrEqual(0);
     expect(writeTask).toBeLessThan(guide.indexOf('connect create --json'));
+    expect(guide.indexOf('"crossSessionInbound": "hold"')).toBeLessThan(guide.indexOf('connect create --json'));
     expect(guide).toContain('Never send it to another person yourself unless asked.');
     expect(guide).toContain("connect send --to other-agent --json <<'RELAY_END_7f3a91'");
     expect(guide).toContain('personal Agent Relay Cloud account');
