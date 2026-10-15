@@ -710,7 +710,7 @@ const router = {
     if (vanityRedirect) {
       const redirectUrl = new URL(vanityRedirect);
       url.searchParams.forEach((value, key) => {
-        redirectUrl.searchParams.set(key, value);
+        redirectUrl.searchParams.append(key, value);
       });
       return Response.redirect(redirectUrl.toString(), 302);
     }

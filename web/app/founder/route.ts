@@ -14,7 +14,7 @@ export function GET(request: Request) {
     FOUNDER_CALENDAR_URLS[Math.floor(Math.random() * FOUNDER_CALENDAR_URLS.length)],
   );
   new URL(request.url).searchParams.forEach((value, key) => {
-    destination.searchParams.set(key, value);
+    destination.searchParams.append(key, value);
   });
   return new Response(null, {
     status: 302,
