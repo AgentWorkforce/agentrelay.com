@@ -7,7 +7,7 @@ import { Hero } from './Hero';
 import { HowItWorks } from './HowItWorks';
 import { MessagingFeature } from './MessagingFeature';
 import { QuickStart } from './QuickStart';
-import { Waitlist } from './Waitlist';
+import { SignupBand } from './SignupBand';
 import s from '../../app/landing.module.css';
 
 export function MessagingLandingPage() {
@@ -35,7 +35,7 @@ export function MessagingLandingPage() {
           <Deploy />
         </div>
 
-        <Waitlist />
+        <SignupBand />
       </main>
 
       <SiteFooter />

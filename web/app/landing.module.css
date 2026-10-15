@@ -3536,7 +3536,7 @@
   min-width: 0;
 }
 
-.waitlistSection {
+.signupSection {
   --card-bg: #0d1724;
   --line: rgba(116, 184, 226, 0.22);
   position: relative;
@@ -3548,11 +3548,11 @@
   border-bottom: 1px solid rgba(116, 184, 226, 0.08);
 }
 
-.waitlistSection::before {
+.signupSection::before {
   content: none;
 }
 
-.waitlistInner {
+.signupInner {
   position: relative;
   display: grid;
   grid-template-columns: 1fr;
@@ -3562,12 +3562,12 @@
   text-align: center;
 }
 
-.waitlistCopy {
+.signupCopy {
   display: grid;
   gap: 18px;
 }
 
-.waitlistTitle {
+.signupTitle {
   margin: 0;
   color: rgba(237, 244, 251, 0.9);
   font-family: var(--font-heading), sans-serif;
@@ -3577,7 +3577,7 @@
   line-height: 1.1;
 }
 
-.waitlistSubtitle {
+.signupSubtitle {
   max-width: 64ch;
   margin: 0 auto;
   color: rgba(168, 184, 200, 0.92);
@@ -3585,12 +3585,8 @@
   line-height: 1.65;
 }
 
-.waitlistFormPanel {
+.signupActions {
   min-width: 0;
-}
-
-.waitlistFormPanel form {
-  max-width: 620px;
 }
 
 .installHeader {
@@ -6494,11 +6490,11 @@
     padding: 0;
   }
 
-  .waitlistSection {
+  .signupSection {
     padding: 78px 24px 86px;
   }
 
-  .waitlistInner {
+  .signupInner {
     gap: 30px;
     max-width: 620px;
   }
@@ -6659,7 +6655,7 @@
     width: min(360px, calc(100% - 56px));
   }
 
-  .waitlistSection {
+  .signupSection {
     padding: 68px 28px 76px;
   }
 

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { WaitlistForm } from '../../components/WaitlistForm';
+import { teamsCloudUrl } from '../../lib/teams-cloud';
 import { WorksWithEveryAgent } from '../../components/home/WorksWithEveryAgent';
 import { ogImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
@@ -132,8 +132,8 @@ export default function PearPage() {
         actions={
           <>
             <GitHubStarsBadge />
-            <Link href="#waitlist" className={s.ctaPrimary} style={{ padding: '0.5rem 1rem' }}>
-              Join waitlist
+            <Link href="#signup" className={s.ctaPrimary} style={{ padding: '0.5rem 1rem' }}>
+              Get started
             </Link>
           </>
         }
@@ -155,8 +155,8 @@ export default function PearPage() {
               and proactively pick up tasks on their own.
             </p>
             <div className={s.ctaRow}>
-              <Link href="#waitlist" className={s.ctaPrimary}>
-                Join waitlist
+              <Link href="#signup" className={s.ctaPrimary}>
+                Get started
               </Link>
               <Link href="/docs" className={s.ctaSecondary}>
                 Read the docs
@@ -564,19 +564,24 @@ export default function PearPage() {
         </section>
       </main>
 
-      {/* Waitlist — same signup band as the home page */}
-      <section id="waitlist" className={home.waitlistSection} aria-labelledby="waitlist-title">
-        <div className={home.waitlistInner}>
-          <div className={home.waitlistCopy}>
-            <h2 id="waitlist-title" className={home.waitlistTitle}>
+      {/* Signup — same signup band as the home page */}
+      <section id="signup" className={home.signupSection} aria-labelledby="signup-title">
+        <div className={home.signupInner}>
+          <div className={home.signupCopy}>
+            <h2 id="signup-title" className={home.signupTitle}>
               Pair with a team that ships
             </h2>
-            <p className={home.waitlistSubtitle}>
-              Pear is in private beta. Join the waitlist and we&apos;ll reach out with an early build.
+            <p className={home.signupSubtitle}>
+              Sign in to Agent Relay and start working with your agents.
             </p>
           </div>
-          <div className={home.waitlistFormPanel}>
-            <WaitlistForm />
+          <div className={home.signupActions}>
+            <a
+              className={home.ctaPrimary}
+              href={teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect')}
+            >
+              Get started
+            </a>
           </div>
         </div>
       </section>
