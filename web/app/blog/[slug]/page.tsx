@@ -11,7 +11,7 @@ import remarkGfm from 'remark-gfm';
 import { BlogTableOfContents } from '../../../components/blog/BlogTableOfContents';
 import styles from '../../../components/blog/blog.module.css';
 import { HighlightedPre } from '../../../components/docs/HighlightedCode';
-import { Waitlist } from '../../../components/home/Waitlist';
+import { SignupBand } from '../../../components/home/SignupBand';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import { getAllPosts, getPost, slugifyHeading } from '../../../lib/blog';
@@ -365,7 +365,7 @@ export default async function BlogPostPage({ params }: PageProps) {
         </section>
       )}
 
-      <Waitlist />
+      <SignupBand />
 
       <SiteFooter />
     </div>
