@@ -34,8 +34,9 @@ and ask the user for that specific action; never fall back to computer use.
 For desktop installation, download the prebuilt binary the skill names. Never
 clone the desktop repository, install build dependencies, run a build, compile
 from source, or generate a DMG. A missing binary is a blocker, not a build task.
-The user handles Google sign-in, device approval, and any provider or operating
-system consent. Never approve access on their behalf or ask for their password.
+${product === 'teams' ? `The user handles the Google sign-in in the browser the app opens, and any
+operating system consent.` : `The user handles Google sign-in, device approval, and any provider or operating
+system consent.`} Never approve access on their behalf or ask for their password.
 
 Site: ${site}
 Cloud API base: ${cloud}
@@ -63,13 +64,13 @@ Where a part offers to install itself as a skill or to use another agent,
 continue with the text here instead. A part that requires another skill finds
 it as another part of this guide; do not stop to install skills.
 ${product === 'teams' ? `
-Part 1 creates the account with signup_source "teams" for signup attribution.
-Complete account setup before Part 2. Pass Part 1's currentWorkspace.id as the
-workspace in Part 2's /setup/sign-in payload. The app signs in on its own, so
-the user may approve one more device link there unless it reuses a login.
-Before Part 2, read Part 3's "The only human steps" and ask the user for those
-inputs up front, so they can mint the token while the desktop installs.
-Setup is complete only in Part 3's finished state: a proven live round trip.` : `
+The desktop app's sign-in creates the account. In Part 1's section 3, send
+{"flow":"browser","signup_source":"teams"} to /setup/sign-in and omit
+workspace for a new signup: the app opens Cloud's login page in the browser,
+the user signs in with Google, and the browser hands back to the app. There is
+no device code and no Cloud token for you to hold. Part 2 takes its Sessions
+token from the app's /setup/sessions-token; the user mints nothing.
+Setup is complete only in Part 2's finished state: a proven live round trip.` : `
 Part 1 creates the account with signup_source "flows". Part 2 uses its access
 token and its user.id and currentWorkspace.id. Part 3 is writing-relayflows,
 the authoring guide Part 2's custom-flow path defers to; skip it for a
@@ -109,15 +110,16 @@ Set state: working at the same step when you resume, and state: failed if work
 cannot continue. Only report complete after the actual checks succeed.
 
 ${product === 'teams' ? `Progress steps for Teams:
-1. Sign in: before Part 1.
-2. Install the app: before Part 2's install (its sections 1 and 2).
-3. Connect the workspace: before Part 2's sign-in (its section 3).
-4. Choose what to share: before Part 2's defaults (its section 4). Report
+1. Install the app: before Part 1's install (its sections 1 and 2).
+2. Sign in: before Part 1's sign-in (its section 3). Report waiting while the
+   user signs in with Google in the browser.
+3. Choose what to share: before Part 1's defaults (its section 4). Report
    waiting while the user decides about an existing sharing mode.
-5. Check everything works: before Part 2's final verification, continuing
-   through all of Part 3. Keep step 5 working or waiting until Part 3 proves a
-   live round trip; only then PATCH step: 5, state: complete. A self-verified
-   read path without a teammate is not completion.` : `Progress steps for Flows:
+4. Connect sessions: before Part 2's Sessions token and MCP install.
+5. Check everything works: before Part 1's final verification, continuing
+   through the rest of Part 2. Keep step 5 working or waiting until Part 2
+   proves a live round trip; only then PATCH step: 5, state: complete. A
+   self-verified read path without a teammate is not completion.` : `Progress steps for Flows:
 1. Sign in: before Part 1.
 2. Choose the flow/repository: before Part 2's section 1 (through section 2,
    and Part 3 for a custom flow).
@@ -142,7 +144,6 @@ ${product === 'flows' ? flowsWebInput : ''}`;
 
 const signupParts: Record<AgentSignupProduct, readonly { label: string; skill: string }[]> = {
   teams: [
-    { label: 'Cloud account', skill: 'signing-in-to-agent-relay-cloud' },
     { label: 'Desktop', skill: 'setting-up-agent-relay-desktop' },
     { label: 'Sessions', skill: 'setting-up-agent-relay-sessions' },
   ],
