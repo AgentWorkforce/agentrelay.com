@@ -60,6 +60,8 @@ const footerColumns: FooterColumn[] = [
       { label: 'Support', href: '/support' },
       { label: 'Telemetry', href: '/telemetry' },
       { label: 'Privacy', href: '/privacy' },
+      { label: 'Trust', href: '/trust' },
+      { label: 'Security', href: '/security' },
       { label: 'Terms', href: '/terms' },
       { label: 'Contact', href: `mailto:${SITE_EMAIL}` },
     ],

@@ -191,6 +191,7 @@ export default function PrivacyPage() {
 
         <section className={s.section}>
           <h2>How we share information</h2>
+          <p>See our <Link href="/trust">trust page</Link> for the preliminary, unconfirmed provider inventory and current controls.</p>
           <p>
             We do not sell personal information. We share information with service providers only as needed to
             operate Agent Relay, with integrations you connect, as directed by workspace administrators, to
