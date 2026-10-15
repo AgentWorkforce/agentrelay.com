@@ -3,7 +3,6 @@ const TRACKED_ROUTE_PREFIXES = [
   { prefix: '/teams', pageGroup: 'teams' },
   { prefix: '/docs', pageGroup: 'docs' },
   { prefix: '/blog', pageGroup: 'blog' },
-  { prefix: '/primitives', pageGroup: 'primitives' },
   { prefix: '/openclaw', pageGroup: 'openclaw' },
   { prefix: '/skill', pageGroup: 'skill' },
 ] as const;
