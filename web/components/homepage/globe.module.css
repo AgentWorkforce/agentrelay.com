@@ -1,0 +1,6 @@
+.canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  font-family: var(--font-geist-sans), sans-serif;
+}

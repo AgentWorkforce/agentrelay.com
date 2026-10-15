@@ -31,7 +31,7 @@ function Mark({ children }: { children: ReactNode }) {
 }
 
 /** Heading block shared by the story sections: a big title and one line. */
-function SectionHeader({ id, title, line }: { id: string; title: ReactNode; line?: string }) {
+export function SectionHeader({ id, title, line }: { id: string; title: ReactNode; line?: string }) {
   return (
     <FadeIn direction="up" className={s.header}>
       <h2 id={id} className={s.title}>
@@ -364,12 +364,13 @@ export function Why({
       No new IDE. No new <Mark>habits.</Mark>
     </>
   ),
-}: { title?: ReactNode } = {}) {
+  last,
+}: { title?: ReactNode; last?: ReactNode } = {}) {
   return (
     <section className={s.section} aria-labelledby="why-title">
       <SectionHeader id="why-title" title={title} />
       <FadeIn direction="up">
-        <WhyRelay />
+        <WhyRelay last={last} />
       </FadeIn>
     </section>
   );
@@ -410,19 +411,37 @@ export function HomeSections({
   showUseCases = true,
   showWhy = true,
   showMiddle = true,
-}: { opening?: ReactNode; showUseCases?: boolean; showWhy?: boolean; showMiddle?: boolean } = {}) {
+  showWorksWith = true,
+  showSilo = true,
+  showContext = true,
+}: {
+  opening?: ReactNode;
+  showUseCases?: boolean;
+  showWhy?: boolean;
+  showMiddle?: boolean;
+  showWorksWith?: boolean;
+  showSilo?: boolean;
+  /** The "find the context themselves" band, with the wave break that leads into it. */
+  showContext?: boolean;
+} = {}) {
   return (
     <div className={s.page}>
       {opening}
       {showMiddle && <Middle />}
-      <div className={`${s.band} ${s.bandRaised}`}>
-        <WorksWith />
-      </div>
-      <Silo />
-      <WaveBreak />
-      <div className={`${s.band} ${s.bandDeep}`}>
-        <Context />
-      </div>
+      {showWorksWith && (
+        <div className={`${s.band} ${s.bandRaised}`}>
+          <WorksWith />
+        </div>
+      )}
+      {showSilo && <Silo />}
+      {showContext && (
+        <>
+          <WaveBreak />
+          <div className={`${s.band} ${s.bandDeep}`}>
+            <Context />
+          </div>
+        </>
+      )}
       <div className={`${s.band} ${s.bandGrid}`}>
         {showUseCases && <UseCases />}
         {showWhy && <Why />}

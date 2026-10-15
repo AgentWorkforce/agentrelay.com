@@ -49,10 +49,12 @@
   color: #fff;
 }
 
-/* Every agent we work with, as a wrapping row of marks. */
+/* Every agent we work with, as an even grid of marks. */
 .logos {
-  flex-wrap: wrap;
-  gap: 10px 12px;
+  display: grid;
+  grid-template-columns: repeat(7, 20px);
+  justify-content: start;
+  gap: 10px 14px;
 }
 
 .logo {

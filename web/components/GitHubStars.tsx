@@ -18,7 +18,7 @@ function formatStarCount(stars: number): string {
   return stars >= 1000 ? `${(stars / 1000).toFixed(1)}k` : String(stars);
 }
 
-async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | null> {
+export async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | null> {
   try {
     const response = await fetch(`https://api.github.com/repos/${repo}`, {
       headers: {

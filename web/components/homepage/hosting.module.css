@@ -1,0 +1,163 @@
+/* We host it / you host it: two cards facing each other across an "or".
+   The hosted card carries the brand blue; the self-hosted one leads with
+   GitHub. */
+.section {
+  composes: section from '../home/home-sections.module.css';
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: stretch;
+  gap: 20px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 30px 30px 32px;
+  border: 1px solid rgba(116, 184, 226, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.hosted {
+  border-color: rgba(116, 184, 226, 0.4);
+  background:
+    radial-gradient(90% 70% at 0% 0%, rgba(74, 144, 194, 0.22), transparent 70%),
+    #0f2132;
+}
+
+.tag {
+  composes: pill from '../home/why-relay.module.css';
+  align-self: flex-start;
+  color: #fff;
+}
+
+.tag svg {
+  width: 14px;
+  height: 14px;
+}
+
+.option h3 {
+  margin: 4px 0 0;
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.option p {
+  margin: 0;
+  color: #a8b8c8;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.option ul {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 8px;
+  padding: 0;
+  color: #d6e4f0;
+  font-size: 0.95rem;
+  list-style: none;
+}
+
+.option li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.option li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #74b8e2;
+}
+
+.action {
+  align-self: flex-start;
+  margin-top: auto;
+}
+
+.or {
+  align-self: center;
+  color: #77879a;
+  font-size: 0.95rem;
+  font-style: italic;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 18px;
+  margin-top: auto;
+}
+
+/* The repo as a big button: GitHub mark, name, and its star count. */
+.github {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px 10px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: #0b141d;
+  color: #fff;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.github:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: #101b26;
+}
+
+.stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  color: #e8c37a;
+  font-weight: 600;
+}
+
+.stars svg {
+  width: 13px;
+  height: 13px;
+  fill: currentColor;
+}
+
+.talk {
+  color: #74b8e2;
+  font-size: 0.92rem;
+  text-decoration: underline;
+  text-decoration-color: rgba(116, 184, 226, 0.4);
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 860px) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .or {
+    justify-self: center;
+  }
+
+  .option {
+    padding: 24px 20px 26px;
+  }
+}

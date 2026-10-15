@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-import { HomeLandingPage } from '../components/home/HomePage';
+import { HomeLandingPage } from '../components/homepage/HomePage';
 import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE } from '../lib/home-copy';
 import { HOME_OG_ALT, HOME_OG_IMAGE_PATH, ogImage } from '../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../lib/site';
