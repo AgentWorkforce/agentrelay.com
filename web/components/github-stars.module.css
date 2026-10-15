@@ -65,6 +65,10 @@
   opacity: 0.3;
 }
 
+.repo {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
 .count {
   font-variant-numeric: tabular-nums;
 }

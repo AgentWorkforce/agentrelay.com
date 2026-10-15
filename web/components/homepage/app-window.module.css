@@ -74,6 +74,14 @@
   min-height: 0;
 }
 
+/* A body with room around content that isn't a list, like the timezone
+   lanes. */
+.padded {
+  display: flex;
+  align-items: center;
+  padding: 24px 28px 40px;
+}
+
 /* A person, or an agent acting for one: the agent's mark on a tile with the
    person's photo tucked on its corner. */
 .who {

@@ -183,9 +183,3 @@
 .followOn > section {
   padding-top: 96px;
 }
-
-/* "Run it your way" at the foot of the page, on the same night tone as the
-   final call to action above it and the FAQ below. */
-.closing {
-  background: #040a12;
-}

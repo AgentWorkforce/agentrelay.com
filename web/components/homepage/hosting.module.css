@@ -1,163 +1,158 @@
-/* We host it / you host it: two cards facing each other across an "or".
-   The hosted card carries the brand blue; the self-hosted one leads with
-   GitHub. */
+/* Run it your way: its own band in the hero's blue, under a fine grid. Two
+   cards, each a big mark, a title, one line and one action. */
+.band {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-top: 1px solid rgba(116, 184, 226, 0.14);
+  background:
+    radial-gradient(circle at 18% 24%, rgba(116, 184, 226, 0.16), transparent 32%),
+    linear-gradient(180deg, #10273a 0%, #17364c 52%, #0d2638 100%);
+}
+
+.band::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(70% 70% at 50% 50%, #000, transparent);
+}
+
 .section {
-  composes: section from '../home/home-sections.module.css';
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 128px 40px;
+}
+
+.header {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  margin-bottom: 56px;
+  text-align: center;
+}
+
+.header h2 {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.4rem, 4.4vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.header p {
+  margin: 0;
+  color: rgba(214, 228, 240, 0.7);
+  font-size: 1.15rem;
 }
 
 .split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: stretch;
-  gap: 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
 }
 
 .option {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  padding: 30px 30px 32px;
-  border: 1px solid rgba(116, 184, 226, 0.16);
+  align-items: flex-start;
+  gap: 12px;
+  padding: 36px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  background: rgba(13, 24, 37, 0.72);
+  box-shadow: 0 24px 60px rgba(2, 7, 14, 0.35);
+  backdrop-filter: blur(8px);
+}
+
+.cloud {
+  border-color: rgba(116, 184, 226, 0.35);
+}
+
+.source {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 8px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.hosted {
-  border-color: rgba(116, 184, 226, 0.4);
-  background:
-    radial-gradient(90% 70% at 0% 0%, rgba(74, 144, 194, 0.22), transparent 70%),
-    #0f2132;
-}
-
-.tag {
-  composes: pill from '../home/why-relay.module.css';
-  align-self: flex-start;
   color: #fff;
 }
 
-.tag svg {
-  width: 14px;
-  height: 14px;
+.cloud .icon {
+  background: linear-gradient(135deg, #4a90c2, #2d6a9c);
+}
+
+.source .icon {
+  background: #fff;
+  color: #0b1624;
+}
+
+.cloud .icon svg {
+  width: 32px;
+  height: 32px;
 }
 
 .option h3 {
-  margin: 4px 0 0;
+  margin: 0;
   color: #fff;
   font-family: var(--font-heading), sans-serif;
-  font-size: 1.6rem;
+  font-size: 1.75rem;
   font-weight: 700;
   letter-spacing: -0.025em;
 }
 
 .option p {
-  margin: 0;
-  color: #a8b8c8;
-  font-size: 1rem;
-  line-height: 1.55;
-}
-
-.option ul {
-  display: grid;
-  gap: 8px;
-  margin: 4px 0 8px;
-  padding: 0;
-  color: #d6e4f0;
-  font-size: 0.95rem;
-  list-style: none;
-}
-
-.option li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.option li::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #74b8e2;
+  margin: 0 0 12px;
+  color: rgba(214, 228, 240, 0.7);
+  font-size: 1.05rem;
+  line-height: 1.5;
 }
 
 .action {
-  align-self: flex-start;
   margin-top: auto;
 }
 
-.or {
-  align-self: center;
-  color: #77879a;
-  font-size: 0.95rem;
-  font-style: italic;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 18px;
+/* The site's GitHub stars button at the foot of the card, sized to match
+   the sign-up button in the card beside it. */
+.badge {
   margin-top: auto;
 }
 
-/* The repo as a big button: GitHub mark, name, and its star count. */
-.github {
-  display: inline-flex;
-  align-items: center;
+.badge > a {
+  min-height: 52px;
+  padding: 13px 26px;
   gap: 10px;
-  padding: 10px 6px 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
-  background: #0b141d;
-  color: #fff;
-  font-family: var(--font-geist-mono), ui-monospace, monospace;
-  font-size: 0.88rem;
-  text-decoration: none;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease;
-}
-
-.github:hover {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: #101b26;
-}
-
-.stars {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-left: 1px solid rgba(255, 255, 255, 0.14);
-  color: #e8c37a;
-  font-weight: 600;
-}
-
-.stars svg {
-  width: 13px;
-  height: 13px;
-  fill: currentColor;
-}
-
-.talk {
-  color: #74b8e2;
-  font-size: 0.92rem;
-  text-decoration: underline;
-  text-decoration-color: rgba(116, 184, 226, 0.4);
-  text-underline-offset: 3px;
+  font-size: 15px;
+  /* Holds still here; the pulse is for the nav. */
+  animation: none;
 }
 
 @media (max-width: 860px) {
-  .split {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+  .section {
+    padding: 88px 16px;
   }
 
-  .or {
-    justify-self: center;
+  .header {
+    margin-bottom: 36px;
+  }
+
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
   }
 
   .option {
-    padding: 24px 20px 26px;
+    padding: 28px 22px;
   }
 }

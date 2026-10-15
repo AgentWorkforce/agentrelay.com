@@ -2,7 +2,12 @@ import { DurableWorkflowFeature } from './DeliveryFeature';
 import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
-import { Deploy, Hero, HowItWorks, MessagingFeature, QuickStart, Waitlist } from './index';
+import { Deploy } from './Deploy';
+import { Hero } from './Hero';
+import { HowItWorks } from './HowItWorks';
+import { MessagingFeature } from './MessagingFeature';
+import { QuickStart } from './QuickStart';
+import { Waitlist } from './Waitlist';
 import s from '../../app/landing.module.css';
 
 export function MessagingLandingPage() {

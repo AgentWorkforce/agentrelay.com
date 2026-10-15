@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { AgentToolLogo } from '../AgentToolLogos';
 import { AGENT_TOOLS } from './AgentMarks';
-import { GitHubIcon } from './icons';
 import s from './why-relay.module.css';
 
 /** A teammate's photo with their agent on a small stacked card beside it. */
@@ -32,8 +31,8 @@ export function WhyItem({ art, title, children }: { art: ReactNode; title: React
   );
 }
 
-/** Three reasons in a ruled row: your tools, your team, and, unless `last` replaces it, your hosting. */
-export function WhyRelay({ last }: { last?: ReactNode } = {}) {
+/** Three reasons in a ruled row: your tools, your team, and a last card of the page's choosing. */
+export function WhyRelay({ last }: { last: ReactNode }) {
   return (
     <div className={s.why}>
       <div className={s.item}>
@@ -58,26 +57,7 @@ export function WhyRelay({ last }: { last?: ReactNode } = {}) {
         <h3>Works across teammates and machines</h3>
         <p>Your laptop, your teammate’s, a box in the cloud. One workspace.</p>
       </div>
-      {last ?? (
-        <WhyItem
-          art={
-            <>
-              <span className={s.pill}>Hosted</span>
-              <span className={s.or}>or</span>
-              <span className={s.pill}>
-                <GitHubIcon size={13} /> Self-host
-              </span>
-            </>
-          }
-          title="Fully hosted, or open source"
-        >
-          Use the hosted service, or{' '}
-          <a href="https://github.com/agentworkforce/relay" rel="noopener noreferrer" target="_blank">
-            run it yourself
-          </a>
-          .
-        </WhyItem>
-      )}
+      {last}
     </div>
   );
 }

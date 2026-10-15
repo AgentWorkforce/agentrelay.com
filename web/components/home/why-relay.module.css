@@ -141,23 +141,6 @@
   background: repeating-linear-gradient(90deg, rgba(116, 184, 226, 0.6) 0 4px, transparent 4px 7px);
 }
 
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  border: 1px solid rgba(116, 184, 226, 0.16);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 0.8rem;
-}
-
-.or {
-  color: #77879a;
-  font-size: 0.8rem;
-  font-style: italic;
-}
-
 @media (max-width: 860px) {
   .why {
     grid-template-columns: minmax(0, 1fr);

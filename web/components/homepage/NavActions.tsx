@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { AgentIcons } from '../AgentSignup';
-import { HERO_SIGNUP_HREF } from '../home/Hero';
+import { HOME_SIGNUP_HREF } from './HomeHero';
 import landing from '../../app/landing.module.css';
 import s from './nav-actions.module.css';
 
@@ -29,7 +29,7 @@ export function NavActions() {
       </a>
       <a
         className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.signup}`}
-        href={HERO_SIGNUP_HREF}
+        href={HOME_SIGNUP_HREF}
         data-shown={showSignup || undefined}
         aria-hidden={!showSignup}
         tabIndex={showSignup ? undefined : -1}
