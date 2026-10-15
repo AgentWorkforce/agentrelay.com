@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AgentSignupPage({ params }: { params: Promise<{ product: string }> }) {
-  const { product } = await params;
+  const { product: routeProduct } = await params;
+  const product = routeProduct === 'with-agent' ? 'teams' : routeProduct;
   if (!isAgentSignupProduct(product)) notFound();
   return <AgentSignupJourney product={product} />;
 }

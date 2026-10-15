@@ -85,7 +85,9 @@ ${product === 'flows' ? 'The web-input protocol may carry a repository name or p
 the progress token in URLs or output it in your final reply. Use the same site
 and /cloud origin shown above; never forward it to another environment.
 
-GET the supplied Progress API URL to obtain the current revision and product.
+If the prompt includes session registration instructions, follow them first. The
+session does not exist until you register it; a 404 before registration is expected.
+Then GET the supplied Progress API URL to obtain the current revision and product.
 Check that the product matches this guide. Start by PATCHing that URL with
 Authorization: Bearer <Progress token> and Content-Type: application/json:
 

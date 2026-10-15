@@ -1,13 +1,13 @@
+import Link from 'next/link';
 import type { CSSProperties } from 'react';
 
 import { InvestorStrip } from '../InvestorStrip';
 import { AgentIcons } from '../AgentSignup';
 import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
-import { teamsCloudUrl } from '../../lib/teams-cloud';
 import s from '../../app/landing.module.css';
 
-/** Google sign-in that lands on the connect-your-agents page. */
-export const HOME_SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
+/** Use client navigation for signup: document crossfades can suspend its canvas frames. */
+export const HOME_SIGNUP_HREF = '/signup/with-agent';
 
 /**
  * The homepage hero: the two-line headline rising in, the description, one
@@ -32,10 +32,10 @@ export function HomeHero() {
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
 
           <div className={s.heroCenterCtas}>
-            <a className={s.ctaPrimary} href={HOME_SIGNUP_HREF} data-hero-signup="">
+            <Link className={s.ctaPrimary} href={HOME_SIGNUP_HREF} data-hero-signup="">
               <AgentIcons mono />
               Connect your agents for free
-            </a>
+            </Link>
           </div>
         </div>
       </section>

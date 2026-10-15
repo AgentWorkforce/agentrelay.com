@@ -1,10 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { isSignupProgress, trackedSignupPrompt } from '../agent-signup-progress';
+import { isSignupProgress, prepareSignupSession, signupSessionId, trackedSignupPrompt } from '../agent-signup-progress';
 import { agentSignupInstructions } from '../agent-signup';
 const id = '537e4857-5590-42e8-8731-66441b466542';
 const progress = { id, product: 'teams', step: 0, state: 'waiting', revision: 0, updatedAt: '2026-09-21T00:00:00.000Z', expiresAt: '2026-09-21T02:00:00.000Z' };
 
 describe('signup progress handoff', () => {
+  it('matches the versioned server capability vector and binds product and expiry', async () => {
+    const expiresAt = '2026-10-15T12:00:00.000Z';
+    const token = 'a'.repeat(64);
+    const id = await signupSessionId('teams', expiresAt, token);
+    expect(id).toBe('4e394d85-cb91-490d-adea-cbba8218bc4e');
+    expect(await signupSessionId('flows', expiresAt, token)).not.toBe(id);
+    expect(await signupSessionId('teams', '2026-10-15T13:00:00.000Z', token)).not.toBe(id);
+    expect(await signupSessionId('teams', expiresAt, 'b'.repeat(64))).not.toBe(id);
+  });
+  it('prepares separate local capabilities and includes idempotent activation instructions', async () => {
+    const a = await prepareSignupSession('teams');
+    const b = await prepareSignupSession('teams');
+    expect(isSignupProgress(a)).toBe(true);
+    expect(a.id).not.toBe(b.id);
+    expect(a.writeToken).not.toBe(b.writeToken);
+    expect(a.activated).toBe(false);
+    expect(a.id).toBe(await signupSessionId('teams', a.expiresAt, a.writeToken));
+    const prompt = trackedSignupPrompt('teams', 'http://localhost:3100', 'http://localhost:3100/cloud/api/v1/signup/agent/sessions', a);
+    expect(prompt).toContain('Before reading or reporting progress, register');
+    expect(prompt).toContain(JSON.stringify({ product: 'teams', sessionId: a.id, expiresAt: a.expiresAt }));
+    expect(prompt).toContain('Registration is safe to retry and never resets progress');
+    expect(prompt.match(/https?:\/\/\S+/g)?.every(url => !url.includes(a.writeToken))).toBe(true);
+  });
   it('accepts valid progress and rejects malformed or premature completion', () => {
     expect(isSignupProgress(progress)).toBe(true);
     for (const invalid of [null, {}, {...progress, step: 6}, {...progress, state: 'complete'}, {...progress, id: '../'.repeat(12)}, {...progress, updatedAt: 0}, {...progress, revision: -1}]) expect(isSignupProgress(invalid)).toBe(false);

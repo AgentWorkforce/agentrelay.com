@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useSignupAnalytics } from './useSignupAnalytics';
 import { Grok } from './brand-icons';
 import { AgentToolLogo } from './AgentToolLogos';
@@ -30,9 +32,9 @@ export function AgentIcons({ mono = false }: { mono?: boolean }) {
 export function AgentSignup({ product }: { product: AgentSignupProduct }) {
   const analytics = useSignupAnalytics(product);
   return (
-    <a onClick={() => analytics.track('entry_clicked')} className={s.button} href={`/signup/${product}`}>
+    <Link onClick={() => analytics.track('entry_clicked')} className={s.button} href={product === 'teams' ? '/signup/with-agent' : '/signup/flows'}>
       <AgentIcons />
       Let your agent do it
-    </a>
+    </Link>
   );
 }
