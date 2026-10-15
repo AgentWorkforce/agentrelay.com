@@ -76,3 +76,18 @@ describe('authenticated progress identity handoff', () => {
     expect(signupHeader).not.toContain('distinct_id');
   });
 });
+
+describe('progress safety exceptions', () => {
+  it.each(['teams', 'flows'] as const)('keeps %s approval links out of telemetry while allowing the human handoff', product => {
+    const header = agentSignupInstructions(product, 'https://agentrelay.com', 'https://agentrelay.com/cloud').split('\n---\n')[0];
+    expect(header).toContain('Approval URLs must never appear in progress JSON or progress request URLs.');
+    expect(header).toContain('The only output exception is the approval link handed directly to the user');
+    expect(header).toContain('when no OS URL opener is available');
+  });
+  it.each(['teams', 'flows'] as const)('limits %s progress reconciliation to revision conflicts', product => {
+    const header = agentSignupInstructions(product, 'https://agentrelay.com', 'https://agentrelay.com/cloud').split('\n---\n')[0];
+    expect(header).toContain('On HTTP 409 progress_conflict, GET current progress and reconcile');
+    expect(header).toContain('This retry rule does not apply to identity_conflict');
+    expect(header).not.toContain('On HTTP 409, GET current progress and reconcile');
+  });
+});

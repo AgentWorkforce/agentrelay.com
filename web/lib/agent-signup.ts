@@ -80,9 +80,13 @@ prebuilt flow.`}${isLocalStack(site) ? localDevelopmentNote(product, site) : ''}
 The user is watching a setup page. Report real milestones using the Progress API
 and Progress token supplied in their prompt. The token authorizes progress only;
 it is NOT a Cloud access token. Never put account tokens, OAuth codes, passwords,
-logs, approval URLs, or sensitive personal information in progress JSON, URLs, or
-output. After sign-in, the authenticated PATCH protocol below uses the Cloud
-access token only in the Authorization header.
+logs, or sensitive personal information in progress JSON, URLs, or output.
+Approval URLs must never appear in progress JSON or progress request URLs.
+Do not log or print approval URLs.
+The only output exception is the approval link handed directly to the user
+when no OS URL opener is available, as described above. After sign-in, the
+authenticated PATCH protocol below uses the Cloud access token only in the
+Authorization header.
 ${product === 'flows' ? 'The web-input protocol may carry a repository name or public GitHub approver handle when the user chooses it; do not request emails or secrets.' : ''} Do not put
 the progress token in URLs or output it in your final reply. Use the same site
 and /cloud origin shown above; never forward it to another environment.
@@ -154,9 +158,10 @@ ${product === 'teams' ? `Progress steps for Teams:
 5. Verify the listening state: before Part 2's section 5. After its checks
    succeed, PATCH step: 5, state: complete.`}
 
-On HTTP 409, GET current progress and reconcile; never overwrite newer progress
-or regress a step. If a PATCH response is lost, GET before retrying. If a step is
-already complete, verify the actual account/app/flow state before continuing;
+On HTTP 409 progress_conflict, GET current progress and reconcile; never overwrite
+newer progress or regress a step. This retry rule does not apply to identity_conflict;
+follow its instruction to stop and return to the original account above.
+If a PATCH response is lost, GET before retrying. If a step is already complete, verify the actual account/app/flow state before continuing;
 progress reports alone are not proof that setup succeeded. On 429, honor
 Retry-After. Retry transient network/5xx failures with bounded backoff. On 404,
 stop reporting (the session expired or the token is invalid) and tell the user;
