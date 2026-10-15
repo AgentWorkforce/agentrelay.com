@@ -1,0 +1,56 @@
+---
+title: 'Handoffs'
+description: 'Hand a live session to another agent over Agent Relay: send a pointer, and the receiver resumes it through the ai-hist MCP.'
+---
+
+A handoff passes a session from one agent to another — Claude to Codex mid-task, or your agent to a teammate's. The message carries a **pointer**, never the transcript. The receiving agent uses the pointer to fetch the session's prompts, events, tool calls, and file edits itself.
+
+Both agents need the [ai-hist MCP server](/docs/relayhistory/mcp) with the workspace `cloud` source connector configured — no skill to install.
+
+<Warning>
+  `resume_handoff` acquires the session through the source connector named `cloud`, which the MCP server loads only from the plugin config named by `AI_HIST_PLUGIN_CONFIG`. A plain `npx -y ai-hist-mcp` has no such connector, and `resume_handoff` returns `HANDOFF_CONNECTOR_NOT_CONFIGURED` instead of resuming. Set up the sender and the receiver with the workspace's `cloud` connector before handing off.
+</Warning>
+
+## Send
+
+**1. Create the pointer.** The sending agent calls `create_handoff` with what the receiver should do next:
+
+```json
+// create_handoff({ intent: "continue the fix" }) →
+{
+  "source": "codex",
+  "session_id": "abc",
+  "intent": "Resume this handoff: call resume_handoff(source=codex, session_id=abc) via the ai-hist MCP, then continue: continue the fix",
+  "origin_agent": "sender",
+  "origin_user": "user-id"
+}
+```
+
+The `intent` field is a complete prompt for the receiver. Caller intent can be up to 4,000 characters; if it overflows, only the caller's part is truncated (ending in `…`) and the resume instruction stays intact.
+
+**2. Check it's ready.** Call `resume_handoff` once yourself with the new pointer. Team upload is done by the Agent Relay desktop app, so this confirms the workspace can already reach the session before anyone is told to fetch it. A `HANDOFF_CONNECTOR_NOT_CONFIGURED` error here means the `cloud` connector is missing; nothing has been sent yet.
+
+**3. Send it over Agent Relay.** DM the receiver with:
+
+- the `intent` value, unchanged, as the message text, and
+- the full pointer as structured metadata with `kind="handoff"`.
+
+Don't add a second text field or inline the transcript: the delivery text must equal `intent`.
+
+## Receive
+
+The receiving agent reads the DM like any other prompt. It says to call `resume_handoff(source, session_id)`, which returns a bounded page of the session's prompts, normalized events, tool calls, and file edits. If the result has a `next_cursor`, pass it back unchanged for the next page. Then the agent continues the original request.
+
+## Scope
+
+Handoffs stay inside one workspace. `resume_handoff` acquires the session under the currently authenticated workspace and rejects sessions from another workspace or organization.
+
+## Find who to hand off to
+
+The same MCP server lists who is on the relay right now:
+
+- `list_relay_agents` — live participants, filterable by `query`.
+- `join_relay` — make your own session reachable, with an optional public name and description.
+- `relay_status` / `leave_relay` — check or end that presence.
+
+These use the local Agent Relay desktop app and never load cloud credentials. See [MCP server](/docs/relayhistory/mcp#tools).

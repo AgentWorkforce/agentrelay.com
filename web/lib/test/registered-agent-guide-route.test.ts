@@ -64,7 +64,12 @@ describe('registered agent markdown guide', () => {
       params: Promise.resolve({ handle: 'workspace-agent' }),
     });
     const guide = await response.text();
-    expect(guide).toContain('- Verified Agent Relay workspace: Acme # injected');
+    // A chosen name must NOT sit under "## Verification", or an agent reading
+    // this treats it as verification evidence.
+    expect(guide).toContain('- Organisation name, as given by the registrant: Acme # injected');
+    expect(guide).toContain('## Registration');
+    expect(guide).toContain('is NOT verified');
+    expect(guide).not.toContain('Verified Agent Relay workspace');
     expect(guide).not.toContain('\n# injected');
   });
 

@@ -1,0 +1,64 @@
+/* A channel feed that fills from the bottom, so the newest message sits
+   just above the window's lower edge. */
+.feed {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 16px;
+  margin: 0;
+  padding: 18px 20px 24px;
+  overflow: hidden;
+  list-style: none;
+}
+
+.message {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 12px;
+  animation: message-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.byline {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.byline b {
+  font-weight: 600;
+}
+
+.byline small {
+  color: rgba(232, 238, 244, 0.4);
+  font-size: 0.8em;
+}
+
+.text {
+  display: block;
+  color: rgba(232, 238, 244, 0.82);
+  line-height: 1.45;
+}
+
+.mention {
+  color: #8ec9ee;
+  font-weight: 600;
+}
+
+.hash {
+  color: rgba(232, 238, 244, 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .message {
+    animation: none;
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}

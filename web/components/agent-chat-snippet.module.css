@@ -6,7 +6,7 @@
   border-radius: 12px;
   background: #0b1c2a;
   text-align: left;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .header {
@@ -76,7 +76,7 @@
   width: 1px;
   height: 1px;
   margin: -1px;
-  overflow: hidden;
+  overflow: clip;
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }

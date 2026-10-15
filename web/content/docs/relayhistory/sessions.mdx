@@ -1,0 +1,67 @@
+---
+title: 'Sessions'
+description: 'What Relayhistory records per session: events, subagent trees, tool calls, file edits, markers, and token usage — and how it reports gaps.'
+---
+
+A session is one conversation in one harness, identified by its **source** and **session id** together. Provider ids collide — a Codex id and a Claude id can be the same string — so every per-session read names both.
+
+## Evidence, not summaries
+
+Relayhistory stores what the harness wrote: prompts, assistant text, tool calls with their arguments and results, file edits with their patches, and per-request token counts. Nothing is summarized away.
+
+Harnesses don't all record the same things, and Relayhistory says so rather than guessing:
+
+- **Hydration reports a capability** for each session — `full`, `partial`, or `shallow_only` — so thin coverage is distinguishable from something that never happened.
+- **Missing fields are reported as unavailable.** Cursor transcripts carry assistant prose and every tool call, but no tool output, model id, or token usage. Older Grok builds log no per-turn billing tokens; their context-window figure is kept as a proxy and labeled as one.
+- **Null usage means no evidence**, never an assumed zero.
+
+Ask what a provider's parser can record with `get_source_capabilities` over [MCP](/docs/relayhistory/mcp).
+
+## Events
+
+```bash
+ai-hist events SESSION_ID --limit 200
+```
+
+The normalized timeline of a session: user turns, assistant turns, tool calls, and tool results, in order. Pages are bounded and deterministic; pass the returned cursor back to continue.
+
+## Subagent trees
+
+Sessions that delegate to subagents form a tree.
+
+```bash
+ai-hist sessions relationships codex SESSION_ID   # direct parents and children
+ai-hist sessions tree codex SESSION_ID --max-depth 8
+```
+
+Each relationship reports how its child was identified:
+
+- **`observed`** — the provider named the child, so it is a real session you can open on its own.
+- **`unlinked`** — the provider recorded a delegation but no stable child id. The child's output stays attributed to the parent, and the relationship keeps the evidence that established it. An id is never invented.
+
+Every event keeps the id of the session that produced it; walking a tree never rewrites a child's event as the parent's.
+
+## Tool calls and file edits
+
+```bash
+ai-hist sessions tools claude SESSION_ID
+ai-hist sessions edits claude SESSION_ID
+```
+
+Structured, paged reads of one session's recorded tool calls and file edits. Stored provider JSON is parsed into `args` and `structuredPatch`; when it can't be parsed, the value is `null` and the raw string stays available, so one unreadable payload never fails a page.
+
+## Markers
+
+```bash
+ai-hist sessions markers claude SESSION_ID
+```
+
+Records a provider wrote that aren't transcript events: compaction and summary boundaries, provider system rows, non-text content blocks, and agent lifecycle events. Each has a classified `kind` and the provider's own `subkind`; anything unclassified is kind `unknown`.
+
+## Token usage
+
+```bash
+ai-hist sessions usage claude SESSION_ID
+```
+
+A provider-neutral rollup of token usage for one session, as the provider reported it. Per-request detail is available through MCP `get_session_requests`, with duplicate copies collapsed so rows can be summed. Cost appears only when the source data carried one; Relayhistory never computes it.

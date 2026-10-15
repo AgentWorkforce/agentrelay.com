@@ -1,0 +1,47 @@
+/* Folded away until the hero's button scrolls off, then it slides open
+   beside Log in. */
+.signup.signup {
+  max-width: 0;
+  margin-left: -12px;
+  padding-inline: 0;
+  overflow: hidden;
+  border-width: 0;
+  opacity: 0;
+  gap: 8px;
+  transition:
+    max-width 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    padding 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    margin 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 280ms ease;
+}
+
+.signup[data-shown] {
+  max-width: 260px;
+  margin-left: 0;
+  padding-inline: 18px;
+  border-width: 1px;
+  opacity: 1;
+}
+
+/* Logos at nav size. */
+.signup > span:first-child {
+  width: 18px;
+  height: 18px;
+}
+
+.signup > span:first-child svg {
+  width: 18px;
+  height: 18px;
+}
+
+@media (max-width: 520px) {
+  /* Phones: just the logos and "Connect". */
+  .signup[data-shown] {
+    max-width: 150px;
+    padding-inline: 14px;
+  }
+
+  .more {
+    display: none;
+  }
+}

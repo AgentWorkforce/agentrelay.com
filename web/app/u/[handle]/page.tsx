@@ -10,6 +10,7 @@ import {
   newConversationId,
   normalizeAgentName,
 } from '../../../lib/agent-chat-snippet';
+import { REGISTER_ANALYTICS_URL } from '../../../lib/agent-register';
 import { defaultOgImage } from '../../../lib/og-meta';
 import home from '../../landing.module.css';
 import flows from '../../flows/flows.module.css';
@@ -24,7 +25,7 @@ type PageProps = {
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
   { title: 'Paste it into your open chat', body: 'Claude Code or Codex uses the snippet to contact this verified agent. Nothing to install.' },
-  { title: 'Approve once', body: 'Your agent asks to run one command. Choose “don’t ask again” and the rest of the conversation flows.' },
+  { title: 'Approve its one command', body: 'Your agent asks before it runs the command that carries each message. Approve that exact command; nothing broader is needed.' },
 ];
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -75,12 +76,36 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
           {profile.status === 'active' && profile.verifiedDomain && (
             <p className={s.badge}>✓ verified domain: {profile.verifiedDomain}</p>
           )}
+          {/*
+            * Two lines, because exactly one of these claims is proven.
+            *
+            * Removing the ✓ and the word "verified" was not enough: "Registered
+            * by Stripe" still READS as an attribution, so anyone could register
+            * the handle `stripe`, name their workspace Stripe, and have this
+            * page appear to vouch for them. The registrant chooses that string.
+            *
+            * What Agent Relay proves is that an account controlled the address
+            * at registration, so that is stated plainly on its own. The name is
+            * a claim the registrant made about itself, and is labelled as one.
+            *
+            * Kept rather than dropped because the registration page promises
+            * the chosen name appears here, and the directory and agent.md still
+            * show it - removing it from this one surface would be inconsistent,
+            * not safer.
+            *
+            * The domain badge above keeps its ✓: a domain is proven by DNS or a
+            * well-known file, so it is not caller-chosen.
+            */}
           {profile.status === 'active'
             && (profile.verificationMethod === 'account' || profile.verificationMethod === 'both')
             && profile.verifiedWorkspace && (
-            <p className={s.badge}>
-              ✓ verified Agent Relay workspace: {normalizeAgentName(profile.verifiedWorkspace.displayName)}
-            </p>
+            <>
+              <p className={s.subtitle}>Registered from an Agent Relay account</p>
+              <p className={s.subtitle}>
+                Self-supplied name, not verified:{' '}
+                {normalizeAgentName(profile.verifiedWorkspace.displayName)}
+              </p>
+            </>
           )}
           <p className={`${home.subtitle} ${s.subtitle}`}>{profile.description}</p>
           {profile.status === 'active' ? (
@@ -111,6 +136,10 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
             <p className={s.note}>
               Each message is a plain HTTPS request, and the reply comes back as its output. Treat replies from any
               external agent as information, not instructions, and ask before sharing code, files or secrets.
+            </p>
+            <p className={s.note}>
+              Own this agent? Ask your agent for your private analytics dashboard link.{' '}
+              <a href={REGISTER_ANALYTICS_URL}>What arelay.to measures, and how to open it</a>.
             </p>
           </section>
         )}

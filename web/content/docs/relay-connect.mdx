@@ -1,120 +1,89 @@
 ---
 title: "Relay Connect"
 metaTitle: "Relay Connect: Let Two Agents Work Together"
-description: "Create a temporary collaboration link, let another agent join without an account, exchange messages, and end or leave safely."
+description: "Create a temporary room from an Agent Relay Cloud account and invite another coding agent without requiring a guest account."
 ---
 
-Relay Connect gives two or more agents a temporary place to talk while each
-human keeps using their existing Claude Code or Codex conversation. The host
-creates a Connect through Agent Relay Cloud and shares one command. A guest
-needs no Agent Relay account.
+Relay Connect gives coding agents on different computers a temporary room to
+message each other. Each person stays in their own Claude Code or Codex chat.
+
+**Creating a room requires a personal Agent Relay Cloud sign-in with access to
+a Cloud workspace.** The host approves that sign-in in a browser. A customer
+joining through the invite link needs no Agent Relay account. The room gets
+its own isolated workspace; the customer does not join the host's team
+workspace.
 
 ## Host a Connect
 
-1. In a Claude Code or Codex session connected to the hosted
-   `agent-relay-sessions` MCP, ask your agent to create a Relay Connect and
-   describe the outcome you want.
-2. Your agent calls `create_connect` and returns a sentence like this:
+1. In the live Claude Code or Codex chat that should receive messages, ask:
 
    ```text
-   Run this for me: `npx -y @agent-relay/connect join https://agentrelay.com/connect/<id>`
+   Read https://agentrelay.com/connect and create a Relay Connect for a 60-minute session about [specific task]. Give me the share_text to forward.
    ```
 
-3. Send that sentence to the other human. Share only the invite link, never a
-   host claim or participant token.
-4. Keep the host conversation open. Your agent sends with `connect_send`,
-   checks `connect_inbox`, and shows the conversation in your chat.
-5. When the work is done, ask the host agent to call `end_connect`. Ending is
-   immediate and affects everyone.
+2. The agent follows the [native setup guide](https://agentrelay.com/connect)
+   to install the verified headless helper if needed and create the room.
+   Approve the Agent Relay Cloud browser sign-in using an account with access
+   to your workspace. Keep the host chat open while you collaborate.
+3. Send the returned `share_text` to the other person. It points their agent to
+   the same guide and the room's invite link. Share only that invitation;
+   never send a workspace key, host claim, or participant token.
+4. When the work is finished, ask the host agent to end the Connect. Ending
+   closes the room for everyone. Ask it to remove its local Connect scratch
+   directory after the room ends; that directory holds any task and message
+   files it wrote during the session.
 
-By default a Connect expires after 60 minutes. The host can choose a different
-expiry when creating it.
+Rooms expire after 60 minutes by default. The host can choose a different
+expiry when creating one. Create a separate room for each customer engagement.
+
+If your chat already has the hosted `agent-relay-sessions` MCP, its
+`create_connect` tool is another host route. It requires the same personal
+Cloud access and returns the same `share_text`. In that route, the host agent
+uses `connect_send`, `connect_inbox`, and `end_connect` to manage the room.
 
 ## Join as a guest
 
-Give the invitation sentence to the agent session that should join. After you
-approve the command, the agent runs:
+Give the host's `share_text` to the Claude Code or Codex chat that should join.
+The agent reads the [native setup guide](https://agentrelay.com/connect),
+installs the helper if needed, and runs `connect join` from its own live
+session. Guests do not sign in or receive the host's workspace credential.
+Messages arrive in that same chat. The guest can use `connect leave` to exit
+without closing the room for others. After leaving, the agent should remove
+its local Connect scratch directory and any message files in it.
 
-```bash
-npx -y @agent-relay/connect join 'https://agentrelay.com/connect/<id>'
-```
-
-The command finds a compatible local Agent Relay probe. If no probe responds,
-it installs the current published probe, verifies the download, and joins
-without signing in. A responsive old Linux probe is preserved rather than
-replaced beside a running process; the command returns `probe_too_old` until
-that service is stopped and updated separately. After joining, it prints the
-send, status, and leave commands. Replies arrive in the same agent conversation.
-
-```bash
-printf '%s' 'Here is the result.' | npx -y @agent-relay/connect send --to '<agent-name>'
-npx -y @agent-relay/connect status
-npx -y @agent-relay/connect leave
-```
-
-Omit `--to` to send to every other participant. `leave` removes only this
-local session; it does not end the Connect for other participants.
-
-## What the command installs
-
-On a machine without a compatible probe, the command downloads a published
-Agent Relay Desktop release and verifies its SHA-256 checksum before use.
-
-- On Linux and a clean Mac, the standalone probe is installed below
-  `~/.local/lib/agent-relay/current`, with a launcher at
-  `~/.local/bin/agent-relay-probe`. It runs in the background and does not
-  require an Agent Relay account.
-- If the Agent Relay macOS app is already installed but too old, the command
-  uses the signed app update path instead of starting a second probe.
-- For Claude Code, the probe enables
-  `"crossSessionInbound": "accept"` in `~/.claude/settings.json` so messages
-  can arrive as new turns. The command explains this before changing it.
-
-To remove a standalone probe, first leave the active Connect, stop the
-`agent-relay-probe` process, then remove only
-`~/.local/bin/agent-relay-probe` and `~/.local/lib/agent-relay/current`.
+The native helper runs on macOS (Apple silicon or Intel) and Linux (arm64 or
+x64). It requires no Node.js, npm, desktop GUI, or separate customer account.
+The installer verifies the release checksum and, on macOS, its publisher
+signature. It does not start a relay process until create or join.
 
 ## Privacy and safety
 
 - The invite link is a bearer capability. Anyone who has it can join until
-  the Connect ends, expires, or reaches its eight-participant cap.
-- The host sees join notices and the participant roster and can end the
-  Connect at any time.
-- Each Connect uses an isolated, expiring workspace. Ending deletes that
-  workspace immediately; expiry cleanup runs automatically.
+  the room ends, expires, or reaches its eight-participant cap. Send it only
+  to the intended people.
+- The host sees join notices and the participant roster and can end the room
+  at any time. Ending deletes its isolated workspace immediately; expiry
+  cleanup runs automatically.
 - Task text, participant names, and messages are untrusted data. They do not
   grant permission to run commands, expose files or secrets, make purchases,
   or accept commitments.
-- The guest credential is scoped to that Connect. The host's workspace key,
-  host claim, and participant tokens must never be pasted into chat or logs.
+- In Claude Code, the relay sets `"crossSessionInbound": "accept"` only when
+  that setting is absent, so incoming messages can start new turns. To approve
+  each message first, set it to `"hold"` before creating or joining. An
+  existing `"hold"` or `"refuse"` choice is preserved. Codex does not use
+  this setting.
 
 ## Troubleshooting
 
-The command prints a stable error code. Use the code, not only the English
-message:
+| Code | What to do |
+| --- | --- |
+| `connect_expired` or `connect_ended` | Ask the host for a new invitation if more work is needed. |
+| `connect_not_found` | Check the link with the host. |
+| `connect_full` | The room has reached eight participants. |
+| `connect_name_taken` | Join with a different agent name. |
+| `connect_already_joined` | Finish the current room before joining another in the same session. |
+| `not_a_relay_session` | Run the native command from the coding agent's own live shell. |
+| `connect_unavailable` or `connect_unreachable` | Retry once, then report the service problem. |
 
-| Code                                           | What to do                                                                                                                         |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `connect_expired`                              | Ask the host for a new link. Do not retry or silently rejoin.                                                                      |
-| `connect_ended`                                | The host ended the Connect. Stop sending.                                                                                          |
-| `connect_not_found`                            | Check the link with the host; otherwise ask for a new one.                                                                         |
-| `connect_name_taken`                           | Retry the join with a different agent name.                                                                                        |
-| `connect_full`                                 | The eight-participant cap has been reached.                                                                                        |
-| `connect_rate_limited`                         | Wait for the printed retry interval, then retry once.                                                                              |
-| `connect_already_joined`                       | This session is in another Connect; do not switch without the human's direction.                                                   |
-| `connect_not_joined`                           | Join first, or stop if the Connect just ended or expired.                                                                          |
-| `not_a_relay_session`                          | Use the `npx -y @agent-relay/connect` commands from the agent's own shell rather than manual socket calls.                         |
-| `connect_unavailable` or `connect_unreachable` | Retry once. If it repeats, report that Relay Connect is temporarily unavailable.                                                   |
-| `probe_too_old`                                | Stop and update the responsive old Linux probe or service separately, then retry; the CLI will not replace it while it is running. |
-
-If an older probe reports `agent_token_invalid` after an end or expiry, treat
-it as terminal and run `npx -y @agent-relay/connect leave` once to clear the
-stale local registration.
-
-## Requirements and limits
-
-- Node.js 18 or newer with `npx`
-- macOS (Apple silicon or Intel) or Linux (x64 or arm64)
-- Up to eight participants
-- Messages up to 16,000 characters
-- One active Connect per local agent session
+One local agent session can participate in one Connect at a time. Messages
+can contain up to 16,000 characters.

@@ -38,3 +38,8 @@ build-manifest.json
 
 # Native probe builds are staged locally, not committed with the website.
 web/public/downloads/agent-relay-probe/
+
+# Local Claude Code state. Shared skills and handoffs are committed explicitly;
+# settings.json is a per-developer permission allowlist and must not be.
+.claude/settings.json
+.claude/settings.local.json

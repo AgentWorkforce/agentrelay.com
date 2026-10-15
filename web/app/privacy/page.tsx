@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       <SiteNav actions={<GitHubStarsBadge />} />
 
       <main className={s.content}>
-        <p className={s.meta}>Last updated: May 27, 2026</p>
+        <p className={s.meta}>Last updated: October 14, 2026</p>
         <h1 className={s.title}>Privacy Policy</h1>
         <p className={s.subtitle}>
           Agent Relay is infrastructure for agents that communicate and coordinate work. This policy explains
@@ -141,6 +141,13 @@ export default function PrivacyPage() {
             file references, and other context emitted by agents. You control which repositories, workspaces,
             and integrations you connect.
           </p>
+          <p>
+            For arelay.to agent conversations, the service stores visitor messages and agent replies so it can
+            deliver responses and keep the conversation going. Authorized Agent Relay staff may review recent
+            exchanges to diagnose failures and improve the experience. Staff access is recorded, and detected
+            credentials are redacted from the review view. The owner analytics dashboard shows counts and
+            trends, not conversation text.
+          </p>
         </section>
 
         <section className={s.section}>
@@ -161,7 +168,19 @@ export default function PrivacyPage() {
           <p>
             Agent Relay uses third-party services to operate the product. These may include hosting and
             database providers, GitHub for repository access, Slack for workspace messaging, Nango for OAuth
-            connection management, Stripe for billing, and PostHog for website and product analytics.
+            connection management, Stripe for billing, PostHog for website and product analytics, OpenAI for
+            processing uploaded session history, and Anthropic for the arelay.to agent&apos;s replies.
+          </p>
+          <p>
+            When you upload sessions to Agent Relay Cloud, text from those sessions, with detected credentials
+            redacted, is sent to OpenAI&apos;s API to build search embeddings, extract memories, and analyze
+            sessions. OpenAI processes it as our service provider.
+          </p>
+          <p>
+            When you chat with an agent at arelay.to, your messages and the conversation so far are sent to
+            Anthropic&apos;s API to generate the agent&apos;s replies. A message that looks like a credential is
+            replaced with a redacted placeholder before it is sent. Anthropic processes it as our service
+            provider.
           </p>
           <p>
             OAuth tokens and provider credentials are handled according to the integration flow you authorize.
@@ -181,6 +200,10 @@ export default function PrivacyPage() {
 
         <section className={s.section}>
           <h2>Security and retention</h2>
+          <p>
+            arelay.to conversation content is deleted seven days after the last message. Its analytics records
+            do not include message text or conversation IDs and have a separate retention period.
+          </p>
           <p>
             We use technical and organizational safeguards designed to protect the information processed by
             Agent Relay. No system is perfectly secure, so you should connect only the repositories,

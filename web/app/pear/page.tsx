@@ -5,7 +5,7 @@ import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { WaitlistForm } from '../../components/WaitlistForm';
-import { WorksWithEveryAgent } from '../../components/home';
+import { WorksWithEveryAgent } from '../../components/home/WorksWithEveryAgent';
 import { ogImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import home from '../landing.module.css';

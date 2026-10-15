@@ -37,27 +37,23 @@ import { SiClaude, SiPython, SiTypescript } from 'react-icons/si';
 
 import { docsNav, legacyDocsNav } from '../../lib/docs-nav';
 import {
-  currentDocsVersion,
-  docsVersions,
   getDocsVersionForPath,
   legacyDocsBasePath,
   v8DocsBasePath,
 } from '../../lib/docs-versions';
+import { packageVersion } from '../../lib/package-versions';
 import { getProductSectionForPath, productBasePath, productSections } from '../../lib/product-docs-nav';
 import { DocsVersionSelect } from './DocsVersionSelect';
-import { FolderOpen as FolderOpenIcon, Repeat } from 'lucide-react';
+import { Download, FolderOpen as FolderOpenIcon, History } from 'lucide-react';
 import styles from './docs.module.css';
 
 type NavIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
 
 const productSectionIcons: Record<string, NavIcon> = {
-  agents: Bot,
   file: FolderOpenIcon,
-  loop: Repeat,
+  relayhistory: History,
   relayflows: Workflow,
 };
-
-const currentRelayDocsVersion = docsVersions.find((version) => version.id === currentDocsVersion)?.shortLabel;
 
 const docsProductOptions = [
   {
@@ -66,7 +62,7 @@ const docsProductOptions = [
     tagline: 'Messaging',
     href: '/docs/introduction',
     Icon: Mail,
-    version: currentRelayDocsVersion,
+    version: packageVersion('agent-relay'),
   },
   ...productSections.map((section) => ({
     id: section.id,
@@ -74,14 +70,13 @@ const docsProductOptions = [
     tagline: section.tagline,
     href: `${productBasePath(section)}/introduction`,
     Icon: productSectionIcons[section.id] ?? BookOpen,
-    version: section.version,
+    version: section.npmPackage && packageVersion(section.npmPackage),
   })),
 ];
 
 const productNavIcons: Record<string, NavIcon> = {
   introduction: Compass,
   quickstart: Rocket,
-  install: Rocket,
   'why-files': BookOpen,
   'mount-layout': FolderOpen,
   'reads-and-writes': Send,
@@ -93,22 +88,17 @@ const productNavIcons: Record<string, NavIcon> = {
   sdk: SiTypescript,
   'python-sdk': SiPython,
   agents: Bot,
-  patterns: Network,
   build: Bot,
-  deploy: Rocket,
   'adapters-and-providers': Plug,
   comparison: BookOpen,
   cloud: Cloud,
   'api-reference': Network,
   cli: Terminal,
-  sync: Activity,
-  search: Compass,
   sessions: BsChatRightText,
-  sources: Network,
-  stats: Zap,
-  'cloud-architecture': Network,
-  privacy: PiLockKeyDuotone,
-  teams: Users,
+  mcp: Plug,
+  handoffs: Send,
+  'remote-sources': Cloud,
+  export: Download,
 };
 
 const navIcons: Record<string, NavIcon> = {
@@ -293,30 +283,17 @@ export function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
           {docsProductOptions.map((option) => {
             const OptionIcon = option.Icon;
             const isActive = option.id === activeId;
-            const isComingSoon = option.id === 'loop';
             const optionContent = (
               <>
                 <OptionIcon className={styles.productSwitcherOptionIcon} aria-hidden="true" />
                 <span className={styles.productSwitcherOptionText}>
                   <span className={styles.productSwitcherOptionTitleRow}>
                     <span className={styles.productSwitcherOptionLabel}>{option.label}</span>
-                    {isComingSoon && <span className={styles.productSwitcherOptionBadge}>Coming soon</span>}
                   </span>
                   <span className={styles.productSwitcherOptionTagline}>{option.tagline}</span>
                 </span>
               </>
             );
-            if (isComingSoon) {
-              return (
-                <div
-                  key={option.id}
-                  className={`${styles.productSwitcherOption} ${styles.productSwitcherOptionDisabled}`}
-                  aria-disabled="true"
-                >
-                  {optionContent}
-                </div>
-              );
-            }
             return (
               <Link
                 key={option.id ?? 'relay'}

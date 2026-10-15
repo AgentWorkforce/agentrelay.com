@@ -3,6 +3,7 @@ import { ExternalLink } from 'lucide-react';
 
 import { SITE_EMAIL } from '../lib/site';
 import { LogoIcon, LogoWordmark } from './SiteNav';
+import { WaitlistForm } from './WaitlistForm';
 import s from './site-footer.module.css';
 
 type FooterLink = {
@@ -91,7 +92,8 @@ function FooterTextLink({ href, label, showExternalIcon }: FooterLink) {
   );
 }
 
-export function SiteFooter() {
+/** `productUpdates` adds the product-updates signup under the tagline. */
+export function SiteFooter({ productUpdates = false }: { productUpdates?: boolean } = {}) {
   return (
     <footer className={s.footer}>
       <div className={s.inner}>
@@ -101,6 +103,12 @@ export function SiteFooter() {
             <LogoWordmark />
           </Link>
           <p className={s.tagline}>The future is multi-agent.</p>
+          {productUpdates ? (
+            <div className={s.updates}>
+              <p className={s.updatesLabel}>Get product updates</p>
+              <WaitlistForm variant="updates" />
+            </div>
+          ) : null}
         </div>
 
         <div className={s.columns}>

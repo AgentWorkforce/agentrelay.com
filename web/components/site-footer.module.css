@@ -58,6 +58,37 @@
   margin: 0;
 }
 
+.updates {
+  max-width: 340px;
+  margin-top: 12px;
+}
+
+/* A compact version of the shared signup form, sized for the footer. */
+.updates form {
+  padding: 3px 3px 3px 4px;
+  border-width: 1px;
+  border-radius: 10px;
+}
+
+.updates input {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 0.875rem;
+}
+
+.updates button {
+  min-height: 30px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  font-size: 0.8125rem;
+}
+
+.updatesLabel {
+  margin: 0 0 8px;
+  color: var(--footer-muted);
+  font-size: 0.85rem;
+}
+
 .columns {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -99,9 +130,11 @@
     background 0.15s;
 }
 
-.link:hover {
-  color: var(--footer-fg);
-  background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .link:hover {
+    color: var(--footer-fg);
+    background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+  }
 }
 
 .externalIcon {
@@ -154,10 +187,12 @@
     background 0.15s;
 }
 
-.social:hover {
-  color: var(--footer-fg);
-  border-color: color-mix(in srgb, var(--footer-fg) 34%, transparent);
-  background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .social:hover {
+    color: var(--footer-fg);
+    border-color: color-mix(in srgb, var(--footer-fg) 34%, transparent);
+    background: color-mix(in srgb, var(--footer-fg) 8%, transparent);
+  }
 }
 
 @media (max-width: 960px) {

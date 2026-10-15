@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSignupAnalytics } from './useSignupAnalytics';
 import type { SignupAnalyticsContext } from '../lib/agent-signup-analytics';
 import Link from 'next/link';
-import Grok from '@lobehub/icons/es/Grok';
+import { Grok } from './brand-icons';
 import { ArrowLeft, ArrowUpRight, Check, Copy, RefreshCw } from 'lucide-react';
 import { AgentToolLogo } from './AgentToolLogos';
 import { SignupAtmosphere } from './SignupAtmosphere';

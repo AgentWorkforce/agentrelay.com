@@ -1,7 +1,7 @@
 /* ── Docs — theme-aware ── */
 
 .docsPage {
-  min-height: 100vh;
+  min-height: 100svh;
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-geist-sans), sans-serif;
@@ -24,13 +24,13 @@
   grid-template-columns: 260px 1fr;
   max-width: 1280px;
   margin: 0 auto;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100svh - 70px);
 }
 
 .sidebarCol {
   position: sticky;
   top: var(--nav-clearance);
-  height: calc(100vh - var(--nav-clearance));
+  height: calc(100dvh - var(--nav-clearance));
   overflow-y: auto;
   padding: var(--docs-rail-top-padding) 1.25rem 2rem;
   border-right: 1px solid var(--line);
@@ -69,9 +69,11 @@
   color: var(--nav-muted);
 }
 
-.mobileSidebar .navLink:hover {
-  background: var(--nav-surface);
-  color: var(--nav-fg);
+@media (hover: hover) and (pointer: fine) {
+  .mobileSidebar .navLink:hover {
+    background: var(--nav-surface);
+    color: var(--nav-fg);
+  }
 }
 
 .mobileSidebar .navLinkActive {
@@ -118,8 +120,23 @@
 }
 
 .toc {
-  max-height: calc(100vh - 100px);
+  max-height: calc(100dvh - 100px);
   overflow-y: auto;
+}
+
+/* Rail scrollbars stay invisible until the pointer or keyboard focus is in
+   the rail. Wheel, trackpad and keyboard scrolling are unaffected. */
+.sidebarCol,
+.toc {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* Ungated :hover on purpose: a stuck hover after a tap only reveals the
+   thumb, and any attached mouse (not just a primary one) should reveal it. */
+.sidebarCol:is(:hover, :focus-within),
+.toc:is(:hover, :focus-within) {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 .tocControl {
@@ -192,13 +209,15 @@
   transition:
     color 0.15s,
     border-color 0.15s;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.tocLink:hover {
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .tocLink:hover {
+    color: var(--primary);
+  }
 }
 
 .tocIndent {
@@ -260,8 +279,10 @@
   cursor: pointer;
 }
 
-.versionSelect:hover {
-  color: var(--fg-muted);
+@media (hover: hover) and (pointer: fine) {
+  .versionSelect:hover {
+    color: var(--fg-muted);
+  }
 }
 
 .versionChevron {
@@ -275,7 +296,7 @@
   transform: translateY(-50%);
 }
 
-/* ── Product section sidebar header (Relayfile / Relayloop) ── */
+/* ── Product section sidebar header (Relayfile / Relayhistory / Flows) ── */
 
 .productHeader {
   margin-bottom: 1.4rem;
@@ -310,9 +331,11 @@
   display: none;
 }
 
-.productSwitcherSummary:hover {
-  border-color: color-mix(in srgb, var(--primary) 32%, var(--line));
-  background: color-mix(in srgb, var(--primary) 7%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .productSwitcherSummary:hover {
+    border-color: color-mix(in srgb, var(--primary) 32%, var(--line));
+    background: color-mix(in srgb, var(--primary) 7%, transparent);
+  }
 }
 
 .productSwitcher[open] .productSwitcherSummary {
@@ -380,7 +403,8 @@
 
 .productHeaderTagline {
   display: block;
-  overflow: hidden;
+  min-width: 0;
+  overflow: clip;
   text-overflow: ellipsis;
   font-size: 0.8rem;
   line-height: 1.4;
@@ -392,7 +416,12 @@
   width: 0.9rem;
   height: 0.9rem;
   color: var(--fg-muted);
-  transition: transform 0.15s;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .productSwitcherChevron {
+    transition: transform 0.15s;
+  }
 }
 
 .productSwitcher[open] .productSwitcherChevron {
@@ -427,20 +456,16 @@
     color 0.15s;
 }
 
-.productSwitcherOption:hover,
 .productSwitcherOptionActive {
   background: color-mix(in srgb, var(--primary) 8%, transparent);
   color: var(--fg);
 }
 
-.productSwitcherOptionDisabled {
-  cursor: default;
-  opacity: 0.68;
-}
-
-.productSwitcherOptionDisabled:hover {
-  background: transparent;
-  color: var(--fg-muted);
+@media (hover: hover) and (pointer: fine) {
+  .productSwitcherOption:hover {
+    background: color-mix(in srgb, var(--primary) 8%, transparent);
+    color: var(--fg);
+  }
 }
 
 .productSwitcherOptionIcon {
@@ -466,26 +491,13 @@
 
 .productSwitcherOptionLabel {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   font-size: 0.86rem;
   font-weight: 700;
   line-height: 1.2;
   color: currentColor;
   white-space: nowrap;
-}
-
-.productSwitcherOptionBadge {
-  flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, var(--primary) 24%, var(--line));
-  border-radius: 999px;
-  padding: 0.05rem 0.34rem;
-  color: color-mix(in srgb, var(--primary) 68%, var(--fg-muted));
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.35;
-  text-transform: uppercase;
 }
 
 .productSwitcherOptionTagline {
@@ -540,9 +552,11 @@
   min-width: 0;
 }
 
-.navLink:hover {
-  background: color-mix(in srgb, var(--primary) 6%, transparent);
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .navLink:hover {
+    background: color-mix(in srgb, var(--primary) 6%, transparent);
+    color: var(--primary);
+  }
 }
 
 .navLinkActive {
@@ -574,8 +588,9 @@
 }
 
 .articleBody {
+  display: flow-root;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .article h1 {
@@ -606,7 +621,7 @@
   border-radius: 0.85rem;
   background: color-mix(in srgb, var(--card-bg) 98%, transparent);
   box-shadow: 0 3px 10px color-mix(in srgb, var(--fg) 4%, transparent);
-  overflow: hidden;
+  overflow: clip;
 }
 
 .pageActionPrimary,
@@ -635,10 +650,12 @@
   border-left: 1px solid var(--line);
 }
 
-.pageActionPrimary:hover,
-.pageActionToggle:hover {
-  background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
-  color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .pageActionPrimary:hover,
+  .pageActionToggle:hover {
+    background: color-mix(in srgb, var(--primary) 8%, var(--card-bg));
+    color: var(--primary);
+  }
 }
 
 .pageActionPrimary:focus-visible,
@@ -687,8 +704,10 @@
   transition: background 0.15s ease;
 }
 
-.pageActionItem:hover {
-  background: color-mix(in srgb, var(--primary) 7%, transparent);
+@media (hover: hover) and (pointer: fine) {
+  .pageActionItem:hover {
+    background: color-mix(in srgb, var(--primary) 7%, transparent);
+  }
 }
 
 .pageActionIconFrame {
@@ -773,14 +792,22 @@
   text-underline-offset: 2px;
   transition: text-decoration-color 0.15s;
 }
-.article a:hover {
-  text-decoration-color: var(--primary);
+@media (hover: hover) and (pointer: fine) {
+  .article a:hover {
+    text-decoration-color: var(--primary);
+  }
 }
 
-.article .pageActionItem,
-.article .pageActionItem:hover {
+.article .pageActionItem {
   color: inherit;
   text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article .pageActionItem:hover {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 .article ul,
@@ -840,7 +867,7 @@
 }
 
 .codeWrapperWithHeader {
-  overflow: hidden;
+  overflow: clip;
   border-radius: 0.75rem;
 }
 
@@ -895,7 +922,7 @@
 
 .codeBlockFilename {
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--fg-muted);
@@ -937,14 +964,16 @@
   background: transparent;
 }
 
-.copyBtn:hover {
-  color: var(--primary);
-  background: var(--bg);
-}
+@media (hover: hover) and (pointer: fine) {
+  .copyBtn:hover {
+    color: var(--primary);
+    background: var(--bg);
+  }
 
-.copyBtnInline:hover {
-  color: var(--fg);
-  background: color-mix(in srgb, var(--surface) 65%, transparent);
+  .copyBtnInline:hover {
+    color: var(--fg);
+    background: color-mix(in srgb, var(--surface) 65%, transparent);
+  }
 }
 
 .article pre {
@@ -954,6 +983,8 @@
   background: var(--code-bg);
   border: 1px solid var(--line);
   overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   line-height: 1.5;
 }
 
@@ -970,7 +1001,7 @@
   margin: 1rem 0;
   border: 1px solid var(--line);
   border-radius: 0.75rem;
-  overflow: hidden;
+  overflow: clip;
   background: var(--code-bg);
 }
 
@@ -999,8 +1030,10 @@
     opacity 0.15s,
     border-color 0.15s;
 }
-.codeGroupTab:hover {
-  opacity: 0.8;
+@media (hover: hover) and (pointer: fine) {
+  .codeGroupTab:hover {
+    opacity: 0.8;
+  }
 }
 .codeGroupTabActive {
   opacity: 1;
@@ -1054,17 +1087,28 @@
     color 0.15s ease;
 }
 
-.article .bannerLink,
-.article .bannerLink:hover {
+.article .bannerLink {
   color: var(--primary-fg);
   text-decoration: none;
 }
 
-.bannerLink:hover {
-  background: #4a90c2;
-  border-color: #234969;
-  transform: translateY(-1px);
-  box-shadow: none;
+@media (hover: hover) and (pointer: fine) {
+  .article .bannerLink:hover {
+    color: var(--primary-fg);
+    text-decoration: none;
+  }
+
+  .bannerLink:hover {
+    background: #4a90c2;
+    border-color: #234969;
+    box-shadow: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .bannerLink:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .bannerLinkIconWrap {
@@ -1131,18 +1175,31 @@
     transform 0.15s ease;
 }
 
-.card:hover {
-  border-color: var(--card-hover-border);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
-    0 4px 14px color-mix(in srgb, black 22%, transparent);
-  transform: translateY(-1px);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: var(--card-hover-border);
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 8%, transparent),
+      0 4px 14px color-mix(in srgb, black 22%, transparent);
+  }
 }
 
-.article .card,
-.article .card:hover {
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.article .card {
   color: inherit;
   text-decoration: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .article .card:hover {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 .cardHeader {
@@ -1173,9 +1230,16 @@
     color 0.15s ease;
 }
 
-.card:hover .cardLinkIcon {
-  color: var(--primary);
-  transform: translateX(2px);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover .cardLinkIcon {
+    color: var(--primary);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .card:hover .cardLinkIcon {
+    transform: translateX(2px);
+  }
 }
 
 .cardBody {
