@@ -115,11 +115,12 @@ ${product === 'teams' ? `Progress steps for Teams:
    user signs in with Google in the browser.
 3. Choose what to share: before Part 1's defaults (its section 4). Report
    waiting while the user decides about an existing sharing mode.
-4. Connect sessions: before Part 2's Sessions token and MCP install.
-5. Check everything works: before Part 1's final verification, continuing
-   through the rest of Part 2. Keep step 5 working or waiting until Part 2
-   proves a live round trip; only then PATCH step: 5, state: complete. A
-   self-verified read path without a teammate is not completion.` : `Progress steps for Flows:
+4. Connect sessions: before Part 1's final verification, continuing through
+   Part 2's Sessions token, MCP install, and tool check.
+5. Check everything works: before Part 2's live round trip. Keep step 5
+   working or waiting until Part 2 proves a live round trip;
+   only then PATCH step: 5, state: complete. A self-verified read path without
+   a teammate is not completion.` : `Progress steps for Flows:
 1. Sign in: before Part 1.
 2. Choose the flow/repository: before Part 2's section 1 (through section 2,
    and Part 3 for a custom flow).
@@ -190,14 +191,14 @@ function localDevelopmentNote(product: AgentSignupProduct, site: string): string
   return `
 
 This is a local development stack. The skills' production URLs have been
-replaced with the origins above.${product === 'teams' ? ` Part 2's macOS commands have also been
+replaced with the origins above.${product === 'teams' ? ` Part 1's macOS commands have also been
 rewritten for the prebuilt Agent Relay Dev app served by the local stack, so run
 them as written: they download
 ${site}/cloud/desktop-downloads/AgentRelay-Dev-macOS-<arch>.dmg and the same URL
 plus .sha256 (arm64 or x64), install Agent Relay Dev.app, require bundle id
 com.agentrelay.desktop.dev, and use the socket pointer
 ~/.agentworkforce/desktop/relay-socket.dev. Use only those Dev paths for every
-socket lookup in Parts 2 and 3. The local stack serves only the macOS Dev app:
+socket lookup in Parts 1 and 2. The local stack serves only the macOS Dev app:
 on Linux, stop and report that no local desktop artifact exists. If the DMG or
 its checksum is unavailable, stop and report the missing prebuilt artifact.
 Do not build it, run the development launcher to produce it, or switch to a

@@ -118,8 +118,11 @@ describe('agent signup instructions', () => {
     const completions = [...content.matchAll(/state: complete/g)].map(match => match.index!);
     expect(completions.length).toBeGreaterThan(0);
     for (const index of completions) expect(index).toBeLessThan(header.length);
-    expect(header).toContain('Keep step 5 working or waiting until Part 2\n   proves a live round trip; only then PATCH step: 5, state: complete.');
-    expect(header).toContain('A\n   self-verified read path without a teammate is not completion.');
+    expect(header).toContain('Keep step 5\n   working or waiting until Part 2 proves a live round trip;\n   only then PATCH step: 5, state: complete.');
+    expect(header).toContain('A self-verified read path without\n   a teammate is not completion.');
+    // Steps run in order: Connect sessions (4) starts before Check everything works (5).
+    expect(header.indexOf('4. Connect sessions')).toBeLessThan(header.indexOf('5. Check everything works'));
+    expect(header).toContain('5. Check everything works: before Part 2\'s live round trip.');
     expect(header).toContain('Setup is complete only in Part 2\'s finished state: a proven live round trip.');
     expect(content.slice(roundTrip)).toContain('Setup is not complete until the full round trip succeeds.');
   });
