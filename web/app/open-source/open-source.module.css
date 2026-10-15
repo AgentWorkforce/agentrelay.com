@@ -116,8 +116,9 @@
 }
 
 .category {
-  /* Land below the sticky nav and chip bar when jumping to an anchor. */
-  scroll-margin-top: calc(var(--nav-clearance) + 72px);
+  /* The root scroll-padding already clears the site nav; this clears the
+     sticky chip bar beneath it. */
+  scroll-margin-top: 60px;
   padding-top: 64px;
 }
 
