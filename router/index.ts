@@ -62,7 +62,7 @@ const AGENT_CHAT_PATH = new RegExp(`^/(${HANDLE_SEGMENT})/([0-9a-f]{32})/?$`);
 const REGISTRY_API_PATH = /^\/api\/v1\/(?:registrations|agents)(?:\/|$)/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
-export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
+export const KHALIQ_CALENDAR_URL = "https://calendar.google.com/calendar/appointments/schedules/AcZssZ1epyhijCW6PzM54mrk-T3ebYZIpfi7GN62lywkJxGc3Dg7vO2kvYAK0ywdLONAts2KxsWTMJ0b";
 const VIRTUAL_OFFICE_URL = "https://meet.google.com/ijx-gpfb-brt";
 // A vanity path maps to one destination, or to several that are chosen from
 // uniformly at random per request (/founder splits meetings between the two

@@ -4,7 +4,7 @@
 // serves this at the edge in production; keep the two destination lists in step.
 const FOUNDER_CALENDAR_URLS = [
   'https://calendar.app.google/RqLuQyT3dYe5e2YdA',
-  'https://calendly.com/khaliq-agent-relay/30min',
+  'https://calendar.google.com/calendar/appointments/schedules/AcZssZ1epyhijCW6PzM54mrk-T3ebYZIpfi7GN62lywkJxGc3Dg7vO2kvYAK0ywdLONAts2KxsWTMJ0b',
 ];
 
 export const dynamic = 'force-dynamic';
