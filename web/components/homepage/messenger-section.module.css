@@ -1,0 +1,339 @@
+/* Multi-player agent work: the band and its heading, and the sessions
+   search window shown in its first tab. The other two windows use
+   AppWindow. */
+
+/* Its own band after "No new IDE": a lifted blue between that section's
+   deep tone and the use cases below. Doubled class: outranks the shared
+   features wrapper's flat background. */
+.band.band {
+  border-top: 1px solid rgba(116, 184, 226, 0.14);
+  background:
+    radial-gradient(60% 50% at 80% 30%, rgba(74, 144, 194, 0.16), transparent 70%),
+    linear-gradient(180deg, #0f2537 0%, #0c1f2f 100%);
+}
+
+/* The band's heading and its line, over everything in it. */
+.intro {
+  display: grid;
+  justify-items: center;
+  gap: 20px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 144px 40px 0;
+  text-align: center;
+}
+
+.intro h2 {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.2rem, 4.4vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.intro em {
+  font-style: italic;
+}
+
+.intro p {
+  max-width: 46ch;
+  margin: 0;
+  color: rgba(214, 228, 240, 0.72);
+  font-size: 1.1rem;
+  line-height: 1.55;
+  text-wrap: balance;
+}
+
+.window {
+  border-left: 0;
+  border-bottom: 0;
+  border-radius: 0 14px 0 0;
+}
+
+.window {
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 0;
+  border-radius: 14px 14px 0 0;
+  background: #0f1923;
+  color: #e8eef4;
+  font-size: 14px;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0b141d;
+}
+
+.lights {
+  display: flex;
+  gap: 8px;
+}
+
+.lights i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #ff5f57;
+}
+
+.lights i:nth-child(2) {
+  background: #febc2e;
+}
+
+.lights i:nth-child(3) {
+  background: #28c840;
+}
+
+.search {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  gap: 10px;
+  max-width: 440px;
+  padding: 9px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(232, 238, 244, 0.45);
+  font-size: 0.86em;
+}
+
+.search svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Two columns fit beside the copy: the session, and whether it is live. */
+.head,
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 0 18px;
+}
+
+.head {
+  height: 46px;
+  color: rgba(232, 238, 244, 0.5);
+  font-size: 0.78em;
+  font-weight: 500;
+}
+
+.row {
+  min-height: 64px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* The typed query, with a caret blinking after it. */
+.query {
+  color: #e8eef4;
+}
+
+.caret {
+  width: 1.5px;
+  height: 1.1em;
+  margin-left: -8px;
+  background: #74b8e2;
+}
+
+/* Holds the full list's height, so the window keeps its size while a
+   search narrows it. */
+.rows {
+  min-height: calc(6 * 64px);
+}
+
+/* Rows rise in as the list changes; once a search finds its sessions, the
+   top match opens on the line from its history that answers it. */
+.rows > .row {
+  animation: row-in 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rows > .row:nth-child(2) {
+  animation-delay: 60ms;
+}
+
+.rows > .row:nth-child(n + 3) {
+  animation-delay: 120ms;
+}
+
+.rows[data-found] > .row:first-child {
+  background: rgba(116, 184, 226, 0.06);
+}
+
+.snippet {
+  grid-column: 1 / -1;
+  margin: 0 0 18px 52px;
+  padding: 12px 16px;
+  border-left: 2px solid #74b8e2;
+  border-radius: 0 10px 10px 0;
+  background: rgba(116, 184, 226, 0.08);
+  color: #d6e4f0;
+  font-size: 0.86em;
+  line-height: 1.5;
+  animation: row-in 420ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
+}
+
+.snippet small {
+  display: block;
+  margin-bottom: 4px;
+  color: rgba(232, 238, 244, 0.5);
+  font-size: 0.86em;
+}
+
+.snippet mark {
+  padding: 0 3px;
+  border-radius: 4px;
+  background: rgba(232, 195, 122, 0.22);
+  color: #f5d99a;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .caret {
+    animation: caret-blink 1s step-end infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rows > .row,
+  .snippet {
+    animation: none;
+  }
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.row:nth-of-type(odd) {
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.session {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.session b,
+.session small {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.session b {
+  font-weight: 600;
+}
+
+.session small {
+  margin-top: 3px;
+  color: rgba(232, 238, 244, 0.5);
+  font-size: 0.78em;
+}
+
+/* Who and how: the teammate's photo with their harness on a small badge,
+   the way the app lists sessions. */
+.who {
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 38px;
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.harness {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #0f1923;
+  border-radius: 6px;
+  background: #16222e;
+  color: #fff;
+}
+
+.harness svg {
+  width: 12px;
+  height: 12px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(232, 238, 244, 0.55);
+  font-size: 0.88em;
+}
+
+.status i,
+.connected {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(232, 238, 244, 0.35);
+}
+
+.status[data-active] {
+  color: #e8eef4;
+}
+
+.status[data-active] i,
+.connected {
+  background: #3ecf8e;
+  box-shadow: 0 0 0 3px rgba(62, 207, 142, 0.16);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: #0b141d;
+  color: rgba(232, 238, 244, 0.6);
+  font-size: 0.78em;
+}
+
+@media (max-width: 900px) {
+  .intro {
+    padding: 96px 16px 0;
+  }
+
+  .window {
+    font-size: 13px;
+  }
+
+  .snippet {
+    margin: 0 0 14px 46px;
+  }
+}

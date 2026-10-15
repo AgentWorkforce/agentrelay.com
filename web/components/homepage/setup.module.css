@@ -1,0 +1,76 @@
+/* The setup card's agent prompt: a request typed into a terminal line. */
+.prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px 7px 10px;
+  border: 1px solid rgba(116, 184, 226, 0.18);
+  border-radius: 10px;
+  background: #0b141d;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.mark svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+
+/* The request, typed one character at a time, with a caret. */
+/* The box keeps the full line's width; only the text inside grows. */
+.typed {
+  display: inline-block;
+  width: 29.6ch;
+}
+
+.typed > span {
+  display: inline-block;
+  overflow: hidden;
+  width: 29.6ch;
+  border-right: 2px solid transparent;
+  color: #e8eef4;
+  vertical-align: bottom;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* One 8.5s loop: type the request in about 2s, let it sit for 5s, then clear. */
+  .typed > span {
+    animation:
+      prompt-type 8.5s steps(29, end) infinite,
+      prompt-caret 8.5s step-end infinite;
+  }
+}
+
+@keyframes prompt-type {
+  0%,
+  4% {
+    width: 0;
+  }
+  30%,
+  94% {
+    width: 29.6ch;
+  }
+  100% {
+    width: 0;
+  }
+}
+
+@keyframes prompt-caret {
+  0%,
+  8%,
+  16%,
+  24%,
+  32% {
+    border-color: #74b8e2;
+  }
+  4%,
+  12%,
+  20%,
+  28%,
+  36%,
+  100% {
+    border-color: transparent;
+  }
+}

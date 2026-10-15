@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from 'react';
 
 import s from '../app/landing.module.css';
 
-type ChannelAgent = 'Planner' | 'Builder' | 'Reviewer';
+/** Which mark an agent shows: Claude, Codex or OpenCode. */
+export type ChannelAgent = 'Planner' | 'Builder' | 'Reviewer';
 
 interface ChannelMessagePart {
   text: string;
@@ -16,8 +17,10 @@ interface ChannelReaction {
   count: number;
 }
 
-interface ChannelMessage {
+export interface ChannelMessage {
   agent: ChannelAgent;
+  /** Display name; defaults to the agent. */
+  name?: string;
   parts: ChannelMessagePart[];
   reply?: boolean;
   reactions?: ChannelReaction[];
@@ -34,7 +37,7 @@ const FIRST_REACTION_DELAY_MS = 1450;
 const NEXT_REACTION_DELAY_MS = 760;
 const INITIAL_REACTION_STAGGER_MS = 1100;
 
-const channelMessages: ChannelMessage[] = [
+const defaultMessages: ChannelMessage[] = [
   {
     agent: 'Planner',
     parts: [{ text: '@builder', mention: true }, { text: ' please review my plan for Linear ticket 341.' }],
@@ -237,7 +240,7 @@ function ChannelMessageBubble({
     <div className={`${s.chatMsg} ${agentClass} ${replyClass}`}>
       <div className={s.chatNameRow}>
         <ChannelAgentIcon agent={message.agent} />
-        <span className={s.chatName}>{message.agent}</span>
+        <span className={s.chatName}>{message.name ?? message.agent}</span>
       </div>
       <span className={s.chatText}>
         {message.parts.map((part, partIndex) =>
@@ -264,7 +267,11 @@ function ChannelMessageBubble({
   );
 }
 
-export function ChannelMessagesPreview() {
+export function ChannelMessagesPreview({
+  channel = 'proj-pipeline-fix',
+  meta = '3 agents',
+  messages: channelMessages = defaultMessages,
+}: { channel?: string; meta?: string; messages?: ChannelMessage[] } = {}) {
   const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_MESSAGES);
   const [visibleReactionCounts, setVisibleReactionCounts] = useState<Record<number, number>>({});
   const [isActive, setIsActive] = useState(false);
@@ -341,7 +348,7 @@ export function ChannelMessagesPreview() {
     return () => {
       if (nextTimer) window.clearTimeout(nextTimer);
     };
-  }, [isActive, showLoopIndicator, visibleCount]);
+  }, [channelMessages, isActive, showLoopIndicator, visibleCount]);
 
   useEffect(() => {
     if (!isActive || showLoopIndicator) return;
@@ -376,7 +383,7 @@ export function ChannelMessagesPreview() {
         reactionTimersRef.current.push(timer);
       });
     });
-  }, [isActive, showLoopIndicator, visibleCount]);
+  }, [channelMessages, isActive, showLoopIndicator, visibleCount]);
 
   useEffect(() => {
     if (!showLoopIndicator) return;
@@ -407,8 +414,8 @@ export function ChannelMessagesPreview() {
     <>
       <div className={s.chatChannelHeader}>
         <span className={s.chatChannelHash}>#</span>
-        <strong>proj-pipeline-fix</strong>
-        <span className={s.chatChannelMeta}>3 agents</span>
+        <strong>{channel}</strong>
+        <span className={s.chatChannelMeta}>{meta}</span>
       </div>
       <div className={s.chatStream} ref={streamRef}>
         {channelMessages.slice(0, visibleCount).map((message, index) => (

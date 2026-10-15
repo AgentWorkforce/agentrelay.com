@@ -1947,7 +1947,7 @@
 /* ---- HERO ---- */
 
 .heroSection {
-  --investor-strip-padding-top: 3rem;
+  --investor-strip-padding-top: 6.5rem;
   position: relative;
   background: var(--agent-tools-band-bg);
   transition: background 0.3s ease;
@@ -2004,13 +2004,45 @@
    `.headline` and `.subtitle` are declared further down this file, so a bare
    class here would lose the cascade to them. */
 .heroCenterColumn .heroCenterHeadline {
-  font-size: clamp(2.6rem, 5.4vw, 4.5rem);
-  max-width: 20ch;
+  max-width: none;
+  font-size: clamp(38px, 5.6vw, 84px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  opacity: 1;
+}
+
+/* Each line rises out of its own clipped box, one after the other. */
+.heroTitleLine {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.1em;
+  margin-bottom: -0.1em;
+}
+
+.heroTitleLineInner {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroTitleLineInner {
+    animation: hero-line-up 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--line, 0) * 110ms + 150ms);
+  }
+}
+
+@keyframes hero-line-up {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
 }
 
 .heroCenterColumn .heroCenterSubtitle {
   max-width: 52ch;
-  margin: -4px auto 0;
+  margin: 12px auto 0;
 }
 
 .heroCenterCtas {
@@ -2033,7 +2065,6 @@
    seams drift instead of beating in step. */
 .heroMarquee {
   position: relative;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -2044,48 +2075,6 @@
      still breathe above and below the row. */
   overflow-x: clip;
   overflow-y: visible;
-}
-
-.heroRelayNetwork {
-  position: absolute;
-  inset: 0 0 26px;
-  z-index: 0;
-  width: 100%;
-  height: calc(100% - 26px);
-  overflow: visible;
-  pointer-events: none;
-}
-
-.heroRelayRoute {
-  fill: none;
-  stroke: none;
-}
-
-.heroRelayPacket,
-.heroRelayOrigin,
-.heroRelayArrival {
-  display: none;
-}
-
-.heroRelayPacketTail {
-  fill: none;
-  stroke: rgba(125, 194, 233, 0.82);
-  stroke-linecap: round;
-  stroke-width: 2.1;
-  vector-effect: non-scaling-stroke;
-}
-
-.heroRelayPacketHalo,
-.heroRelayOrigin,
-.heroRelayArrival {
-  fill: none;
-  stroke: rgba(125, 194, 233, 0.58);
-  stroke-width: 1.4;
-  vector-effect: non-scaling-stroke;
-}
-
-.heroRelayPacketCore {
-  fill: rgba(166, 219, 247, 0.96);
 }
 
 .heroMarqueeRow {
@@ -2103,20 +2092,14 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .heroRelayPacket,
-  .heroRelayOrigin,
-  .heroRelayArrival {
-    display: inline;
-  }
-
   .heroMarqueeTrack {
     will-change: transform;
     animation: heroMarqueeSlide linear infinite;
   }
 
+  /* Row one starts at its first card so Claude Code leads the band. */
   .heroMarqueeTrackOne {
     animation-duration: 74s;
-    animation-delay: -11s;
   }
 
   .heroMarqueeTrackTwo {
@@ -4054,168 +4037,11 @@
   content: none;
 }
 
-.commandsFeature {
-  order: 6;
-  --feature-band-bg: #0b1c2a;
-  padding-top: 36px;
-}
-
-.commandsFeature::before {
-  border-top: 0;
-}
-
-.commandsFeature .featurePreview {
-  order: 2;
-}
-
-.commandsFeature .featureCopy {
-  order: 1;
-  max-width: 620px;
-}
-
 /* The "works with every agent" band takes the slot between the messaging
    feature (order 1) and the delivery feature (order 3), carrying its own band
    borders. */
 .howItWorks {
   order: 2;
-}
-
-.featureSeparator.a2aSeparator {
-  order: 7;
-}
-
-.a2aFeature {
-  order: 8;
-  --feature-band-bg: #0b1c2a;
-  padding-top: 36px;
-}
-
-.a2aFeature::before {
-  border-top: 0;
-}
-
-.a2aFeature .featurePreview {
-  order: 1;
-}
-
-.a2aFeature .featureCopy {
-  order: 2;
-  max-width: 620px;
-}
-
-.featureSeparator {
-  position: relative;
-  order: 5;
-  grid-column: 1 / -1;
-  width: 100vw;
-  height: 70px;
-  margin: -56px calc(50% - 50vw) -72px;
-  isolation: isolate;
-  overflow: clip;
-  pointer-events: none;
-}
-
-.featureSeparator::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 128vw;
-  height: 1px;
-  transform: translate(-50%, -50%) rotate(2deg);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(116, 184, 226, 0.05) 18%,
-    rgba(116, 184, 226, 0.2) 50%,
-    rgba(116, 184, 226, 0.05) 82%,
-    transparent 100%
-  );
-  z-index: 0;
-}
-
-.featureSeparatorWaves {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  width: 128vw;
-  height: 78px;
-  color: #74b8e2;
-  opacity: 0.4;
-  overflow: visible;
-  transform: translate(-50%, -50%) rotate(2deg);
-  transform-origin: center;
-}
-
-.featureSeparatorWaves path {
-  stroke: currentColor;
-  stroke-width: 1.2;
-  stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
-}
-
-.featureSeparatorWaves path:nth-child(2) {
-  opacity: 0.5;
-}
-
-/* A2A separator: a livelier sibling of the plain feature wave. A gradient
-   strand (blue → pear-green → blue) with a soft glow, an extra ghost strand,
-   an opposite tilt, and a gentle horizontal drift. */
-.a2aSeparatorWaves {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  width: 132vw;
-  height: 96px;
-  overflow: visible;
-  opacity: 0.5;
-  transform: translate(-50%, -50%) rotate(-2.4deg);
-  transform-origin: center;
-  filter: drop-shadow(0 0 4px rgba(116, 184, 226, 0.15));
-}
-
-.a2aSeparatorWaves path {
-  stroke: url(#a2aWaveStroke);
-  stroke-linecap: round;
-  fill: none;
-  vector-effect: non-scaling-stroke;
-}
-
-.a2aWaveLead {
-  stroke-width: 1.2;
-  opacity: 0.6;
-}
-
-.a2aWaveTrail {
-  stroke-width: 1;
-  opacity: 0.32;
-}
-
-.a2aWaveGhost {
-  stroke-width: 0.9;
-  opacity: 0.18;
-}
-
-.a2aWaveFlow {
-  animation: a2aWaveDrift 9s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-@keyframes a2aWaveDrift {
-  from {
-    transform: translateX(-14px);
-  }
-  to {
-    transform: translateX(14px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .a2aWaveFlow {
-    animation: none;
-  }
 }
 
 .messagingFeature .featurePreview {
@@ -4856,108 +4682,6 @@
   opacity: 0.55;
 }
 
-.actionToolBadges {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-
-.actionToolBadge {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  color: rgba(196, 211, 226, 0.74);
-  cursor: default;
-  transition:
-    color 0.18s ease,
-    transform 0.18s ease;
-}
-
-.actionToolBadge:focus-visible {
-  color: #ffffff;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .actionToolBadge:hover {
-    color: #ffffff;
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .actionToolBadge:focus-visible {
-    transform: translateY(-1px);
-  }
-}
-
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .actionToolBadge:hover {
-    transform: translateY(-1px);
-  }
-}
-
-.actionToolBadge:focus-visible {
-  outline: 1px solid color-mix(in srgb, var(--primary) 48%, white 14%);
-  outline-offset: 4px;
-}
-
-.actionToolBadge svg {
-  flex: none;
-}
-
-.actionToolTooltip {
-  position: absolute;
-  bottom: calc(100% + 12px);
-  left: 0;
-  z-index: 8;
-  width: min(330px, calc(100vw - 48px));
-  padding: 12px 13px;
-  border: 1px solid rgba(156, 207, 255, 0.2);
-  border-radius: 10px;
-  background: rgba(7, 17, 31, 0.94);
-  box-shadow: 0 18px 42px rgba(3, 10, 20, 0.36);
-  color: rgba(214, 228, 241, 0.9);
-  font-size: 0.78rem;
-  font-weight: 500;
-  line-height: 1.45;
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .actionToolTooltip {
-    transform: translateY(5px);
-  }
-}
-
-.actionToolTooltip strong {
-  display: block;
-  margin-bottom: 4px;
-  color: #ffffff;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.actionToolBadge:focus-visible .actionToolTooltip {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .actionToolBadge:hover .actionToolTooltip {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .featureList {
   display: grid;
   gap: 12px;
@@ -5535,131 +5259,6 @@
     transform: none;
     transition: none;
   }
-}
-
-.editorWindow {
-  align-self: center;
-  justify-self: stretch;
-  min-width: 0;
-  margin: 22px;
-  overflow: clip;
-  border: 1px solid rgba(156, 207, 255, 0.16);
-  border-radius: 12px;
-  background: #07111e;
-}
-
-.editorTitlebar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 38px;
-  padding: 0 14px;
-  border-bottom: 1px solid rgba(156, 207, 255, 0.14);
-  background: #111a24;
-}
-
-.editorTitlebar span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-}
-
-.editorTitlebar span:nth-child(1) {
-  background: #ff5f57;
-}
-
-.editorTitlebar span:nth-child(2) {
-  background: #febc2e;
-}
-
-.editorTitlebar span:nth-child(3) {
-  background: #28c840;
-}
-
-.editorTitlebar strong {
-  margin-left: 6px;
-  color: rgba(226, 232, 240, 0.64);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.66rem;
-  font-weight: 750;
-}
-
-.editorCode {
-  margin: 0;
-  padding: 18px 16px 20px;
-  color: rgba(248, 250, 252, 0.9);
-  min-height: 0;
-  overflow: clip;
-}
-
-.editorCode code {
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.72rem;
-  font-weight: 720;
-  line-height: 1.75;
-  white-space: pre-wrap;
-}
-
-.codeFunction {
-  color: #9ccfff;
-}
-
-.codeVariable {
-  color: #f2c28d;
-}
-
-.codeMuted {
-  color: rgba(226, 232, 240, 0.74);
-}
-
-.editorCode .codeKeyword {
-  color: #ff7b72;
-}
-
-.editorCode .codeString {
-  color: #f8d4af;
-}
-
-.commandsEditorPreview {
-  border: 0;
-  border-radius: 14px;
-  background: #07111f;
-  box-shadow: none;
-}
-
-.commandsEditorPreview .editorWindow {
-  position: absolute;
-  top: 0;
-  right: auto;
-  bottom: auto;
-  left: 0;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  border: 1px solid rgba(156, 207, 255, 0.16);
-  border-radius: 14px;
-  box-sizing: border-box;
-  align-self: stretch;
-  justify-self: stretch;
-}
-
-.commandsEditorPreview .editorTitlebar {
-  min-height: 46px;
-}
-
-.commandsEditorPreview .editorCode {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  padding: clamp(22px, 4vw, 36px);
-}
-
-.commandsEditorPreview .editorCode code {
-  font-size: clamp(0.68rem, 1.1vw, 0.88rem);
-  line-height: 1.9;
 }
 
 .durableTimelinePreview {
@@ -6360,24 +5959,6 @@
     order: 1;
   }
 
-  .commandsFeature .featureCopy {
-    order: 1;
-  }
-
-  .commandsFeature .featurePreview {
-    order: 2;
-  }
-
-  .featureSeparator {
-    height: 56px;
-    margin: -34px calc(50% - 50vw) -50px;
-  }
-
-  .featureSeparatorWaves {
-    width: 130vw;
-    height: 78px;
-  }
-
   .featureCopy {
     max-width: none;
   }
@@ -6402,19 +5983,6 @@
 
   .capabilityCopy p {
     font-size: 0.95rem;
-  }
-
-  .editorWindow {
-    margin: 18px;
-  }
-
-  .editorCode {
-    padding: 16px 14px 18px;
-  }
-
-  .editorCode code {
-    font-size: 0.66rem;
-    line-height: 1.7;
   }
 
   .featureTitle {
@@ -6872,10 +6440,6 @@
     max-width: 640px;
   }
 
-  .heroCenterColumn .heroCenterHeadline {
-    font-size: clamp(2.5rem, 7.6vw, 3.9rem);
-  }
-
   .heroMarquee {
     margin-top: 52px;
   }
@@ -6976,7 +6540,7 @@
   }
 
   .heroSection {
-    --investor-strip-padding-top: 2.5rem;
+    --investor-strip-padding-top: 4.5rem;
   }
 
   /* Give the mobile headline more emphasis while keeping the copy compact. */
@@ -6989,8 +6553,8 @@
   }
 
   .heroCenterColumn .heroCenterHeadline {
-    font-size: clamp(2.75rem, 12vw, 4rem);
-    max-width: none;
+    font-size: 7.6vw;
+    letter-spacing: -0.05em;
   }
 
   .heroCenterColumn .heroCenterSubtitle {
@@ -7002,6 +6566,7 @@
   .heroCenterCtas {
     align-self: stretch;
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
     gap: 10px;
     margin-top: 10px;
@@ -7261,4 +6826,683 @@
 }
 @media (max-width: 600px) {
   .expandedPreviewFeature .featurePreview { padding: 12px 0 0 20px; }
+}
+
+/* ── Desktop app windows in the terminal marquee ─────────────────────────
+   GUI agent apps (Conductor, Claude, Codex) ride the same rows as the
+   terminals. They read as apps rather than shells: sans type, a sidebar,
+   chat bubbles, a composer, and a toolbar in place of a mono title. */
+.heroApp {
+  --app-bg: #18191b;
+  --app-side: #111213;
+  --app-line: rgba(255, 255, 255, 0.08);
+  --app-text: rgba(236, 238, 242, 0.92);
+  --app-dim: rgba(176, 182, 192, 0.7);
+  --app-accent: #8ab4f8;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 360px;
+  min-height: 158px;
+  margin-right: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: var(--app-bg);
+  box-shadow: 0 10px 26px rgba(2, 10, 20, 0.38);
+  color: var(--app-text);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  overflow: hidden;
+}
+
+.heroApp[data-app='claude'] {
+  --app-bg: #1f1e1c;
+  --app-side: #191816;
+  --app-accent: #d97757;
+}
+
+.heroApp[data-app='codex'] {
+  --app-bg: #1a1a1a;
+  --app-side: #141414;
+  --app-accent: #6aa7ff;
+}
+
+.heroApp[data-app='conductor'] {
+  --app-bg: #161616;
+  --app-side: #101010;
+  --app-accent: #7fd3a0;
+  width: 408px;
+}
+
+.heroAppBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--app-side);
+  border-bottom: 1px solid var(--app-line);
+}
+
+.heroAppToolbar {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.heroAppToolbarIcon {
+  width: 9px;
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 2px;
+}
+
+.heroAppToolbarIcon + .heroAppToolbarIcon {
+  width: 7px;
+  border-radius: 50%;
+}
+
+.heroAppTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.heroAppMark {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--app-text);
+}
+
+.heroAppBody {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.heroAppRail {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 22px;
+  padding-top: 9px;
+  background: var(--app-side);
+  border-right: 1px solid var(--app-line);
+}
+
+.heroAppRail span {
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+}
+
+.heroAppSidebar {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 2px;
+  width: 92px;
+  padding: 8px 6px;
+  background: var(--app-side);
+  border-right: 1px solid var(--app-line);
+  font-size: 0.56rem;
+}
+
+.heroAppNav {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 4px;
+  color: var(--app-text);
+}
+
+.heroAppNavIcon {
+  width: 8px;
+  color: var(--app-dim);
+  text-align: center;
+}
+
+.heroAppSidebarHeading {
+  margin: 6px 4px 2px;
+  color: var(--app-dim);
+  font-size: 0.5rem;
+  font-weight: 600;
+}
+
+.heroAppSession {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 3px 4px;
+  border-radius: 4px;
+  color: rgba(220, 224, 230, 0.78);
+}
+
+.heroAppSessionActive {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppSessionLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppSessionMeta {
+  color: var(--app-dim);
+  font-size: 0.48rem;
+}
+
+.heroAppUnread {
+  width: 4px;
+  height: 4px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--app-accent);
+}
+
+.heroAppThread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 0.58rem;
+  line-height: 1.35;
+}
+
+.heroAppCrumb {
+  overflow: hidden;
+  color: var(--app-dim);
+  font-size: 0.54rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppCrumb b {
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppCrumb span {
+  margin: 0 4px;
+}
+
+.heroAppAsk {
+  align-self: flex-end;
+  max-width: 88%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.heroApp[data-app='claude'] .heroAppAsk {
+  border: 1px solid rgba(110, 150, 220, 0.35);
+  background: rgba(60, 90, 150, 0.32);
+}
+
+.heroAppReply {
+  color: var(--app-text);
+}
+
+.heroAppTools {
+  color: var(--app-dim);
+}
+
+.heroAppRelay {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #85c6ec;
+  font-weight: 500;
+}
+
+.heroAppRelayDot {
+  width: 5px;
+  height: 5px;
+  flex: none;
+  border-radius: 50%;
+  background: #85c6ec;
+  box-shadow: 0 0 6px rgba(133, 198, 236, 0.7);
+}
+
+.heroAppComposer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding: 4px 4px 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 0.52rem;
+}
+
+.heroApp[data-app='codex'] .heroAppComposer {
+  border-radius: 999px;
+}
+
+.heroAppComposerHint {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--app-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppComposerModel {
+  color: var(--app-dim);
+  white-space: nowrap;
+}
+
+.heroAppSend {
+  display: grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--app-text);
+  color: var(--app-bg);
+  font-size: 0.5rem;
+  font-weight: 700;
+}
+
+.heroApp[data-app='claude'] .heroAppSend {
+  border-radius: 4px;
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.heroAppChanges {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 112px;
+  padding: 7px 7px;
+  background: var(--app-side);
+  border-left: 1px solid var(--app-line);
+  font-size: 0.52rem;
+}
+
+.heroAppMergeRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.heroAppReady {
+  color: var(--app-accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.heroAppMerge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #2f8f57;
+  color: #fff;
+  font-weight: 600;
+}
+
+.heroAppChangesTabs {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid var(--app-line);
+  color: var(--app-dim);
+}
+
+.heroAppChangesTabs b {
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppFile {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+}
+
+.heroAppFileName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(220, 224, 230, 0.8);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroAppAdd {
+  color: #7fd3a0;
+}
+
+.heroAppDel {
+  color: #f08a8a;
+}
+
+.heroApp[data-app='devin'] {
+  --app-bg: #15171c;
+  --app-side: #101216;
+  --app-accent: #6b9cff;
+}
+
+.heroApp[data-app='hermes'] {
+  --app-bg: #16181d;
+  --app-side: #111317;
+  --app-accent: #9fb3d1;
+}
+
+.heroApp[data-app='capy'] {
+  --app-bg: #191a19;
+  --app-side: #121312;
+  --app-accent: #6fd1bf;
+}
+
+.heroApp[data-app='capy'] .heroAppMark {
+  color: #6fd1bf;
+}
+
+.heroApp[data-app='paseo'] {
+  --app-bg: #161817;
+  --app-side: #111312;
+  --app-accent: #8fd6a8;
+}
+
+.heroAppSpeaker {
+  display: block;
+  font-weight: 650;
+}
+
+.heroAppTabs {
+  display: flex;
+  gap: 4px;
+  font-size: 0.52rem;
+  white-space: nowrap;
+}
+
+.heroAppTabs > * {
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: var(--app-dim);
+}
+
+.heroAppTabs b {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--app-text);
+  font-weight: 600;
+}
+
+.heroAppStatusReview,
+.heroAppStatusWorking {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border: 1.2px solid var(--app-accent);
+  border-radius: 50%;
+}
+
+.heroAppStatusWorking {
+  border-color: #e5b45a;
+  border-right-color: transparent;
+}
+
+/* Phones running the labs' personal agents: a third surface in the band. */
+.heroPhone {
+  --phone-accent: #e8eaee;
+  display: flex;
+  flex: none;
+  width: 128px;
+  margin-right: 14px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 22px;
+  background: #0a0b0c;
+  box-shadow: 0 10px 26px rgba(2, 10, 20, 0.38);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+.heroPhone[data-phone='grokbot'] {
+  --phone-accent: #f1f1f1;
+}
+
+.heroPhone[data-phone='muse'] {
+  --phone-accent: #4f8dff;
+}
+
+.heroPhoneScreen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 7px 6px;
+  border-radius: 18px;
+  background: #17181a;
+  color: rgba(236, 238, 242, 0.92);
+  font-size: 0.5rem;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.heroPhoneStatus {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.44rem;
+  font-weight: 600;
+}
+
+.heroPhoneIsland {
+  width: 30px;
+  height: 8px;
+  border-radius: 999px;
+  background: #000;
+}
+
+.heroPhoneSignal {
+  width: 12px;
+  height: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 2px;
+}
+
+.heroPhoneHeader {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.heroPhoneMark {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  color: var(--phone-accent);
+}
+
+.heroPhoneTitle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.heroPhoneTitle b {
+  overflow: hidden;
+  font-size: 0.52rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heroPhoneTitle span {
+  color: rgba(176, 182, 192, 0.7);
+  font-size: 0.42rem;
+}
+
+.heroPhoneAsk {
+  align-self: flex-end;
+  max-width: 92%;
+  padding: 3px 6px;
+  border-radius: 9px 9px 2px 9px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.heroPhone[data-phone='muse'] .heroPhoneAsk {
+  background: #2f6fe4;
+  color: #fff;
+}
+
+.heroPhoneReply {
+  max-width: 96%;
+}
+
+.heroPhoneRelay {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  color: #85c6ec;
+  font-weight: 500;
+}
+
+.heroPhoneRelay .heroAppRelayDot {
+  margin-top: 3px;
+}
+
+.heroPhoneComposer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding: 2px 2px 2px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: rgba(176, 182, 192, 0.7);
+  font-size: 0.46rem;
+}
+
+.heroPhoneSend {
+  display: grid;
+  place-items: center;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(236, 238, 242, 0.92);
+  color: #17181a;
+  font-size: 0.42rem;
+  font-weight: 700;
+}
+
+/* The handoff between two neighbouring cards: a packet crossing the gap. The
+   bridge overlaps each card by 7px and nets zero width, so the track's
+   one-copy loop distance is unchanged. */
+.heroHandoffBridge {
+  position: relative;
+  z-index: 2;
+  flex: none;
+  align-self: center;
+  width: 28px;
+  height: 2px;
+  margin: 0 -7px 0 -21px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(133, 198, 236, 0.2), rgba(133, 198, 236, 0.9), rgba(133, 198, 236, 0.2));
+  box-shadow: 0 0 8px rgba(133, 198, 236, 0.6);
+}
+
+.heroHandoffPacket {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a6dbf7;
+  box-shadow: 0 0 10px rgba(166, 219, 247, 0.95);
+}
+
+.heroAppAskRelay {
+  align-self: flex-start;
+  border: 1px solid rgba(133, 198, 236, 0.4);
+  background: rgba(133, 198, 236, 0.12);
+}
+
+.heroAppFrom {
+  display: block;
+  color: #85c6ec;
+  font-size: 0.5rem;
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroHandoffPacket {
+    animation: heroHandoffPacket 1.8s ease-in-out infinite;
+  }
+}
+
+@keyframes heroHandoffPacket {
+  0% {
+    left: -4px;
+    opacity: 0;
+  }
+  20%,
+  80% {
+    opacity: 1;
+  }
+  100% {
+    left: 24px;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .heroHandoffBridge {
+    margin-left: -17px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .heroAppCycleLine {
+    animation: heroTerminalLineCycle var(--term-cycle) cubic-bezier(0.16, 1, 0.3, 1) infinite both;
+    animation-delay: calc(var(--term-phase) + var(--line-delay));
+  }
+}
+
+@media (max-width: 600px) {
+  .heroApp {
+    width: 300px;
+    margin-right: 10px;
+  }
+
+  .heroApp[data-app='conductor'] {
+    width: 340px;
+  }
+
+  .heroAppSidebar {
+    width: 80px;
+  }
+
+  .heroAppChanges {
+    width: 96px;
+  }
+
+  .heroPhone {
+    width: 118px;
+    margin-right: 10px;
+  }
 }

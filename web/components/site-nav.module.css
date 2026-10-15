@@ -165,6 +165,31 @@
 
 /* ── Hamburger (hidden on desktop, shown on mobile) ── */
 
+@media (max-width: 960px) {
+  .singleAction .navRight {
+    display: flex;
+  }
+
+  .singleAction .actions a {
+    min-height: 44px;
+    padding: 10px 14px;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .singleAction .logo {
+    gap: 6px;
+  }
+
+  .singleAction .logoIcon {
+    width: 26px;
+  }
+
+  .singleAction .logoWordmark {
+    height: 18px;
+  }
+}
+
 .hamburger {
   display: none;
   align-items: center;

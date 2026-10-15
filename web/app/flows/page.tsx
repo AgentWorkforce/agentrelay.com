@@ -158,7 +158,7 @@ export default function FlowsPage() {
         </section>
 
         <div className={s.capabilityWaveBreak}>
-          <WaveDivider variant="capability" />
+          <WaveDivider />
         </div>
 
         <section className={s.workflowSection} aria-label="Durable. Observable. Repeatable.">

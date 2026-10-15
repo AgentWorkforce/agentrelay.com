@@ -1,0 +1,255 @@
+/* Your agent's public address: its own section after the multi-player
+   band, on a warmer flat navy, with a centred heading and the mirrored
+   carousel. The windows below share the app window frame. */
+.section {
+  background: linear-gradient(180deg, #131c28 0%, #101822 100%);
+}
+
+.header {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 120px 40px 0;
+  text-align: center;
+}
+
+.header h3 {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.2rem, 4vw, 3.2rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.header p {
+  margin: 0;
+  color: rgba(214, 228, 240, 0.7);
+  font-size: 1.1rem;
+}
+
+/* The prompt to hand your own agent: one quiet line of text centred under
+   the carousel, pulled up into its bottom padding, with an icon to copy it. */
+.try {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px 10px;
+  max-width: calc(100% - 32px);
+  margin: -64px auto 0;
+  color: rgba(214, 228, 240, 0.5);
+  font-size: 0.9rem;
+}
+
+.try code {
+  color: rgba(232, 238, 244, 0.8);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.86rem;
+}
+
+.copy {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: rgba(232, 238, 244, 0.55);
+  cursor: pointer;
+}
+
+.copy svg {
+  width: 15px;
+  height: 15px;
+}
+
+.copy:hover,
+.copy:focus-visible {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.section {
+  padding-bottom: 120px;
+}
+
+/* A conversation that fills from the top down, each new line under the last. */
+.feed {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 14px;
+  margin: 0;
+  padding: 18px 20px 24px;
+  overflow: hidden;
+  list-style: none;
+}
+
+.feed > li {
+  flex: none;
+  animation: line-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* A status line, like "knocked": quiet text, not a badge. */
+.event {
+  align-self: center;
+  color: rgba(232, 238, 244, 0.4);
+  font-size: 0.8em;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.message b {
+  display: block;
+  margin-bottom: 2px;
+  font-weight: 600;
+}
+
+.text {
+  display: block;
+  color: rgba(232, 238, 244, 0.82);
+  line-height: 1.45;
+}
+
+.message code {
+  color: #8ec9ee;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.88em;
+}
+
+.mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(116, 184, 226, 0.35);
+  border-radius: 9px;
+  background: #13283b;
+  color: rgba(232, 238, 244, 0.6);
+  font-weight: 600;
+}
+
+.mark[data-muted] {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mark svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* The access list: who, what they see, and their setting. */
+.rules {
+  display: grid;
+  align-content: start;
+  margin: 0;
+  padding: 8px 0;
+  list-style: none;
+}
+
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ruleWho {
+  flex: 1;
+  min-width: 0;
+}
+
+.ruleWho b {
+  display: block;
+  font-weight: 600;
+}
+
+.ruleWho small {
+  display: block;
+  margin-top: 2px;
+  color: rgba(232, 238, 244, 0.5);
+  font-size: 0.82em;
+}
+
+.setting {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  color: rgba(232, 238, 244, 0.8);
+  font-size: 0.82em;
+}
+
+.setting::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.setting[data-tone='open']::before {
+  background: #3ecf8e;
+}
+
+.setting[data-tone='knock']::before {
+  background: #e8c37a;
+}
+
+.setting[data-tone='closed']::before {
+  background: rgba(232, 238, 244, 0.3);
+}
+
+.approve {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #4a90c2;
+  color: #fff;
+  font-size: 0.82em;
+  font-weight: 600;
+  animation: line-in 300ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed > li,
+  .approve {
+    animation: none;
+  }
+}
+
+@keyframes line-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (max-width: 900px) {
+  .header {
+    padding: 88px 16px 0;
+  }
+
+  .try {
+    margin-top: -40px;
+  }
+
+  .section {
+    padding-bottom: 88px;
+  }
+}

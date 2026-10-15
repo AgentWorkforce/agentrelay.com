@@ -79,7 +79,7 @@ export default function TeamsPage() {
 
         <div className={flows.main}>
 
-          <div className={flows.capabilityWaveBreak}><WaveDivider variant="capability" /></div>
+          <div className={flows.capabilityWaveBreak}><WaveDivider /></div>
 
           <section id="how-it-works" className={`${flows.sectionBand} ${flows.bandCode} ${s.activitySection}`} aria-labelledby="teams-setup-heading">
             <div className={s.activityIntro}>
@@ -100,7 +100,7 @@ export default function TeamsPage() {
             </figure>
           </section>
 
-          <div className={flows.capabilityWaveBreak}><WaveDivider variant="capability" /></div>
+          <div className={flows.capabilityWaveBreak}><WaveDivider /></div>
 
           <section id="session-overview" className={`${flows.sectionBand} ${s.sessionSection}`} aria-labelledby="session-overview-heading">
             <div className={s.sessionIntro}>
@@ -119,7 +119,7 @@ export default function TeamsPage() {
             </figure>
           </section>
 
-          <div className={flows.capabilityWaveBreak}><WaveDivider variant="capability" /></div>
+          <div className={flows.capabilityWaveBreak}><WaveDivider /></div>
 
           <section id="teams-durable-workflows" className={flows.workflowSection} aria-label="Find the shared bottlenecks. Fix with workflows.">
             <DurableWorkflowFeature
@@ -134,7 +134,7 @@ export default function TeamsPage() {
             />
           </section>
 
-          <div className={flows.capabilityWaveBreak}><WaveDivider variant="capability" /></div>
+          <div className={flows.capabilityWaveBreak}><WaveDivider /></div>
 
           <section id="teams-agent-workflows" className={flows.workflowSection} aria-label="Let your agents talk. Directly.">
             <MessagingFeature intro="Work together on the intents and constraints, but let the agents collaborate themselves when it’s time to do the work." />
@@ -160,7 +160,7 @@ export default function TeamsPage() {
             </div>
           </section>
 
-          <div className={flows.capabilityWaveBreak}><WaveDivider variant="capability" /></div>
+          <div className={flows.capabilityWaveBreak}><WaveDivider /></div>
 
           <section className={`${flows.sectionBand} ${flows.bandIntegrations} ${s.integrationsSection}`}>
             <div className={flows.sectionIntro}>
