@@ -63,8 +63,8 @@ Where a part offers to install itself as a skill or to use another agent,
 continue with the text here instead. A part that requires another skill finds
 it as another part of this guide; do not stop to install skills.
 ${product === 'teams' ? `
-Part 1 creates the account with signup_source "teams"; this marker admits a new
-Teams signup, so do it before Part 2. Pass Part 1's currentWorkspace.id as the
+Part 1 creates the account with signup_source "teams" for signup attribution.
+Complete account setup before Part 2. Pass Part 1's currentWorkspace.id as the
 workspace in Part 2's /setup/sign-in payload. The app signs in on its own, so
 the user may approve one more device link there unless it reuses a login.
 Before Part 2, read Part 3's "The only human steps" and ask the user for those
