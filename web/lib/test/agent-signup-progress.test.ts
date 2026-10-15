@@ -57,3 +57,22 @@ describe('signup progress handoff', () => {
     }
   });
 });
+
+describe('authenticated progress identity handoff', () => {
+  it.each(['teams', 'flows'] as const)('requires the verified account and capability together after %s login', product => {
+    const guide = agentSignupInstructions(product, 'http://localhost:3100', 'http://localhost:3100/cloud');
+    const signupHeader = guide.split('\n---\n')[0];
+    expect(signupHeader).toContain('Authorization: Bearer <Cloud access token from Part 1>');
+    expect(signupHeader).toContain('X-Agent-Relay-Progress-Token: <Progress token>');
+    expect(signupHeader).toContain('http://localhost:3100/cloud/api/v1/signup/agent/sessions/<Progress session from the prompt>');
+    expect(signupHeader).toContain('Never follow redirects or forward either token to another URL');
+    expect(signupHeader).toContain('for completion');
+    expect(signupHeader).toContain('progress token\nalone never proves a person');
+    expect(signupHeader).toContain('Keep GET requests on the original Progress-token');
+    expect(signupHeader).toContain('On 409 identity_conflict, stop reporting');
+    expect(signupHeader).toContain('Never fall back to anonymous updates');
+    expect(signupHeader).toContain('Authorization: Bearer <Progress token>');
+    expect(signupHeader).not.toContain('https://agentrelay.com/cloud');
+    expect(signupHeader).not.toContain('distinct_id');
+  });
+});
