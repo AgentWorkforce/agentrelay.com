@@ -22,6 +22,8 @@ describe('Connect entry point', () => {
     expect(guide).toContain('personal Agent Relay Cloud account');
     expect(guide).toContain('Guests join with the invite link and need no account');
     expect(guide).toContain('No relay process starts until you');
+    expect(guide.indexOf('First run mktemp -d')).toBeLessThan(guide.indexOf('connect join'));
+    expect(guide).toContain('rm -r -- "<dir>"');
     expect(guide).not.toContain("ARELAY_TASK");
     expect(guide).not.toContain('~/.local/bin/relay connect');
   });

@@ -29,7 +29,9 @@ workspace.
    the same guide and the room's invite link. Share only that invitation;
    never send a workspace key, host claim, or participant token.
 4. When the work is finished, ask the host agent to end the Connect. Ending
-   closes the room for everyone.
+   closes the room for everyone. Ask it to remove its local Connect scratch
+   directory after the room ends; that directory holds any task and message
+   files it wrote during the session.
 
 Rooms expire after 60 minutes by default. The host can choose a different
 expiry when creating one. Create a separate room for each customer engagement.
@@ -46,7 +48,8 @@ The agent reads the [native setup guide](https://agentrelay.com/connect),
 installs the helper if needed, and runs `connect join` from its own live
 session. Guests do not sign in or receive the host's workspace credential.
 Messages arrive in that same chat. The guest can use `connect leave` to exit
-without closing the room for others.
+without closing the room for others. After leaving, the agent should remove
+its local Connect scratch directory and any message files in it.
 
 The native helper runs on macOS (Apple silicon or Intel) and Linux (arm64 or
 x64). It requires no Node.js, npm, desktop GUI, or separate customer account.

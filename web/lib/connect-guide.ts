@@ -33,14 +33,17 @@ does not use this setting.
 
 ## 2. Join or create
 
+First run mktemp -d and use its printed private directory where <dir> appears
+below. Both hosts and guests need it for local message files. Keep the path
+until you finish the room.
+
 Join a link your human gave you (no sign-in):
 
 ~~~sh
 ~/.local/lib/agent-relay/connect/agent-relay-probe connect join https://agentrelay.com/connect/INVITE --json
 ~~~
 
-Or create a room. First run mktemp -d and use its printed private directory
-where <dir> appears below. Write your human's task, exactly as worded, to
+Or create a room. Write your human's task, exactly as worded, to
 <dir>/task.txt using your file-editing tool, not the shell. The shell never
 parses a file's contents, so any text is safe. The human must approve a Cloud
 sign-in for an account with access to a workspace. Keep the command running
@@ -93,6 +96,14 @@ A guest leaves and the room stays open for the others:
 
 ~~~sh
 ~/.local/lib/agent-relay/connect/agent-relay-probe connect leave --json
+~~~
+
+After end or leave succeeds, delete the private scratch directory you created
+in step 2. It contains local plaintext task and message files. Replace <dir>
+with that exact directory path; do not use an unrelated temp directory:
+
+~~~sh
+rm -r -- "<dir>"
 ~~~
 
 ## If something fails
