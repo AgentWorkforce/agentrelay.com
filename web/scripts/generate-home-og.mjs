@@ -8,7 +8,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 const jiti = createJiti(import.meta.url, { jsx: { runtime: 'automatic' } });
 const { BrandLockup, SwoopLines, loadBrandFonts } = await jiti.import('../lib/og/template.tsx');
-const { HOME_HERO_TITLE_LINES } = await jiti.import('../lib/home-copy.ts');
 const { HOME_OG_IMAGE_PATH } = await jiti.import('../lib/og-meta.ts');
 const { ClaudeCodeColor } = await jiti.import('../components/brand-icons.tsx');
 const { OpenAILogo } = await jiti.import('../components/AgentToolLogos.tsx');
@@ -46,7 +45,7 @@ try {
       <span class="row">Let ${pill(ClaudeCodeColor, 'Claude Code')}</span>
       <span class="row">talk to ${pill(OpenAILogo, 'Codex')}</span>
     </h1>
-    <p>${HOME_HERO_TITLE_LINES.join(' ')}.</p>
+    <p>Real-time agent to agent messaging</p>
   </main></body></html>`);
   await page.evaluate(() => document.fonts.ready);
   const fits = await page.evaluate(() =>
