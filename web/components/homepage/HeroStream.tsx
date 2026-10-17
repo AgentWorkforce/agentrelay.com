@@ -296,6 +296,9 @@ export function HeroStream() {
       cancelAnimationFrame(frame);
       frame = 0;
       pointer.active = false;
+      // Settle to the same still frame reduced motion gets at load.
+      reveal = 0;
+      egg = null;
       play();
     };
 
