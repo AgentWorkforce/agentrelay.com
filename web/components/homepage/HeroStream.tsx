@@ -72,7 +72,8 @@ export function HeroStream() {
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
 
-    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let reduceMotion = motionQuery.matches;
 
     let width = 0;
     let height = 0;
@@ -264,7 +265,7 @@ export function HeroStream() {
 
     const loop = (now: number) => {
       step(now);
-      frame = visible && !document.hidden ? requestAnimationFrame(loop) : 0;
+      frame = !reduceMotion && visible && !document.hidden ? requestAnimationFrame(loop) : 0;
     };
 
     const play = () => {
@@ -279,7 +280,7 @@ export function HeroStream() {
     };
 
     const onPointerMove = (event: PointerEvent) => {
-      if (event.pointerType !== 'mouse') return;
+      if (reduceMotion || event.pointerType !== 'mouse') return;
       const rect = canvas.getBoundingClientRect();
       pointer.x = event.clientX - rect.left;
       pointer.y = event.clientY - rect.top;
@@ -289,6 +290,14 @@ export function HeroStream() {
       pointer.active = false;
     };
     const onVisibility = () => play();
+    // Follow the reduced-motion setting live: stop on a still frame, or resume.
+    const onMotionChange = () => {
+      reduceMotion = motionQuery.matches;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      pointer.active = false;
+      play();
+    };
 
     resize();
     // The atlas needs the real mono face; redraw once it has loaded.
@@ -309,11 +318,10 @@ export function HeroStream() {
     });
     intersection.observe(canvas);
 
-    if (!reduceMotion) {
-      window.addEventListener('pointermove', onPointerMove, { passive: true });
-      document.documentElement.addEventListener('pointerleave', onPointerLeave);
-    }
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onPointerLeave);
     document.addEventListener('visibilitychange', onVisibility);
+    motionQuery.addEventListener('change', onMotionChange);
     play();
 
     return () => {
@@ -323,6 +331,7 @@ export function HeroStream() {
       window.removeEventListener('pointermove', onPointerMove);
       document.documentElement.removeEventListener('pointerleave', onPointerLeave);
       document.removeEventListener('visibilitychange', onVisibility);
+      motionQuery.removeEventListener('change', onMotionChange);
     };
   }, []);
 
