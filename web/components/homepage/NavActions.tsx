@@ -1,5 +1,7 @@
 'use client';
 
+import Link from 'next/link';
+
 import { useEffect, useState } from 'react';
 
 import { AgentIcons } from '../AgentSignup';
@@ -27,7 +29,7 @@ export function NavActions() {
       <a className={`${landing.ctaSecondary} ${landing.homeNavAction}`} href="/login">
         Log in
       </a>
-      <a
+      <Link
         className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.signup}`}
         href={HOME_SIGNUP_HREF}
         data-shown={showSignup || undefined}
@@ -38,7 +40,7 @@ export function NavActions() {
         <span>
           Connect<span className={s.more}> your agents</span>
         </span>
-      </a>
+      </Link>
     </>
   );
 }

@@ -1,3 +1,4 @@
+import type { SignupAnalyticsContext } from './agent-signup-analytics';
 import { agentSignupPrompt, type AgentSignupProduct } from './agent-signup';
 
 export type SignupProgress = {
@@ -9,7 +10,28 @@ export type SignupProgress = {
     options?: string[]; actionHref?: string; status: 'pending' | 'answered'; step: number;
   };
 };
-export type SignupSession = SignupProgress & { writeToken: string };
+export type SignupActivation = { expiresAt: string; analytics?: SignupAnalyticsContext };
+export type SignupSession = SignupProgress & {
+  writeToken: string; activation?: SignupActivation; activated?: boolean; launched?: boolean;
+};
+
+/** Must match Cloud's versioned capability contract; the token never goes in a URL. */
+export async function signupSessionId(product: AgentSignupProduct, expiresAt: string, token: string) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(['agent-relay-signup-v1', product, expiresAt, token])));
+  const digest = Array.from(new Uint8Array(bytes), byte => byte.toString(16).padStart(2, '0')).join('');
+  return `${digest.slice(0, 8)}-${digest.slice(8, 12)}-4${digest.slice(13, 16)}-${((parseInt(digest[16], 16) & 3) | 8).toString(16)}${digest.slice(17, 20)}-${digest.slice(20, 32)}`;
+}
+
+export async function prepareSignupSession(product: AgentSignupProduct, analytics?: SignupAnalyticsContext): Promise<SignupSession> {
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + 2 * 60 * 60_000).toISOString();
+  const writeToken = Array.from(crypto.getRandomValues(new Uint8Array(32)), byte => byte.toString(16).padStart(2, '0')).join('');
+  return {
+    id: await signupSessionId(product, expiresAt, writeToken), product, writeToken,
+    step: 0, state: 'waiting', revision: 0, updatedAt: now.toISOString(), expiresAt,
+    activation: { expiresAt, ...(analytics ? { analytics } : {}) }, activated: false, launched: false,
+  };
+}
 
 export function isSignupProgress(value: unknown): value is SignupProgress {
   if (!value || typeof value !== 'object') return false;
@@ -35,8 +57,9 @@ function isSignupInputRequest(value: unknown): boolean {
         new Set(input.options).size === input.options.length));
 }
 
-export function trackedSignupPrompt(product: AgentSignupProduct, origin: string, endpoint: string, session: Pick<SignupSession, 'id' | 'writeToken'>) {
-  return `${agentSignupPrompt(product, origin)}\n\nReport real progress using the guide’s protocol so I can watch the signup page.${product === 'flows' ? ' Request any missing non-secret choices through the web-input protocol in the guide; do not ask me to answer in chat.' : ''}\n\nProgress session: ${session.id}\nProgress API: ${endpoint}/${session.id}\nProgress token: ${session.writeToken}\n\nKeep this token private; it authorizes progress and web-input requests only.`;
+export function trackedSignupPrompt(product: AgentSignupProduct, origin: string, endpoint: string, session: Pick<SignupSession, 'id' | 'writeToken' | 'activation'>) {
+  const activation = session.activation ? `\n\nBefore reading or reporting progress, register this locally prepared session by POSTing to ${endpoint} with Authorization: Bearer <Progress token> and Content-Type: application/json. Use this exact JSON body:\n${JSON.stringify({ product, sessionId: session.id, ...session.activation })}\nA 201 creates the session; 200 means it already exists. Registration is safe to retry and never resets progress. On 410, ask me to start a new signup; do not change the ID, token, or expiry. Then follow the guide’s GET/PATCH protocol.` : '';
+  return `${agentSignupPrompt(product, origin)}${activation}\n\nReport real progress using the guide’s protocol so I can watch the signup page.${product === 'flows' ? ' Request any missing non-secret choices through the web-input protocol in the guide; do not ask me to answer in chat.' : ''}\n\nProgress session: ${session.id}\nProgress API: ${endpoint}/${session.id}\nProgress token: ${session.writeToken}\n\nKeep this token private; it authorizes progress and web-input requests only.`;
 }
 
 export const signupSteps = {

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { GitHubStarsBadge } from '../GitHubStars';
 import { HOME_SIGNUP_HREF } from './HomeHero';
 import { CloudIcon, GitHubIcon } from '../home/icons';
@@ -21,9 +22,9 @@ export function Hosting() {
             </span>
             <h3>We host it</h3>
             <p>Sign up and go. Free to start.</p>
-            <a className={`${landing.ctaPrimary} ${s.action}`} href={HOME_SIGNUP_HREF}>
+            <Link className={`${landing.ctaPrimary} ${s.action}`} href={HOME_SIGNUP_HREF}>
               Connect your agents for free
-            </a>
+            </Link>
           </article>
 
           <article className={`${s.option} ${s.source}`}>
