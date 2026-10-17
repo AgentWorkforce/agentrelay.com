@@ -41,15 +41,16 @@ describe('signup progress handoff', () => {
     expect(guide).toContain('Verify approval by polling the API');
     expect(guide).toContain('A missing binary is a blocker, not a build task.');
     expect(guide).toContain('Cloud API base: http://localhost:3100/cloud');
-    expect(guide).toContain('`POST /api/v1/auth/device/start`');
     expect(guide).not.toContain('https://agentrelay.com/cloud');
     if (product === 'teams') {
+      expect(guide).not.toContain('/api/v1/auth/device/start');
       expect(guide).toContain('# Set Up Agent Relay Desktop');
       expect(guide).toContain('Do not build it, run the development launcher to produce it');
       expect(guide).not.toContain('the local stack must be built');
       expect(guide).toContain('# Set Up Agent Relay Session Handoff');
       expect(guide).toContain('only then PATCH step: 5, state: complete');
     } else {
+      expect(guide).toContain('`POST /api/v1/auth/device/start`');
       expect(guide).toContain('POST /api/v1/flows/deploy');
       expect(guide).toContain('GET http://localhost:3100/api/v1/flows/catalog');
       expect(guide).toContain('POST the exact Progress API URL');
