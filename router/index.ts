@@ -712,7 +712,11 @@ const router = {
       url.searchParams.forEach((value, key) => {
         redirectUrl.searchParams.append(key, value);
       });
-      return Response.redirect(redirectUrl.toString(), 302);
+      // Never cache: a cached 302 would pin a visitor to one /founder calendar.
+      return new Response(null, {
+        status: 302,
+        headers: { Location: redirectUrl.toString(), "Cache-Control": "no-store" },
+      });
     }
 
     const agentChatCloudPath = getAgentChatCloudPath(

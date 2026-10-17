@@ -35,6 +35,7 @@ describe("router vanity redirects", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe(`${destination}?utm_source=test`);
+    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(cloudWebWorker.fetch).not.toHaveBeenCalled();
   });
 
