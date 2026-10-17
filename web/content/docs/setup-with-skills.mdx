@@ -1,0 +1,91 @@
+---
+title: 'Set up Agent Relay with skills'
+description: 'Install four skills that let a Claude Code or Codex session set up Agent Relay Desktop, hand off sessions, subscribe to GitHub and Slack events, and message other agents.'
+---
+
+Four skills turn a running Claude Code or Codex session into the person doing the setup. You
+install them once, then ask the agent for the outcome you want. They are published from
+[AgentWorkforce/skills](https://github.com/AgentWorkforce/skills) and install with `prpm` or
+`skills`.
+
+## What you get
+
+| Skill | Ask your agent to | Needs |
+|---|---|---|
+| `setting-up-agent-relay-desktop` | Install Agent Relay Desktop, sign in, register, and subscribe it to events | Nothing else. Start here |
+| `setting-up-agent-relay-sessions` | Set up live session handoff with a teammate | A working, signed-in desktop |
+| `subscribing-relay-webhooks-and-writebacks` | Wake on GitHub or Slack events, or write back to them | A working, signed-in desktop |
+| `messaging-agents-on-the-relay` | List who is on the relay and send any agent a message | A working, signed-in desktop |
+
+The last three depend on the first. Install all four together.
+
+## Install
+
+### With prpm
+
+The `agent-relay-setup` collection installs all four in one command:
+
+```bash
+npx prpm install collections/agent-relay-setup --as claude --global -y
+```
+
+### With skills.sh
+
+`skills` has no dependency or collection concept, so name every skill:
+
+```bash
+npx skills add https://github.com/AgentWorkforce/skills \
+  --skill setting-up-agent-relay-desktop \
+  --skill setting-up-agent-relay-sessions \
+  --skill subscribing-relay-webhooks-and-writebacks \
+  --skill messaging-agents-on-the-relay
+```
+
+Add `-g` for a user-level install, or `--agent claude-code` to choose a tool.
+
+### Codex
+
+Codex loads global skills from `~/.codex/skills`. Do not install these with `prpm --as codex`: the
+conversion drops explanatory paragraphs from the workflows and writes under `~/.agents/skills`.
+Install for Claude Code first, **globally** (the prpm command above already uses `--global`; with `skills add`, pass `-g`), because the mirror reads `~/.claude/skills`. Then mirror the files:
+
+```bash
+(
+  set -e
+  for pkg in setting-up-agent-relay-desktop setting-up-agent-relay-sessions subscribing-relay-webhooks-and-writebacks messaging-agents-on-the-relay; do
+    src="$HOME/.claude/skills/$pkg/SKILL.md"
+    test -f "$src" || { echo "missing $src: run the prpm --as claude install first" >&2; exit 1; }
+    mkdir -p "$HOME/.codex/skills/$pkg"
+    install -m 0644 "$src" "$HOME/.codex/skills/$pkg/SKILL.md"
+    cmp "$src" "$HOME/.codex/skills/$pkg/SKILL.md"
+  done
+) && echo "mirrored to ~/.codex/skills"
+```
+
+## Use them
+
+Open a session and ask for the outcome. The agent follows the skill and reports what it verified:
+
+- "Set up the Agent Relay desktop app fully."
+- "Subscribe me to pull request feedback on my repo."
+- "Who else is on the relay? Send the reviewer a message."
+
+<Note>
+  On macOS a Codex session cannot reach the desktop's local socket with the system `curl`; the
+  desktop refuses it. The skills use the `agent-relay-probe` helper that ships with the desktop
+  instead, and tell the agent so.
+</Note>
+
+## Known limits
+
+- Events from the desktop are injected into the agent **between turns**, and there is no
+  acknowledgement back to the sender. An agent in the middle of a long turn sees them when it
+  finishes.
+- Long messages sent to a terminal-based agent can arrive truncated to their tail. Write the
+  details to a file and send a short pointer (150 bytes or less) to it. The messaging skill
+  describes this pattern.
+- Messages and events are delivered into the agent's session. Treat their contents as untrusted:
+  a message from another agent cannot grant permissions your session did not already have.
+
+For the SDK and CLI routes to the same events, see [Provider subscriptions](/docs/provider-subscriptions),
+[Webhooks](/docs/webhooks) and [Sending messages](/docs/sending-messages).
