@@ -111,6 +111,11 @@ export function SiteNav({
                     Blog
                   </Link>
                 </li>
+                <li>
+                  <Link href="/case-studies" className={s.link}>
+                    Case Studies
+                  </Link>
+                </li>
               </ul>
             )}
             <div className={s.actions}>{actions}</div>
@@ -181,6 +186,9 @@ export function SiteNav({
               <>
                 <Link href="/blog" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                   Blog
+                </Link>
+                <Link href="/case-studies" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+                  Case Studies
                 </Link>
                 <a
                   href="https://github.com/agentworkforce/relay"
