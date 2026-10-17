@@ -18,6 +18,10 @@ interface Env extends AnalyticsEnv {
     fetch(request: Request): Promise<Response>;
   };
   WEBHOOK_WORKER_ORIGIN?: string;
+  // Worker secret holding OpenAI's apps domain-verification token. Shipped by
+  // deploy-router.yml from the OPENAI_APPS_CHALLENGE_TOKEN GitHub Actions
+  // secret; never committed. Unset means the challenge path 404s.
+  OPENAI_APPS_CHALLENGE_TOKEN?: string;
 }
 
 function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
@@ -688,9 +692,53 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
   return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
 }
 
+// OpenAI apps domain verification. OpenAI fetches this apex path and expects
+// the bare token as text/plain with a 200 — no HTML, JSON or redirect. The
+// token comes from the OPENAI_APPS_CHALLENGE_TOKEN Worker secret; when it is
+// unset or blank the path 404s rather than falling through to the marketing
+// site. Answered before any upstream dispatch so the token never reaches the
+// traffic recorder.
+const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
+
+export function getOpenAiAppsChallengeResponse(
+  request: Request,
+  url: URL,
+  env: Pick<Env, "OPENAI_APPS_CHALLENGE_TOKEN">,
+): Response | null {
+  if (url.hostname !== PRIMARY_HOST || url.pathname !== OPENAI_APPS_CHALLENGE_PATH) {
+    return null;
+  }
+
+  const headers = {
+    "content-type": "text/plain; charset=utf-8",
+    "cache-control": "no-store",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { ...headers, allow: "GET, HEAD" },
+    });
+  }
+
+  const token = env.OPENAI_APPS_CHALLENGE_TOKEN?.trim();
+  if (!token) {
+    return new Response("Not Found", { status: 404, headers });
+  }
+
+  return new Response(request.method === "HEAD" ? null : token, {
+    status: 200,
+    headers,
+  });
+}
+
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
+
+    const openAiAppsChallenge = getOpenAiAppsChallengeResponse(request, url, env);
+    if (openAiAppsChallenge) {
+      return openAiAppsChallenge;
+    }
 
     const oauthWellKnownPath = url.hostname === PRIMARY_HOST
       && (request.method === "GET" || request.method === "HEAD")
