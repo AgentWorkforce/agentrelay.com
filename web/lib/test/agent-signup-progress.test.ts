@@ -57,3 +57,37 @@ describe('signup progress handoff', () => {
     }
   });
 });
+
+describe('authenticated progress identity handoff', () => {
+  it.each(['teams', 'flows'] as const)('requires the verified account and capability together after %s login', product => {
+    const guide = agentSignupInstructions(product, 'http://localhost:3100', 'http://localhost:3100/cloud');
+    const signupHeader = guide.split('\n---\n')[0];
+    expect(signupHeader).toContain('Authorization: Bearer <Cloud access token from Part 1>');
+    expect(signupHeader).toContain('X-Agent-Relay-Progress-Token: <Progress token>');
+    expect(signupHeader).toContain('http://localhost:3100/cloud/api/v1/signup/agent/sessions/<Progress session from the prompt>');
+    expect(signupHeader).toContain('Never follow redirects or forward either token to another URL');
+    expect(signupHeader).toContain('for completion');
+    expect(signupHeader).toContain('progress token\nalone never proves a person');
+    expect(signupHeader).toContain('Keep GET requests on the original Progress-token');
+    expect(signupHeader).toContain('On 409 identity_conflict, stop reporting');
+    expect(signupHeader).toContain('Never fall back to anonymous updates');
+    expect(signupHeader).toContain('Authorization: Bearer <Progress token>');
+    expect(signupHeader).not.toContain('https://agentrelay.com/cloud');
+    expect(signupHeader).not.toContain('distinct_id');
+  });
+});
+
+describe('progress safety exceptions', () => {
+  it.each(['teams', 'flows'] as const)('keeps %s approval links out of telemetry while allowing the human handoff', product => {
+    const header = agentSignupInstructions(product, 'https://agentrelay.com', 'https://agentrelay.com/cloud').split('\n---\n')[0];
+    expect(header).toContain('Approval URLs must never appear in progress JSON or progress request URLs.');
+    expect(header).toContain('The only output exception is the approval link handed directly to the user');
+    expect(header).toContain('when no OS URL opener is available');
+  });
+  it.each(['teams', 'flows'] as const)('limits %s progress reconciliation to revision conflicts', product => {
+    const header = agentSignupInstructions(product, 'https://agentrelay.com', 'https://agentrelay.com/cloud').split('\n---\n')[0];
+    expect(header).toContain('On HTTP 409 progress_conflict, GET current progress and reconcile');
+    expect(header).toContain('This retry rule does not apply to identity_conflict');
+    expect(header).not.toContain('On HTTP 409, GET current progress and reconcile');
+  });
+});

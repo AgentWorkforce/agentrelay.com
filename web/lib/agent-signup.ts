@@ -79,8 +79,14 @@ prebuilt flow.`}${isLocalStack(site) ? localDevelopmentNote(product, site) : ''}
 
 The user is watching a setup page. Report real milestones using the Progress API
 and Progress token supplied in their prompt. The token authorizes progress only;
-it is NOT a Cloud access token. Never send account tokens, OAuth codes, passwords,
-logs, approval URLs, or sensitive personal information to the progress endpoint.
+it is NOT a Cloud access token. Never put account tokens, OAuth codes, passwords,
+logs, or sensitive personal information in progress JSON, URLs, or output.
+Approval URLs must never appear in progress JSON or progress request URLs.
+Do not log or print approval URLs.
+The only output exception is the approval link handed directly to the user
+when no OS URL opener is available, as described above. After sign-in, the
+authenticated PATCH protocol below uses the Cloud access token only in the
+Authorization header.
 ${product === 'flows' ? 'The web-input protocol may carry a repository name or public GitHub approver handle when the user chooses it; do not request emails or secrets.' : ''} Do not put
 the progress token in URLs or output it in your final reply. Use the same site
 and /cloud origin shown above; never forward it to another environment.
@@ -100,6 +106,32 @@ cannot determine it; never guess from the logos on the page. Include agent in
 your first PATCH. It is stored once for signup funnel attribution; later PATCHes
 may omit it. A different known agent returns 409 agent_conflict: preserve the
 original attribution and omit agent when resuming from a different tool.
+
+After Part 1 returns a Cloud access token, authenticate subsequent PATCHes with
+both headers:
+
+~~~text
+Authorization: Bearer <Cloud access token from Part 1>
+X-Agent-Relay-Progress-Token: <Progress token>
+Content-Type: application/json
+~~~
+
+Before attaching the Cloud token, verify that the Progress API URL is exactly
+${cloud}/api/v1/signup/agent/sessions/<Progress session from the prompt>.
+The origin, /cloud base (when present), and session ID must match this guide and
+prompt. Never follow redirects or forward either token to another URL. If they
+do not match, stop progress reporting and report the mismatch. Do not substitute
+a user ID, email, or browser analytics ID for the authenticated account.
+
+Use this authenticated PATCH protocol for the first milestone after sign-in and
+for completion. It binds the journey to the verified account; the progress token
+alone never proves a person. Keep GET requests on the original Progress-token
+protocol. POST/PUT web-input requests may also use both headers after sign-in.
+On 401 invalid_cloud_identity, refresh sign-in through Part 1 before retrying.
+On 409 identity_conflict, stop reporting and ask the user to return to the
+account already used for this journey. Never fall back to anonymous updates to
+bypass an identity conflict. Before sign-in, the original capability-only
+protocol remains available so the user can see approval progress.
 
 Use the revision returned by the latest GET/PATCH, not the example's literal 0.
 PATCH before each numbered progress step below. A move to the next step marks
@@ -126,9 +158,10 @@ ${product === 'teams' ? `Progress steps for Teams:
 5. Verify the listening state: before Part 2's section 5. After its checks
    succeed, PATCH step: 5, state: complete.`}
 
-On HTTP 409, GET current progress and reconcile; never overwrite newer progress
-or regress a step. If a PATCH response is lost, GET before retrying. If a step is
-already complete, verify the actual account/app/flow state before continuing;
+On HTTP 409 progress_conflict, GET current progress and reconcile; never overwrite
+newer progress or regress a step. This retry rule does not apply to identity_conflict;
+follow its instruction to stop and return to the original account above.
+If a PATCH response is lost, GET before retrying. If a step is already complete, verify the actual account/app/flow state before continuing;
 progress reports alone are not proof that setup succeeded. On 429, honor
 Retry-After. Retry transient network/5xx failures with bounded backoff. On 404,
 stop reporting (the session expired or the token is invalid) and tell the user;
