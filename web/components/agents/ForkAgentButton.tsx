@@ -1,4 +1,4 @@
-import { forkUrl, launchUrl, type Agent } from '../../lib/agents';
+import { forkUrl, type Agent } from '../../lib/agents';
 
 const GitHubMark = () => (
   <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
@@ -7,44 +7,20 @@ const GitHubMark = () => (
 );
 
 /**
- * CTA row for an agent: primary "Launch agent" (one-click deploy on Agent Relay
- * Cloud via https://agentrelay.com/cloud/deploy?persona=…) and a secondary
- * "Fork on GitHub" link (https://github.com/<repo>/fork). Uses the global .btn
- * classes via the className props the caller passes.
+ * CTA for an agent: a "Fork on GitHub" link (https://github.com/<repo>/fork).
+ * Uses the global .btn classes via the className prop the caller passes.
  */
-export function ForkAgentButton({
-  agent,
-  primaryClassName,
-  secondaryClassName,
-  primaryLabel = 'Launch agent',
-}: {
-  agent: Agent;
-  primaryClassName: string;
-  secondaryClassName: string;
-  primaryLabel?: string;
-}) {
+export function ForkAgentButton({ agent, className }: { agent: Agent; className: string }) {
   return (
-    <>
-      <a
-        href={launchUrl(agent)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={primaryClassName}
-        aria-label={`Launch ${agent.name} on Agent Relay`}
-      >
-        {primaryLabel}
-        <span aria-hidden="true"> →</span>
-      </a>
-      <a
-        href={forkUrl(agent)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={secondaryClassName}
-        aria-label={`Fork ${agent.name} on GitHub`}
-      >
-        <GitHubMark />
-        Fork on GitHub
-      </a>
-    </>
+    <a
+      href={forkUrl(agent)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={className}
+      aria-label={`Fork ${agent.name} on GitHub`}
+    >
+      <GitHubMark />
+      Fork on GitHub
+    </a>
   );
 }

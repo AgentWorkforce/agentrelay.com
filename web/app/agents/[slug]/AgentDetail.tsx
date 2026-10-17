@@ -55,11 +55,7 @@ export function AgentDetail({ agent }: { agent: Agent }) {
 
         <FadeIn direction="up" delay={140}>
           <div className={s.ctaRow}>
-            <ForkAgentButton
-              agent={agent}
-              primaryClassName={s.ctaPrimary}
-              secondaryClassName={s.ctaSecondary}
-            />
+            <ForkAgentButton agent={agent} className={s.ctaPrimary} />
           </div>
         </FadeIn>
 
@@ -129,14 +125,10 @@ export function AgentDetail({ agent }: { agent: Agent }) {
           <div className={s.poweredCard}>
             <span className={s.poweredEyebrow}>Ready to run it?</span>
             <p className={s.poweredText}>
-              Launch {agent.name} on Agent Relay in one click, or fork the source and tailor it to your team.
+              Fork the source, tailor {agent.name} to your team, and deploy it with the agentworkforce CLI.
             </p>
             <div className={s.ctaRow} style={{ marginTop: 0, justifyContent: 'center' }}>
-              <ForkAgentButton
-                agent={agent}
-                primaryClassName={s.ctaPrimary}
-                secondaryClassName={s.ctaSecondary}
-              />
+              <ForkAgentButton agent={agent} className={s.ctaPrimary} />
             </div>
           </div>
         </FadeIn>
