@@ -4,7 +4,7 @@ import { AgentSignup } from '../AgentSignup';
 import { FadeIn } from '../FadeIn';
 import { RelayRibbons } from '../RelayRibbons';
 import landing from '../../app/landing.module.css';
-import { HOME_SIGNUP_HREF } from '../homepage/HomeHero';
+import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
 import { ScribbleUnderline } from './icons';
 import { WhyRelay } from './WhyRelay';
 import s from './home-sections.module.css';
