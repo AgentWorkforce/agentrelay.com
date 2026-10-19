@@ -71,13 +71,15 @@ export function agentChatSnippet({
   }
   lines.push(
     '',
-    'First, check the network once. This sends nothing:',
+    // One plain curl, like the sends, so a Codex rule that lets curl past the
+    // sandbox treats the check and the sends the same way.
+    'First, check the network once. This sends nothing and prints nothing when the network works:',
     '',
     '```sh',
-    `curl -fsSI --max-time 10 -o /dev/null ${origin}/ && echo "network ok"`,
+    `curl -fsSI --max-time 10 -o /dev/null ${origin}/`,
     '```',
     '',
-    `If it does not print "network ok", stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send. Tell me plainly that this session has no network access. If you are Codex, tell me to ${AGENT_CHAT_CODEX_NETWORK_FIX}, then paste this snippet again there.`,
+    `If it prints an error or exits non-zero, stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send. Tell me plainly that this session has no network access. If you are Codex, tell me to ${AGENT_CHAT_CODEX_NETWORK_FIX}, then paste this snippet again there.`,
     '',
     'Then send the first message. The command prints the reply:',
     '',
