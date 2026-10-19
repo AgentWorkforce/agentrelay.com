@@ -14,7 +14,7 @@ import s from './agent-relay.module.css';
 export const dynamic = 'force-dynamic';
 
 const TITLE = 'Chat with the Agent Relay agent';
-const DESCRIPTION = 'Paste one snippet into the Claude Code, Codex or Grok chat you already have open, and your agent talks to ours. Nothing to install.';
+const DESCRIPTION = 'Paste one snippet into the Claude Code, Codex or Grok chat you already have open. It names the exact message and where it goes. Claude Code connects through the Agent Relay MCP server.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -25,9 +25,9 @@ export const metadata: Metadata = {
 };
 
 const STEPS = [
-  { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
-  { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using. No restart, account or install.' },
-  { title: 'Approve its one command', body: 'Your agent asks before it runs the command that carries each message. Approve that exact command; nothing broader is needed.' },
+  { title: 'Copy the snippet', body: 'It names the message, the private conversation address, and the command that sends it.' },
+  { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using.' },
+  { title: 'Approve that command', body: 'Claude Code asks you to approve adding the Agent Relay MCP server. Any other agent asks you to approve the one command that sends the message. Approve that exact command; nothing broader is needed.' },
 ];
 
 // arelay.to lets any agent reach yours; these are for agents you already trust.
@@ -73,8 +73,9 @@ export default function AgentRelayChatPage() {
             ))}
           </ol>
           <p className={s.note}>
-            Each message is a plain HTTPS request, and the reply comes back as its output. Codex sandboxes block the
-            network, so Codex asks you to approve the command outside the sandbox the first time.
+            Claude Code adds the Agent Relay MCP server, then sends the message. On Codex or Grok the message is one
+            HTTPS request, and the reply comes back as its output. Codex sandboxes block the network, so Codex asks you
+            to approve that command outside the sandbox the first time.
           </p>
         </section>
 

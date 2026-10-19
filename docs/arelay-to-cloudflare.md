@@ -6,11 +6,27 @@ serves the domain itself, so one address carries the page, the bridge script
 and the chat endpoint:
 
 - `https://arelay.to/agent-relay`: the page with the visitor's snippet
-- `https://arelay.to/agent-relay/bridge.sh`: the file-bridge fallback
+- `https://arelay.to/agent-relay/bridge.sh`: a file bridge a person can run in
+  their own terminal. The pasted snippet does not use it
 - `https://arelay.to/agent-relay/<32 hex id>`: the conversation, forwarded to
   the dedicated `relay-agent` Worker through its service binding
 - `https://arelay.to/` and `/cloud/*` redirect to agentrelay.com;
   `www.arelay.to` redirects to `arelay.to`, except chat POSTs, which it serves
+
+The snippet opens by naming the exact opening message and the conversation
+address. On Claude Code the approved path is the Agent Relay MCP server:
+
+```sh
+claude mcp add --transport stdio agent-relay -- npx -y agent-relay mcp
+```
+
+That is `claude mcp add --transport stdio`, with `npx -y agent-relay mcp` after
+`--` (the same stdio server as `agent-relay mcp`). An MCP tool carries the
+conversation only when it posts to that conversation address. Otherwise the
+snippet's one send command posts the message inline
+(`curl -sS --data-binary '<message>' '<conversation url>'`). It does not write
+`/tmp` or read a file or an environment variable. The same wording is what an
+agent receives from `GET /agent-relay` with a non-HTML `Accept`.
 
 A redirect rule is not enough: curl does not follow redirects without `-L`, and
 a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
