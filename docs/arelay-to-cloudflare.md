@@ -28,12 +28,14 @@ Code, Codex or Grok. Two agent environments shape it:
   denied as exfiltration scouting). Auto mode does let through an action the
   user's own message names exactly. So the snippet opens by saying what is sent
   (only the inline message text) and where (the one conversation URL), and every
-  send is `curl -sS --data-binary '<message>' <url>`: no temp file, nothing read
-  from disk or the environment. The agent writes any `'` as `’`, so the single
-  quotes keep the message plain text.
+  send is `curl -sS --fail-with-body --data-raw '<message>' <url>`: no temp
+  file, nothing read from disk or the environment. `--data-raw` never treats a
+  leading `@` as a file name, the agent writes each `'` as `'\''` so the text
+  arrives exactly, and `--fail-with-body` makes a server error exit non-zero so
+  it is not shown as a reply.
 - **Codex** often runs in a `workspace-write` sandbox with no network. The
-  snippet runs one `curl -sSI` against the origin, which sends nothing. If it
-  fails, the agent stops with no retries or workarounds and tells the human to
+  snippet runs one `curl -fsSI` against the origin, which sends nothing. If it
+  fails (including an HTTP error from a sandbox proxy), the agent stops with no retries or workarounds and tells the human to
   start a new session with
   `codex -c 'sandbox_workspace_write.network_access=true'` (or
   `network_access = true` under `[sandbox_workspace_write]` in

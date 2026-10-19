@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
   { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using. No restart, account or install.' },
-  { title: 'Approve the sends', body: 'The snippet opens by saying exactly what is sent and where. Each message travels inline in one curl command to your private conversation; no local file or setting is read.' },
+  { title: 'Approve the sends', body: 'The snippet opens by saying exactly what is sent and where. It checks the network once, then each message travels inline in one curl command to your private conversation; no local file or setting is read.' },
 ];
 
 // arelay.to lets any agent reach yours; these are for agents you already trust.

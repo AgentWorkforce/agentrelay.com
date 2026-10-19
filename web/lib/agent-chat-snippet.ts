@@ -56,7 +56,8 @@ export function agentChatSnippet({
   // own message names exactly. So the snippet opens by saying what is sent
   // and where, and every send carries its text inline: no temp file, nothing
   // read from disk or the environment. Inside single quotes POSIX sh expands
-  // nothing, so with every ' written as ’ the message is never parsed as shell.
+  // nothing, and each ' is written as '\'' so the text arrives byte for byte.
+  // --data-raw, unlike --data-binary, never reads a file for a leading @.
   const lines = [
     `Chat with ${agentLabel} for me and show me each reply.`,
     '',
@@ -73,7 +74,7 @@ export function agentChatSnippet({
     'First, check the network once. This sends nothing:',
     '',
     '```sh',
-    `curl -sSI --max-time 10 -o /dev/null ${origin}/ && echo "network ok"`,
+    `curl -fsSI --max-time 10 -o /dev/null ${origin}/ && echo "network ok"`,
     '```',
     '',
     `If it does not print "network ok", stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send. Tell me plainly that this session has no network access. If you are Codex, tell me to ${AGENT_CHAT_CODEX_NETWORK_FIX}, then paste this snippet again there.`,
@@ -81,12 +82,14 @@ export function agentChatSnippet({
     'Then send the first message. The command prints the reply:',
     '',
     '```sh',
-    `curl -sS --data-binary '${AGENT_CHAT_OPENING_MESSAGE}' ${url}`,
+    `curl -sS --fail-with-body --data-raw '${AGENT_CHAT_OPENING_MESSAGE}' ${url}`,
     '```',
     '',
-    "For each later message, run the same command and change only the text between the single quotes. Write any ' in the text as ’ so the shell reads the whole message as plain text, and never add anything outside the quotes, such as @file, $(...), a pipe or a variable.",
+    "For each later message, run the same command and change only the text between the single quotes. Write each ' in the text as '\\'' (quote, backslash, quote, quote) so the shell passes the message through exactly, and never add anything outside the quotes, such as $(...), a pipe, a variable or a file.",
     '',
-    `If it prints "no reply yet", run \`curl -sS --data-binary '' ${url}\` to keep waiting.`,
+    'If curl exits with an error, what it printed is an error from the server, not a reply: show it to me as an error.',
+    '',
+    `If it prints "no reply yet", run \`curl -sS --fail-with-body --data-raw '' ${url}\` to keep waiting.`,
     '',
     'If your permission system blocks a send, show me the exact command and ask me to approve it. Do not try another route.',
     '',

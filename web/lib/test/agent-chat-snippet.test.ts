@@ -24,7 +24,7 @@ describe('agent chat snippet', () => {
 
   it('sends each message inline, with no temp file and nothing read from disk or the environment', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/' });
-    expect(snippet.split('\n')).toContain(`curl -sS --data-binary '${AGENT_CHAT_OPENING_MESSAGE}' ${url}`);
+    expect(snippet.split('\n')).toContain(`curl -sS --fail-with-body --data-raw '${AGENT_CHAT_OPENING_MESSAGE}' ${url}`);
     expect(snippet).not.toContain('/tmp');
     expect(snippet).not.toContain('@/');
     expect(snippet).not.toContain('--data-binary @');
@@ -33,15 +33,17 @@ describe('agent chat snippet', () => {
     expect(snippet).not.toContain('<<');
     // No command expands anything: no substitution, variable or file read.
     for (const line of snippet.split('\n').filter((l) => l.startsWith('curl '))) expect(line).not.toMatch(/[$`@<|]/);
-    expect(snippet).toContain("Write any ' in the text as ’");
-    expect(snippet).toContain(`run \`curl -sS --data-binary '' ${url}\` to keep waiting.`);
+    expect(snippet).not.toContain('--data-binary');
+    expect(snippet).toContain("Write each ' in the text as '\\''");
+    expect(snippet).toContain('If curl exits with an error, what it printed is an error from the server, not a reply');
+    expect(snippet).toContain(`run \`curl -sS --fail-with-body --data-raw '' ${url}\` to keep waiting.`);
   });
 
   it('checks the network once without sending anything', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/' });
     expect(snippet).toContain('First, check the network once. This sends nothing:');
-    expect(snippet.split('\n')).toContain('curl -sSI --max-time 10 -o /dev/null https://example.test/ && echo "network ok"');
-    expect(snippet.split('\n').filter((line) => line.startsWith('curl -sSI'))).toHaveLength(1);
+    expect(snippet.split('\n')).toContain('curl -fsSI --max-time 10 -o /dev/null https://example.test/ && echo "network ok"');
+    expect(snippet.split('\n').filter((line) => line.startsWith('curl -fsSI'))).toHaveLength(1);
   });
 
   it('stops at once without network and tells a Codex human how to turn it on', () => {
@@ -58,10 +60,21 @@ describe('agent chat snippet', () => {
   it('keeps the opening message safe as single-quoted shell text', () => {
     expect(AGENT_CHAT_OPENING_MESSAGE).not.toContain("'");
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/' });
-    const command = snippet.split('\n').find((line) => line.startsWith('curl -sS --data-binary'))!;
+    const command = snippet.split('\n').find((line) => line.startsWith('curl -sS --fail-with-body --data-raw'))!;
     // Swap curl for printf to see exactly what the shell would hand it.
-    const printed = spawnSync('sh', ['-c', command.replace(/^curl -sS --data-binary /, 'printf %s ').replace(` ${url}`, '')], { encoding: 'utf8' });
+    const printed = spawnSync('sh', ['-c', command.replace(/^curl -sS --fail-with-body --data-raw /, 'printf %s ').replace(` ${url}`, '')], { encoding: 'utf8' });
     expect(printed.stdout).toBe(AGENT_CHAT_OPENING_MESSAGE);
+  });
+
+  it('passes later messages through byte for byte, apostrophes and leading @ included', () => {
+    const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/' });
+    const command = snippet.split('\n').find((line) => line.startsWith('curl -sS --fail-with-body --data-raw'))!;
+    for (const message of ["don't", "const s = 'x';", '@.env', '$(id) `id` $HOME | cat']) {
+      // Quote the way the snippet tells the agent to: each ' becomes '\''.
+      const sent = command.replace(AGENT_CHAT_OPENING_MESSAGE, message.replaceAll("'", "'\\''"));
+      const printed = spawnSync('sh', ['-c', sent.replace(/^curl -sS --fail-with-body --data-raw /, 'printf %s ').replace(` ${url}`, '')], { encoding: 'utf8' });
+      expect(printed.stdout).toBe(message);
+    }
   });
 
   it('tells the visitor agent to check setup steps with our agent first', () => {
@@ -77,15 +90,15 @@ describe('agent chat snippet', () => {
 
   it('points at the arelay.to conversation route by default', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123' });
-    expect(snippet).toContain(`curl -sS --data-binary '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/agent-relay/abc123`);
-    expect(snippet).toContain('curl -sSI --max-time 10 -o /dev/null https://arelay.to/ && echo "network ok"');
+    expect(snippet).toContain(`curl -sS --fail-with-body --data-raw '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/agent-relay/abc123`);
+    expect(snippet).toContain('curl -fsSI --max-time 10 -o /dev/null https://arelay.to/ && echo "network ok"');
   });
 
   it('serves agents a guide around a fresh conversation', () => {
     const guide = agentChatAgentGuide({ conversationId: 'abc123' });
     expect(guide).toMatch(/^# Chat with the Agent Relay agent/);
     expect(guide).toContain("don't fetch this page again");
-    expect(guide).toContain(`curl -sS --data-binary '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/agent-relay/abc123`);
+    expect(guide).toContain(`curl -sS --fail-with-body --data-raw '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/agent-relay/abc123`);
     expect(guide).not.toContain('/tmp');
   });
 
@@ -130,7 +143,7 @@ describe('agent chat snippet', () => {
     });
     expect(guide).toMatch(/^# Chat with Acme Support/);
     expect(guide).toContain('the verified agent "Acme Support"');
-    expect(guide).toContain(`curl -sS --data-binary '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/acme-support/abc123`);
+    expect(guide).toContain(`curl -sS --fail-with-body --data-raw '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/acme-support/abc123`);
     expect(guide).toContain('each message goes only to https://arelay.to/acme-support/abc123');
     expect(guide).not.toContain('/tmp');
     expect(guide).not.toContain('<<');

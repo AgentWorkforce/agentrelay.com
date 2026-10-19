@@ -24,7 +24,7 @@ describe('registered agent markdown guide', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(guide).toMatch(/^# Chat with Acme Support/);
-    expect(guide).toMatch(/curl -sS --data-binary 'Hi! What can you help me with\?' https:\/\/arelay\.to\/acme-support\/[0-9a-f]{32}/);
+    expect(guide).toMatch(/curl -sS --fail-with-body --data-raw 'Hi! What can you help me with\?' https:\/\/arelay\.to\/acme-support\/[0-9a-f]{32}/);
     expect(guide).not.toContain('/tmp');
     expect(guide).not.toContain('<<');
   });
