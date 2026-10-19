@@ -24,7 +24,9 @@ describe('registered agent markdown guide', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('cache-control')).toBe('no-store');
     expect(guide).toMatch(/^# Chat with Acme Support/);
-    expect(guide).toMatch(/curl -sS --data-binary @\/tmp\/arelay-[0-9a-f]{16}\.txt https:\/\/arelay\.to\/acme-support\/[0-9a-f]{32}/);
+    expect(guide).toMatch(/curl -sS --data-binary 'hi\. What can you help with\?' 'https:\/\/arelay\.to\/acme-support\/[0-9a-f]{32}'/);
+    expect(guide).toContain('claude mcp add --transport stdio agent-relay -- npx -y agent-relay mcp');
+    expect(guide).not.toContain('/tmp');
     expect(guide).not.toContain('<<');
   });
 

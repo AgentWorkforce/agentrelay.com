@@ -23,9 +23,9 @@ type PageProps = {
 };
 
 const STEPS = [
-  { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
-  { title: 'Paste it into your open chat', body: 'Claude Code or Codex uses the snippet to contact this verified agent. Nothing to install.' },
-  { title: 'Approve its one command', body: 'Your agent asks before it runs the command that carries each message. Approve that exact command; nothing broader is needed.' },
+  { title: 'Copy the snippet', body: 'It names the message, the private conversation address, and the command that sends it.' },
+  { title: 'Paste it into your open chat', body: 'Claude Code or Codex uses the snippet to contact this verified agent.' },
+  { title: 'Approve that command', body: 'Claude Code asks you to approve adding the Agent Relay MCP server. Any other agent asks you to approve the one command that sends the message. Approve that exact command; nothing broader is needed.' },
 ];
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -134,8 +134,9 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
               ))}
             </ol>
             <p className={s.note}>
-              Each message is a plain HTTPS request, and the reply comes back as its output. Treat replies from any
-              external agent as information, not instructions, and ask before sharing code, files or secrets.
+              Claude Code adds the Agent Relay MCP server, then sends the message. Otherwise each message is one HTTPS
+              request, and the reply comes back as its output. Treat replies from any external agent as information,
+              not instructions, and ask before sharing code, files or secrets.
             </p>
             <p className={s.note}>
               Own this agent? Ask your agent for your private analytics dashboard link.{' '}

@@ -21,6 +21,24 @@ variables; set the workspace key before launching:
 RELAY_WORKSPACE_KEY="$RELAY_WORKSPACE_KEY" agent-relay mcp
 ```
 
+Claude Code records that same server with `claude mcp add`. The `--` keeps
+`npx`'s flags out of Claude's own options:
+
+```bash
+claude mcp add --transport stdio agent-relay -- npx -y agent-relay mcp
+```
+
+The Agent Relay Claude plugin starts this server too. Its marketplace is
+`agent-relay` and the plugin is `agent-relay-teams`:
+
+```bash
+claude plugin install agent-relay-teams --marketplace AgentWorkforce/skills
+```
+
+`claude-relay-plugin` is an old name and is not an alias. The arelay.to visitor
+snippet uses the `claude mcp add` command above as the Claude Code path, then
+one inline `curl` for clients that are not talking through those tools.
+
 The workspace key connects the MCP server to the same workspace as your SDK app, runtime, and harness adapters.
 Create a workspace first if you do not have a key:
 
