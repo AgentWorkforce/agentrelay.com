@@ -6,14 +6,46 @@ serves the domain itself, so one address carries the page, the bridge script
 and the chat endpoint:
 
 - `https://arelay.to/agent-relay`: the page with the visitor's snippet
-- `https://arelay.to/agent-relay/bridge.sh`: the file-bridge fallback
+- `https://arelay.to/agent-relay/bridge.sh`: the retired file-bridge fallback.
+  The snippet no longer points at it; it stays served for snippets pasted
+  before the change.
 - `https://arelay.to/agent-relay/<32 hex id>`: the conversation, forwarded to
   the dedicated `relay-agent` Worker through its service binding
 - `https://arelay.to/` and `/cloud/*` redirect to agentrelay.com;
   `www.arelay.to` redirects to `arelay.to`, except chat POSTs, which it serves
 
 A redirect rule is not enough: curl does not follow redirects without `-L`, and
-a 301/302 turns the snippet's POST into a GET. Agents do not run these steps.
+a 301/302 turns the snippet's POST into a GET.
+
+## The visitor's snippet
+
+`web/lib/agent-chat-snippet.ts` builds the text a visitor pastes into Claude
+Code, Codex or Grok. Two agent environments shape it:
+
+- **Claude Code auto mode** blocks a command that reads a local file and uploads
+  it to a domain it does not trust (the old snippet wrote each message to
+  `/tmp/arelay-<id>.txt` and posted it with `curl --data-binary @file`, which was
+  denied as exfiltration scouting). Auto mode does let through an action the
+  user's own message names exactly. So the snippet opens by saying what is sent
+  (only the inline message text) and where (the one conversation URL), and every
+  send is `curl -sS --data-binary '<message>' <url>`: no temp file, nothing read
+  from disk or the environment. The agent writes any `'` as `’`, so the single
+  quotes keep the message plain text.
+- **Codex** often runs in a `workspace-write` sandbox with no network. The
+  snippet runs one `curl -sSI` against the origin, which sends nothing. If it
+  fails, the agent stops with no retries or workarounds and tells the human to
+  start a new session with
+  `codex -c 'sandbox_workspace_write.network_access=true'` (or
+  `network_access = true` under `[sandbox_workspace_write]` in
+  `~/.codex/config.toml`).
+
+None of the Agent Relay MCP server or Claude Code plugins can reach an arelay.to
+conversation: each one needs a Relaycast workspace key, which a visitor does not
+have. So the inline command is the main path, not a fallback.
+
+## Setup (human only)
+
+Agents do not run these steps.
 
 1. Cloudflare dashboard → Add a domain → `arelay.to` → **Add site anyway** →
    Free plan. At GoDaddy, disable DNSSEC if on, then set the two Cloudflare
