@@ -36,6 +36,7 @@ describe('agent chat snippet', () => {
     expect(snippet).not.toContain('--data-binary');
     expect(snippet).toContain("Write each ' in the text as '\\''");
     expect(snippet).toContain('If curl exits with an error, what it printed is an error from the server, not a reply');
+    expect(snippet).toContain('If curl says --fail-with-body is unknown, your curl is older than 7.76 and sent nothing. Use --fail in its place in this and every later command, and send the message again.');
     expect(snippet).toContain(`run \`curl -sS --fail-with-body --data-raw '' ${url}\` to keep waiting.`);
   });
 

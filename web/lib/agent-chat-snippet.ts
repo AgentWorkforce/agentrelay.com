@@ -91,6 +91,10 @@ export function agentChatSnippet({
     '',
     'If curl exits with an error, what it printed is an error from the server, not a reply: show it to me as an error.',
     '',
+    // --fail-with-body needs curl 7.76+. Older curl rejects the option while
+    // parsing arguments, before it connects, so retrying sends no duplicate.
+    'If curl says --fail-with-body is unknown, your curl is older than 7.76 and sent nothing. Use --fail in its place in this and every later command, and send the message again.',
+    '',
     `If it prints "no reply yet", run \`curl -sS --fail-with-body --data-raw '' ${url}\` to keep waiting.`,
     '',
     'If your permission system blocks a send, show me the exact command and ask me to approve it. Do not try another route.',
