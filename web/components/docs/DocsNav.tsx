@@ -8,7 +8,6 @@ import {
   Activity,
   BookOpen,
   Bot,
-  ChevronDown,
   Cloud,
   Clock3,
   Compass,
@@ -41,38 +40,12 @@ import {
   legacyDocsBasePath,
   v8DocsBasePath,
 } from '../../lib/docs-versions';
-import { packageVersion } from '../../lib/package-versions';
-import { getProductSectionForPath, productBasePath, productSections } from '../../lib/product-docs-nav';
+import { getProductSectionForPath, productBasePath } from '../../lib/product-docs-nav';
 import { DocsVersionSelect } from './DocsVersionSelect';
-import { Download, FolderOpen as FolderOpenIcon, History } from 'lucide-react';
+import { Download } from 'lucide-react';
 import styles from './docs.module.css';
 
 type NavIcon = ComponentType<{ className?: string; 'aria-hidden'?: boolean | 'true' | 'false' }>;
-
-const productSectionIcons: Record<string, NavIcon> = {
-  file: FolderOpenIcon,
-  relayhistory: History,
-  relayflows: Workflow,
-};
-
-const docsProductOptions = [
-  {
-    id: null,
-    label: 'Relay',
-    tagline: 'Messaging',
-    href: '/docs/introduction',
-    Icon: Mail,
-    version: packageVersion('agent-relay'),
-  },
-  ...productSections.map((section) => ({
-    id: section.id,
-    label: section.label,
-    tagline: section.tagline,
-    href: `${productBasePath(section)}/introduction`,
-    Icon: productSectionIcons[section.id] ?? BookOpen,
-    version: section.npmPackage && packageVersion(section.npmPackage),
-  })),
-];
 
 const productNavIcons: Record<string, NavIcon> = {
   introduction: Compass,
@@ -104,6 +77,18 @@ const productNavIcons: Record<string, NavIcon> = {
 const navIcons: Record<string, NavIcon> = {
   introduction: Compass,
   quickstart: Rocket,
+  sessions: BsChatRightText,
+  desktop: RiLayout5Line,
+  'claude-code': SiClaude,
+  codex: Bot,
+  grok: Bot,
+  'grok-bot': Bot,
+  chatgpt: Bot,
+  'more-agents': Users,
+  'forward-deployed-agents': Send,
+  'relay-connect': Network,
+  agents: Bot,
+  flows: Workflow,
   workspaces: Users,
   messaging: Mail,
   delivery: Network,
@@ -211,7 +196,6 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
       aria-label="Documentation"
     >
       {!isSidebar && !productSection && <DocsVersionSelect />}
-      {(productSection || docsVersion === 'v8') && <DocsProductSwitcher activeId={productSection?.id ?? null} />}
       {navGroups.map((group) => (
         <div key={group.title} className={styles.navGroup}>
           <h4 className={styles.navGroupTitle}>{group.title}</h4>
@@ -242,73 +226,5 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
         </div>
       ))}
     </nav>
-  );
-}
-
-export function DocsProductSwitcher({ activeId }: { activeId: string | null }) {
-  const activeProduct =
-    docsProductOptions.find((option) => option.id === activeId) ?? docsProductOptions[0];
-  const ActiveIcon = activeProduct.Icon;
-  const detailsRef = useRef<HTMLDetailsElement | null>(null);
-  const closeSwitcher = () => {
-    if (detailsRef.current) {
-      detailsRef.current.open = false;
-    }
-  };
-  const closeSwitcherAfterNavigationStarts = () => {
-    window.setTimeout(closeSwitcher, 0);
-  };
-
-  return (
-    <div className={styles.productHeader}>
-      <details ref={detailsRef} className={styles.productSwitcher}>
-        <summary className={styles.productSwitcherSummary}>
-          <span className={styles.productSwitcherCurrent}>
-            <ActiveIcon className={styles.productHeaderIcon} aria-hidden="true" />
-            <span className={styles.productSwitcherText}>
-              <span className={styles.productSwitcherTitleRow}>
-                <span className={styles.productSwitcherLabel}>{activeProduct.label}</span>
-                {activeProduct.version && (
-                  <span className={styles.productHeaderVersion}>v{activeProduct.version}</span>
-                )}
-              </span>
-              <span className={styles.productHeaderTagline}>{activeProduct.tagline}</span>
-            </span>
-          </span>
-          <span className={styles.productSwitcherMeta}>
-            <ChevronDown className={styles.productSwitcherChevron} aria-hidden="true" />
-          </span>
-        </summary>
-        <div className={styles.productSwitcherMenu}>
-          {docsProductOptions.map((option) => {
-            const OptionIcon = option.Icon;
-            const isActive = option.id === activeId;
-            const optionContent = (
-              <>
-                <OptionIcon className={styles.productSwitcherOptionIcon} aria-hidden="true" />
-                <span className={styles.productSwitcherOptionText}>
-                  <span className={styles.productSwitcherOptionTitleRow}>
-                    <span className={styles.productSwitcherOptionLabel}>{option.label}</span>
-                  </span>
-                  <span className={styles.productSwitcherOptionTagline}>{option.tagline}</span>
-                </span>
-              </>
-            );
-            return (
-              <Link
-                key={option.id ?? 'relay'}
-                href={option.href}
-                className={`${styles.productSwitcherOption} ${
-                  isActive ? styles.productSwitcherOptionActive : ''
-                }`}
-                onClick={closeSwitcherAfterNavigationStarts}
-              >
-                {optionContent}
-              </Link>
-            );
-          })}
-        </div>
-      </details>
-    </div>
   );
 }

@@ -61,8 +61,6 @@ const nextConfig = {
       '/docs/llms.txt',
       '/docs/markdown.md',
       '/docs/markdown/:path*',
-      '/docs/file/markdown/:path*',
-      '/docs/relayhistory/markdown/:path*',
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
@@ -201,10 +199,12 @@ const nextConfig = {
       { source: '/schedule', destination: '/docs', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
-      // Session history is documented under Relayhistory; retired product pages point to Sessions.
+      // Retired product pages. Session history lives with the current Sessions docs.
       { source: '/reflex', destination: '/teams', permanent: true },
-      { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
-      { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
+      { source: '/docs/loop', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/loop/:path*', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/relayhistory', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/relayhistory/:path*', destination: '/docs/sessions', permanent: true },
     ];
   },
 };

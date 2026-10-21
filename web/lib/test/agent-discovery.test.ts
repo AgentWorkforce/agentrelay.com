@@ -25,10 +25,7 @@ describe('api-catalog', () => {
     const { linkset } = getApiCatalog();
 
     // Anchors must be API hosts that actually exist — api.agentrelay.com does not.
-    expect(linkset.map((e) => e.anchor)).toEqual([
-      'https://cast.agentrelay.com/v1',
-      'https://file.agentrelay.com/v1',
-    ]);
+    expect(linkset.map((e) => e.anchor)).toEqual(['https://cast.agentrelay.com/v1']);
     for (const entry of linkset) {
       expect(entry.anchor).toMatch(/^https:\/\//);
       expect(entry['service-desc']?.[0]?.href).toMatch(/^https:\/\//);
@@ -42,7 +39,7 @@ describe('mcp.json', () => {
     const manifest = getMcpManifest();
     const [server] = manifest.servers;
 
-    expect(manifest.documentation).toBe('https://agentrelay.com/docs/agent-relay-mcp');
+    expect(manifest.documentation).toBe('https://agentrelay.com/docs/agents');
     expect(server.transport).toBe('stdio');
     expect(server.command).toBe('agent-relay');
     expect(server.args).toEqual(['mcp']);

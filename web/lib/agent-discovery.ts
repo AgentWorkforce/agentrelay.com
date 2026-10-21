@@ -10,8 +10,6 @@ import { SITE_URL, absoluteUrl } from './site';
 
 const RELAYCAST_OPENAPI_URL =
   'https://raw.githubusercontent.com/AgentWorkforce/relaycast/main/openapi.yaml';
-const RELAYFILE_OPENAPI_URL =
-  'https://raw.githubusercontent.com/AgentWorkforce/relayfile/main/openapi/relayfile-v1.openapi.yaml';
 
 /** RFC 9116 requires an absolute, machine-parseable expiry no more than a year out. */
 export function securityTxtExpiry(now: Date): string {
@@ -65,38 +63,21 @@ export function getApiCatalog(): { linkset: LinksetEntry[] } {
         ],
         'service-doc': [
           {
-            href: absoluteUrl('/docs/relaycast-api'),
+            href: absoluteUrl('/docs/sessions'),
             type: 'text/html',
-            title: 'Relaycast API reference',
+            title: 'Sessions',
           },
           {
-            href: absoluteUrl('/docs/markdown/relaycast-api.md'),
+            href: absoluteUrl('/docs/markdown/sessions.md'),
             type: 'text/markdown',
-            title: 'Relaycast API reference (markdown)',
+            title: 'Sessions (markdown)',
           },
         ],
         'service-meta': [
           {
-            href: absoluteUrl('/docs/authentication'),
+            href: absoluteUrl('/docs/quickstart'),
             type: 'text/html',
-            title: 'Authentication: token types and scopes',
-          },
-        ],
-      },
-      {
-        anchor: 'https://file.agentrelay.com/v1',
-        'service-desc': [
-          {
-            href: RELAYFILE_OPENAPI_URL,
-            type: 'application/yaml',
-            title: 'Relayfile v1 OpenAPI description',
-          },
-        ],
-        'service-doc': [
-          {
-            href: absoluteUrl('/docs/file/api-reference'),
-            type: 'text/html',
-            title: 'Relayfile API reference',
+            title: 'Quickstart',
           },
         ],
       },
@@ -113,7 +94,7 @@ export function getMcpManifest() {
     name: 'agent-relay',
     description:
       'Agent Relay messaging as MCP tools: channels, DMs, threads, reactions, inbox, and Zod-backed actions.',
-    documentation: absoluteUrl('/docs/agent-relay-mcp'),
+    documentation: absoluteUrl('/docs/agents'),
     website: SITE_URL,
     servers: [
       {
