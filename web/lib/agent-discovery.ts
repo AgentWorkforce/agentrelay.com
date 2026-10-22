@@ -6,7 +6,7 @@
 // exist — the docs pages and the published OpenAPI specs — so the manifests
 // stay true without a separate source of truth to keep in sync.
 
-import { SITE_EMAIL, SITE_URL, absoluteUrl } from './site';
+import { SITE_URL, absoluteUrl } from './site';
 
 const RELAYCAST_OPENAPI_URL =
   'https://raw.githubusercontent.com/AgentWorkforce/relaycast/main/openapi.yaml';
@@ -27,11 +27,12 @@ export function getSecurityTxt(now: Date): string {
     '# Agent Relay security contact (RFC 9116).',
     '# Report a vulnerability by email; we acknowledge within two business days.',
     '',
-    `Contact: mailto:${SITE_EMAIL}`,
+    'Contact: mailto:security@agentrelay.com',
+    'Contact: https://github.com/AgentWorkforce/relay/security/advisories/new',
     `Expires: ${securityTxtExpiry(now)}`,
     'Preferred-Languages: en',
     `Canonical: ${absoluteUrl('/.well-known/security.txt')}`,
-    `Policy: ${absoluteUrl('/terms')}`,
+    `Policy: ${absoluteUrl('/security')}`,
     '',
   ].join('\n');
 }

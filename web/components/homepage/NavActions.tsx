@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
 import { AgentIcons } from '../AgentSignup';
-import { HOME_SIGNUP_HREF } from './HomeHero';
+import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
 import landing from '../../app/landing.module.css';
 import s from './nav-actions.module.css';
 

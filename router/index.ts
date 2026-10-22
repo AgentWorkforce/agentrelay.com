@@ -18,6 +18,10 @@ interface Env extends AnalyticsEnv {
     fetch(request: Request): Promise<Response>;
   };
   WEBHOOK_WORKER_ORIGIN?: string;
+  // Worker secret holding OpenAI's apps domain-verification token. Shipped by
+  // deploy-router.yml from the OPENAI_APPS_CHALLENGE_TOKEN GitHub Actions
+  // secret; never committed. Unset means the challenge path 404s.
+  OPENAI_APPS_CHALLENGE_TOKEN?: string;
 }
 
 function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
@@ -62,13 +66,17 @@ const AGENT_CHAT_PATH = new RegExp(`^/(${HANDLE_SEGMENT})/([0-9a-f]{32})/?$`);
 const REGISTRY_API_PATH = /^\/api\/v1\/(?:registrations|agents)(?:\/|$)/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
-export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
+export const KHALIQ_CALENDAR_URL = "https://calendar.google.com/calendar/appointments/schedules/AcZssZ1epyhijCW6PzM54mrk-T3ebYZIpfi7GN62lywkJxGc3Dg7vO2kvYAK0ywdLONAts2KxsWTMJ0b";
 const VIRTUAL_OFFICE_URL = "https://meet.google.com/ijx-gpfb-brt";
-const VANITY_REDIRECTS = new Map<string, string>([
+// A vanity path maps to one destination, or to several that are chosen from
+// uniformly at random per request (/founder splits meetings between the two
+// founders' calendars).
+const VANITY_REDIRECTS = new Map<string, string | readonly string[]>([
   ["/meet-with-will", WILL_CALENDAR_URL],
   ["/will", WILL_CALENDAR_URL],
   ["/meet-with-khaliq", KHALIQ_CALENDAR_URL],
   ["/khaliq", KHALIQ_CALENDAR_URL],
+  ["/founder", [WILL_CALENDAR_URL, KHALIQ_CALENDAR_URL]],
   ["/virtual-office", VIRTUAL_OFFICE_URL],
 ]);
 
@@ -371,7 +379,11 @@ export function getVanityRedirect(hostname: string, pathname: string): string | 
   const normalizedPathname = (pathname.length > 1
     ? pathname.replace(/\/$/, "")
     : pathname).toLowerCase();
-  return VANITY_REDIRECTS.get(normalizedPathname);
+  const destination = VANITY_REDIRECTS.get(normalizedPathname);
+  if (typeof destination === "string" || destination === undefined) {
+    return destination;
+  }
+  return destination[Math.floor(Math.random() * destination.length)];
 }
 
 // True only for the exact paths the webhook worker knows how to handle. Used
@@ -680,9 +692,53 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
   return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
 }
 
+// OpenAI apps domain verification. OpenAI fetches this apex path and expects
+// the bare token as text/plain with a 200 — no HTML, JSON or redirect. The
+// token comes from the OPENAI_APPS_CHALLENGE_TOKEN Worker secret; when it is
+// unset or blank the path 404s rather than falling through to the marketing
+// site. Answered before any upstream dispatch so the token never reaches the
+// traffic recorder.
+const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
+
+export function getOpenAiAppsChallengeResponse(
+  request: Request,
+  url: URL,
+  env: Pick<Env, "OPENAI_APPS_CHALLENGE_TOKEN">,
+): Response | null {
+  if (url.hostname !== PRIMARY_HOST || url.pathname !== OPENAI_APPS_CHALLENGE_PATH) {
+    return null;
+  }
+
+  const headers = {
+    "content-type": "text/plain; charset=utf-8",
+    "cache-control": "no-store",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { ...headers, allow: "GET, HEAD" },
+    });
+  }
+
+  const token = env.OPENAI_APPS_CHALLENGE_TOKEN?.trim();
+  if (!token) {
+    return new Response("Not Found", { status: 404, headers });
+  }
+
+  return new Response(request.method === "HEAD" ? null : token, {
+    status: 200,
+    headers,
+  });
+}
+
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
+
+    const openAiAppsChallenge = getOpenAiAppsChallengeResponse(request, url, env);
+    if (openAiAppsChallenge) {
+      return openAiAppsChallenge;
+    }
 
     const oauthWellKnownPath = url.hostname === PRIMARY_HOST
       && (request.method === "GET" || request.method === "HEAD")
@@ -702,9 +758,13 @@ const router = {
     if (vanityRedirect) {
       const redirectUrl = new URL(vanityRedirect);
       url.searchParams.forEach((value, key) => {
-        redirectUrl.searchParams.set(key, value);
+        redirectUrl.searchParams.append(key, value);
       });
-      return Response.redirect(redirectUrl.toString(), 302);
+      // Never cache: a cached 302 would pin a visitor to one /founder calendar.
+      return new Response(null, {
+        status: 302,
+        headers: { Location: redirectUrl.toString(), "Cache-Control": "no-store" },
+      });
     }
 
     const agentChatCloudPath = getAgentChatCloudPath(

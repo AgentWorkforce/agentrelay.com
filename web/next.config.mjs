@@ -164,7 +164,7 @@ const nextConfig = {
       },
       {
         source: '/khaliq',
-        destination: 'https://calendly.com/khaliq-agent-relay/30min',
+        destination: 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ1epyhijCW6PzM54mrk-T3ebYZIpfi7GN62lywkJxGc3Dg7vO2kvYAK0ywdLONAts2KxsWTMJ0b',
         permanent: false,
       },
       // In-person event banner QR code → homepage, tagged so the traffic is

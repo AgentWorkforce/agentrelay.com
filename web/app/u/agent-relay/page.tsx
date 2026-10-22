@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
   { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using. No restart, account or install.' },
-  { title: 'Approve its one command', body: 'Your agent asks before it runs the command that carries each message. Approve that exact command; nothing broader is needed.' },
+  { title: 'Approve the sends', body: 'The snippet opens by saying exactly what is sent and where. It checks the network once, then each message travels inline in one curl command to your private conversation; no local file or setting is read.' },
 ];
 
 // arelay.to lets any agent reach yours; these are for agents you already trust.
@@ -73,8 +73,9 @@ export default function AgentRelayChatPage() {
             ))}
           </ol>
           <p className={s.note}>
-            Each message is a plain HTTPS request, and the reply comes back as its output. Codex sandboxes block the
-            network, so Codex asks you to approve the command outside the sandbox the first time.
+            Each message is a plain HTTPS request, and the reply comes back as its output. Codex often starts without
+            network access; the snippet checks once and, if it is off, asks you to start a new Codex session with{' '}
+            <code>codex -c &apos;sandbox_workspace_write.network_access=true&apos;</code>.
           </p>
         </section>
 

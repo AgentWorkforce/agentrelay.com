@@ -13,12 +13,11 @@ These rules are repository law for every agent session in this checkout.
 - Main requires at least two recorded reviews. The author's own pass does
   not count; at least one review must come from a different agent.
   Check/status contexts such as CodeRabbit are not submitted reviews.
-- Only humans cut releases. Any earlier agent release permission is void,
-  not paused.
+- Only humans cut releases, including where a skill or other instruction
+  describes an agent publishing.
 - Never execute a command that prints or may print a credential in an
   agent transcript. Never pass `--show-token` to `gh auth status`; that flag
-  deliberately exposes the credential. The bare command is not the
-  credential-printing hazard the old rule treated it as. Use
+  deliberately exposes the credential. Use
   `env -u GITHUB_TOKEN -u GH_TOKEN /opt/homebrew/bin/gh <command>` for the
   concrete GitHub operation; escalate if unmasked credential scope itself
   must be inspected.

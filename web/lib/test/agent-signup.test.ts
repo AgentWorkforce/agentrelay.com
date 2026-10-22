@@ -106,7 +106,7 @@ describe('agent signup instructions', () => {
     const sessions = content.indexOf('# Set Up Agent Relay Session Handoff');
     expect(desktop).toBeGreaterThan(0);
     expect(sessions).toBeGreaterThan(desktop);
-    const roundTrip = content.indexOf('## 5. Prove one live round trip', sessions);
+    const roundTrip = content.indexOf('## 6. Prove one live round trip', sessions);
     expect(roundTrip).toBeGreaterThan(sessions);
     // Every instruction to PATCH completion is in the header and is tied to Part 3's round trip.
     const header = content.slice(0, content.indexOf('# Part 1:'));

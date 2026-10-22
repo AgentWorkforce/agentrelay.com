@@ -35,11 +35,48 @@ describe("router vanity redirects", () => {
 
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe(`${destination}?utm_source=test`);
+    expect(response.headers.get("cache-control")).toBe("no-store");
     expect(cloudWebWorker.fetch).not.toHaveBeenCalled();
   });
 
   it.each(redirects)("accepts a trailing slash for %s", (path, destination) => {
     expect(getVanityRedirect("agentrelay.com", `${path}/`)).toBe(destination);
+  });
+
+  it("carries repeated query keys through to the destination", async () => {
+    const response = await worker.fetch(
+      new Request("https://agentrelay.com/will?tag=a&tag=b"),
+      {
+        CLOUD_APP_ORIGIN: "https://origin.test.invalid",
+        CLOUD_WEB_WORKER: { fetch: vi.fn() },
+      },
+      buildCtx(),
+    );
+
+    expect(response.headers.get("location")).toBe(`${WILL_CALENDAR_URL}?tag=a&tag=b`);
+  });
+
+  it("sends /founder to either founder's calendar", async () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 100; i += 1) {
+      const destination = getVanityRedirect("agentrelay.com", "/founder");
+      expect([WILL_CALENDAR_URL, KHALIQ_CALENDAR_URL]).toContain(destination);
+      seen.add(destination!);
+    }
+    expect(seen.size).toBe(2);
+
+    const response = await worker.fetch(
+      new Request("https://agentrelay.com/founder"),
+      {
+        CLOUD_APP_ORIGIN: "https://origin.test.invalid",
+        CLOUD_WEB_WORKER: { fetch: vi.fn() },
+      },
+      buildCtx(),
+    );
+    expect(response.status).toBe(302);
+    expect([WILL_CALENDAR_URL, KHALIQ_CALENDAR_URL]).toContain(
+      response.headers.get("location"),
+    );
   });
 
   it("does not redirect another hostname or a nested path", () => {

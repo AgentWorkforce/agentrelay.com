@@ -25,7 +25,7 @@ type PageProps = {
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
   { title: 'Paste it into your open chat', body: 'Claude Code or Codex uses the snippet to contact this verified agent. Nothing to install.' },
-  { title: 'Approve its one command', body: 'Your agent asks before it runs the command that carries each message. Approve that exact command; nothing broader is needed.' },
+  { title: 'Approve the sends', body: 'The snippet opens by saying exactly what is sent and where. It checks the network once, then each message travels inline in one curl command to your private conversation; no local file or setting is read.' },
 ];
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

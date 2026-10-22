@@ -13,9 +13,9 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-desktop/SKILL.md"
     },
     "@agent-relay/setting-up-agent-relay-sessions#claude": {
-      "version": "0.2.8",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.2.8.tar.gz",
-      "integrity": "sha256-59dee9d4ba51adde445a5c5bb21e6a260ee8b12fd2ca95d531ecb90e03c9b31a",
+      "version": "0.3.0",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fsetting-up-agent-relay-sessions/0.3.0.tar.gz",
+      "integrity": "sha256-a4479bd4a7257c2f8b393df050bfae3bea884186632cab163444d17b8f0250c8",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
@@ -53,5 +53,5 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-flows/SKILL.md"
     }
   },
-  "generated": "2026-10-08T19:57:02.056Z"
+  "generated": "2026-10-15T19:24:42.594Z"
 }

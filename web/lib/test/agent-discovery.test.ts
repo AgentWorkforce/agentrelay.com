@@ -6,10 +6,12 @@ describe('security.txt', () => {
   it('carries the RFC 9116 required fields', () => {
     const txt = getSecurityTxt(new Date('2026-08-21T00:00:00Z'));
 
-    expect(txt).toContain('Contact: mailto:hello@agentrelay.com');
+    expect(txt).toContain('Contact: mailto:security@agentrelay.com');
     expect(txt).toContain('Expires: 2027-08-21T00:00:00Z');
     expect(txt).toContain('Canonical: https://agentrelay.com/.well-known/security.txt');
     expect(txt).toContain('Preferred-Languages: en');
+    expect(txt).toContain('Contact: https://github.com/AgentWorkforce/relay/security/advisories/new');
+    expect(txt).toContain('Policy: https://agentrelay.com/security');
   });
 
   it('always expires in the future', () => {

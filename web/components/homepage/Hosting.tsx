@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { GitHubStarsBadge } from '../GitHubStars';
-import { HOME_SIGNUP_HREF } from './HomeHero';
+import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
 import { CloudIcon, GitHubIcon } from '../home/icons';
 import landing from '../../app/landing.module.css';
 import s from './hosting.module.css';

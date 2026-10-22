@@ -88,11 +88,14 @@ jobs:
 
       # Worker secrets ship atomically with the deploy. Only secrets that are
       # present are written; an absent ANALYTICS_VISITOR_HASH_SECRET leaves
-      # guide-fetch analytics failing closed (no data points).
+      # guide-fetch analytics failing closed (no data points), and an absent
+      # OPENAI_APPS_CHALLENGE_TOKEN leaves /.well-known/openai-apps-challenge
+      # returning 404.
       - name: Prepare optional Worker secrets
         shell: bash
         env:
           ANALYTICS_VISITOR_HASH_SECRET: ${{ secrets.ANALYTICS_VISITOR_HASH_SECRET }}
+          OPENAI_APPS_CHALLENGE_TOKEN: ${{ secrets.OPENAI_APPS_CHALLENGE_TOKEN }}
         run: |
           set -euo pipefail
           umask 077
@@ -100,7 +103,7 @@ jobs:
           node --input-type=module <<'NODE'
           import { writeFileSync } from "node:fs";
 
-          const names = ["ANALYTICS_VISITOR_HASH_SECRET"];
+          const names = ["ANALYTICS_VISITOR_HASH_SECRET", "OPENAI_APPS_CHALLENGE_TOKEN"];
           const secrets = Object.fromEntries(names.flatMap((name) => {
             const value = process.env[name];
             return value ? [[name, value]] : [];
