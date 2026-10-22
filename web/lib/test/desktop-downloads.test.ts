@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LINUX_TARBALLS,
+  WINDOWS_PORTABLE,
   downloadFor,
   detectDesktopDownload,
   downloadLabel,
@@ -17,24 +18,24 @@ const LINUX_X64 =
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36';
 
 describe('desktop downloads', () => {
-  it('detects Windows and recommends the Windows zip, not the Mac disk image', () => {
+  it('detects Windows and recommends the Windows installer, not the Mac disk image', () => {
     const detected = detectDesktopDownload({ userAgent: WINDOWS_X64 });
 
     expect(detected?.platform).toBe('windows');
     expect(detected?.arch).toBe('x64');
-    expect(detected?.filename).toBe('AgentRelay-Windows-x64.zip');
+    expect(detected?.filename).toBe('AgentRelay-Windows-x64-Setup.exe');
     expect(detected?.url).toBe(
-      'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-Windows-x64.zip',
+      'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-Windows-x64-Setup.exe',
     );
     expect(downloadLabel(detected!)).toBe('Download for Windows (x64)');
   });
 
-  it('uses Client Hints or the user agent to pick Windows on Arm', () => {
+  it('uses Client Hints or the user agent to pick the Arm installer', () => {
     expect(
       detectDesktopDownload({ userAgent: WINDOWS_X64, architecture: '"arm"' })?.filename,
-    ).toBe('AgentRelay-Windows-arm64.zip');
+    ).toBe('AgentRelay-Windows-arm64-Setup.exe');
     expect(detectDesktopDownload({ userAgent: WINDOWS_ARM64 })?.filename).toBe(
-      'AgentRelay-Windows-arm64.zip',
+      'AgentRelay-Windows-arm64-Setup.exe',
     );
   });
 
@@ -76,6 +77,8 @@ describe('desktop downloads', () => {
           'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36',
       }),
     ).toBeNull();
-    expect(downloadFor('windows', 'arm64').format).toBe('zip');
+    expect(downloadFor('windows', 'arm64').format).toBe('exe');
+    expect(WINDOWS_PORTABLE.x64).toMatch(/AgentRelay-Windows-x64\.zip$/);
+    expect(WINDOWS_PORTABLE.arm64).toMatch(/AgentRelay-Windows-arm64\.zip$/);
   });
 });

@@ -6,6 +6,7 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import {
   LINUX_TARBALLS,
+  WINDOWS_PORTABLE,
   detectDesktopDownload,
   downloadLabel,
   downloadsFor,
@@ -62,7 +63,7 @@ const platforms: Array<{
     id: 'windows',
     name: 'Windows',
     blurb: 'For Intel, AMD, and Arm PCs.',
-    note: 'Windows 10 and 11. Unpack the .zip and run agent-relay.exe. Releases are not code-signed yet, so SmartScreen may ask once; Smart App Control must be off.',
+    note: 'Windows 10 and 11. Run the installer: it installs for your account without administrator rights. Releases are not code-signed yet, so SmartScreen may ask once; Smart App Control must be off.',
   },
   {
     id: 'linux',
@@ -105,7 +106,7 @@ export default async function DownloadPage() {
               <p className={s.installNote}>{detected.installNote}</p>
               {detected.platform === 'windows' ? (
                 <p className={s.warning}>
-                  Windows builds are not code-signed yet: SmartScreen may show <em>Windows protected your PC</em>{' '}
+                  The Windows installer is not code-signed yet: SmartScreen may show <em>Windows protected your PC</em>{' '}
                   once. Choose <strong>More info</strong> → <strong>Run anyway</strong>.
                 </p>
               ) : null}
@@ -148,6 +149,13 @@ export default async function DownloadPage() {
                     );
                   })}
                 </div>
+
+                {platform.id === 'windows' ? (
+                  <p className={s.alternative}>
+                    Prefer portable? <a href={WINDOWS_PORTABLE.x64}>x64 .zip</a> or{' '}
+                    <a href={WINDOWS_PORTABLE.arm64}>arm64 .zip</a>
+                  </p>
+                ) : null}
 
                 {platform.id === 'linux' ? (
                   <p className={s.alternative}>

@@ -2,7 +2,7 @@ const RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/relea
 
 export type DesktopPlatform = 'macos' | 'windows' | 'linux';
 export type DesktopArch = 'arm64' | 'x64';
-export type DesktopDownloadFormat = 'dmg' | 'zip' | 'deb';
+export type DesktopDownloadFormat = 'dmg' | 'exe' | 'zip' | 'deb';
 
 export type DesktopDownload = {
   platform: DesktopPlatform;
@@ -59,18 +59,18 @@ export const DESKTOP_DOWNLOADS: readonly DesktopDownload[] = [
   download(
     'windows',
     'x64',
-    'zip',
-    'AgentRelay-Windows-x64.zip',
+    'exe',
+    'AgentRelay-Windows-x64-Setup.exe',
     'x64',
-    'Unpack the .zip and run agent-relay.exe.',
+    'Run the installer. It installs for your account without administrator rights.',
   ),
   download(
     'windows',
     'arm64',
-    'zip',
-    'AgentRelay-Windows-arm64.zip',
+    'exe',
+    'AgentRelay-Windows-arm64-Setup.exe',
     'Arm64',
-    'Unpack the .zip and run agent-relay.exe.',
+    'Run the installer. It installs for your account without administrator rights.',
   ),
   download(
     'linux',
@@ -89,6 +89,15 @@ export const DESKTOP_DOWNLOADS: readonly DesktopDownload[] = [
     'Install the .deb with your package manager.',
   ),
 ];
+
+/**
+ * The zips are the portable alternative to the Windows installer: unpack one
+ * and run agent-relay.exe without installing anything.
+ */
+export const WINDOWS_PORTABLE: Record<DesktopArch, string> = {
+  x64: `${RELEASES}/AgentRelay-Windows-x64.zip`,
+  arm64: `${RELEASES}/AgentRelay-Windows-arm64.zip`,
+};
 
 export const LINUX_TARBALLS: Record<DesktopArch, string> = {
   x64: `${RELEASES}/AgentRelay-Linux-x64.tar.gz`,
