@@ -15,6 +15,11 @@ export type SignupSession = SignupProgress & {
   writeToken: string; activation?: SignupActivation; activated?: boolean; launched?: boolean;
 };
 
+/** Add attribution only while the locally prepared activation is still editable. */
+export function withSignupAnalytics(activation: SignupActivation | undefined, context: SignupAnalyticsContext | undefined): SignupActivation | undefined {
+  return activation && context && !activation.analytics ? { ...activation, analytics: context } : activation;
+}
+
 /** Must match Cloud's versioned capability contract; the token never goes in a URL. */
 export async function signupSessionId(product: AgentSignupProduct, expiresAt: string, token: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(['agent-relay-signup-v1', product, expiresAt, token])));

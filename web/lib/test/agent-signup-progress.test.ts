@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isSignupProgress, prepareSignupSession, signupSessionId, trackedSignupPrompt } from '../agent-signup-progress';
+import { isSignupProgress, prepareSignupSession, signupSessionId, trackedSignupPrompt, withSignupAnalytics } from '../agent-signup-progress';
 import { agentSignupInstructions } from '../agent-signup';
 const id = '537e4857-5590-42e8-8731-66441b466542';
 const progress = { id, product: 'teams', step: 0, state: 'waiting', revision: 0, updatedAt: '2026-09-21T00:00:00.000Z', expiresAt: '2026-09-21T02:00:00.000Z' };
@@ -27,6 +27,16 @@ describe('signup progress handoff', () => {
     expect(prompt).toContain(JSON.stringify({ product: 'teams', sessionId: a.id, expiresAt: a.expiresAt }));
     expect(prompt).toContain('Registration is safe to retry and never resets progress');
     expect(prompt.match(/https?:\/\/\S+/g)?.every(url => !url.includes(a.writeToken))).toBe(true);
+  });
+  it('adds attribution when telemetry becomes ready before the prompt is copied', async () => {
+    const session = await prepareSignupSession('teams');
+    expect(session.activation?.analytics).toBeUndefined();
+    const context = { distinctId: 'anon-visitor', journeyId: id };
+    const activation = withSignupAnalytics(session.activation, context);
+    const prompt = trackedSignupPrompt('teams', 'http://localhost:3100', 'http://localhost:3100/cloud/api/v1/signup/agent/sessions', { ...session, activation });
+    expect(prompt).toContain(JSON.stringify({ product: 'teams', sessionId: session.id, expiresAt: session.expiresAt, analytics: context }));
+    expect(session.id).toBe(await signupSessionId('teams', session.expiresAt, session.writeToken));
+    expect(withSignupAnalytics(activation, { distinctId: 'other', journeyId: id })).toBe(activation);
   });
   it('accepts valid progress and rejects malformed or premature completion', () => {
     expect(isSignupProgress(progress)).toBe(true);

@@ -7,7 +7,7 @@ import { ArrowUpRight, Copy, RefreshCw } from 'lucide-react';
 import { SignupAtmosphere } from './SignupAtmosphere';
 import { signupChapters, signupLoading, signupReady } from '../lib/agent-signup-story';
 import type { AgentSignupProduct } from '../lib/agent-signup';
-import { isSignupProgress, prepareSignupSession, trackedSignupPrompt, type SignupActivation, type SignupProgress, type SignupSession } from '../lib/agent-signup-progress';
+import { isSignupProgress, prepareSignupSession, trackedSignupPrompt, withSignupAnalytics, type SignupActivation, type SignupProgress, type SignupSession } from '../lib/agent-signup-progress';
 import { teamsCloudUrl } from '../lib/teams-cloud';
 import landing from '../app/landing.module.css';
 import s from './agent-signup-journey.module.css';
@@ -201,14 +201,22 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
     return () => clearTimeout(timer);
   }, [progress?.expiresAt, complete, expired]);
 
-  function launch() {
+  function launch(currentActivation = activation) {
     setLaunched(true);
     try {
-      if (progress && token) sessionStorage.setItem(storageKey(product), JSON.stringify({ ...progress, writeToken: token, activation, activated: !pending, launched: true }));
+      if (progress && token) sessionStorage.setItem(storageKey(product), JSON.stringify({ ...progress, writeToken: token, activation: currentActivation, activated: !pending, launched: true }));
     } catch { /* In-memory setup still works when storage is unavailable. */ }
   }
   async function copy() {
-    try { await navigator.clipboard.writeText(prompt); setCopyMessage('Copied. Paste it into your agent.'); analytics.track('prompt_copied'); launch(); }
+    // Telemetry can become ready after the session was prepared. Include its
+    // context in the exact prompt copied and the saved reload capability.
+    const currentActivation = !launched ? withSignupAnalytics(activation, analytics.context()) : activation;
+    if (currentActivation !== activation && progress && token) {
+      setActivation(currentActivation);
+      try { sessionStorage.setItem(storageKey(product), JSON.stringify({ ...progress, writeToken: token, activation: currentActivation, activated: !pending, launched })); } catch { /* Optional reload recovery. */ }
+    }
+    const currentPrompt = progress && token ? trackedSignupPrompt(product, origin, endpoint, { id: progress.id, writeToken: token, activation: currentActivation }) : prompt;
+    try { await navigator.clipboard.writeText(currentPrompt); setCopyMessage('Copied. Paste it into your agent.'); analytics.track('prompt_copied'); launch(currentActivation); }
     catch { analytics.track('manual_copy_shown'); setShowPrompt(true); setCopyMessage('Select and copy the prompt below.'); requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.select(); }); }
   }
   async function submitAnswer(event: React.FormEvent<HTMLFormElement>) {
