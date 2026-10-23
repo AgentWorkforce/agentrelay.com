@@ -22,8 +22,8 @@ const CAPABILITIES = [
   },
   {
     Icon: Zap,
-    title: 'One-click deploy',
-    text: 'Launch on Agent Relay Cloud, or fork the source and run it yourself.',
+    title: 'Open source',
+    text: 'Fork the source and tailor it to your team.',
   },
 ];
 
@@ -50,7 +50,7 @@ export function AgentsGallery() {
           <FadeIn direction="up" delay={120}>
             <p className={s.subtitle}>
               A gallery of open-source agents that watch your repos, inbox, and stack — then act. Pick one,
-              fork it, and launch it on Agent Relay in one click.
+              fork it, and tailor it to your team.
             </p>
           </FadeIn>
 
