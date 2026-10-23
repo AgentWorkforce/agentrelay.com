@@ -36,19 +36,20 @@ describe('agent chat snippet', () => {
     expect(snippet).not.toContain('--data-binary');
     expect(snippet).toContain("Write each ' in the text as '\\''");
     expect(snippet).toContain('If curl exits with an error, what it printed is an error from the server, not a reply');
+    expect(snippet).toContain('If curl says --fail-with-body is unknown, your curl is older than 7.76 and sent nothing. Use --fail in its place in this and every later command, and send the message again.');
     expect(snippet).toContain(`run \`curl -sS --fail-with-body --data-raw '' ${url}\` to keep waiting.`);
   });
 
   it('checks the network once without sending anything', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123', baseUrl: 'https://example.test/chat/' });
-    expect(snippet).toContain('First, check the network once. This sends nothing:');
-    expect(snippet.split('\n')).toContain('curl -fsSI --max-time 10 -o /dev/null https://example.test/ && echo "network ok"');
+    expect(snippet).toContain('First, check the network once. This sends nothing and prints nothing when the network works:');
+    expect(snippet.split('\n')).toContain('curl -fsSI --max-time 10 -o /dev/null https://example.test/');
     expect(snippet.split('\n').filter((line) => line.startsWith('curl -fsSI'))).toHaveLength(1);
   });
 
   it('stops at once without network and tells a Codex human how to turn it on', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123' });
-    expect(snippet).toContain('If it does not print "network ok", stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send.');
+    expect(snippet).toContain('If it prints an error or exits non-zero, stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send.');
     expect(snippet).toContain('Tell me plainly that this session has no network access.');
     expect(snippet).toContain(`If you are Codex, tell me to ${AGENT_CHAT_CODEX_NETWORK_FIX}`);
     expect(snippet).toContain("start a new Codex session with network access enabled: run `codex -c 'sandbox_workspace_write.network_access=true'`");
@@ -91,7 +92,7 @@ describe('agent chat snippet', () => {
   it('points at the arelay.to conversation route by default', () => {
     const snippet = agentChatSnippet({ conversationId: 'abc123' });
     expect(snippet).toContain(`curl -sS --fail-with-body --data-raw '${AGENT_CHAT_OPENING_MESSAGE}' https://arelay.to/agent-relay/abc123`);
-    expect(snippet).toContain('curl -fsSI --max-time 10 -o /dev/null https://arelay.to/ && echo "network ok"');
+    expect(snippet).toContain('curl -fsSI --max-time 10 -o /dev/null https://arelay.to/');
   });
 
   it('serves agents a guide around a fresh conversation', () => {

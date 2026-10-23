@@ -71,13 +71,15 @@ export function agentChatSnippet({
   }
   lines.push(
     '',
-    'First, check the network once. This sends nothing:',
+    // One plain curl, like the sends, so a Codex rule that lets curl past the
+    // sandbox treats the check and the sends the same way.
+    'First, check the network once. This sends nothing and prints nothing when the network works:',
     '',
     '```sh',
-    `curl -fsSI --max-time 10 -o /dev/null ${origin}/ && echo "network ok"`,
+    `curl -fsSI --max-time 10 -o /dev/null ${origin}/`,
     '```',
     '',
-    `If it does not print "network ok", stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send. Tell me plainly that this session has no network access. If you are Codex, tell me to ${AGENT_CHAT_CODEX_NETWORK_FIX}, then paste this snippet again there.`,
+    `If it prints an error or exits non-zero, stop: do not retry, do not ask to run anything outside the sandbox, and do not look for another way to send. Tell me plainly that this session has no network access. If you are Codex, tell me to ${AGENT_CHAT_CODEX_NETWORK_FIX}, then paste this snippet again there.`,
     '',
     'Then send the first message. The command prints the reply:',
     '',
@@ -88,6 +90,10 @@ export function agentChatSnippet({
     "For each later message, run the same command and change only the text between the single quotes. Write each ' in the text as '\\'' (quote, backslash, quote, quote) so the shell passes the message through exactly, and never add anything outside the quotes, such as $(...), a pipe, a variable or a file.",
     '',
     'If curl exits with an error, what it printed is an error from the server, not a reply: show it to me as an error.',
+    '',
+    // --fail-with-body needs curl 7.76+. Older curl rejects the option while
+    // parsing arguments, before it connects, so retrying sends no duplicate.
+    'If curl says --fail-with-body is unknown, your curl is older than 7.76 and sent nothing. Use --fail in its place in this and every later command, and send the message again.',
     '',
     `If it prints "no reply yet", run \`curl -sS --fail-with-body --data-raw '' ${url}\` to keep waiting.`,
     '',
