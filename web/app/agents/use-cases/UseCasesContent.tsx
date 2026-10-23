@@ -106,7 +106,7 @@ export function UseCasesContent() {
           <div className={s.poweredCard}>
             <span className={s.poweredEyebrow}>Powered by Agent Relay</span>
             <p className={s.poweredText}>
-              Browse the full gallery and fork any of these agents for your team.
+              Browse the full gallery and fork an agent from it for your team.
             </p>
             <Link href="/agents" className={s.pill}>
               Explore all agents →
