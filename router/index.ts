@@ -56,8 +56,8 @@ const RESERVED_AGENT_PAGE_HANDLES = new Set([
   "docs", "status", "security", "abuse", "login", "signup", "agents", "directory",
   "download",
 ]);
-// Desktop download links (release READMEs, the Windows placeholder app) name
-// arelay.to/download; the page lives on the primary host.
+// Desktop download links name arelay.to/download; the page lives on the
+// primary host.
 const DOWNLOAD_PAGE_PATH = "/download";
 // The verified-agent directory page. web/lib/agent-directory.ts names the same
 // path (AGENT_DIRECTORY_PATH); keep the two in step.
