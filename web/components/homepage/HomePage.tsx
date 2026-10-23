@@ -23,7 +23,7 @@ import headline from './rotating-headline.module.css';
  */
 export function HomeLandingPage() {
   return (
-    <div className={`${landing.page} ${landing.messagingPage}`}>
+    <div className={`${landing.page} ${landing.messagingPage} ${landing.homeLanding}`}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
