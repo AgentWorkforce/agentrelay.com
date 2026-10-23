@@ -44,18 +44,12 @@ describe('agent signup funnel', () => {
     expect(ph.capture.mock.calls.map(([event]) => event)).toEqual(['agent_signup_page_left', 'agent_signup_page_left', 'agent_signup_restarted']);
     expect(uuid).toHaveBeenCalledTimes(1);
   });
-  it('waits briefly for the SDK so early events and the session POST share one journey', async () => {
+  it('returns immediately when telemetry is not ready and can attach context later', () => {
     ph.__loaded = false;
     const tracker = new SignupTracker(ph, 'flows', storage(), () => journeyId);
-    const pending = tracker.contextWhenReady(500);
+    expect(tracker.context()).toBeUndefined();
     ph.__loaded = true;
-    await expect(pending).resolves.toEqual({ journeyId, distinctId: 'anon-visitor' });
-  });
-  it('returns undefined without blocking setup when the SDK never loads', async () => {
-    ph.__loaded = false;
-    const tracker = new SignupTracker(ph, 'flows', storage(), () => journeyId);
-    await expect(tracker.contextWhenReady(50)).resolves.toBeUndefined();
-    expect(ph.capture).not.toHaveBeenCalled();
+    expect(tracker.context()).toEqual({ journeyId, distinctId: 'anon-visitor' });
   });
   it('does not send browser or server context when unconfigured or opted out', () => {
     const tracker = new SignupTracker(ph, 'teams', storage(), () => journeyId);

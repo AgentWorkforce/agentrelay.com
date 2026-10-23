@@ -150,6 +150,12 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      // Preserve existing signup sessions while normalizing the public entry URL.
+      {
+        source: '/signup/teams',
+        destination: '/signup/with-agent',
+        permanent: true,
+      },
       // Mirror the router's calendar aliases for direct Next.js and local dev requests.
       {
         source: '/will',

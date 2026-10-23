@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 
 import { AgentSignup } from '../AgentSignup';
@@ -52,9 +53,9 @@ export function FinalCta() {
       </h2>
       <p className={s.line}>Install the desktop app and sign in. About 10 minutes to your first handoff.</p>
       <div className={s.actions}>
-        <a className={landing.ctaPrimary} href={HOME_SIGNUP_HREF}>
+        <Link className={landing.ctaPrimary} href={HOME_SIGNUP_HREF}>
           Sign up for free
-        </a>
+        </Link>
         <AgentSignup product="teams" />
       </div>
     </section>
