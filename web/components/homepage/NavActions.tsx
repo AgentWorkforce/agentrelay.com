@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import { AgentIcons } from '../AgentSignup';
-import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import landing from '../../app/landing.module.css';
 import s from './nav-actions.module.css';
 
@@ -29,7 +29,7 @@ export function NavActions() {
       </a>
       <a
         className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.signup}`}
-        href={HOME_SIGNUP_HREF}
+        href={teamsGoogleAuthHref('home_nav')}
         data-shown={showSignup || undefined}
         aria-hidden={!showSignup}
         tabIndex={showSignup ? undefined : -1}
