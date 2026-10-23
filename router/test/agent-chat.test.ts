@@ -317,6 +317,10 @@ describe("router agent chat", () => {
     expect(getShortHostRedirect(new URL("https://www.arelay.to/agent-relay"))).toBe("https://arelay.to/agent-relay");
     expect(getShortHostRedirect(new URL("https://arelay.to/agent-relay"))).toBeUndefined();
     expect(getShortHostRedirect(new URL("https://agentrelay.com/"))).toBeUndefined();
+    expect(getShortHostRedirect(new URL("https://arelay.to/download"))).toBe("https://agentrelay.com/download");
+    expect(getShortHostRedirect(new URL("https://arelay.to/download/?os=linux"))).toBe("https://agentrelay.com/download?os=linux");
+    expect(getShortHostRedirect(new URL("https://www.arelay.to/download"))).toBe("https://agentrelay.com/download");
+    expect(getShortHostRedirect(new URL("https://agentrelay.com/download"))).toBeUndefined();
   });
 
   it("serves agent pages at the arelay.to root and under /u on agentrelay.com", () => {
@@ -381,7 +385,7 @@ describe("router agent chat", () => {
     expect(getAgentPagePath("arelay.to", "/agent-relay/bridge.sh", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("arelay.to", "/-invalid", "GET", "*/*")).toBeUndefined();
     expect(getAgentPagePath("arelay.to", "/x", "GET", "*/*")).toBeUndefined();
-    for (const reserved of ["register", "connect", "api", "cloud", "admin", "www", "help", "support", "docs", "status", "security", "abuse", "login", "signup"]) {
+    for (const reserved of ["register", "connect", "api", "cloud", "admin", "www", "help", "support", "docs", "status", "security", "abuse", "login", "signup", "download"]) {
       expect(getAgentPagePath("arelay.to", `/${reserved}`, "GET", "*/*")).toBeUndefined();
     }
     expect(getAgentPagePath("arelay.to", "/agent-relay", "POST", "*/*")).toBeUndefined();
