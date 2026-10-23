@@ -1,0 +1,266 @@
+.page {
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+.main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 3.5rem 1.25rem 5rem;
+}
+
+/* ── Hero ── */
+
+.hero {
+  text-align: center;
+  padding: 1rem 0 2.75rem;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--primary);
+  margin: 0 0 12px;
+}
+
+.headline {
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--primary);
+  margin: 0 0 16px;
+}
+
+.lead {
+  max-width: 42rem;
+  margin: 0 auto;
+  color: var(--fg-muted);
+  font-size: 1.05rem;
+  line-height: 1.7;
+}
+
+.recommendation {
+  width: fit-content;
+  max-width: 100%;
+  margin: 2rem auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.detected {
+  margin: 0;
+  color: var(--fg-faint);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.primary {
+  composes: btn btn-primary from global;
+  min-height: 56px;
+  padding: 16px 28px;
+  font-size: 1.0625rem;
+  gap: 10px;
+}
+
+.installNote {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.warning {
+  max-width: 36rem;
+  margin: 0.25rem auto 0;
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.warning em {
+  color: var(--fg-muted);
+  font-style: italic;
+}
+
+.warning strong {
+  color: var(--fg-muted);
+  font-weight: 600;
+}
+
+.choose {
+  margin: 1.75rem 0 0;
+  color: var(--fg-muted);
+  font-size: 0.95rem;
+}
+
+/* ── Platform cards ── */
+
+.platforms {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.platform {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--card-bg);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.platformRecommended {
+  border-color: color-mix(in srgb, var(--primary) 55%, var(--line));
+  box-shadow: 0 2px 20px color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.platformHeader h2 {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+.platformHeader p {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--fg);
+  text-decoration: none;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .choice:hover {
+    border-color: var(--primary);
+    background: var(--secondary-surface);
+  }
+}
+
+.choiceRecommended {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+}
+
+.choiceArch {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.choiceFormat {
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.78rem;
+}
+
+.alternative {
+  margin: -0.35rem 0 0;
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+}
+
+.alternative a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.platformNote {
+  margin: auto 0 0;
+  color: var(--fg-faint);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+/* ── Release note ── */
+
+.releaseNote {
+  max-width: 46rem;
+  margin: 2.5rem auto 0;
+  padding-top: 1.75rem;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  color: var(--fg-faint);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.releaseNote p {
+  margin: 0.4rem 0;
+}
+
+.releaseNote a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .platforms {
+    grid-template-columns: 1fr;
+  }
+
+  .main {
+    padding-top: 2.5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .main {
+    padding-inline: 1rem;
+  }
+
+  .headline {
+    font-size: clamp(2.1rem, 10vw, 2.8rem);
+  }
+
+  .primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .platform {
+    padding: 1.1rem;
+  }
+}
