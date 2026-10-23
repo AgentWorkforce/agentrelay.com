@@ -23,14 +23,14 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-sessions/SKILL.md"
     },
     "@agent-relay/writing-relayflows#claude": {
-      "version": "1.6.2",
-      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fwriting-relayflows/1.6.2.tar.gz",
-      "integrity": "sha256-1b57a97f93f65ef4fc4b2eddadafdedce2d0e7e917bc8efe3d771e8c5d6a431b",
+      "version": "1.6.4",
+      "resolved": "https://registry.prpm.dev/api/v1/packages/%40agent-relay%2Fwriting-relayflows/1.6.4.tar.gz",
+      "integrity": "sha256-716c47c2780aa2ee07dede1d5a2a1f574224f108ad1dfc9b96cc5a054ce66874",
       "format": "claude",
       "subtype": "skill",
       "sourceFormat": "claude",
       "sourceSubtype": "skill",
-      "installedPath": ".claude/skills/writing-relayflows/SKILL.md"
+      "installedPath": ".claude/skills/writing-relayflows"
     },
     "@agent-relay/signing-in-to-agent-relay-cloud#claude": {
       "version": "0.1.0",
@@ -53,5 +53,5 @@
       "installedPath": ".claude/skills/setting-up-agent-relay-flows/SKILL.md"
     }
   },
-  "generated": "2026-10-15T19:24:42.594Z"
+  "generated": "2026-10-23T06:15:07.751Z"
 }

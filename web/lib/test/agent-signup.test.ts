@@ -5,13 +5,13 @@ import { agentSignupPrompt } from '../agent-signup';
 import { SETUP_SKILLS, SETUP_SKILLS_SOURCE } from '../generated/setup-skills';
 import { getRecommendedFlow } from '../recommended-flow-catalog';
 // @ts-expect-error -- plain .mjs build script without type declarations
-import { readInstalledSkills, renderModule, SETUP_SKILL_NAMES, stripFrontmatter } from '../../scripts/generate-setup-skills.mjs';
+import { readInstalledSkills, renderModule, SETUP_SKILL_NAMES, skillFilePath, stripFrontmatter } from '../../scripts/generate-setup-skills.mjs';
 
 const repoRoot = new URL('../../../', import.meta.url);
 const lockText = readFileSync(new URL('prpm.lock', repoRoot), 'utf8');
 const lock = JSON.parse(lockText);
 const entry = (name: string) => lock.packages[`@agent-relay/${name}#claude`];
-const installed = (name: string) => stripFrontmatter(readFileSync(new URL(entry(name).installedPath, repoRoot), 'utf8'));
+const installed = (name: string) => stripFrontmatter(readFileSync(new URL(skillFilePath(entry(name).installedPath), repoRoot), 'utf8'));
 const guide = async (product: string, url = `https://agentrelay.com/signup/agent/${product}`) =>
   (await GET(new Request(url), { params: Promise.resolve({ product }) })).text();
 
@@ -62,6 +62,8 @@ describe('agent signup instructions', () => {
     const generated = readFileSync(new URL('../generated/setup-skills.ts', import.meta.url), 'utf8');
     expect(generated).toBe(renderModule(versions, Object.fromEntries(SETUP_SKILL_NAMES.map((name: string) => [name, installed(name)]))));
     await expect(readInstalledSkills('{"packages":{}}', async () => '')).rejects.toThrow('is not in prpm.lock');
+    expect(skillFilePath('.claude/skills/x/SKILL.md')).toBe('.claude/skills/x/SKILL.md');
+    expect(skillFilePath('.claude/skills/x')).toBe('.claude/skills/x/SKILL.md');
     expect(stripFrontmatter('---\nname: x\ndescription: y\n---\n\n# X\n')).toBe('# X\n');
     expect(() => stripFrontmatter('# X\n')).toThrow('frontmatter');
     expect(stripFrontmatter('---\r\nname: x\r\n---\r\n\r\n# X\r\n')).toBe('# X\r\n');

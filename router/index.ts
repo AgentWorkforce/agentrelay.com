@@ -54,7 +54,11 @@ const HANDLE_SEGMENT = "[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])";
 const RESERVED_AGENT_PAGE_HANDLES = new Set([
   "register", "connect", "api", "cloud", "admin", "www", "help", "support",
   "docs", "status", "security", "abuse", "login", "signup", "agents", "directory",
+  "download",
 ]);
+// Desktop download links name arelay.to/download; the page lives on the
+// primary host.
+const DOWNLOAD_PAGE_PATH = "/download";
 // The verified-agent directory page. web/lib/agent-directory.ts names the same
 // path (AGENT_DIRECTORY_PATH); keep the two in step.
 const AGENT_DIRECTORY_PAGE_PATH = "/directory";
@@ -356,9 +360,13 @@ export function isRelayAgentRegistryRoute(
   return REGISTRY_API_PATH.test(pathname);
 }
 
-// arelay.to only fronts agent chat: its root, its www alias and the signed-in
-// cloud app redirect to the primary host.
+// arelay.to only fronts agent chat: its root, the download page, its www alias
+// and the signed-in cloud app redirect to the primary host.
 export function getShortHostRedirect(url: URL): string | undefined {
+  const shortHost = url.hostname === SHORT_HOST || url.hostname === SHORT_HOST_WWW;
+  if (shortHost && url.pathname.replace(/\/$/, "") === DOWNLOAD_PAGE_PATH) {
+    return `https://${PRIMARY_HOST}${DOWNLOAD_PAGE_PATH}${url.search}`;
+  }
   if (url.hostname === SHORT_HOST_WWW) {
     return `https://${SHORT_HOST}${url.pathname}${url.search}`;
   }

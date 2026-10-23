@@ -13,7 +13,7 @@ import { SiteNav } from '../../components/SiteNav';
 import { SiteFooter } from '../../components/SiteFooter';
 import { TEAMS_OG_ALT, TEAMS_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
-import { teamsCloudUrl } from '../../lib/teams-cloud';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import { AgentSignup } from '../../components/AgentSignup';
 import home from '../landing.module.css';
 import flows from '../flows/flows.module.css';
@@ -40,10 +40,9 @@ export const metadata: Metadata = {
 };
 
 export default function TeamsPage() {
-  const signupHref = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
   const signupLabel = 'Sign up for free';
   const setupLink = (
-    <a className={`${home.ctaPrimary} ${home.homeNavAction}`} href={signupHref}>
+    <a className={`${home.ctaPrimary} ${home.homeNavAction}`} href={teamsGoogleAuthHref('teams_nav')}>
       {signupLabel}
     </a>
   );
@@ -64,7 +63,7 @@ export default function TeamsPage() {
                 Share your coding agent sessions with your team, find overlapping work, and discover whats working for everyone.
               </p>
               <div className={`${home.heroCenterCtas} ${s.signupCtas}`}>
-                <a className={home.ctaPrimary} href={signupHref}>
+                <a className={home.ctaPrimary} href={teamsGoogleAuthHref('teams_hero')}>
                   {signupLabel}
                 </a>
                 <AgentSignup product="teams" />
@@ -84,7 +83,7 @@ export default function TeamsPage() {
           <section id="how-it-works" className={`${flows.sectionBand} ${flows.bandCode} ${s.activitySection}`} aria-labelledby="teams-setup-heading">
             <div className={s.activityIntro}>
               <h2 id="teams-setup-heading">Your whole team's coding agents, under one roof</h2>
-              <p>Work like you normally would. Agent sessions get shared automatically. Get a bird’s-eye view of all the work happening across the team.</p>
+              <p>Work like you normally would. Share the agent sessions you choose and get a bird’s-eye view of all the work happening across the team.</p>
             </div>
             <figure className={s.productScreenshot}>
               <a href={dashboardConcept.src} target="_blank" rel="noreferrer" aria-label="View the full dashboard concept">

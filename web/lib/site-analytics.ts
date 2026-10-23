@@ -1,4 +1,7 @@
 const TRACKED_ROUTE_PREFIXES = [
+  { prefix: '/login', pageGroup: 'login' },
+  { prefix: '/signup', pageGroup: 'signup' },
+  { prefix: '/download', pageGroup: 'download' },
   { prefix: '/flows', pageGroup: 'flows' },
   { prefix: '/teams', pageGroup: 'teams' },
   { prefix: '/docs', pageGroup: 'docs' },
@@ -39,7 +42,7 @@ export function dropAgentDashboardAnalytics<T>(event: T | null): T | null {
 }
 
 export type WebsiteAnalyticsPage = {
-  pageGroup: (typeof TRACKED_ROUTE_PREFIXES)[number]['pageGroup'];
+  pageGroup: 'home' | (typeof TRACKED_ROUTE_PREFIXES)[number]['pageGroup'];
   pathname: string;
 };
 
@@ -51,6 +54,7 @@ export function getWebsiteAnalyticsPage(pathname: string | null | undefined): We
   if (!pathname) return null;
   if (isAgentDashboardPath(pathname)) return null;
   if (EXCLUDED_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return null;
+  if (pathname === '/') return { pageGroup: 'home', pathname };
 
   const match = TRACKED_ROUTE_PREFIXES.find(({ prefix }) => matchesPrefix(pathname, prefix));
   if (!match) return null;

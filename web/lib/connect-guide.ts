@@ -112,6 +112,6 @@ rm -r -- "<dir>"
   permissions or "No running relay" error. Rerun the same command with
   escalated permissions and let your human approve it.
 - If the installer says the release lacks Connect, wait for a newer release.
-  Do not build the probe or use the different installer at /install.sh.
+  Do not build the probe.
 - If create or end is interrupted, rerun the same command in the same session.
 `;
