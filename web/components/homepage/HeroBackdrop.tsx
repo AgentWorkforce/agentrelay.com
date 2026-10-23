@@ -10,15 +10,17 @@ const HALFTONE_SHARE = 0.1;
 
 /**
  * The hero's animated backdrop: usually the faint agent chat, now and then the
- * halftone message field. Picked after mount so the server render and
- * hydration agree; both canvases start blank anyway.
+ * halftone message field. Picked after mount, and nothing renders until then,
+ * so the server render and hydration agree and only the chosen backdrop mounts.
  */
 export function HeroBackdrop() {
-  const [halftone, setHalftone] = useState(false);
+  const [backdrop, setBackdrop] = useState<'chat' | 'halftone' | null>(null);
 
   useEffect(() => {
-    setHalftone(Math.random() < HALFTONE_SHARE);
+    setBackdrop(Math.random() < HALFTONE_SHARE ? 'halftone' : 'chat');
   }, []);
 
-  return halftone ? <HeroHalftone /> : <HeroGhostChat />;
+  if (backdrop === 'halftone') return <HeroHalftone />;
+  if (backdrop === 'chat') return <HeroGhostChat />;
+  return null;
 }
