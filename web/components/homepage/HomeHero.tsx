@@ -3,19 +3,19 @@ import type { CSSProperties } from 'react';
 import { InvestorStrip } from '../InvestorStrip';
 import { AgentIcons } from '../AgentSignup';
 import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE_LINES, HOME_SIGNUP_HREF } from '../../lib/home-copy';
-import { HeroStream } from './HeroStream';
+import { HeroBackdrop } from './HeroBackdrop';
 import s from '../../app/landing.module.css';
 
 /**
  * The homepage hero: the two-line headline rising in, the description, one
  * sign-up button with the agent logos turning in it, and the backers, over a
- * faint stream of falling bytes. The button is marked so the nav can show its
+ * faint animated backdrop of agents talking. The button is marked so the nav can show its
  * own once this one scrolls away.
  */
 export function HomeHero() {
   return (
     <div className={s.heroSection}>
-      <HeroStream />
+      <HeroBackdrop />
       <section className={s.heroCenter}>
         <div className={s.heroCenterColumn}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
