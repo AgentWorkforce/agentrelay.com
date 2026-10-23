@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import ts from 'typescript';
-import { ISSUE_SOURCES, issueSourceCode, sourceSummary, validSourcePreferences, type IssueSourceId, type SourcePreferences } from '../flow-sources';
-import { localInput } from '../flow-local';
-import { DEFAULT_FACTORY } from '../flow-onboarding';
+import { ISSUE_SOURCES, issueSourceCode, type IssueSourceId, type SourcePreferences } from '../flow-sources';
 
 /**
  * Filtering now ships only in the local flow: a Cloud deployment is filtered by
@@ -124,21 +122,6 @@ describe('generated issue source filters', () => {
     const events = linear.fields.find(field => field.key === 'events')!;
     expect('options' in events && events.options.map(option => option.value)).toEqual(['issues', 'assigned', 'all']);
 
-    // Storage validation accepts the choices (and a blank default) but nothing else.
-    for (const value of ['issues', 'assigned', 'all', '']) {
-      expect(validSourcePreferences({ linear: { events: value } })).toBe(true);
-    }
-    expect(validSourcePreferences({ linear: { events: 'mentions' } })).toBe(false);
-    expect(validSourcePreferences({ github: { events: 'assigned' } })).toBe(false);
-
-    // The summary names the choice, not its storage value — and an untouched
-    // select still means its displayed default, not "all incoming items".
-    expect(sourceSummary('linear', { events: 'assigned', team: 'Engineering' }))
-      .toBe('Wake on: Issues assigned to the agent · Team: Engineering');
-    expect(sourceSummary('linear', {})).toBe('Wake on: New issues');
-    expect(sourceSummary('linear', { team: 'Engineering' }))
-      .toBe('Wake on: New issues · Team: Engineering');
-
     // `events` is what wakes the Cloud listener, not a field a ticket carries:
     // the local flow must not filter on it or declare it on Issue.
     const settings: SourcePreferences = { linear: { events: 'assigned' } };
@@ -146,14 +129,11 @@ describe('generated issue source filters', () => {
     expect(local).not.toContain('events');
     expect(matcher(['linear'], settings)({ ...issue, team: 'Engineering' })).toBe(true);
     expect(issueSourceCode(['linear'], settings, 'cloud')).not.toContain('events?:');
-    // And the prefilled local ticket carries real ticket fields only.
-    expect(localInput({ ...DEFAULT_FACTORY, sources: ['linear'], sourceSettings: settings }).issue)
-      .not.toHaveProperty('events');
   });
 
   it('never reads a field the trimmed Issue type does not declare', () => {
-    // The kit tells people to run `npx flows check` before `flows run`, so the
-    // generated filter has to typecheck against the trimmed Issue. Slack is the
+    // `flows check` typechecks the generated filter against the trimmed Issue,
+    // so it may read only declared fields. Slack is the
     // only source that can carry a mention rule, so it is the only one allowed
     // to read issue.mentioned.
     const mentions = issueSourceCode(['slack'], { slack: { mentioned: true } }, 'local');

@@ -50,52 +50,6 @@ export type IssueSourceId = typeof ISSUE_SOURCES[number]['id'];
 export type SourceFilterKey = typeof ISSUE_SOURCES[number]['fields'][number]['key'];
 export type SourceSettings = Partial<Record<SourceFilterKey, string>> & { mentioned?: boolean };
 export type SourcePreferences = Partial<Record<IssueSourceId, SourceSettings>>;
-export const sourceLabel = (id: IssueSourceId) => ISSUE_SOURCES.find(source => source.id === id)!.label;
-
-/**
- * Where the flow's change request opens. Mirrors Cloud's deploy-page inference
- * (flow-handoff `suggestedRepository`): a GitHub source keeps GitHub; a GitLab
- * source without one makes the GitLab project the target.
- */
-export type RepositoryHost = 'github' | 'gitlab';
-export function repositoryHost(sources: readonly IssueSourceId[]): RepositoryHost {
-  return !sources.includes('github') && sources.includes('gitlab') ? 'gitlab' : 'github';
-}
-
-export function validSourcePreferences(value: unknown): value is SourcePreferences {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  return Object.entries(value).every(([id, settings]) => {
-    const source = ISSUE_SOURCES.find(source => source.id === id);
-    if (!source || !settings || typeof settings !== 'object' || Array.isArray(settings)) return false;
-    return Object.entries(settings).every(([key, val]) => {
-      if (key === 'mentioned') return id === 'slack' && typeof val === 'boolean';
-      const field = source.fields.find(field => field.key === key);
-      if (!field || typeof val !== 'string' || val.length > 200) return false;
-      // A choice field accepts its options — or blank, which means the default
-      // and is dropped before it ever reaches a deploy request.
-      return !('options' in field) || !val || field.options.some(option => option.value === val);
-    });
-  });
-}
-
-export function sourceSummary(id: IssueSourceId, settings: SourceSettings): string {
-  if (id === 'markdown') return `${settings.path?.trim() || 'tasks.md'} · Local runs only, nothing to connect`;
-  const parts = ISSUE_SOURCES.find(source => source.id === id)!.fields.flatMap(field => {
-    const value = settings[field.key]?.trim();
-    // A choice field unset still has a visible default in the picker — the
-    // first option — so the summary must name it rather than read as if every
-    // event family were subscribed.
-    if (!value) {
-      return 'options' in field ? [`${field.label}: ${field.options[0].label}`] : [];
-    }
-    const shown = 'options' in field
-      ? field.options.find(option => option.value === value)?.label ?? value
-      : value;
-    return [`${field.label}: ${shown}`];
-  });
-  if (id === 'slack' && settings.mentioned) parts.push('Only when the app is mentioned');
-  return parts.join(' · ') || 'All incoming items from this connection';
-}
 
 /** The chosen filters per source, with blank values dropped. */
 function sourceFilterRules(sources: IssueSourceId[], preferences: SourcePreferences) {

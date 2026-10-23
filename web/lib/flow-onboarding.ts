@@ -1,10 +1,7 @@
-import { validFlowAgentSettings, type FlowAgentSettings } from './flow-agent-settings';
-import { flowPreview } from './flow-preview';
+import type { FlowAgentSettings } from './flow-agent-settings';
 import { FLOW_TIME, WORKFLOWS, workflowCode, workflowAgents, type WorkflowId } from './flow-workflows';
-import { ISSUE_SOURCES, issueSourceCode, validSourcePreferences, type IssueSourceId, type SourcePreferences } from './flow-sources';
-
-import { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
-export { CODING_AGENTS, isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
+import { issueSourceCode, type IssueSourceId, type SourcePreferences } from './flow-sources';
+import { isCodingAgent, type AgentId, type CodingAgent } from './flow-agents';
 
 export type FactoryDraft = {
   version: 4;
@@ -18,91 +15,18 @@ export type FactoryDraft = {
   workflow: WorkflowId | null;
   step: number;
 };
-export const LEGACY_FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v2';
-export const PREVIOUS_FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v3';
-export const FACTORY_DRAFT_KEY = 'agentrelay:software-factory:v4';
 export const DEFAULT_FACTORY: FactoryDraft = { version: 4, sources: [], sourceSettings: {}, agents: [], otherAgent: '', task: '', workflow: null, step: 0 };
-export const agentLabel = (id: AgentId) => CODING_AGENTS.find(agent => agent.id === id)!.label;
-export function primaryAgent(draft: FactoryDraft): CodingAgent {
+function primaryAgent(draft: FactoryDraft): CodingAgent {
   return workflowAgents(draft.agents).builder;
 }
-export function otherAgentIsSelected(draft: FactoryDraft): boolean {
+function otherAgentIsSelected(draft: FactoryDraft): boolean {
   return draft.otherAgentSelected ?? Boolean(draft.otherAgent?.trim());
 }
-export function canContinue(draft: FactoryDraft, step = draft.step): boolean {
+function canContinue(draft: FactoryDraft, step = draft.step): boolean {
   return [draft.sources.length > 0, draft.agents.length > 0 || (otherAgentIsSelected(draft) && Boolean(draft.otherAgent?.trim())), WORKFLOWS.some(workflow => workflow.id === draft.workflow)][step] ?? true;
 }
 
-export const ONBOARDING_STAGES = ['sources', 'agents', 'task', 'connections'] as const;
-export function onboardingPath(step: number): string {
-  return step < 0 ? '/flows/onboarding' : `/flows/onboarding/${ONBOARDING_STAGES[step]}`;
-}
-export function accessibleOnboardingStep(draft: FactoryDraft, requestedStep: number): number {
-  for (let step = 0; step < requestedStep; step++) {
-    if (!canContinue(draft, step)) return step;
-  }
-  return requestedStep;
-}
-export function readFactoryDraft(raw: string | null): FactoryDraft | null {
-  try {
-    const value = JSON.parse(raw ?? 'null');
-    if (!validFlowAgentSettings(value?.agentSettings) || ![2, 3, 4].includes(value?.version) || !Array.isArray(value.agents) ||
-      !value.agents.every((id: unknown) => CODING_AGENTS.some(agent => agent.id === id)) ||
-      (value.otherAgent !== undefined && (typeof value.otherAgent !== 'string' || value.otherAgent.length > 100)) ||
-      (value.otherAgentSelected !== undefined && typeof value.otherAgentSelected !== 'boolean') ||
-      typeof value.task !== 'string' || value.task.length > 600 ||
-      (value.version === 4 && value.workflow !== null && !WORKFLOWS.some(workflow => workflow.id === value.workflow)) || !Number.isInteger(value.step) || value.step < 0 || value.step > (value.version === 2 ? 5 : value.version === 3 ? 6 : 3)) return null;
-    if (value.version >= 3 && (!Array.isArray(value.sources) ||
-      !value.sources.every((id: unknown) => ISSUE_SOURCES.some(source => source.id === id)) ||
-      !validSourcePreferences(value.sourceSettings))) return null;
-    const draft: FactoryDraft = { version: 4,
-      sources: value.version === 2 ? [] : [...new Set<IssueSourceId>(value.sources)],
-      sourceSettings: value.version === 2 ? {} : value.sourceSettings, agents: [...new Set<AgentId>(value.agents)], otherAgent: value.otherAgent ?? '', task: value.task,
-      ...(value.agentSettings !== undefined ? { agentSettings: value.agentSettings } : {}),
-      ...(value.otherAgentSelected !== undefined ? { otherAgentSelected: value.otherAgentSelected } : {}),
-      workflow: value.version === 4 ? value.workflow : null, step: value.version === 2 ? 0 : value.version === 3 ? Math.min(value.step, 2) : value.step };
-    for (let step = 0; step < draft.step; step++) {
-      if (!canContinue(draft, step)) { draft.step = step; break; }
-    }
-    return draft;
-  } catch { return null; }
-}
-
-/**
- * Cloud deploys a listener, and a Markdown file is read by a run rather than
- * emitting events, so a Markdown-only flow has nothing to trigger it. Cloud
- * already refuses this at deploy time; saying so here saves a Google sign-in,
- * a GitHub App install and a model choice made for a deploy that cannot
- * happen. Any other selected source is a real listener, so the flow deploys
- * (Cloud drops markdown from the sources it listens to) and is not blocked.
- */
-export const MARKDOWN_ONLY_CLOUD_NOTE = 'Markdown files are not a live source, so Cloud has nothing to listen to. Choose a ticket source, or run on your computer.';
-export function isMarkdownOnly(draft: FactoryDraft): boolean {
-  return draft.sources.length > 0 && draft.sources.every(source => source === 'markdown');
-}
-export function cloudBlockedReason(draft: FactoryDraft): string {
-  return isMarkdownOnly(draft) ? MARKDOWN_ONLY_CLOUD_NOTE : '';
-}
-
-export function cloudConnectionsHref(draft: FactoryDraft, handoffId: string, journeyId?: string, distinctId?: string): string {
-  if (!canContinue(draft, 2)) throw new Error('Choose a workflow before continuing to Cloud.');
-  // The fragment is read only by Cloud's browser deploy page, which keeps it in
-  // localStorage across Google sign-in. Source code and ticket filters must not
-  // enter OAuth state, cookies, or server access logs.
-  // distinctId is PostHog's anonymous device identifier for this visitor, and
-  // nothing else: no email, name, or anything typed into onboarding. Both apps
-  // are same-origin in production, so Cloud normally reads the same anonymous
-  // id from shared browser storage. Carrying it here lets Cloud measure whether
-  // that continuity actually held and merge the two people when it did not.
-  const analytics = { ...(journeyId ? { journeyId } : {}), ...(distinctId ? { distinctId } : {}) };
-  const payload = { version: 1, handoffId, ...(Object.keys(analytics).length ? { analytics } : {}), name: 'Software Garden', source: factorySource({ ...draft, step: 3 }),
-    workflow: draft.workflow, preview: flowPreview(draft), sources: draft.sources, sourceSettings: draft.sourceSettings,
-    agents: draft.agents, otherAgent: draft.otherAgent, otherAgentSelected: otherAgentIsSelected(draft), task: draft.task };
-  const base = process.env.NEXT_PUBLIC_CLOUD_URL || 'https://agentrelay.com/cloud';
-  return `${base.replace(/\/$/, '')}/flows/deploy#${encodeURIComponent(JSON.stringify(payload))}`;
-}
-
-export function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
+function factoryCodeSections(draft: FactoryDraft, target: 'cloud' | 'local' = 'cloud') {
   // A wall-clock budget for every target. Since relayflows 2.0.13 a dollar
   // budget no longer refuses a model-less Codex step (AgentWorkforce/flows#421);
   // such a step runs unmetered, so a dollar cap cannot bound it. Wall-clock is
