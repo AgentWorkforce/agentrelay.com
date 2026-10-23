@@ -28,11 +28,7 @@ describe('agent signup instructions', () => {
     expect(response.headers.get('access-control-allow-origin')).toBe('*');
     expect(response.headers.get('cache-control')).toBe('no-store');
     const content = await response.text();
-    expect(content).toContain(`signup_source "${product}"`);
     expect(content).toContain('Cloud API base: https://agentrelay.com/cloud');
-    expect(content).toContain('/api/v1/auth/device/token');
-    expect(content).toContain('/api/v1/auth/whoami');
-    expect(content).toContain('/api/v1/auth/token/refresh');
     // cloud#4254: the edge 403s Python urllib's default User-Agent.
     expect(content).toContain('Send a User-Agent naming your tool');
     expect(content).toContain('Python-urllib');
@@ -40,9 +36,18 @@ describe('agent signup instructions', () => {
     // The prompt must carry it too: a blocked client never reads the guide.
     expect(agentSignupPrompt(product as 'teams' | 'flows', 'https://agentrelay.com')).toContain('sending a User-Agent that names your tool');
     if (product === 'teams') {
+      // The app's browser sign-in creates the account; the agent never runs a Cloud device login.
+      expect(content).toContain('{"flow":"browser","signup_source":"teams"}');
+      expect(content).toContain('/setup/sessions-token');
+      expect(content).not.toContain('/api/v1/auth/device/token');
+      expect(content).not.toContain('# Sign In to Agent Relay Cloud');
       expect(content).toContain('releases/latest/download');
       expect(content).toContain('AgentRelay-macOS-$relay_arch.dmg');
     } else {
+      expect(content).toContain('signup_source "flows"');
+      expect(content).toContain('/api/v1/auth/device/token');
+      expect(content).toContain('/api/v1/auth/whoami');
+      expect(content).toContain('/api/v1/auth/token/refresh');
       expect(content).toContain('"mode": "activate"');
       expect(content).toContain('/api/v1/flows/listeners/<agentId>');
     }
@@ -68,7 +73,7 @@ describe('agent signup instructions', () => {
   });
 
   it.each([
-    ['teams', ['signing-in-to-agent-relay-cloud', 'setting-up-agent-relay-desktop', 'setting-up-agent-relay-sessions'], ['Cloud account', 'Desktop', 'Sessions']],
+    ['teams', ['setting-up-agent-relay-desktop', 'setting-up-agent-relay-sessions'], ['Desktop', 'Sessions']],
     ['flows', ['signing-in-to-agent-relay-cloud', 'setting-up-agent-relay-flows', 'writing-relayflows'], ['Cloud account', 'Flows', 'Custom flow authoring']],
   ])('renders %s as the signup header followed by the skills verbatim, in order', async (product, skills, labels) => {
     const content = await guide(product);
@@ -113,9 +118,12 @@ describe('agent signup instructions', () => {
     const completions = [...content.matchAll(/state: complete/g)].map(match => match.index!);
     expect(completions.length).toBeGreaterThan(0);
     for (const index of completions) expect(index).toBeLessThan(header.length);
-    expect(header).toContain('Keep step 5 working or waiting until Part 3 proves a\n   live round trip; only then PATCH step: 5, state: complete.');
-    expect(header).toContain('A self-verified\n   read path without a teammate is not completion.');
-    expect(header).toContain('Setup is complete only in Part 3\'s finished state: a proven live round trip.');
+    expect(header).toContain('Keep step 5\n   working or waiting until Part 2 proves a live round trip;\n   only then PATCH step: 5, state: complete.');
+    expect(header).toContain('A self-verified read path without\n   a teammate is not completion.');
+    // Steps run in order: Connect sessions (4) starts before Check everything works (5).
+    expect(header.indexOf('4. Connect sessions')).toBeLessThan(header.indexOf('5. Check everything works'));
+    expect(header).toContain('5. Check everything works: before Part 2\'s live round trip.');
+    expect(header).toContain('Setup is complete only in Part 2\'s finished state: a proven live round trip.');
     expect(content.slice(roundTrip)).toContain('Setup is not complete until the full round trip succeeds.');
   });
 
@@ -137,8 +145,10 @@ describe('agent signup instructions', () => {
     expect(content).not.toMatch(/npm install -g agent-relay/);
     expect(content).toContain('relay-desktop#333');
     expect(content).toContain('60-second timeout');
-    expect(content).toContain('Use `curl` or `fetch`');
-    expect(content).toContain('cloud#4254');
+    // Flows signs in through the Cloud sign-in skill, which carries the HTTP-client guidance.
+    const flows = await guide('flows');
+    expect(flows).toContain('Use `curl` or `fetch`');
+    expect(flows).toContain('cloud#4254');
   });
 
   it('keeps the local hostname and port for OAuth, APIs, and the dev desktop download', async () => {
