@@ -1,0 +1,357 @@
+/* Open source catalog. Sits on the messaging page wash from landing.module.css
+   and reuses its glass treatment: translucent navy panels, relay-blue edges. */
+
+.eyebrow {
+  margin: 0 0 -6px;
+  color: #74b8e2;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.statRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+}
+
+.stat {
+  min-width: 132px;
+  padding: 14px 20px;
+  border: 1px solid rgba(116, 184, 226, 0.16);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(116, 184, 226, 0.08), rgba(116, 184, 226, 0.02)),
+    rgba(4, 18, 31, 0.5);
+  -webkit-backdrop-filter: blur(12px) saturate(125%);
+  backdrop-filter: blur(12px) saturate(125%);
+}
+
+.stat dt {
+  color: var(--fg-faint);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.stat dd {
+  margin: 4px 0 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.9rem;
+  font-weight: 500;
+  line-height: 1.1;
+}
+
+/* ---- Category chips ---- */
+
+.categoryNav {
+  position: sticky;
+  top: var(--nav-clearance);
+  z-index: 4;
+  margin-top: 72px;
+  border-top: 1px solid rgba(116, 184, 226, 0.08);
+  border-bottom: 1px solid rgba(116, 184, 226, 0.08);
+  background: rgba(13, 38, 56, 0.82);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+  backdrop-filter: blur(14px) saturate(130%);
+}
+
+.categoryNavInner {
+  display: flex;
+  gap: 8px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 40px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.categoryNavInner::-webkit-scrollbar {
+  display: none;
+}
+
+.categoryChip {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  border: 1px solid rgba(116, 184, 226, 0.18);
+  border-radius: 999px;
+  color: var(--fg-muted);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    color 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.categoryChip:hover {
+  border-color: rgba(116, 184, 226, 0.42);
+  background: rgba(116, 184, 226, 0.08);
+  color: var(--fg);
+}
+
+.categoryCount {
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.74rem;
+}
+
+/* ---- Catalog ---- */
+
+.body {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 40px 112px;
+}
+
+.category {
+  /* The root scroll-padding already clears the site nav; this clears the
+     sticky chip bar beneath it. */
+  scroll-margin-top: 60px;
+  padding-top: 64px;
+}
+
+.categoryHeader {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 28px;
+  padding-left: 16px;
+  border-left: 3px solid rgba(116, 184, 226, 0.5);
+}
+
+.categoryTitle {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.categoryDescription {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--fg-muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 22px 18px;
+  border: 1px solid rgba(116, 184, 226, 0.14);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(116, 184, 226, 0.07), rgba(116, 184, 226, 0.015)),
+    rgba(4, 18, 31, 0.62);
+  box-shadow: inset 0 1px 0 rgba(237, 247, 255, 0.05);
+  transition:
+    border-color 0.2s,
+    transform 0.2s var(--ease-out-quint),
+    background 0.2s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    border-color: rgba(116, 184, 226, 0.38);
+    background:
+      linear-gradient(180deg, rgba(116, 184, 226, 0.1), rgba(116, 184, 226, 0.025)),
+      rgba(4, 18, 31, 0.7);
+    transform: translateY(-2px);
+  }
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* The title link covers the whole card; "Learn more" sits above it. */
+.cardLink {
+  color: inherit;
+  text-decoration: none;
+}
+
+.cardLink::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.cardLink:focus-visible {
+  outline: none;
+}
+
+.card:has(.cardLink:focus-visible) {
+  outline: 2px solid color-mix(in srgb, var(--primary) 70%, white 18%);
+  outline-offset: 3px;
+}
+
+.stars {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.8rem;
+}
+
+.stars svg {
+  width: 14px;
+  height: 14px;
+  color: #74b8e2;
+}
+
+.cardPath {
+  margin: 0;
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.76rem;
+}
+
+.cardDescription {
+  flex: 1;
+  margin: 4px 0 10px;
+  color: var(--fg-muted);
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(116, 184, 226, 0.08);
+}
+
+.language {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--fg-faint);
+  font-size: 0.8rem;
+}
+
+.languageDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.cardMore {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #74b8e2;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.cardMore svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s var(--ease-out-quint);
+}
+
+.cardMore:hover svg {
+  transform: translateX(2px);
+}
+
+/* ---- Closing ---- */
+
+.closing {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  margin-top: 96px;
+  padding: 56px 40px;
+  border: 1px solid rgba(116, 184, 226, 0.16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(116, 184, 226, 0.16), transparent 60%),
+    rgba(4, 18, 31, 0.5);
+  text-align: center;
+}
+
+.closingTitle {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.05;
+}
+
+.closingBody {
+  margin: 0;
+  max-width: 54ch;
+  color: var(--fg-muted);
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.closingCtas {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  .categoryNavInner,
+  .body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .categoryNav {
+    margin-top: 48px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .closing {
+    padding: 40px 20px;
+  }
+}
