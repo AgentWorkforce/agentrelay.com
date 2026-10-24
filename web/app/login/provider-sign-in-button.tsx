@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
+import type { SignInProvider } from '../../lib/login';
 import { GoogleIcon } from './google-icon';
+import { MicrosoftIcon } from './microsoft-icon';
 import { RELAY_RUSH_EVENT } from './relay-events';
 import s from './login.module.css';
 
@@ -15,7 +17,19 @@ import s from './login.module.css';
  */
 const HANDOFF_MS = 8000;
 
-export function GoogleSignInButton({ href }: { href: string }) {
+const PROVIDERS = {
+  google: { label: 'Google', Icon: GoogleIcon },
+  microsoft: { label: 'Microsoft', Icon: MicrosoftIcon },
+} as const;
+
+export function ProviderSignInButton({
+  provider,
+  href,
+}: {
+  provider: SignInProvider;
+  href: string;
+}) {
+  const { label, Icon } = PROVIDERS[provider];
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
@@ -37,7 +51,7 @@ export function GoogleSignInButton({ href }: { href: string }) {
   return (
     <a
       href={href}
-      className={s.google}
+      className={s.provider}
       aria-busy={pending || undefined}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
@@ -50,8 +64,8 @@ export function GoogleSignInButton({ href }: { href: string }) {
         setPending(true);
       }}
     >
-      {pending ? <LoaderCircle className={s.spin} aria-hidden="true" /> : <GoogleIcon />}
-      {pending ? 'Redirecting to Google…' : 'Continue with Google'}
+      {pending ? <LoaderCircle className={s.spin} aria-hidden="true" /> : <Icon />}
+      {pending ? `Redirecting to ${label}…` : `Continue with ${label}`}
     </a>
   );
 }

@@ -140,7 +140,7 @@
   background: rgba(240, 114, 127, 0.12);
 }
 
-.google {
+.provider {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -162,21 +162,24 @@
     transform 160ms ease;
 }
 @media (hover: hover) and (pointer: fine) {
-  .google:hover {
+  .provider:hover {
     background: #eef4f9;
     box-shadow:
       0 0 0 4px color-mix(in srgb, var(--primary) 14%, transparent),
       0 12px 28px -12px rgba(0, 0, 0, 0.45);
   }
 }
-.google:active {
+.provider + .provider {
+  margin-top: 12px;
+}
+.provider:active {
   transform: scale(0.99);
 }
-.google:focus-visible {
+.provider:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
-.google[aria-busy] {
+.provider[aria-busy] {
   cursor: progress;
   color: #4b5563;
 }
@@ -275,7 +278,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .field,
-  .google {
+  .provider {
     transition: none;
   }
   .form {

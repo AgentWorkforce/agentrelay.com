@@ -1,27 +1,34 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import LoginPage from '../../app/login/page';
-import { authErrorMessage, googleSignInHref } from '../login';
+import { authErrorMessage, signInHref } from '../login';
 
 const render = async (params: Record<string, string>) =>
   renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve(params) }));
 
 describe('login page', () => {
-  it('signs in through Cloud’s Google route, carrying the destination', async () => {
+  it('signs in through Cloud’s Google and Microsoft routes, carrying the destination', async () => {
     const html = await render({ next: '/dashboard/workflows' });
     expect(html).toContain('Sign in to Agent Relay');
     expect(html).toContain('href="/cloud/api/auth/google/start?next=%2Fdashboard%2Fworkflows"');
+    expect(html).toContain('href="/cloud/api/auth/microsoft/start?next=%2Fdashboard%2Fworkflows"');
+    expect(html).toContain('Continue with Google');
+    expect(html).toContain('Continue with Microsoft');
   });
 
-  it('acknowledges an invite and forwards its token', async () => {
+  it('acknowledges an invite and forwards its token to every provider', async () => {
     const html = await render({ invite: ' abc123 ' });
     expect(html).toContain('You’ve been invited to a workspace');
-    expect(html).toContain('invite_token=abc123');
+    expect(html).toContain('/cloud/api/auth/google/start?invite_token=abc123');
+    expect(html).toContain('/cloud/api/auth/microsoft/start?invite_token=abc123');
   });
 
   it('announces known OAuth errors and ignores unknown codes', async () => {
     expect(await render({ authError: 'state' })).toMatch(
       /role="alert"[^>]*>Your sign-in session expired/,
+    );
+    expect(await render({ authError: 'microsoft' })).toMatch(
+      /role="alert"[^>]*>We couldn’t complete Microsoft sign-in/,
     );
     expect(await render({ authError: '<script>' })).not.toContain('role="alert"');
   });
@@ -42,9 +49,10 @@ describe('login page', () => {
   });
 });
 
-describe('googleSignInHref', () => {
+describe('signInHref', () => {
   it('omits empty params', () => {
-    expect(googleSignInHref({})).toBe('/cloud/api/auth/google/start');
+    expect(signInHref('google', {})).toBe('/cloud/api/auth/google/start');
+    expect(signInHref('microsoft', {})).toBe('/cloud/api/auth/microsoft/start');
   });
 });
 

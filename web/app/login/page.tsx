@@ -8,8 +8,8 @@ import {
 } from '../../components/AgentToolLogos';
 import { Cursor, Grok, MuseColor } from '../../components/brand-icons';
 import { LogoIcon, LogoWordmark } from '../../components/SiteNav';
-import { authErrorMessage, googleSignInHref } from '../../lib/login';
-import { GoogleSignInButton } from './google-sign-in-button';
+import { authErrorMessage, signInHref } from '../../lib/login';
+import { ProviderSignInButton } from './provider-sign-in-button';
 import { RelayField } from './relay-field';
 import s from './login.module.css';
 
@@ -76,9 +76,13 @@ export default async function LoginPage({ searchParams }: LoginProps) {
             </p>
           )}
 
-          <GoogleSignInButton
-            href={googleSignInHref({ next: first(params.next), invite })}
-          />
+          {(['google', 'microsoft'] as const).map((provider) => (
+            <ProviderSignInButton
+              key={provider}
+              provider={provider}
+              href={signInHref(provider, { next: first(params.next), invite })}
+            />
+          ))}
 
           <div className={s.worksWith}>
             <p>Works with all your agents</p>
