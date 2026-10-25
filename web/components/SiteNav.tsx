@@ -102,6 +102,11 @@ export function SiteNav({
                   </a>
                 </li>
                 <li>
+                  <Link href="/pricing" className={s.link}>
+                    Pricing
+                  </Link>
+                </li>
+                <li>
                   <Link href="/docs" className={s.link}>
                     Docs
                   </Link>
@@ -171,6 +176,11 @@ export function SiteNav({
               <a href={teamsCloudUrl('/login')} className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                 Log in
               </a>
+            )}
+            {!hideLinks && (
+              <Link href="/pricing" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+                Pricing
+              </Link>
             )}
             {!hideLinks && !hideMobileDocsLink && (
               <Link href="/docs" className={s.mobileLink} onClick={() => setMenuOpen(false)}>

@@ -15,6 +15,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Introduction', slug: 'introduction' },
       { title: 'Quickstart', slug: 'quickstart' },
       { title: 'Workspaces', slug: 'workspaces' },
+      { title: 'Plans and limits', slug: 'plans-and-limits' },
       { title: 'Authentication', slug: 'authentication' },
     ],
   },
