@@ -355,10 +355,6 @@
     grid-template-columns: 1fr;
     max-width: 560px;
   }
-
-  .tierHighlighted {
-    order: -1;
-  }
 }
 
 @media (max-width: 640px) {
