@@ -181,6 +181,10 @@
   outline: 2px solid var(--primary);
   outline-offset: 3px;
 }
+/* Until Cloud's Microsoft sign-in is verified; `?microsoft=true` reveals it. */
+.provider.hidden {
+  display: none;
+}
 .provider[aria-busy] {
   cursor: progress;
   color: #4b5563;

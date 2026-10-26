@@ -1,10 +1,20 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import LoginPage from '../../app/login/page';
+import s from '../../app/login/login.module.css';
 import { authErrorMessage, googleSignInHref, microsoftSignInHref } from '../login';
 
 const render = async (params: Record<string, string>) =>
   renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve(params) }));
+
+/** The class attribute of the sign-in link for `provider`. */
+const providerClasses = (html: string, provider: string) => {
+  const match = html.match(
+    new RegExp(`<a href="/cloud/api/auth/${provider}/start[^"]*" class="([^"]*)"`),
+  );
+  expect(match, `${provider} sign-in link`).not.toBeNull();
+  return match![1].split(' ');
+};
 
 describe('login page', () => {
   it('signs in through Cloud’s Google and Microsoft routes, carrying the destination', async () => {
@@ -14,6 +24,25 @@ describe('login page', () => {
     expect(html).toContain('Continue with Google');
     expect(html).toContain('href="/cloud/api/auth/microsoft/start?next=%2Fdashboard%2Fworkflows"');
     expect(html).toContain('Continue with Microsoft');
+  });
+
+  it('hides the Microsoft button unless ?microsoft=true', async () => {
+    expect(s.hidden).toBeTruthy();
+    const hiddenParams: Record<string, string>[] = [
+      {},
+      { microsoft: 'false' },
+      { microsoft: '1' },
+      { microsoft: 'TRUE' },
+    ];
+    for (const params of hiddenParams) {
+      const html = await render(params);
+      expect(providerClasses(html, 'microsoft')).toContain(s.hidden);
+      expect(providerClasses(html, 'google')).not.toContain(s.hidden);
+    }
+    const shown = await render({ microsoft: 'true' });
+    expect(providerClasses(shown, 'microsoft')).not.toContain(s.hidden);
+    expect(providerClasses(shown, 'microsoft')).toContain(s.provider);
+    expect(providerClasses(shown, 'google')).not.toContain(s.hidden);
   });
 
   it('acknowledges an invite and forwards its token to both providers', async () => {
