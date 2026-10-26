@@ -12,11 +12,12 @@ describe('docs markdown export for MDX components', () => {
     expect(doc?.markdown).not.toContain('<Card');
     expect(doc?.markdown).not.toContain('<CardGroup');
     expect(doc?.markdown).not.toContain('<BannerLink');
-    expect(doc?.markdown).toContain('[Messaging](https://agentrelay.com/docs/messaging)');
-    expect(doc?.markdown).toContain('[Delivery](https://agentrelay.com/docs/delivery)');
-    expect(doc?.markdown).toContain('[Actions](https://agentrelay.com/docs/actions)');
+    expect(doc?.markdown).toContain('[Sessions](https://agentrelay.com/docs/sessions)');
+    expect(doc?.markdown).toContain('[Forward deployed agents](https://agentrelay.com/docs/forward-deployed-agents)');
+    expect(doc?.markdown).toContain('[Flows](https://agentrelay.com/docs/flows)');
+    expect(doc?.markdown).toContain('[For agents](https://agentrelay.com/docs/agents)');
     expect(doc?.markdown).toContain(
-      '[Build a workspace with messaging, events, and a typed action in five minutes.](https://agentrelay.com/docs/quickstart)'
+      '[Install the desktop app and reach your first handoff.](https://agentrelay.com/docs/quickstart)'
     );
   });
 
@@ -27,6 +28,8 @@ describe('docs markdown export for MDX components', () => {
     expect(llms).toContain('https://agentrelay.com/llms-full.txt');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/quickstart.md');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/relay-connect.md');
+    expect(llms).toContain('## For agents');
+    expect(llms).toContain('https://agentrelay.com/docs/markdown/agents.md');
     expect(llms).not.toContain('https://agentrelay.com/docs/7.1.1/introduction');
   });
 

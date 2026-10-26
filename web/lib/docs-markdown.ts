@@ -1,7 +1,7 @@
 import matter from 'gray-matter';
 
 import { readContentFile } from './content-store';
-import { docsNav, getAllDocSlugs } from './docs-nav';
+import { agentDocs, docsNav, getAllDocSlugs } from './docs-nav';
 import { absoluteUrl } from './site';
 import { providersByCategory } from './integrations';
 
@@ -179,22 +179,28 @@ type DocsLink = {
   description: string;
 };
 
+function linksFor(items: { slug: string }[]): DocsLink[] {
+  return items.flatMap((item) => {
+    const doc = getDocMarkdown(item.slug);
+    if (!doc) {
+      return [];
+    }
+    return [
+      {
+        title: doc.title,
+        url: getDocMarkdownUrl(item.slug),
+        description: doc.description,
+      },
+    ];
+  });
+}
+
 function getCurrentDocsLinks(): DocsLink[] {
-  return docsNav.flatMap((group) =>
-    group.items.flatMap((item) => {
-      const doc = getDocMarkdown(item.slug);
-      if (!doc) {
-        return [];
-      }
-      return [
-        {
-          title: doc.title,
-          url: getDocMarkdownUrl(item.slug),
-          description: doc.description,
-        },
-      ];
-    })
-  );
+  return linksFor(docsNav.flatMap((group) => group.items));
+}
+
+function getAgentDocsLinks(): DocsLink[] {
+  return linksFor(agentDocs);
 }
 
 function formatLink({ title, url, description }: DocsLink): string {
@@ -210,9 +216,9 @@ export function getLlmsText(): string {
   const lines = [
     '# Agent Relay',
     '',
-    '> Agent Relay is Headless Slack for agents: a communication layer for workspaces, messages, delivery receipts, actions, events, sessions, harnesses, and CLI/MCP tooling.',
+    '> Agent Relay connects the agents you already use so they can message each other and read each other’s sessions.',
     '',
-    `\`/llms.txt\` and \`/llm.txt\` return this same Markdown index. Every docs page has a plain-markdown mirror: append \`.md\` to its URL (for example ${DOCS_BASE_URL}/typescript-sdk.md) or use the canonical form ${DOCS_BASE_URL}/markdown/{slug}.md. Use \`/llms-full.txt\` when you need all docs in one file.`,
+    `\`/llms.txt\` and \`/llm.txt\` return this same Markdown index. Every docs page has a plain-markdown mirror: append \`.md\` to its URL (for example ${DOCS_BASE_URL}/agents.md) or use the canonical form ${DOCS_BASE_URL}/markdown/{slug}.md. Use \`/llms-full.txt\` when you need all docs in one file.`,
     '',
     '## Documentation',
     '',
@@ -229,6 +235,12 @@ export function getLlmsText(): string {
       description: 'Per-page Markdown endpoints for current docs.',
     }),
     ...getCurrentDocsLinks().map(formatLink),
+    '',
+    '## For agents',
+    '',
+    'Procedures an agent follows. These pages are omitted from the human sidebar.',
+    '',
+    ...getAgentDocsLinks().map(formatLink),
     '',
     '## Optional',
     '',
