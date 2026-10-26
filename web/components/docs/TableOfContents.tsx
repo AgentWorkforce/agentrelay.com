@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type MouseEvent } from 'react';
 import { usePathname } from 'next/navigation';
 
 import type { TocItem } from '../../lib/docs';
@@ -9,6 +9,21 @@ import { getProductSectionForPath } from '../../lib/product-docs-nav';
 import { useDocsLanguage } from './DocsLanguageContext';
 import { DocsVersionSelect } from './DocsVersionSelect';
 import styles from './docs.module.css';
+
+/**
+ * A plain hash link makes the browser push a history entry without the Next
+ * router's state, so pressing Back onto it after a version switch changes the
+ * URL but leaves the other version's page on screen. Push the entry ourselves,
+ * carrying the router's state, so Back re-renders the right page.
+ */
+function jumpToHeading(event: MouseEvent<HTMLAnchorElement>, id: string) {
+  if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const heading = document.getElementById(id);
+  if (!heading) return;
+  event.preventDefault();
+  heading.scrollIntoView();
+  window.history.pushState(window.history.state, '', `#${id}`);
+}
 
 /**
  * `showLanguage` is false on pages with no TypeScript/Python code to switch,
@@ -90,6 +105,7 @@ export function TableOfContents({ items, showLanguage = true }: { items: TocItem
               <li key={item.id}>
                 <a
                   href={`#${item.id}`}
+                  onClick={(event) => jumpToHeading(event, item.id)}
                   className={`${styles.tocLink} ${item.level === 3 ? styles.tocIndent : ''} ${activeId === item.id ? styles.tocActive : ''}`}
                 >
                   {item.text}
