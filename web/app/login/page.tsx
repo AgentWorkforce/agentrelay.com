@@ -8,8 +8,8 @@ import {
 } from '../../components/AgentToolLogos';
 import { Cursor, Grok, MuseColor } from '../../components/brand-icons';
 import { LogoIcon, LogoWordmark } from '../../components/SiteNav';
-import { authErrorMessage, googleSignInHref } from '../../lib/login';
-import { GoogleSignInButton } from './google-sign-in-button';
+import { authErrorMessage, signInHref } from '../../lib/login';
+import { SignInButton } from './sign-in-button';
 import { RelayField } from './relay-field';
 import s from './login.module.css';
 
@@ -49,7 +49,11 @@ export default async function LoginPage({ searchParams }: LoginProps) {
     first(params.inviteToken) ??
     first(params.invite)
   )?.trim();
-  const error = authErrorMessage(first(params.authError));
+  const error = authErrorMessage(first(params.authError), first(params.authProvider));
+  const destination = { next: first(params.next), invite };
+  // Microsoft is not rendered until Cloud's Microsoft sign-in is verified end
+  // to end; `?microsoft=true` reveals it.
+  const showMicrosoft = first(params.microsoft) === 'true';
 
   return (
     <div className={s.page}>
@@ -76,9 +80,12 @@ export default async function LoginPage({ searchParams }: LoginProps) {
             </p>
           )}
 
-          <GoogleSignInButton
-            href={googleSignInHref({ next: first(params.next), invite })}
-          />
+          <div className={s.providers}>
+            <SignInButton provider="google" href={signInHref('google', destination)} />
+            {showMicrosoft && (
+              <SignInButton provider="microsoft" href={signInHref('microsoft', destination)} />
+            )}
+          </div>
 
           <div className={s.worksWith}>
             <p>Works with all your agents</p>
