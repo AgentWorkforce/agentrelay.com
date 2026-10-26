@@ -6,7 +6,7 @@ import { setTimeout } from 'node:timers/promises';
 const base = new URL(process.argv[2]);
 const cases = [
   ['/', /Agent Relay/i],
-  ['/docs/observer', /Observer/],
+  ['/docs/sessions', /Sessions/],
   ['/blog/promptgramming', /Promptgramming/],
   // force-dynamic: proves request-time rendering as well as the static cache.
   // This checks rendering, not availability of the external directory service.
