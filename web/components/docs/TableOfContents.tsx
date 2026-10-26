@@ -10,7 +10,11 @@ import { useDocsLanguage } from './DocsLanguageContext';
 import { DocsVersionSelect } from './DocsVersionSelect';
 import styles from './docs.module.css';
 
-export function TableOfContents({ items }: { items: TocItem[] }) {
+/**
+ * `showLanguage` is false on pages with no TypeScript/Python code to switch,
+ * so the picker never offers a language the page cannot show.
+ */
+export function TableOfContents({ items, showLanguage = true }: { items: TocItem[]; showLanguage?: boolean }) {
   const [activeId, setActiveId] = useState('');
   const { language, setLanguage } = useDocsLanguage();
   const pathname = usePathname() ?? '/docs';
@@ -27,10 +31,10 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
   // the already-displayed option produces no onChange to correct it. Write
   // the fallback back to real state so display and state always agree.
   useEffect(() => {
-    if (language !== 'typescript' && language !== secondaryLanguage) {
+    if (showLanguage && language !== 'typescript' && language !== secondaryLanguage) {
       setLanguage('typescript');
     }
-  }, [language, secondaryLanguage, setLanguage]);
+  }, [showLanguage, language, secondaryLanguage, setLanguage]);
 
   useEffect(() => {
     const headings = items.map((item) => document.getElementById(item.id)).filter(Boolean) as HTMLElement[];
@@ -54,20 +58,22 @@ export function TableOfContents({ items }: { items: TocItem[] }) {
 
   return (
     <div className={styles.toc}>
-      <div className={styles.tocControl}>
-        <span className={styles.tocTitle}>Language</span>
-        <label className={styles.tocSelectWrap}>
-          <select
-            className={styles.tocSelect}
-            aria-label="Select docs language"
-            value={language === secondaryLanguage ? secondaryLanguage : 'typescript'}
-            onChange={(event) => setLanguage(event.target.value as 'typescript' | 'python' | 'yaml')}
-          >
-            <option value="typescript">TypeScript</option>
-            <option value={secondaryLanguage}>{secondaryLanguageLabel}</option>
-          </select>
-        </label>
-      </div>
+      {showLanguage && (
+        <div className={styles.tocControl}>
+          <span className={styles.tocTitle}>Language</span>
+          <label className={styles.tocSelectWrap}>
+            <select
+              className={styles.tocSelect}
+              aria-label="Select docs language"
+              value={language === secondaryLanguage ? secondaryLanguage : 'typescript'}
+              onChange={(event) => setLanguage(event.target.value as 'typescript' | 'python' | 'yaml')}
+            >
+              <option value="typescript">TypeScript</option>
+              <option value={secondaryLanguage}>{secondaryLanguageLabel}</option>
+            </select>
+          </label>
+        </div>
+      )}
       {!productSection && <DocsVersionSelect />}
       {productVersion && (
         <div className={styles.versionControl}>
