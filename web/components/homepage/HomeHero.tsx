@@ -2,23 +2,21 @@ import type { CSSProperties } from 'react';
 
 import { InvestorStrip } from '../InvestorStrip';
 import { AgentIcons } from '../AgentSignup';
-import { HOME_HERO_DESCRIPTION, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
+import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
 import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
-import { HeroBackdrop } from './HeroBackdrop';
 import s from '../../app/landing.module.css';
+import home from './home-hero.module.css';
 
 /**
  * The homepage hero: the two-line headline rising in, the description, one
- * sign-up button with the agent logos turning in it, and the backers, over a
- * faint animated backdrop of agents talking. The button is marked so the nav can show its
- * own once this one scrolls away.
+ * sign-up button and the backers on plain navy.
+ * The button is marked so the nav can show its own once this one scrolls away.
  */
 export function HomeHero() {
   return (
-    <div className={s.heroSection}>
-      <HeroBackdrop />
-      <section className={s.heroCenter}>
-        <div className={s.heroCenterColumn}>
+    <div className={`${s.heroSection} ${home.hero}`}>
+      <section className={`${s.heroCenter} ${home.copy}`}>
+        <div className={`${s.heroCenterColumn} ${home.content}`}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
             {HOME_HERO_TITLE_LINES.map((line, index) => (
               <span className={s.heroTitleLine} key={line}>
@@ -29,9 +27,9 @@ export function HomeHero() {
             ))}
           </h1>
 
-          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_DESCRIPTION}</p>
+          <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_SUBTITLE}</p>
 
-          <div className={s.heroCenterCtas}>
+          <div className={`${s.heroCenterCtas} ${home.actions}`}>
             <a className={`${s.ctaPrimary} ${s.heroCta}`} href={teamsGoogleAuthHref('home_hero')} data-hero-signup="">
               <AgentIcons mono />
               Connect your agents for free
@@ -43,7 +41,7 @@ export function HomeHero() {
         </div>
       </section>
 
-      <InvestorStrip />
+      <InvestorStrip compact />
     </div>
   );
 }

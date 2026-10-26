@@ -6,17 +6,20 @@ import { AGENT_TOOLS, type AgentTool } from '../home/AgentMarks';
 import { TypeScriptLogo } from '../home/icons';
 import s from './rotating-headline.module.css';
 
-type Tool = AgentTool | 'custom';
+type Tool = AgentTool | 'custom' | 'dots' | 'pi';
 
 /** The agents we work with, plus one built on our SDK. */
 const TOOLS: Record<Tool, { name: string; logo: ReactNode }> = {
   ...AGENT_TOOLS,
+  muse: { name: 'Muse', logo: <img src="/logos/muse-transparent.png" alt="" /> },
+  dots: { name: 'Dots', logo: <img src="/logos/dot.webp" alt="" /> },
+  pi: { name: 'Pi', logo: <img className={s.monoLogo} src="/logos/pi.svg" alt="" /> },
   custom: { name: 'your custom agent', logo: <TypeScriptLogo className={s.fill} /> },
 };
 
 /**
- * Each step swaps one side, and every pair keeps Claude Code or Codex on one
- * side: the other tools take turns talking to the two agents people know.
+ * Start with familiar coding agents, then mix in hosted assistants and
+ * cross-provider conversations as the rotation progresses.
  */
 const PAIRS: [Tool, Tool][] = [
   ['claude', 'codex'],
@@ -31,12 +34,21 @@ const PAIRS: [Tool, Tool][] = [
   ['opencode', 'codex'],
   ['opencode', 'claude'],
   ['grok', 'claude'],
+  ['dots', 'claude'],
+  ['dots', 'muse'],
+  ['muse', 'grokbot'],
+  ['muse', 'claude'],
+  ['pi', 'claude'],
+  ['pi', 'codex'],
   ['grok', 'codex'],
   ['custom', 'codex'],
   ['claude', 'codex'],
   ['claude', 'antigravity'],
   ['codex', 'antigravity'],
   ['codex', 'grokbot'],
+  ['codex', 'pi'],
+  ['claude', 'pi'],
+  ['claude', 'dots'],
   ['claude', 'grokbot'],
   ['claude', 'muse'],
   ['codex', 'muse'],
