@@ -1935,10 +1935,9 @@
   background: var(--agent-tools-band-bg);
 }
 
-/* The homepage hero's wash is a flat vertical fade: the animated backdrop
-   carries the hero, so no highlight competes with it. */
+/* A plain navy field keeps the homepage's message in focus. */
 .homeLanding::before {
-  background: linear-gradient(180deg, #10273a 0%, #13314a 52%, #0d2638 100%);
+  background: #0d2638;
 }
 
 /* Lift the page content above the hero wash. Targeted at the two content
