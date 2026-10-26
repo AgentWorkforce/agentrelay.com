@@ -63,21 +63,21 @@ export function getApiCatalog(): { linkset: LinksetEntry[] } {
         ],
         'service-doc': [
           {
-            href: absoluteUrl('/docs/sessions'),
+            href: absoluteUrl('/docs/relaycast-api'),
             type: 'text/html',
-            title: 'Sessions',
+            title: 'Relaycast API reference',
           },
           {
-            href: absoluteUrl('/docs/markdown/sessions.md'),
+            href: absoluteUrl('/docs/markdown/relaycast-api.md'),
             type: 'text/markdown',
-            title: 'Sessions (markdown)',
+            title: 'Relaycast API reference (markdown)',
           },
         ],
         'service-meta': [
           {
-            href: absoluteUrl('/docs/quickstart'),
+            href: absoluteUrl('/docs/relaycast-api#authentication'),
             type: 'text/html',
-            title: 'Quickstart',
+            title: 'Authentication: token types and scopes',
           },
         ],
       },
@@ -94,7 +94,7 @@ export function getMcpManifest() {
     name: 'agent-relay',
     description:
       'Agent Relay messaging as MCP tools: channels, DMs, threads, reactions, inbox, and Zod-backed actions.',
-    documentation: absoluteUrl('/docs/agents'),
+    documentation: absoluteUrl('/docs/agent-relay-mcp'),
     website: SITE_URL,
     servers: [
       {

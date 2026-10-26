@@ -31,6 +31,7 @@ describe('api-catalog', () => {
       expect(entry['service-desc']?.[0]?.href).toMatch(/^https:\/\//);
       expect(entry['service-doc']?.[0]?.href).toMatch(/^https:\/\/agentrelay\.com\//);
     }
+    expect(linkset[0]['service-doc']?.[0]?.href).toBe('https://agentrelay.com/docs/relaycast-api');
   });
 });
 
@@ -39,7 +40,7 @@ describe('mcp.json', () => {
     const manifest = getMcpManifest();
     const [server] = manifest.servers;
 
-    expect(manifest.documentation).toBe('https://agentrelay.com/docs/agents');
+    expect(manifest.documentation).toBe('https://agentrelay.com/docs/agent-relay-mcp');
     expect(server.transport).toBe('stdio');
     expect(server.command).toBe('agent-relay');
     expect(server.args).toEqual(['mcp']);

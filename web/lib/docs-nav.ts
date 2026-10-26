@@ -39,7 +39,11 @@ export const docsNav: NavGroup[] = [
  * The audience is an agent fetching the `.md`, the same idea as a product
  * section's `unlistedSlugs`.
  */
-export const agentDocs: NavItem[] = [{ title: 'For agents', slug: 'agents' }];
+export const agentDocs: NavItem[] = [
+  { title: 'For agents', slug: 'agents' },
+  { title: 'Relaycast API', slug: 'relaycast-api' },
+  { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
+];
 
 const humanDocsSlugs = docsNav.flatMap((group) => group.items.map((item) => item.slug));
 
