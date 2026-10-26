@@ -1,10 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import { LoaderCircle } from 'lucide-react';
+import { signInProviderLabel, type SignInProvider } from '../../lib/login';
 import { GoogleIcon } from './google-icon';
+import { MicrosoftIcon } from './microsoft-icon';
 import { RELAY_RUSH_EVENT } from './relay-events';
 import s from './login.module.css';
+
+const ICONS: Record<SignInProvider, ComponentType> = {
+  google: GoogleIcon,
+  microsoft: MicrosoftIcon,
+};
 
 /**
  * A plain link to the OAuth start route, so sign-in works before hydration.
@@ -15,8 +22,10 @@ import s from './login.module.css';
  */
 const HANDOFF_MS = 8000;
 
-export function GoogleSignInButton({ href }: { href: string }) {
+export function SignInButton({ provider, href }: { provider: SignInProvider; href: string }) {
   const [pending, setPending] = useState(false);
+  const label = signInProviderLabel(provider);
+  const Icon = ICONS[provider];
 
   useEffect(() => {
     // Back-navigation restores this page from bfcache with pending still set.
@@ -37,7 +46,7 @@ export function GoogleSignInButton({ href }: { href: string }) {
   return (
     <a
       href={href}
-      className={s.google}
+      className={s.provider}
       aria-busy={pending || undefined}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {
@@ -50,8 +59,8 @@ export function GoogleSignInButton({ href }: { href: string }) {
         setPending(true);
       }}
     >
-      {pending ? <LoaderCircle className={s.spin} aria-hidden="true" /> : <GoogleIcon />}
-      {pending ? 'Redirecting to Google…' : 'Continue with Google'}
+      {pending ? <LoaderCircle className={s.spin} aria-hidden="true" /> : <Icon />}
+      {pending ? `Redirecting to ${label}…` : `Continue with ${label}`}
     </a>
   );
 }
