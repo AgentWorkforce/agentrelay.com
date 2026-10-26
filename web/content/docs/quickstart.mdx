@@ -19,9 +19,9 @@ Download the current release for your machine from [agentrelay.com/download](/do
 
 - **Mac.** Open the disk image and move Agent Relay to Applications, then open it.
 - **Linux.** Install the `.deb` on Ubuntu, or the per-user archive on other systemd machines. The app runs in the background. A window is optional.
-- **Windows.** Run the installer. If SmartScreen warns, choose More info › Run anyway.
+- **Windows.** Check the installer against its `.sha256` file from the [download page](/download) (`Get-FileHash .\AgentRelay-Windows-x64-Setup.exe` in PowerShell), then run it. The build is unsigned, so SmartScreen may warn. Once the checksum matches, choose More info › Run anyway.
 
-Supported: macOS (Apple silicon and Intel), Linux (x64 and arm64), and Windows (x64 and Arm).
+Supported: macOS (Apple silicon and Intel), Linux (x64 and ARM64), and Windows (x64 and ARM64).
 
 ## 2. Sign in
 
