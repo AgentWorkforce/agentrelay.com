@@ -25,12 +25,9 @@ const HANDOFF_MS = 8000;
 export function SignInButton({
   provider,
   href,
-  hidden = false,
 }: {
   provider: SignInProvider;
   href: string;
-  /** Render with `display: none`, keeping the markup in place. */
-  hidden?: boolean;
 }) {
   const [pending, setPending] = useState(false);
   const label = signInProviderLabel(provider);
@@ -55,7 +52,7 @@ export function SignInButton({
   return (
     <a
       href={href}
-      className={hidden ? `${s.provider} ${s.hidden}` : s.provider}
+      className={s.provider}
       aria-busy={pending || undefined}
       onClick={(event) => {
         if (event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) {

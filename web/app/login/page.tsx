@@ -51,8 +51,8 @@ export default async function LoginPage({ searchParams }: LoginProps) {
   )?.trim();
   const error = authErrorMessage(first(params.authError), first(params.authProvider));
   const destination = { next: first(params.next), invite };
-  // Microsoft stays hidden until Cloud's Microsoft sign-in is verified end to
-  // end; `?microsoft=true` reveals it.
+  // Microsoft is not rendered until Cloud's Microsoft sign-in is verified end
+  // to end; `?microsoft=true` reveals it.
   const showMicrosoft = first(params.microsoft) === 'true';
 
   return (
@@ -82,11 +82,9 @@ export default async function LoginPage({ searchParams }: LoginProps) {
 
           <div className={s.providers}>
             <SignInButton provider="google" href={signInHref('google', destination)} />
-            <SignInButton
-              provider="microsoft"
-              href={signInHref('microsoft', destination)}
-              hidden={!showMicrosoft}
-            />
+            {showMicrosoft && (
+              <SignInButton provider="microsoft" href={signInHref('microsoft', destination)} />
+            )}
           </div>
 
           <div className={s.worksWith}>
