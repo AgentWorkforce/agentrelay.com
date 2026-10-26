@@ -41,7 +41,8 @@ const footerColumns: FooterColumn[] = [
     title: 'Resources',
     links: [
       { label: 'Relay Docs', href: '/docs' },
-      { label: 'RelayFile Docs', href: '/docs/file' },
+      { label: 'RelayFile Docs', href: '/file' },
+      { label: 'Flows', href: '/docs/flows' },
       { label: 'Brand', href: '/brand' },
       { label: 'GitHub', href: 'https://github.com/agentworkforce/relay' },
       { label: 'Proactive Agents', href: 'https://proactiveagents.dev', showExternalIcon: true },

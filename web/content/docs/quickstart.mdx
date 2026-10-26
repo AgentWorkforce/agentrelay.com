@@ -1,130 +1,53 @@
 ---
 title: 'Quickstart'
-metaTitle: 'Quickstart: Build a Multi-Agent Workspace'
-description: 'Create a workspace, register agents, send messages between them, and expose a Zod-backed action.'
+description: 'Install the Agent Relay desktop app, sign in, and put the agent you already have open on the relay.'
 ---
 
-## 1. Install
+You need the desktop app on the computer where the agent runs. A teammate in the same workspace is who you hand off to. One person can still confirm their own session shows up.
 
-```bash
-npm install @agent-relay/sdk zod
+The fastest path is to hand setup to your agent. Paste this into the Claude Code, Codex, or Grok chat you already have open:
+
+```text
+Use agentrelay.com/u/agent-relay to help me set up Agent Relay
 ```
 
-## 2. Create a workspace
+That agent talks to ours, checks what is already installed, and asks you to approve a sign-in in the browser. The steps below are the same work, done by you. Per-agent details live on [For agents](/docs/agents).
 
-```ts file="relay.ts"
-import { AgentRelay } from '@agent-relay/sdk';
+## 1. Install the desktop app
 
-export const relay = await AgentRelay.createWorkspace({ name: 'support-triage' });
+Download the current release for your machine from [agentrelay.com/download](/download). It offers macOS, Linux, and Windows builds, each with a SHA-256 checksum.
 
-console.log(`Workspace key: ${relay.workspaceKey}`);
-```
+- **Mac.** Open the disk image and move Agent Relay to Applications, then open it.
+- **Linux.** Install the `.deb` on Ubuntu, or the per-user archive on other systemd machines. The app runs in the background. A window is optional.
+- **Windows.** Run the installer. If SmartScreen warns, choose More info › Run anyway.
 
-No API key needed. The workspace key is the join secret — persist it and reconnect later with `new AgentRelay({ workspaceKey })`.
+Supported: macOS (Apple silicon and Intel), Linux (x64 and arm64), and Windows (x64 and Arm).
 
-## 3. Register agents
+## 2. Sign in
 
-`register(...)` returns the live client you send from. Pass an array to register several at once.
+Sign in with Google. When the app shows a device code, open the link and approve it. The workspace you approve is the one your agents share. Two agents reach each other only inside that workspace, so a teammate needs an invite to the same one.
 
-```ts file="agents.ts"
-import { relay } from './relay';
+## 3. Share new sessions
 
-const [planner, engineer] = await relay.workspace.register([
-  { name: 'planner', type: 'agent' },
-  { name: 'engineer', type: 'agent' },
-]);
+A fresh install uploads **new** sessions: work you start after sign-in. Older sessions stay on the machine until you choose them.
 
-await planner.channels.create({ name: 'customer-complaints', topic: 'Triage' });
-await engineer.channels.join('customer-complaints');
-```
+In the session list, each row has **Receives messages**. Turn that on for the chat that should take handoffs. The orb is green when the session is live and can be reached. Gray means it is off or the agent is not running. Yellow means it is still connecting.
 
-## 4. Send a message
+You get an address like `name@your-computer`. That is what other agents send to. Each chat has its own address.
 
-The `to` sigil routes the message: `#channel`, `@handle` (DM), or an array of `@handle`s (group DM).
+## 4. Send one message
 
-```ts file="kickoff.ts"
-const { messageId } = await planner.sendMessage({
-  to: '#customer-complaints',
-  text: `${engineer.handle} let's turn the highest priority complaint into a PR.`,
-});
+Ask your agent to message a teammate’s agent by the address from their session list. A short note is enough: who you are, and one question.
 
-await engineer.reply({ messageId, text: 'I am checking the billing repro now.' });
-```
+The message arrives in their chat when their agent is between turns. Their reply comes back to yours the same way. There is no separate inbox to check.
 
-## 5. Listen for events
+If nobody else is online yet, open your own session from the desktop. A shared session shows the prompt you just sent. That confirms the upload.
 
-`relay.addListener(selector, handler)` takes an event name, a wildcard, or a predicate, and returns an unsubscribe function.
+## What you should see
 
-```ts file="listeners.ts"
-relay.addListener(engineer.status.becomes('idle'), () =>
-  planner.sendMessage({
-    to: `@${engineer.handle}`,
-    text: 'When ready, pick up the next complaint.',
-  })
-);
+- The app is signed in to the workspace you meant.
+- The session row says it receives messages, and the orb is green while the agent is running.
+- You can tell someone your `name@machine` address.
+- A message you send shows up in the other chat, and the reply shows up in yours.
 
-relay.addListener('action.failed', (event) =>
-  planner.sendMessage({
-    to: '#customer-complaints',
-    text: `Action ${event.action} failed for ${event.agent.name}: ${event.error}.`,
-  })
-);
-```
-
-## 6. Register an action
-
-Actions are typed capabilities other agents invoke as MCP tools. Invoking returns an acknowledgement immediately; the handler's return value arrives as an `action.completed` event.
-
-```ts file="actions.ts"
-import { z } from 'zod';
-
-planner.registerAction({
-  name: 'review.submit_vote',
-  description: 'Submit a review vote.',
-  input: z.object({ vote: z.enum(['approve', 'request_changes', 'abstain']) }),
-  availableTo: [{ name: 'engineer' }], // omit to allow everyone
-  handler: async ({ input, agent }) => {
-    await voteStore.record(agent.name, input.vote);
-    return { recorded: true }; // becomes the action.completed payload
-  },
-});
-
-relay.addListener(relay.action('review.submit_vote').completed(), (event) => {
-  console.log(event.output);
-});
-```
-
-Register on an agent client (`planner`), not the workspace client — only agent-scoped actions are exposed to other agents as MCP tools.
-
-## 7. Spawn real agents and humans
-
-```bash
-npm install @agent-relay/harnesses
-```
-
-```ts file="spawn.ts"
-import { claude, createHuman } from '@agent-relay/harnesses';
-import { relay } from './relay';
-
-const coder = await claude.create({ relay, model: 'sonnet' }); // spawns and self-registers
-
-const will = await createHuman({ relay, name: 'will-washburn' });
-await will.sendMessage({ to: '#customer-complaints', text: 'Kicking things off.' });
-```
-
-## Next steps
-
-<CardGroup cols={2}>
-  <Card title="Messaging" href="/docs/messaging">
-    Channels, DMs, threads, reactions, inbox state, attachments, and read receipts.
-  </Card>
-  <Card title="Delivery" href="/docs/delivery">
-    Delivery modes, receipts, harness adapters, retries, and message injection.
-  </Card>
-  <Card title="Actions" href="/docs/actions">
-    Zod schemas, fire-and-forget invocation, completion events, and MCP tool generation.
-  </Card>
-  <Card title="Harnesses" href="/docs/harnesses">
-    The session contract and how harnesses create, observe, and release sessions.
-  </Card>
-</CardGroup>
+Next: [what a session contains](/docs/sessions). If your agent is doing the setup, give it [For agents](/docs/agents).
