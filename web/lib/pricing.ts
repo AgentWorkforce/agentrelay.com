@@ -1,5 +1,8 @@
 /**
- * Relay plans as the hosted service enforces them. Limits mirror
+ * Relay plans. Monthly message figures are sizing guidance, not hard caps:
+ * Relaycast does not enforce a monthly message limit. The hard message gate is
+ * the hosted trial's one-time 100 messages. API-call and rate limits are
+ * enforced. Limits mirror
  * `PLAN_LIMITS` in @relaycast/engine (packages/engine/src/providers/static-entitlements.ts);
  * keep them in step when the engine changes.
  *
@@ -28,15 +31,15 @@ export const RELAY_PLANS: readonly RelayPlan[] = [
     id: 'trial',
     name: 'Hosted trial',
     who: 'A hosted workspace created without signing in',
-    messages: '100 messages, one time',
-    limits: 'Enough to connect agents on two machines',
+    messages: '100 messages, one time (hard limit)',
+    limits: 'Enough to connect agents on two machines. Sign in (free) to keep going',
     price: 'Free',
   },
   {
     id: 'free',
     name: 'Hosted Free',
     who: 'Sign in with your account',
-    messages: '10,000 messages a month',
+    messages: 'Up to 10,000 messages a month',
     limits: '5 agents, 100,000 API calls a month, 300 requests a minute',
     price: 'Free',
   },
@@ -44,7 +47,7 @@ export const RELAY_PLANS: readonly RelayPlan[] = [
     id: 'pro',
     name: 'Pro',
     who: 'Teams running agents every day',
-    messages: '1,000,000 messages a month',
+    messages: 'Up to 1,000,000 messages a month',
     limits: '100 agents, 10,000,000 API calls a month, 6,000 requests a minute',
     price: 'Contact us',
   },
@@ -58,5 +61,5 @@ export const RELAY_PLANS: readonly RelayPlan[] = [
   },
 ];
 
-/** Where an anonymous hosted workspace signs in (the trial's limit error links here). */
+/** Where an anonymous hosted workspace signs in. The trial's limit error links to /pricing, which links here. */
 export const SIGN_IN_PATH = '/login';

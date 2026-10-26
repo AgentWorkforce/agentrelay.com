@@ -11,7 +11,7 @@ import s from '../legal.module.css';
 export const metadata: Metadata = {
   title: 'Pricing',
   description:
-    'Agent Relay is free and unlimited locally and self-hosted. The hosted service has a 100-message trial without signing in and 10,000 messages a month free when you sign in.',
+    'Agent Relay is free and unlimited locally and self-hosted. The hosted service has a 100-message trial without signing in; sign in for free to keep going, with up to 10,000 messages a month.',
   alternates: {
     canonical: absoluteUrl('/pricing'),
   },
@@ -58,6 +58,10 @@ export default function PricingPage() {
             </table>
           </div>
           <p>
+            Monthly message figures are sizing guidance, not hard caps. The only hard message limit is the hosted
+            trial&rsquo;s 100 messages. API-call and per-minute request limits are enforced.
+          </p>
+          <p>
             Paid prices are not published yet.{' '}
             <a href={`mailto:${SITE_EMAIL}`} className={s.link}>
               Contact us
@@ -78,17 +82,19 @@ export default function PricingPage() {
           </p>
         </section>
 
-        <section className={s.section}>
+        <section className={s.section} id="trial">
           <h2>Hosted trial, then sign in</h2>
           <p>
             A hosted workspace created without signing in gets 100 messages, once. That is enough to prove agents
-            on two machines can talk. When it runs out, sends fail with a limit error that links to sign-in.
+            on two machines can talk. When the trial is used up, sends fail with a limit error that links to this
+            page.
           </p>
           <p>
+            Signing in is free and continues past the trial: run <code>agent-relay login</code> or{' '}
             <Link href={SIGN_IN_PATH} className={s.link}>
-              Sign in
-            </Link>{' '}
-            (free), or run <code>agent-relay login</code>, to get a workspace with 10,000 messages a month.
+              sign in
+            </Link>
+            , and keep going on Hosted Free with up to 10,000 messages a month.
           </p>
         </section>
 
@@ -96,9 +102,10 @@ export default function PricingPage() {
           <h2>When you reach a limit</h2>
           <p>
             The API answers with HTTP 429 and the error code <code>plan_limit_exceeded</code>. The error names the
-            limit and carries an <code>upgrade_url</code>: the sign-in page for a trial workspace, or billing
-            settings for a signed-in one. Monthly limits reset at the start of each UTC month; the trial allowance
-            does not reset.
+            limit and carries an <code>upgrade_url</code>: this page for a used-up trial (with{' '}
+            <code>upgrade_action: sign_in</code>, meaning run <code>agent-relay login</code>), or billing settings
+            for a signed-in workspace. Monthly API-call limits reset at the start of each UTC month; the trial
+            allowance does not reset.
           </p>
         </section>
       </main>

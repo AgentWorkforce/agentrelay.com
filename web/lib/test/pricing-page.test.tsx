@@ -18,11 +18,19 @@ describe('pricing page', () => {
     expect(html).toMatch(/Local and self-hosted[\s\S]*?Unlimited[\s\S]*?Free/);
   });
 
-  it('states the hosted trial and the signed-in free tier', () => {
-    expect(html).toContain('100 messages, one time');
-    expect(html).toContain('10,000 messages a month');
+  it('makes the 100-message trial the hard gate and signing in the way past it', () => {
+    expect(html).toContain('100 messages, one time (hard limit)');
+    expect(html).toContain('Signing in is free and continues past the trial');
     expect(html).toContain(`href="${SIGN_IN_PATH}"`);
     expect(html).toContain('agent-relay login');
+    expect(html).toContain('id="trial"');
+  });
+
+  it('does not promise a hard monthly message cap', () => {
+    expect(html).toContain('Up to 10,000 messages a month');
+    expect(html).toContain('Up to 1,000,000 messages a month');
+    expect(html).toContain('not hard caps');
+    expect(html).not.toMatch(/(?<!Up to |up to )10,000 messages a month/);
   });
 
   it('lists paid plans without inventing prices', () => {
