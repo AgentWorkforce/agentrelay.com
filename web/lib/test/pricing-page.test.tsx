@@ -24,6 +24,14 @@ describe('pricing page', () => {
     expect(html).toContain(`href="${SIGN_IN_PATH}"`);
     expect(html).toContain('agent-relay login');
     expect(html).toContain('id="trial"');
+    // No claim flow: signing in means a new workspace, not the trial one.
+    expect(html).toContain('does not convert the trial');
+  });
+
+  it('scopes plan_limit_exceeded to plan quotas and states the self-hosted request ceiling', () => {
+    expect(html).toContain('When a workspace uses up the trial or a monthly plan quota');
+    expect(html).not.toContain('No limits');
+    expect(html).toContain('30,000 requests a minute');
   });
 
   it('does not promise a hard monthly message cap', () => {

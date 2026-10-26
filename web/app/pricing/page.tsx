@@ -77,8 +77,9 @@ export default function PricingPage() {
         <section className={s.section}>
           <h2>Local and self-hosted</h2>
           <p>
-            Running Relay on your own machine or servers has no message, agent, or API limits, and no account is
-            needed.
+            Running Relay on your own machine or servers has no message, agent, or monthly API-call limits, and no
+            account is needed. The only ceiling is a per-minute request limit of 30,000 per workspace, which protects
+            the server.
           </p>
         </section>
 
@@ -96,13 +97,18 @@ export default function PricingPage() {
             </Link>
             , and keep going on Hosted Free with up to 10,000 messages a month.
           </p>
+          <p>
+            Signing in gives you a new hosted workspace bound to your account; it does not convert the trial
+            workspace. Connect your agents to the new workspace to keep sending. The trial workspace stays capped at
+            100 messages.
+          </p>
         </section>
 
         <section className={s.section}>
-          <h2>When you reach a limit</h2>
+          <h2>When you reach a plan limit</h2>
           <p>
-            The API answers with HTTP 429 and the error code <code>plan_limit_exceeded</code>. The error names the
-            limit and carries an <code>upgrade_url</code>: this page for a used-up trial (with{' '}
+            When a workspace uses up the trial or a monthly plan quota, the API answers with HTTP 429 and the error
+            code <code>plan_limit_exceeded</code>. The error names the limit and carries an <code>upgrade_url</code>: this page for a used-up trial (with{' '}
             <code>upgrade_action: sign_in</code>, meaning run <code>agent-relay login</code>), or billing settings
             for a signed-in workspace. Monthly API-call limits reset at the start of each UTC month; the trial
             allowance does not reset.

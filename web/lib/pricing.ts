@@ -24,7 +24,7 @@ export const RELAY_PLANS: readonly RelayPlan[] = [
     name: 'Local and self-hosted',
     who: 'Run Relay on your own machine or servers',
     messages: 'Unlimited',
-    limits: 'No limits',
+    limits: 'Unlimited agents and API calls, 30,000 requests a minute',
     price: 'Free',
   },
   {
