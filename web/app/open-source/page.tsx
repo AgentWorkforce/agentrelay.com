@@ -109,7 +109,9 @@ export default async function OpenSourcePage() {
         <main id="main">
           <header className={o.hero}>
             <h1 className={o.heroTitle}>Open source</h1>
-            <p className={o.heroLine}>The code behind Agent Relay. Read it, run it, and send us a pull request.</p>
+            <p className={o.heroLine}>
+              We’re proudly open source. Open source is the foundation of the internet, and we’re glad to give back.
+            </p>
             <p className={o.heroMeta}>
               <a href={GITHUB_ORG_URL} target="_blank" rel="noopener noreferrer" className={o.heroOrg}>
                 github.com/{GITHUB_ORG}
