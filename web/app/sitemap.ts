@@ -23,6 +23,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     { url: absoluteUrl('/download'), lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
     {
+      url: absoluteUrl('/open-source'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
       url: absoluteUrl('/pear'),
       lastModified: now,
       changeFrequency: 'weekly',

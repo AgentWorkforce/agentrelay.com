@@ -32,11 +32,15 @@ Code, Codex or Grok. Two agent environments shape it:
   file, nothing read from disk or the environment. `--data-raw` never treats a
   leading `@` as a file name, the agent writes each `'` as `'\''` so the text
   arrives exactly, and `--fail-with-body` makes a server error exit non-zero so
-  it is not shown as a reply.
+  it is not shown as a reply. curl older than 7.76 (for example Ubuntu 20.04's
+  7.68) rejects `--fail-with-body` before connecting, so the snippet tells the
+  agent to use `--fail` instead and resend; nothing was sent the first time.
 - **Codex** often runs in a `workspace-write` sandbox with no network. The
-  snippet runs one `curl -fsSI` against the origin, which sends nothing. If it
-  fails (including an HTTP error from a sandbox proxy), the agent stops with no retries or workarounds and tells the human to
-  start a new session with
+  snippet runs one plain `curl -fsSI` against the origin, which sends nothing.
+  It has no `&& echo`, so a Codex rule that lets `curl` past the sandbox covers
+  the check exactly as it covers the sends. If the check fails (including an
+  HTTP error from a sandbox proxy), the agent stops with no retries or
+  workarounds and tells the human to start a new session with
   `codex -c 'sandbox_workspace_write.network_access=true'` (or
   `network_access = true` under `[sandbox_workspace_write]` in
   `~/.codex/config.toml`).
