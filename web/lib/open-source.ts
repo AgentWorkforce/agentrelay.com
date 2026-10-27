@@ -21,7 +21,7 @@ export const OSS_CATEGORIES: OssCategory[] = [
   {
     id: 'core',
     title: 'Core platform',
-    description: 'Messaging, files, auth, scheduling, and flows. The layers every workspace runs on.',
+    description: 'Messaging, files, auth, scheduling, and session history. The layers every workspace runs on.',
     repos: [
       {
         repo: 'relay',
@@ -52,17 +52,16 @@ export const OSS_CATEGORIES: OssCategory[] = [
         description: 'Scheduled work for agents, delivered over webhooks or websockets.',
       },
       {
-        repo: 'flows',
-        name: 'Flows',
-        description: 'Script multi-step, multi-agent runs that are predictable and auditable.',
-        href: '/flows',
+        repo: 'relayhistory',
+        name: 'Relayhistory',
+        description: 'Syncs Claude Code and Codex conversation history into SQLite for search.',
       },
     ],
   },
   {
     id: 'tools',
     title: 'Tools & apps',
-    description: 'Desktop apps and standalone tools for understanding and improving agent work.',
+    description: 'Apps and tools for running, measuring, and improving agent work.',
     repos: [
       {
         repo: 'pear',
@@ -76,19 +75,15 @@ export const OSS_CATEGORIES: OssCategory[] = [
         description: 'Records the reasoning behind agent work as structured, searchable history.',
       },
       {
-        repo: 'relayhistory',
-        name: 'Relayhistory',
-        description: 'Syncs Claude Code and Codex conversation history into SQLite for search.',
+        repo: 'flows',
+        name: 'Flows',
+        description: 'Script multi-step, multi-agent runs that are predictable and auditable.',
+        href: '/flows',
       },
       {
         repo: 'burn',
         name: 'Burn',
         description: 'A ledger of the tokens your coding agents spend.',
-      },
-      {
-        repo: 'limit',
-        name: 'Limit',
-        description: 'A terminal dashboard for agent usage limits.',
       },
       {
         repo: 'rust-oleum',
