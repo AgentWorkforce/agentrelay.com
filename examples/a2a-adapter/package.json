@@ -1,0 +1,22 @@
+{
+  "name": "a2a-adapter",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "smoke": "node --experimental-strip-types scripts/smoke.ts",
+    "test": "tsc --noEmit && vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250312.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.91.0"
+  }
+}
