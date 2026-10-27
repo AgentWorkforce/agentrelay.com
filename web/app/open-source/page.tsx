@@ -67,7 +67,7 @@ function Repo({ repo, language }: { repo: OssRepo; language: string | null | und
               title={language}
             />
           ) : null}
-          {repo.repo}
+          {GITHUB_ORG.toLowerCase()}/{repo.repo}
         </span>
         {repo.href ? (
           <Link href={repo.href} className={o.repoDocs}>
@@ -97,10 +97,12 @@ export default async function OpenSourcePage() {
             <h1 className={o.heroTitle}>Open source</h1>
             <p className={o.heroLine}>The code behind Agent Relay. Read it, run it, and send us a pull request.</p>
             <p className={o.heroMeta}>
-              <a href={GITHUB_ORG_URL} target="_blank" rel="noopener noreferrer">
+              <a href={GITHUB_ORG_URL} target="_blank" rel="noopener noreferrer" className={o.heroOrg}>
                 github.com/{GITHUB_ORG}
               </a>
-              <span aria-hidden="true">·</span>
+              <span aria-hidden="true" className={o.heroOrgSep}>
+                ·
+              </span>
               <span>{listed.length} projects</span>
               <TotalStars repos={listed} />
             </p>

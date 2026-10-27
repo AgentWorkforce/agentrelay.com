@@ -199,16 +199,20 @@
 
 .repoPath {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
   color: var(--fg-faint);
   font-family: var(--font-geist-mono), ui-monospace, monospace;
   font-size: 0.76rem;
 }
 
 .languageDot {
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
+  margin-top: 0.4em;
   border-radius: 50%;
 }
 
@@ -250,6 +254,15 @@
 @media (max-width: 720px) {
   .hero {
     padding: 104px 16px 72px;
+  }
+
+  /* The org link takes its own line so the counts never wrap after a dot. */
+  .heroOrg {
+    flex-basis: 100%;
+  }
+
+  .heroOrgSep {
+    display: none;
   }
 
   .catalog {
