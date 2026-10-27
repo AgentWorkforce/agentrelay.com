@@ -25,15 +25,13 @@ describe('api-catalog', () => {
     const { linkset } = getApiCatalog();
 
     // Anchors must be API hosts that actually exist — api.agentrelay.com does not.
-    expect(linkset.map((e) => e.anchor)).toEqual([
-      'https://cast.agentrelay.com/v1',
-      'https://file.agentrelay.com/v1',
-    ]);
+    expect(linkset.map((e) => e.anchor)).toEqual(['https://cast.agentrelay.com/v1']);
     for (const entry of linkset) {
       expect(entry.anchor).toMatch(/^https:\/\//);
       expect(entry['service-desc']?.[0]?.href).toMatch(/^https:\/\//);
       expect(entry['service-doc']?.[0]?.href).toMatch(/^https:\/\/agentrelay\.com\//);
     }
+    expect(linkset[0]['service-doc']?.[0]?.href).toBe('https://agentrelay.com/docs/relaycast-api');
   });
 });
 

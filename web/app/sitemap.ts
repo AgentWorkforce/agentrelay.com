@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next';
 
 import { allAgentSlugs } from '../lib/agents';
 import { getAllPosts } from '../lib/blog';
-import { getAllDocSlugs } from '../lib/docs-nav';
+import { getHumanDocSlugs } from '../lib/docs-nav';
 import { productBasePath, productSections } from '../lib/product-docs-nav';
 import { absoluteUrl } from '../lib/site';
 
@@ -194,14 +194,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const docsRoutes: MetadataRoute.Sitemap = getAllDocSlugs().map((slug) => ({
+  // Agent pages stay out of the sitemap. Agents find them from llms.txt.
+  const docsRoutes: MetadataRoute.Sitemap = getHumanDocSlugs().map((slug) => ({
     url: absoluteUrl(`/docs/${slug}`),
     lastModified: now,
     changeFrequency: 'weekly',
     priority: slug === 'introduction' ? 0.9 : 0.8,
   }));
 
-  // Product docs (Relayfile, Relayhistory, Flows): every page in each section's
+  // Product docs (Flows): every page in each section's
   // sidebar. Unlisted slugs are agent-facing briefs and stay out.
   const productDocsRoutes: MetadataRoute.Sitemap = productSections.flatMap((section) =>
     section.nav.flatMap((group) =>

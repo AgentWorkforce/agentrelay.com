@@ -10,8 +10,6 @@ import { SITE_URL, absoluteUrl } from './site';
 
 const RELAYCAST_OPENAPI_URL =
   'https://raw.githubusercontent.com/AgentWorkforce/relaycast/main/openapi.yaml';
-const RELAYFILE_OPENAPI_URL =
-  'https://raw.githubusercontent.com/AgentWorkforce/relayfile/main/openapi/relayfile-v1.openapi.yaml';
 
 /** RFC 9116 requires an absolute, machine-parseable expiry no more than a year out. */
 export function securityTxtExpiry(now: Date): string {
@@ -77,26 +75,9 @@ export function getApiCatalog(): { linkset: LinksetEntry[] } {
         ],
         'service-meta': [
           {
-            href: absoluteUrl('/docs/authentication'),
+            href: absoluteUrl('/docs/relaycast-api#authentication'),
             type: 'text/html',
             title: 'Authentication: token types and scopes',
-          },
-        ],
-      },
-      {
-        anchor: 'https://file.agentrelay.com/v1',
-        'service-desc': [
-          {
-            href: RELAYFILE_OPENAPI_URL,
-            type: 'application/yaml',
-            title: 'Relayfile v1 OpenAPI description',
-          },
-        ],
-        'service-doc': [
-          {
-            href: absoluteUrl('/docs/file/api-reference'),
-            type: 'text/html',
-            title: 'Relayfile API reference',
           },
         ],
       },

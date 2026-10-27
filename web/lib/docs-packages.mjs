@@ -1,7 +1,7 @@
 // npm packages whose latest published version the docs display. next.config
 // resolves them once per build and inlines the result as DOCS_PACKAGE_VERSIONS;
 // lib/package-versions.ts reads it.
-export const DOCS_PACKAGES = ['agent-relay', 'relayfile', 'ai-hist'];
+export const DOCS_PACKAGES = ['agent-relay'];
 
 const REGISTRY = 'https://registry.npmjs.org';
 

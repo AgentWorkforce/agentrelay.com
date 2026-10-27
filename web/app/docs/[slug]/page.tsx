@@ -117,7 +117,7 @@ export default async function DocsPage({ params }: PageProps) {
         </div>
       </article>
       <aside className={styles.tocSidebar}>
-        <TableOfContents items={doc.toc} />
+        <TableOfContents items={doc.toc} showLanguage={/<(CodeGroup|LegacySpawnOptionsTable)\b/.test(doc.content)} />
       </aside>
     </div>
   );
