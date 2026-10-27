@@ -54,7 +54,7 @@ export const OSS_CATEGORIES: OssCategory[] = [
       {
         repo: 'relayhistory',
         name: 'Relayhistory',
-        description: 'Syncs Claude Code and Codex conversation history into SQLite for search.',
+        description: 'Indexes every coding-agent session on your machine into one local, searchable database.',
       },
     ],
   },
