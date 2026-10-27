@@ -3,9 +3,10 @@ import Link from 'next/link';
 
 import { WaveDivider } from '../../components/home/icons';
 import sections from '../../components/home/home-sections.module.css';
-import { LiveGitHubBadge, LiveStarsProvider, StarCount, TotalStars } from '../../components/open-source/LiveStars';
+import { LiveStarsProvider, StarCount, TotalStars } from '../../components/open-source/LiveStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
 import { DEFAULT_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { fetchOrgRepoStats, GITHUB_ORG, GITHUB_ORG_URL, OSS_CATEGORIES, type OssRepo } from '../../lib/open-source';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
@@ -90,7 +91,20 @@ export default async function OpenSourcePage() {
           Skip to content
         </a>
 
-        <SiteNav actions={<LiveGitHubBadge />} />
+        <SiteNav
+          hideLinks
+          singleAction
+          actions={
+            <>
+              <a className={`${s.ctaSecondary} ${s.homeNavAction}`} href="/login">
+                Log in
+              </a>
+              <a className={`${s.ctaPrimary} ${s.homeNavAction}`} href={HOME_SIGNUP_HREF}>
+                Sign up
+              </a>
+            </>
+          }
+        />
 
         <main id="main">
           <header className={o.hero}>
