@@ -7,34 +7,26 @@ const render = async (params: Record<string, string>) =>
   renderToStaticMarkup(await LoginPage({ searchParams: Promise.resolve(params) }));
 
 describe('login page', () => {
-  it('signs in through Cloud’s Google route without a Microsoft button by default', async () => {
+  it('shows both sign-in providers by default and carries the destination', async () => {
     const html = await render({ next: '/dashboard/workflows' });
     expect(html).toContain('Sign in to Agent Relay');
-    expect(html).toContain('href="/cloud/api/auth/google/start?next=%2Fdashboard%2Fworkflows"');
-    expect(html).toContain('Continue with Google');
-    expect(html).not.toContain('Continue with Microsoft');
-    expect(html).not.toContain('/cloud/api/auth/microsoft/start');
-  });
-
-  it('renders the Microsoft button with ?microsoft=true, carrying the destination', async () => {
-    const html = await render({ microsoft: 'true', next: '/dashboard/workflows' });
     expect(html).toContain('href="/cloud/api/auth/google/start?next=%2Fdashboard%2Fworkflows"');
     expect(html).toContain('Continue with Google');
     expect(html).toContain('href="/cloud/api/auth/microsoft/start?next=%2Fdashboard%2Fworkflows"');
     expect(html).toContain('Continue with Microsoft');
   });
 
-  it('does not render the Microsoft button unless microsoft is exactly "true"', async () => {
-    for (const microsoft of ['false', '1', 'TRUE']) {
+  it('shows the Microsoft button regardless of the old query parameter', async () => {
+    for (const microsoft of ['true', 'false', '1', 'TRUE']) {
       const html = await render({ microsoft });
       expect(html, `microsoft=${microsoft}`).toContain('Continue with Google');
-      expect(html, `microsoft=${microsoft}`).not.toContain('Continue with Microsoft');
-      expect(html, `microsoft=${microsoft}`).not.toContain('/cloud/api/auth/microsoft/start');
+      expect(html, `microsoft=${microsoft}`).toContain('Continue with Microsoft');
+      expect(html, `microsoft=${microsoft}`).toContain('/cloud/api/auth/microsoft/start');
     }
   });
 
   it('acknowledges an invite and forwards its token to both providers', async () => {
-    const html = await render({ invite: ' abc123 ', microsoft: 'true' });
+    const html = await render({ invite: ' abc123 ' });
     expect(html).toContain('You’ve been invited to a workspace');
     expect(html).toContain('href="/cloud/api/auth/google/start?invite_token=abc123"');
     expect(html).toContain('href="/cloud/api/auth/microsoft/start?invite_token=abc123"');
