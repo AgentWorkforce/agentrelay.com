@@ -60,14 +60,14 @@ export const OSS_CATEGORIES: OssCategory[] = [
   },
   {
     id: 'tools',
-    title: 'Tools & apps',
-    description: 'Apps and tools for running, measuring, and improving agent work.',
+    title: 'Tools',
+    description: 'For running, measuring, and improving agent work.',
     repos: [
       {
-        repo: 'pear',
-        name: 'Pear',
-        description: 'A desktop app for pair programming with a team of agents.',
-        href: '/pear',
+        repo: 'flows',
+        name: 'Flows',
+        description: 'Script multi-step, multi-agent runs that are predictable and auditable.',
+        href: '/flows',
       },
       {
         repo: 'trajectories',
@@ -75,10 +75,9 @@ export const OSS_CATEGORIES: OssCategory[] = [
         description: 'Records the reasoning behind agent work as structured, searchable history.',
       },
       {
-        repo: 'flows',
-        name: 'Flows',
-        description: 'Script multi-step, multi-agent runs that are predictable and auditable.',
-        href: '/flows',
+        repo: 'sandbox',
+        name: 'Sandbox',
+        description: 'Provider-agnostic sandbox runtimes for agent workloads.',
       },
       {
         repo: 'burn',
@@ -91,14 +90,14 @@ export const OSS_CATEGORIES: OssCategory[] = [
         description: 'A code-quality ratchet for Rust codebases.',
       },
       {
-        repo: 'sandbox',
-        name: 'Sandbox',
-        description: 'Provider-agnostic sandbox runtimes for agent workloads.',
-      },
-      {
         repo: 'collab-bench',
         name: 'Collab Bench',
         description: 'A benchmark for how well agents work together.',
+      },
+      {
+        repo: 'software-garden',
+        name: 'Software Garden',
+        description: 'Turns ready issues into reviewed pull requests within a scope you define.',
       },
     ],
   },
@@ -122,11 +121,6 @@ export const OSS_CATEGORIES: OssCategory[] = [
         repo: 'workforce',
         name: 'Workforce',
         description: 'Single-purpose agent configs, versioned and shared like code.',
-      },
-      {
-        repo: 'software-garden',
-        name: 'Software Garden',
-        description: 'Turns ready issues into reviewed pull requests within a scope you define.',
       },
       {
         repo: 'ricky',
