@@ -125,7 +125,7 @@ export function AgentDetail({ agent }: { agent: Agent }) {
           <div className={s.poweredCard}>
             <span className={s.poweredEyebrow}>Ready to run it?</span>
             <p className={s.poweredText}>
-              Fork the source and tailor {agent.name} to your team.
+              Fork the source, tailor {agent.name} to your team, and deploy it with the agentworkforce CLI.
             </p>
             <div className={s.ctaRow} style={{ marginTop: 0, justifyContent: 'center' }}>
               <ForkAgentButton agent={agent} className={s.ctaPrimary} />

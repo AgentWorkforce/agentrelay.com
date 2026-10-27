@@ -8,7 +8,7 @@ import { AgentsGallery } from './AgentsGallery';
 
 const title = 'Agents — Proactive agents ready to deploy';
 const description =
-  'A gallery of open-source proactive agents that review PRs, triage issues, monitor releases, and digest your work. Fork one and tailor it to your team.';
+  'A gallery of open-source proactive agents that review PRs, triage issues, monitor releases, and digest your work. Fork one and deploy it on Agent Relay.';
 
 export const metadata: Metadata = {
   title,

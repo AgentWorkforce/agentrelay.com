@@ -6,7 +6,10 @@ const GitHubMark = () => (
   </svg>
 );
 
-/** "Fork on GitHub" (https://github.com/<repo>/fork), styled by the caller's className. */
+/**
+ * CTA for an agent: a "Fork on GitHub" link (https://github.com/<repo>/fork).
+ * Uses the global .btn classes via the className prop the caller passes.
+ */
 export function ForkAgentButton({ agent, className }: { agent: Agent; className: string }) {
   return (
     <a
