@@ -46,7 +46,7 @@ export function DownloadButton() {
 
   if (!platform) {
     return (
-      <div className={s.hero}>
+      <div className={s.actions}>
         <div className={s.choices}>
           {EVERY_PLATFORM.map((choice) => {
             const asset = primaryDesktopAsset(choice);
@@ -69,7 +69,7 @@ export function DownloadButton() {
   const alternate = alternateDesktopAsset(platform);
 
   return (
-    <div className={s.hero}>
+    <div className={s.actions}>
       <a className={`btn btn-primary ${s.primary}`} href={desktopAssetUrl(asset.file)}>
         Download for {asset.label}
       </a>

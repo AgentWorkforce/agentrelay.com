@@ -1,13 +1,15 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../components/GitHubStars';
+import { WaveDivider } from '../../components/home/icons';
+import sections from '../../components/home/home-sections.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { DESKTOP_ASSETS, desktopAssetUrl } from '../../lib/desktop-downloads';
+import { DESKTOP_ASSETS, type DesktopAsset, type DesktopOs, desktopAssetUrl } from '../../lib/desktop-downloads';
 import { absoluteUrl } from '../../lib/site';
-import legal from '../legal.module.css';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
+import s from '../landing.module.css';
 import { DownloadButton } from './DownloadButton';
-import s from './download.module.css';
+import d from './download.module.css';
 
 const description =
   'Download the Agent Relay desktop app for macOS, Linux, or Windows. It connects the coding agents on your machine to your team’s relay.';
@@ -19,89 +21,101 @@ export const metadata: Metadata = {
   openGraph: { title: 'Download Agent Relay', description, url: absoluteUrl('/download') },
 };
 
+const PLATFORMS: readonly { os: DesktopOs; name: string; requirements: string; verify: string }[] = [
+  {
+    os: 'macos',
+    name: 'macOS',
+    requirements: 'macOS 13 Ventura or later.',
+    verify: 'shasum -a 256 -c <file>.sha256',
+  },
+  {
+    os: 'linux',
+    name: 'Linux',
+    requirements: 'glibc 2.34+ and GTK 4.6+. The background service runs under systemd.',
+    verify: 'sha256sum -c <file>.sha256',
+  },
+  {
+    os: 'windows',
+    name: 'Windows',
+    requirements:
+      'Installs for your account without admin rights. The build is unsigned, so SmartScreen may ask you to confirm: choose More info › Run anyway.',
+    verify: 'Get-FileHash <file>',
+  },
+];
+
+function archName(asset: DesktopAsset): string {
+  if (asset.os === 'macos') return asset.arch === 'arm64' ? 'Apple silicon' : 'Intel';
+  return asset.arch === 'arm64' ? 'ARM64' : 'x64';
+}
+
 export default function DownloadPage() {
   return (
-    <div className={legal.page}>
-      <SiteNav actions={<GitHubStarsBadge />} />
+    <div className={`${s.page} ${s.messagingPage} ${s.homeLanding}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
 
-      <main className={legal.content}>
-        <h1 className={legal.title}>Download Agent Relay</h1>
-        <p className={legal.subtitle}>
-          The desktop app connects the coding agents on your machine to your team’s relay. Install it, sign in,
-          and your agents can reach each other.
-        </p>
-
-        <DownloadButton />
-
-        <section className={legal.section} aria-labelledby="agent-install">
-          <h2 id="agent-install">Let your agent install it</h2>
-          <p>
-            On macOS or Linux, give your coding agent one prompt and it downloads, verifies, and installs the app,
-            then signs you in and connects your workspace. You approve the sign-in; it does the rest.
-          </p>
-          <p>
-            <a href="/signup/teams" className={legal.link}>
-              Let your agent install it
+      <SiteNav
+        hideLinks
+        singleAction
+        actions={
+          <>
+            <a className={`${s.ctaSecondary} ${s.homeNavAction}`} href="/login">
+              Log in
             </a>
-          </p>
-        </section>
+            <a className={`${s.ctaPrimary} ${s.homeNavAction}`} href={teamsGoogleAuthHref('download_nav')}>
+              Sign up
+            </a>
+          </>
+        }
+      />
 
-        <section className={legal.section} aria-labelledby="all-downloads">
-          <h2 id="all-downloads">All downloads</h2>
-          <p>Every build is the latest release. Each has a SHA-256 checksum to verify the file you downloaded.</p>
-          <div className={legal.tableWrapper}>
-            <table className={legal.table}>
-              <thead>
-                <tr>
-                  <th scope="col">Platform</th>
-                  <th scope="col">Format</th>
-                  <th scope="col">Download</th>
-                  <th scope="col">Checksum</th>
-                </tr>
-              </thead>
-              <tbody>
-                {DESKTOP_ASSETS.map((asset) => (
-                  <tr key={asset.file}>
-                    <td>{asset.label}</td>
-                    <td>{asset.kind}</td>
-                    <td>
-                      <a href={desktopAssetUrl(asset.file)} className={`${legal.link} ${s.file}`}>
-                        {asset.file}
+      <main id="main">
+        <header className={d.hero}>
+          <h1 className={d.heroTitle}>Download Agent Relay</h1>
+          <p className={d.heroLine}>The desktop app connects the coding agents on your machine to your team’s relay.</p>
+          <DownloadButton />
+          <p className={d.agentInstall}>
+            On macOS or Linux, your coding agent can install it for you. <a href="/signup/teams">Get the setup prompt</a>
+          </p>
+        </header>
+
+        <div className={sections.waveBreak}>
+          <WaveDivider />
+        </div>
+
+        <section className={d.catalog} id="all-downloads" aria-labelledby="all-downloads-title">
+          <h2 id="all-downloads-title" className={d.catalogTitle}>
+            All downloads
+          </h2>
+          <div className={d.platforms}>
+            {PLATFORMS.map((platform) => (
+              <div key={platform.os} className={d.platform}>
+                <h3 className={d.platformName}>{platform.name}</h3>
+                <ul className={d.builds}>
+                  {DESKTOP_ASSETS.filter((asset) => asset.os === platform.os).map((asset) => (
+                    <li key={asset.file} className={d.build}>
+                      <a className={d.buildLink} href={desktopAssetUrl(asset.file)}>
+                        <span className={d.buildArch}>{archName(asset)}</span>
+                        <span className={d.buildKind}>{asset.kind}</span>
                       </a>
-                    </td>
-                    <td>
-                      <a href={desktopAssetUrl(`${asset.file}.sha256`)} className={legal.link}>
+                      <a
+                        className={d.checksum}
+                        href={desktopAssetUrl(`${asset.file}.sha256`)}
+                        aria-label={`SHA-256 checksum for ${asset.file}`}
+                      >
                         SHA-256
                       </a>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </li>
+                  ))}
+                </ul>
+                <p className={d.requirements}>{platform.requirements}</p>
+                <p className={d.verify}>
+                  Verify <code>{platform.verify}</code>
+                </p>
+              </div>
+            ))}
           </div>
-          <p>
-            Check a download with <code className={s.code}>shasum -a 256 -c &lt;file&gt;.sha256</code> on macOS,{' '}
-            <code className={s.code}>sha256sum -c &lt;file&gt;.sha256</code> on Linux, run in the folder that
-            holds both files, or compare the file’s{' '}
-            <code className={s.code}>Get-FileHash</code> with the checksum on Windows.
-          </p>
-        </section>
-
-        <section className={legal.section} aria-labelledby="requirements">
-          <h2 id="requirements">Requirements</h2>
-          <ul className={legal.list}>
-            <li>
-              <strong>macOS</strong> 13 Ventura or later, on Apple silicon or Intel.
-            </li>
-            <li>
-              <strong>Linux</strong> with glibc 2.34 or later and GTK 4.6 or later, on x64 or ARM64. The
-              background service runs under systemd.
-            </li>
-            <li>
-              <strong>Windows</strong> on x64 or ARM64. Setup installs for your account only, without
-              administrator rights; the background service runs as a logon task in Task Scheduler.
-            </li>
-          </ul>
         </section>
       </main>
 
