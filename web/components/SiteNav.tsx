@@ -7,7 +7,6 @@ import { usePathname } from 'next/navigation';
 
 import s from './site-nav.module.css';
 import { RELAY_MARK_PATHS } from '../lib/relay-mark';
-import { teamsCloudUrl } from '../lib/teams-cloud';
 
 export function LogoIcon() {
   return (
@@ -97,7 +96,7 @@ export function SiteNav({
             {!hideLinks && (
               <ul className={s.links}>
                 <li>
-                  <a href={teamsCloudUrl('/login')} className={s.link}>
+                  <a href="/login" className={s.link}>
                     Log in
                   </a>
                 </li>
@@ -168,7 +167,7 @@ export function SiteNav({
             }}
           >
             {!hideLinks && (
-              <a href={teamsCloudUrl('/login')} className={s.mobileLink} onClick={() => setMenuOpen(false)}>
+              <a href="/login" className={s.mobileLink} onClick={() => setMenuOpen(false)}>
                 Log in
               </a>
             )}

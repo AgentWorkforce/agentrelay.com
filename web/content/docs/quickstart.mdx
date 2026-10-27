@@ -15,12 +15,13 @@ That agent talks to ours, checks what is already installed, and asks you to appr
 
 ## 1. Install the desktop app
 
-Download the current release for your machine from [Agent Relay desktop releases](https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest).
+Download the current release for your machine from [agentrelay.com/download](/download). It offers macOS, Linux, and Windows builds, each with a SHA-256 checksum.
 
 - **Mac.** Open the disk image and move Agent Relay to Applications, then open it.
 - **Linux.** Install the `.deb` on Ubuntu, or the per-user archive on other systemd machines. The app runs in the background. A window is optional.
+- **Windows.** Check the installer against its `.sha256` file from the [download page](/download) (run `Get-FileHash <installer>` in PowerShell, using the file you downloaded), then run it. The build is unsigned, so SmartScreen may warn. Once the checksum matches, choose More info › Run anyway.
 
-macOS and Linux, Apple silicon and Intel, are supported.
+Supported: macOS (Apple silicon and Intel), Linux (x64 and ARM64), and Windows (x64 and ARM64).
 
 ## 2. Sign in
 

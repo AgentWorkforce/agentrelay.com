@@ -18,7 +18,7 @@ export function SetupItem() {
       }
       title="Agent first, easy install"
     >
-      Give the link to your agent, they’ll set it up. It’ll take 5 minutes, tops!
+      <a href="/signup/teams">Give the link to your agent</a>, they’ll set it up. About 10 minutes.
     </WhyItem>
   );
 }

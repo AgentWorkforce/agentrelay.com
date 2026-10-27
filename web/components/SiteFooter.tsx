@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 
-import { HOME_SIGNUP_HREF } from '../lib/home-copy';
+import { teamsGoogleAuthHref } from '../lib/teams-cloud';
 import { SITE_EMAIL } from '../lib/site';
 import { LogoIcon, LogoWordmark } from './SiteNav';
 import s from './site-footer.module.css';
@@ -23,7 +23,8 @@ const footerColumns: FooterColumn[] = [
   {
     title: 'Product',
     links: [
-      { label: 'Sign up', href: HOME_SIGNUP_HREF, navigate: true },
+      { label: 'Sign up', href: teamsGoogleAuthHref('footer'), navigate: true },
+      { label: 'Desktop app', href: '/download' },
       { label: 'Open source', href: '/open-source' },
     ],
   },

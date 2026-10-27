@@ -2,7 +2,8 @@ import type { CSSProperties } from 'react';
 
 import { InvestorStrip } from '../InvestorStrip';
 import { AgentIcons } from '../AgentSignup';
-import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE_LINES, HOME_SIGNUP_HREF } from '../../lib/home-copy';
+import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../../app/landing.module.css';
 import home from './home-hero.module.css';
 
@@ -29,7 +30,7 @@ export function HomeHero() {
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_SUBTITLE}</p>
 
           <div className={`${s.heroCenterCtas} ${home.actions}`}>
-            <a className={`${s.ctaPrimary} ${s.heroCta}`} href={HOME_SIGNUP_HREF} data-hero-signup="">
+            <a className={`${s.ctaPrimary} ${s.heroCta}`} href={teamsGoogleAuthHref('home_hero')} data-hero-signup="">
               <AgentIcons mono />
               Connect your agents for free
               <svg className={s.heroCtaArrow} viewBox="0 0 16 16" aria-hidden="true">

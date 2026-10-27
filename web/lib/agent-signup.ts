@@ -1,3 +1,4 @@
+import { DESKTOP_RELEASES } from './desktop-downloads';
 import { SETUP_SKILLS, SETUP_SKILLS_SOURCE } from './generated/setup-skills';
 
 export type AgentSignupProduct = 'teams' | 'flows';
@@ -193,8 +194,6 @@ function isLocalStack(site: string): boolean {
   const { protocol, hostname } = new URL(site);
   return protocol === 'http:' && (hostname === 'localhost' || hostname === '127.0.0.1');
 }
-
-const DESKTOP_RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download';
 
 /**
  * The skills name production. Another host substitutes its own exact origins;

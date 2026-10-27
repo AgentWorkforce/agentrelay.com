@@ -60,6 +60,17 @@ async function startSession(product: AgentSignupProduct, analytics?: SignupAnaly
   return { progress: session, token: session.writeToken };
 }
 
+/** The same-origin page that linked here, so Back returns to it rather than a fixed landing page. */
+function previousSitePage(location: Location): string | null {
+  try {
+    const referrer = new URL(document.referrer);
+    if (referrer.origin !== location.origin || referrer.pathname === location.pathname) return null;
+    return `${referrer.pathname}${referrer.search}${referrer.hash}`;
+  } catch {
+    return null;
+  }
+}
+
 export function AgentSignupJourney({ product }: { product: AgentSignupProduct }) {
   const analytics = useSignupAnalytics(product);
   const viewed = useRef(false);
@@ -69,6 +80,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const [progress, setProgress] = useState<SignupProgress>();
   const [token, setToken] = useState<string>();
   const [origin, setOrigin] = useState('');
+  const [backHref, setBackHref] = useState(`/${product}`);
   const [error, setError] = useState('');
   const [copyMessage, setCopyMessage] = useState('');
   const [expired, setExpired] = useState(false);
@@ -92,6 +104,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   const prompt = progress && token ? trackedSignupPrompt(product, origin, endpoint, { id: progress.id, writeToken: token }) : '';
 
   useEffect(() => { setAnswerValue(''); setAnswerError(''); }, [inputRequest?.id]);
+  useEffect(() => { setBackHref(previousSitePage(window.location) ?? `/${product}`); }, [product]);
 
   latest.current = { step: active, owner: Boolean(token) };
   useEffect(() => {
@@ -206,7 +219,7 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
   return (
     <div className={`${s.page} ph-sensitive ph-no-capture`} data-mode={mode}>
       <SignupAtmosphere className={s.atmosphere} step={complete ? 6 : active} mode={mode} />
-      <Link href={`/${product}`} className={s.back} aria-label={`Back to ${product}`}><ArrowLeft size={18} /></Link>
+      <Link href={backHref} className={s.back} aria-label="Back"><ArrowLeft size={18} /></Link>
       <main className={s.main}>
         <div className={s.content}>
           <h1>{heading}</h1>
@@ -220,8 +233,9 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
             </div>
           )}
           {complete ? <a onClick={() => { if (token) analytics.track('dashboard_opened', active); }} className={s.primary} href={teamsCloudUrl(product === 'teams' ? '/dashboard/sessions' : '/dashboard')}>Open {product === 'teams' ? 'your workspace' : 'dashboard'} <ArrowUpRight size={17} /></a>
+            : expired || failed ? <button type="button" className={s.primary} onClick={restart}><RefreshCw size={16} />Start a new session</button>
             : !active && !expired && !answeredInput && inputRequest?.status !== 'pending' ? <button type="button" className={s.primary} disabled={!prompt} onClick={() => void copy()}>{copyMessage.startsWith('Copied') ? <Check size={17} /> : <Copy size={17} />}{copyMessage.startsWith('Copied') ? 'Prompt copied' : 'Copy setup prompt'}</button> : null}
-          <p className={s.copyStatus} role="status">{complete ? '' : expired ? '' : notice ? 'No action is required to keep this draft saved.' : inputRequest?.status === 'pending' ? 'Your answer goes straight to your agent.' : answeredInput ? 'Your agent is processing your answer.' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac.' : 'Paste into a coding agent with terminal access.')}</p>
+          <p className={s.copyStatus} role="status">{complete ? '' : expired ? '' : notice ? 'No action is required to keep this draft saved.' : inputRequest?.status === 'pending' ? 'Your answer goes straight to your agent.' : answeredInput ? 'Your agent is processing your answer.' : active ? (paused ? 'Your agent will continue after you approve.' : 'You can leave this page open.') : copyMessage || (progress && !token ? 'Watching this session. The prompt is in the original browser tab.' : product === 'teams' ? 'Paste into a coding agent on your Mac or Linux machine.' : 'Paste into a coding agent with terminal access.')}</p>
           {inputRequest && !expired && !complete && (inputRequest.status === 'pending' || answeredInput) && <section className={s.inputCard} aria-label={notice ? 'Flow preview status' : 'Question from your agent'}>
             {notice ? <>
               <p className={s.inputEyebrow}>INACTIVE PREVIEW</p>
@@ -275,7 +289,6 @@ export function AgentSignupJourney({ product }: { product: AgentSignupProduct })
             </div>
           </details>
           {showPrompt && prompt && <textarea data-ph-no-capture className={s.prompt} ref={textarea} aria-label="Agent signup prompt" value={prompt} readOnly spellCheck={false} rows={12} />}
-          {expired && <button type="button" className={s.restart} onClick={restart}>Start a new session <RefreshCw size={13} /></button>}
         </div>
       </main>
     </div>
