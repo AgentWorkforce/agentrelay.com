@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 74,
+  "count": 75,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -57,6 +57,7 @@
     "https://agentrelay.com/docs/relayflows/recommended",
     "https://agentrelay.com/docs/relayflows/reliability",
     "https://agentrelay.com/docs/sessions",
+    "https://agentrelay.com/download",
     "https://agentrelay.com/enterprise",
     "https://agentrelay.com/file",
     "https://agentrelay.com/flows",
