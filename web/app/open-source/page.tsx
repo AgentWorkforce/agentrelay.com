@@ -8,7 +8,7 @@ import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { DEFAULT_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { fetchOrgRepoStats, GITHUB_ORG, GITHUB_ORG_URL, OSS_CATEGORIES, type OssRepo } from '../../lib/open-source';
-import { absoluteUrl, SITE_NAME } from '../../lib/site';
+import { absoluteUrl, DISCORD_URL, SITE_NAME } from '../../lib/site';
 import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../landing.module.css';
 import o from './open-source.module.css';
@@ -163,7 +163,7 @@ export default async function OpenSourcePage() {
                 </a>
                 <a
                   className={s.ctaSecondary}
-                  href="https://discord.gg/RJGE7CHV"
+                  href={DISCORD_URL}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
