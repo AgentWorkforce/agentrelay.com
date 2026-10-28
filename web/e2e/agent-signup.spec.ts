@@ -110,3 +110,39 @@ test('logo ribbons respond to pointer movement and settle into the completed mar
   }), { timeout: 15000 }).toBeGreaterThan(180);
   await page.screenshot({ path: testInfo.outputPath('signup-logo-complete.png') });
 });
+
+test('a failed setup offers a new session, and Back returns to the page that linked here', async ({ page }) => {
+  const fresh = `${id.slice(0, -1)}9`;
+  let creates = 0;
+  const waiting = { id, product: 'teams', step: 0, state: 'waiting', revision: 0, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7200000).toISOString() };
+  let progress = waiting;
+  await page.route('**/cloud/api/v1/signup/agent/sessions**', route => {
+    if (route.request().method() === 'POST') {
+      creates++;
+      return route.fulfill({ status: 201, json: {...waiting, id: creates === 1 ? id : fresh, writeToken: token} });
+    }
+    return route.fulfill({ json: route.request().url().includes(fresh) ? {...waiting, id: fresh} : progress });
+  });
+  await page.goto('/download');
+  await expect(page.getByRole('link', { name: 'Let your agent install it' })).toHaveAttribute('href', '/signup/teams');
+  await page.goto('/signup/teams', { referer: new URL('/download', page.url()).href });
+  await expect(page.getByText('Paste into a coding agent on your Mac or Linux machine.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/download');
+
+  progress = {...progress, step: 2, state: 'failed', revision: 1};
+  await expect(page.getByRole('heading', { name: 'Your agent needs a hand.' })).toBeVisible();
+  const restart = page.getByRole('button', { name: 'Start a new session' });
+  await expect(restart).toBeInViewport();
+  await restart.click();
+  await expect(page).toHaveURL(new RegExp(`session=${fresh}`));
+  await expect(page.getByRole('button', { name: 'Copy setup prompt' })).toBeEnabled();
+  expect(creates).toBe(2);
+});
+
+test('Back falls back to the product page without a same-site referrer', async ({ page }) => {
+  const progress = { id, product: 'flows', step: 0, state: 'waiting', revision: 0, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 7200000).toISOString() };
+  await page.route('**/cloud/api/v1/signup/agent/sessions**', route => route.fulfill({ status: route.request().method() === 'POST' ? 201 : 200, json: {...progress, writeToken: token} }));
+  await page.goto('/signup/flows');
+  await expect(page.getByRole('button', { name: 'Copy setup prompt' })).toBeEnabled();
+  await expect(page.getByRole('link', { name: 'Back' })).toHaveAttribute('href', '/flows');
+});

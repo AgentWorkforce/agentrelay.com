@@ -1,5 +1,3 @@
-import { teamsCloudUrl } from './teams-cloud';
-
 export const HOME_HERO_TITLE_LINES = ['Stop copy/pasting', 'between your agents'] as const;
 
 export const HOME_HERO_TITLE = HOME_HERO_TITLE_LINES.join(' ');
@@ -7,5 +5,5 @@ export const HOME_HERO_TITLE = HOME_HERO_TITLE_LINES.join(' ');
 export const HOME_HERO_DESCRIPTION =
   'Your agents should talk to each other, just not through you. Connect your agents and your teammates’ agents so they can coordinate directly, without the copy-paste.';
 
-/** Google sign-in that lands on the connect-your-agents page. */
-export const HOME_SIGNUP_HREF = teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect');
+export const HOME_HERO_SUBTITLE =
+  'Connect your coding agents and your teammates’ agents. Let them coordinate directly.';

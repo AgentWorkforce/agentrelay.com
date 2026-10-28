@@ -28,6 +28,11 @@ export const SETUP_SKILL_NAMES = [
   'writing-relayflows',
 ];
 
+/** prpm records a single-file skill by its SKILL.md and a multi-file skill by its directory. */
+export function skillFilePath(installedPath) {
+  return installedPath.endsWith('.md') ? installedPath : `${installedPath.replace(/\/$/, '')}/SKILL.md`;
+}
+
 export function stripFrontmatter(text) {
   const match = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n)+/.exec(text);
   if (!match) throw new Error('SKILL.md is missing YAML frontmatter');
@@ -53,9 +58,10 @@ export async function readInstalledSkills(lockText, readInstalled) {
       missing.push(`@agent-relay/${name} is not in prpm.lock`);
       continue;
     }
-    const text = await readInstalled(entry.installedPath).catch(() => null);
+    const path = skillFilePath(entry.installedPath);
+    const text = await readInstalled(path).catch(() => null);
     if (text === null) {
-      missing.push(`${entry.installedPath} is missing (run prpm install)`);
+      missing.push(`${path} is missing (run prpm install)`);
       continue;
     }
     versions[name] = entry.version;

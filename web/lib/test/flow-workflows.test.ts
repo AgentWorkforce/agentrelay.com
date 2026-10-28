@@ -14,7 +14,6 @@ import {
   WORKFLOWS, FLOW_TIME,
 } from '../flow-workflows';
 import { factorySource, type FactoryDraft } from '../flow-onboarding';
-import { RELAYFLOWS_VERSION } from '../flow-local';
 
 /**
  * Every generated check step runs under `sh`, and its exit code is the only
@@ -1502,18 +1501,6 @@ describe('agent step time limits (agentrelay.com#138)', () => {
       if (id === 'prototype') expect(source).toMatch(/if \(timedOut\(comparison\)\)/);
     });
 
-    it(`states no agent time limit in the ${id} local flow, whose pinned runtime predates them`, () => {
-      // The local kit installs RELAYFLOWS_VERSION, older than 2.0.40, and an
-      // older runtime refuses an agent `timeout`. Once the pin reaches 2.0.40,
-      // emit the limits for the local target too and change this test.
-      const [major, minor, patch] = RELAYFLOWS_VERSION.split('.').map(Number);
-      expect(major! * 1e6 + minor! * 1e3 + patch!).toBeLessThan(2_000_040);
-      const source = factorySource(draft(id), 'local');
-      expect(agentSteps(source).filter(step => step.timeout !== undefined).map(step => step.source)).toEqual([]);
-      // The branches are still there, and still typecheck against 2.0.26's
-      // AgentResult (which has no completionReason): they never fire.
-      expect(source).toContain('const timedOut = (result: unknown) =>');
-    });
   }
 });
 

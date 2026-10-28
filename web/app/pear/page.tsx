@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { teamsCloudUrl } from '../../lib/teams-cloud';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import { WorksWithEveryAgent } from '../../components/home/WorksWithEveryAgent';
 import { ogImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
@@ -578,7 +578,7 @@ export default function PearPage() {
           <div className={home.signupActions}>
             <a
               className={home.ctaPrimary}
-              href={teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect')}
+              href={teamsGoogleAuthHref('pear')}
             >
               Get started
             </a>

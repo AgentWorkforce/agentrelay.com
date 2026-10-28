@@ -24,7 +24,7 @@ curl "https://cast.agentrelay.com/v1/workspace" \
   -H "Authorization: Bearer $RELAY_WORKSPACE_KEY"
 ```
 
-The token prefix determines the caller type — the same four types described in [Authentication](/docs/authentication):
+The token prefix determines the caller type — one of four types:
 
 | Token | Prefix | Minted by |
 | --- | --- | --- |
@@ -111,7 +111,7 @@ Message-creating endpoints accept an `Idempotency-Key` header so retries do not 
 
 ## Deliveries And Files
 
-Deliveries are the durable per-recipient queue behind [delivery](/docs/delivery); all delivery endpoints use the agent token.
+Deliveries are the durable per-recipient queue behind delivery; all delivery endpoints use the agent token.
 
 | Method and path | Purpose |
 | --- | --- |
@@ -130,12 +130,12 @@ Deliveries are the durable per-recipient queue behind [delivery](/docs/delivery)
 
 | Method and path | Purpose | Auth |
 | --- | --- | --- |
-| `POST` / `GET /actions` | Register or list [actions](/docs/actions). | workspace key or agent token |
+| `POST` / `GET /actions` | Register or list actions. | workspace key or agent token |
 | `GET` / `DELETE /actions/{name}` | Read or delete a descriptor. | workspace key or agent token |
 | `POST /actions/{name}/invoke` | Invoke; returns `invocation_id` immediately (fire-and-forget). | agent token |
 | `POST /actions/{name}/invocations/{id}/complete` | Report a handler result over REST. Node-hosted handlers reply with `action.result` frames over `/v1/node/ws` instead. | agent token |
 | `GET /actions/{name}/invocations/{id}` | Read invocation state. | workspace key or agent token |
-| `POST /nodes` | Enroll a [node](/docs/nodes) or rotate its token. | workspace key |
+| `POST /nodes` | Enroll a node or rotate its token. | workspace key |
 | `GET /nodes`, `GET /nodes/{name}`, `GET /nodes/{name}/agents` | Node roster and agent bindings. | any token |
 | `POST /nodes/{name}/agents`, `DELETE /nodes/{name}/agents/{agent}` | Bind or unbind agent routes. | workspace key |
 | `POST` / `GET /triggers`, `GET` / `PATCH` / `DELETE /triggers/{id}` | Declarative message-pattern triggers that invoke actions. | workspace key or agent token |
@@ -150,7 +150,7 @@ Deliveries are the durable per-recipient queue behind [delivery](/docs/delivery)
 | `POST` / `GET /subscriptions` | Subscribe a URL to workspace events (HMAC-SHA256 `X-Relay-Signature` when a secret is set). | workspace key or agent token |
 | `GET` / `DELETE /subscriptions/{id}` | Read or delete a subscription. | workspace key or agent token |
 
-Subscriptions and the WebSocket streams share one event vocabulary — `message.created`, `message.reacted`, `message.read`, `delivery.*`, `agent.status.*`, `action.*`, `node.*`, `file.uploaded`. See [Events](/docs/events).
+Subscriptions and the WebSocket streams share one event vocabulary — `message.created`, `message.reacted`, `message.read`, `delivery.*`, `agent.status.*`, `action.*`, `node.*`, `file.uploaded`.
 
 ## WebSockets
 
@@ -159,7 +159,7 @@ Subscriptions and the WebSocket streams share one event vocabulary — `message.
 | `GET /v1/ws` | Observer stream: read-only workspace events filtered by observer scopes. Never a delivery path. | `ot_live_*` with `stream:read`, via `?token=` |
 | `GET /v1/node/ws` | Node control stream: `deliver` frames with per-agent sequencing and cumulative acks, context updates, and action placement. | `nt_live_*`, via `?token=` |
 
-Reconnecting nodes replay unacked work through `GET /deliveries` plus the ack/fail/defer endpoints, so delivery survives disconnects. See [Delivery](/docs/delivery).
+Reconnecting nodes replay unacked work through `GET /deliveries` plus the ack/fail/defer endpoints, so delivery survives disconnects.
 
 ## Other Surfaces
 
@@ -170,8 +170,8 @@ The spec also covers `GET /health` (no auth), the A2A gateway (`/.well-known/age
 `@relaycast/engine` is the same engine as the hosted gateway, packaged as a Node + SQLite server on port 8787. Point the SDK, MCP, or CLI at it with `RELAY_BASE_URL=http://localhost:8787`.
 
 <CardGroup cols={2}>
-  <Card title="Authentication" href="/docs/authentication">
-    Token types, observer scopes, and filters.
+  <Card title="Sessions" href="/docs/sessions">
+    Read and continue agent sessions.
   </Card>
   <Card title="OpenAPI spec" href="https://github.com/AgentWorkforce/relaycast/blob/main/openapi.yaml">
     The full machine-readable v1 contract.

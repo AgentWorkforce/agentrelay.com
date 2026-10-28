@@ -4,7 +4,7 @@ import { AgentSignup } from '../AgentSignup';
 import { FadeIn } from '../FadeIn';
 import { RelayRibbons } from '../RelayRibbons';
 import landing from '../../app/landing.module.css';
-import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import { ScribbleUnderline } from './icons';
 import { WhyRelay } from './WhyRelay';
 import s from './home-sections.module.css';
@@ -50,9 +50,11 @@ export function FinalCta() {
       <h2 id="final-cta-title" className={s.title}>
         Get your team on the <Mark>relay</Mark>
       </h2>
-      <p className={s.line}>Install the desktop app and sign in. About 10 minutes to your first handoff.</p>
+      <p className={s.line}>
+        <a href="/download">Install the desktop app</a> and sign in. About 10 minutes to your first handoff.
+      </p>
       <div className={s.actions}>
-        <a className={landing.ctaPrimary} href={HOME_SIGNUP_HREF}>
+        <a className={landing.ctaPrimary} href={teamsGoogleAuthHref('home_final_cta')}>
           Sign up for free
         </a>
         <AgentSignup product="teams" />

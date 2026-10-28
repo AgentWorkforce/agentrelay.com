@@ -6,7 +6,7 @@ import { setTimeout } from 'node:timers/promises';
 const base = new URL(process.argv[2]);
 const cases = [
   ['/', /Agent Relay/i],
-  ['/docs/observer', /Observer/],
+  ['/docs/sessions', /Sessions/],
   ['/blog/promptgramming', /Promptgramming/],
   // force-dynamic: proves request-time rendering as well as the static cache.
   // This checks rendering, not availability of the external directory service.
@@ -25,6 +25,15 @@ for (let attempt = 0; ; attempt++) {
   }
 }
 
+// Legacy entry points redirect to current docs. Follow each one and check the
+// page it lands on, so a redirect to a deleted page fails here, not in prod.
+const redirects = [
+  ['/relaycast', '/docs/relaycast-api', /Relaycast API/],
+  ['/message', '/docs/relaycast-api', /Relaycast API/],
+  ['/auth', '/docs/relaycast-api', /Relaycast API/],
+  ['/docs/relayhistory', '/docs/sessions', /Sessions/],
+];
+
 for (const [path, content] of cases) {
   const response = await fetch(new URL(path, base), { redirect: 'manual', signal: AbortSignal.timeout(15000) });
   assert.equal(response.status, 200, `${path}: Worker returned ${response.status}`);
@@ -42,4 +51,12 @@ for (const [path, content] of cases) {
     assert.equal(assetResponse.status, 200, 'Built asset is unavailable');
     assert.doesNotMatch(assetResponse.headers.get('content-type') ?? '', /text\/html/);
   }
+}
+
+for (const [path, target, content] of redirects) {
+  const response = await fetch(new URL(path, base), { signal: AbortSignal.timeout(15000) });
+  assert.equal(response.status, 200, `${path}: redirect landed on ${response.status}`);
+  assert.equal(new URL(response.url).pathname, target, `${path}: redirected to ${response.url}`);
+  assert.match(await response.text(), content, `${path}: expected page content is missing`);
+  console.log(`Worker smoke: ${path} redirects to ${target}`);
 }

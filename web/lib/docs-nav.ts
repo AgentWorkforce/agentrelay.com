@@ -8,88 +8,50 @@ export interface NavGroup {
   items: NavItem[];
 }
 
+/** Pages a person browses. Keep this short. */
 export const docsNav: NavGroup[] = [
   {
     title: 'Start',
     items: [
       { title: 'Introduction', slug: 'introduction' },
       { title: 'Quickstart', slug: 'quickstart' },
-      { title: 'Workspaces', slug: 'workspaces' },
       { title: 'Plans and limits', slug: 'plans-and-limits' },
-      { title: 'Authentication', slug: 'authentication' },
     ],
   },
   {
-    title: 'Guides',
+    title: 'Sessions',
+    items: [{ title: 'Sessions', slug: 'sessions' }],
+  },
+  {
+    title: 'Forward deployed agents',
     items: [
-      { title: 'Public agent on arelay.to', slug: 'arelay-public-agent' },
+      { title: 'Public address', slug: 'forward-deployed-agents' },
       { title: 'Relay Connect', slug: 'relay-connect' },
-      { title: 'Fleet setup', slug: 'fleet-setup' },
     ],
   },
   {
-    title: 'Messaging',
-    items: [
-      { title: 'Overview', slug: 'messaging' },
-      { title: 'Sending messages', slug: 'sending-messages' },
-      { title: 'Channels', slug: 'channels' },
-      { title: 'DMs and group DMs', slug: 'dms' },
-      { title: 'Threads', slug: 'threads' },
-      { title: 'Emoji reactions', slug: 'emoji-reactions' },
-    ],
-  },
-  {
-    title: 'Automation',
-    items: [
-      { title: 'Actions', slug: 'actions' },
-      { title: 'Orchestrating with actions', slug: 'orchestrating-with-actions' },
-      { title: 'Events', slug: 'events' },
-      { title: 'Event handlers', slug: 'event-handlers' },
-      { title: 'Webhooks', slug: 'webhooks' },
-      { title: 'Provider subscriptions', slug: 'provider-subscriptions' },
-    ],
-  },
-  {
-    title: 'Delivery and sessions',
-    items: [
-      { title: 'Architecture', slug: 'architecture' },
-      { title: 'Delivery', slug: 'delivery' },
-      { title: 'Nodes and providers', slug: 'nodes-and-providers' },
-      { title: 'Nodes', slug: 'nodes' },
-      { title: 'Harnesses', slug: 'harnesses' },
-      { title: 'Session capabilities', slug: 'session-capabilities' },
-      { title: 'Harness driver package', slug: 'harness-driver' },
-    ],
-  },
-  {
-    title: 'Interfaces',
-    items: [
-      { title: 'TypeScript SDK', slug: 'typescript-sdk' },
-      { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
-      { title: 'Observer', slug: 'observer' },
-    ],
-  },
-  {
-    title: 'CLI',
-    items: [
-      { title: 'CLI', slug: 'cli-overview' },
-      { title: 'CLI messaging', slug: 'cli-messaging' },
-      { title: 'Agent management', slug: 'cli-agent-management' },
-      { title: 'Broker lifecycle', slug: 'cli-broker-lifecycle' },
-      { title: 'CLI reference', slug: 'reference-cli' },
-    ],
-  },
-  {
-    title: 'Reference',
-    items: [
-      { title: 'Relaycast API', slug: 'relaycast-api' },
-      { title: 'Migration to version 8', slug: 'migration' },
-    ],
+    title: 'Flows',
+    items: [{ title: 'Flows', slug: 'flows' }],
   },
 ];
 
-/** All doc slugs for static generation + search. */
-export const currentDocsSlugs = docsNav.flatMap((group) => group.items.map((item) => item.slug));
+/**
+ * Built, searchable, and mirrored as markdown, but left out of the sidebar.
+ * The audience is an agent fetching the `.md`, the same idea as a product
+ * section's `unlistedSlugs`.
+ */
+export const agentDocs: NavItem[] = [
+  { title: 'For agents', slug: 'agents' },
+  { title: 'Relaycast API', slug: 'relaycast-api' },
+  { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
+];
+
+const humanDocsSlugs = docsNav.flatMap((group) => group.items.map((item) => item.slug));
+
+export const agentDocsSlugs = agentDocs.map((item) => item.slug);
+
+/** Human pages plus agent pages. Version routing treats all of these as current. */
+export const currentDocsSlugs = [...humanDocsSlugs, ...agentDocsSlugs];
 
 export const legacyDocsNav: NavGroup[] = [
   {
@@ -184,7 +146,12 @@ export const legacyDocsSlugs = [
   ...LEGACY_HIDDEN_SLUGS,
 ];
 
-/** Flat list of all doc slugs for static generation */
+/** Sidebar slugs. The sitemap lists these and leaves agent pages out. */
+export function getHumanDocSlugs(): string[] {
+  return [...humanDocsSlugs];
+}
+
+/** Human and agent slugs, for static generation, search, and markdown mirrors. */
 export function getAllDocSlugs(): string[] {
   return [...new Set(currentDocsSlugs)];
 }

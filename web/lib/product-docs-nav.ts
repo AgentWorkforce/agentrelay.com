@@ -1,5 +1,5 @@
 // Pure, dependency-free section + nav definitions for the standalone product
-// docs (Relayfile, Relayhistory, Flows). This module is safe to import from client
+// docs (Flows). This module is safe to import from client
 // components — it must NOT import anything that touches `node:fs` (e.g.
 // content-store), so the sidebar can use it without dragging server-only code
 // into the browser bundle. Content loaders live in `./product-docs`.
@@ -21,7 +21,7 @@ export interface NavGroup {
  * but has its own sidebar, content tree, and routing under `/docs/<id>`.
  */
 export interface ProductDocSection {
-  /** Route + content-folder id, e.g. `file` → `/docs/file`, `content/docs/file`. */
+  /** Route + content-folder id, e.g. `relayflows` → `/docs/relayflows`. */
   id: string;
   /** Product name shown at the top of the sidebar. */
   label: string;
@@ -39,115 +39,6 @@ export interface ProductDocSection {
   unlistedSlugs?: string[];
   nav: NavGroup[];
 }
-
-export const fileSection: ProductDocSection = {
-  id: 'file',
-  label: 'Relayfile',
-  tagline: 'The event layer for AI agents.',
-  repo: 'AgentWorkforce/relayfile',
-  npmPackage: 'relayfile',
-  // Handed to an agent as markdown from the review-bot guide, not browsed.
-  unlistedSlugs: ['review-bot-brief'],
-  nav: [
-    {
-      title: 'Start',
-      items: [
-        { title: 'Introduction', slug: 'introduction' },
-        { title: 'Quickstart', slug: 'quickstart' },
-        { title: 'Why files', slug: 'why-files' },
-      ],
-    },
-    {
-      title: 'Guides',
-      items: [{ title: 'Build a PR review bot', slug: 'review-bot' }],
-    },
-    {
-      title: 'Concepts',
-      items: [
-        { title: 'Events and webhooks', slug: 'events' },
-        { title: 'Mount layout', slug: 'mount-layout' },
-        { title: 'Reads and writes', slug: 'reads-and-writes' },
-        { title: 'Per-agent ACLs', slug: 'acls' },
-        { title: 'Real-time sync', slug: 'realtime-sync' },
-      ],
-    },
-    {
-      title: 'Running Relayfile',
-      items: [
-        { title: 'Self-hosting', slug: 'self-hosting' },
-        { title: 'Run locally', slug: 'run-locally' },
-        { title: 'Local development', slug: 'local-development' },
-        { title: 'Mounting a workspace', slug: 'mounting' },
-      ],
-    },
-    {
-      title: 'SDK & agents',
-      items: [
-        { title: 'TypeScript SDK', slug: 'sdk' },
-        { title: 'Python SDK', slug: 'python-sdk' },
-        { title: 'Agent frameworks', slug: 'agents' },
-      ],
-    },
-    {
-      title: 'Architecture',
-      items: [
-        { title: 'Integrations', slug: 'integrations' },
-        { title: 'Adapters & providers', slug: 'adapters-and-providers' },
-        { title: 'How Relayfile compares', slug: 'comparison' },
-      ],
-    },
-    {
-      title: 'Cloud',
-      items: [{ title: 'Hosted Relayfile', slug: 'cloud' }],
-    },
-    {
-      title: 'Reference',
-      items: [
-        { title: 'API reference', slug: 'api-reference' },
-        { title: 'CLI reference', slug: 'cli' },
-      ],
-    },
-  ],
-};
-
-export const relayhistorySection: ProductDocSection = {
-  id: 'relayhistory',
-  label: 'Relayhistory',
-  tagline: 'Search, resume, and hand off every coding-agent session.',
-  repo: 'AgentWorkforce/relayhistory',
-  npmPackage: 'ai-hist',
-  nav: [
-    {
-      title: 'Start',
-      items: [
-        { title: 'Introduction', slug: 'introduction' },
-        { title: 'Quickstart', slug: 'quickstart' },
-      ],
-    },
-    {
-      title: 'Use',
-      items: [
-        { title: 'CLI', slug: 'cli' },
-        { title: 'Sessions', slug: 'sessions' },
-      ],
-    },
-    {
-      title: 'Agents',
-      items: [
-        { title: 'MCP server', slug: 'mcp' },
-        { title: 'Handoffs', slug: 'handoffs' },
-      ],
-    },
-    {
-      title: 'Build',
-      items: [
-        { title: 'TypeScript SDK', slug: 'sdk' },
-        { title: 'Remote sources', slug: 'remote-sources' },
-        { title: 'Export', slug: 'export' },
-      ],
-    },
-  ],
-};
 
 export const relayflowsSection: ProductDocSection = {
   id: 'relayflows',
@@ -188,13 +79,13 @@ export const relayflowsSection: ProductDocSection = {
   ],
 };
 
-export const productSections: ProductDocSection[] = [fileSection, relayhistorySection, relayflowsSection];
+export const productSections: ProductDocSection[] = [relayflowsSection];
 
 export function getProductSection(id: string): ProductDocSection | null {
   return productSections.find((section) => section.id === id) ?? null;
 }
 
-/** Resolve a section from a pathname like `/docs/file/quickstart`. */
+/** Resolve a section from a pathname like `/docs/relayflows/quickstart`. */
 export function getProductSectionForPath(pathname: string): ProductDocSection | null {
   const normalized = pathname.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/docs';
   const match = normalized.match(/^\/docs\/([^/]+)/);
