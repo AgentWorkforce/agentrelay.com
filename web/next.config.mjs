@@ -61,8 +61,6 @@ const nextConfig = {
       '/docs/llms.txt',
       '/docs/markdown.md',
       '/docs/markdown/:path*',
-      '/docs/file/markdown/:path*',
-      '/docs/relayhistory/markdown/:path*',
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
       '/.well-known/:path*',
@@ -104,6 +102,17 @@ const nextConfig = {
             value: "frame-ancestors 'none'; base-uri 'none'; object-src 'none'; form-action 'none'",
           },
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+        ],
+      },
+      {
+        // Chromium withholds Sec-CH-UA-Arch until the response asks for it.
+        // Critical-CH retries the navigation with that hint, so the download
+        // page can name the Intel or Arm build in the response the visitor
+        // actually sees. Values match DOWNLOAD_CLIENT_HINT_HEADERS.
+        source: '/download',
+        headers: [
+          { key: 'Accept-CH', value: 'Sec-CH-UA-Arch, Sec-CH-UA-Platform' },
+          { key: 'Critical-CH', value: 'Sec-CH-UA-Arch, Sec-CH-UA-Platform' },
         ],
       },
     ];
@@ -179,32 +188,28 @@ const nextConfig = {
           'https://agentrelay.com/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
         permanent: false,
       },
-      // In-person event QR card → the relay GitHub repo, tagged like /banner
-      // above so card scans are attributable to the current event. Temporary
-      // for the same repointing reason.
-      {
-        source: '/qr-card',
-        destination:
-          'https://github.com/agentworkforce/relay?utm_source=ai-engineer-worldfair&utm_medium=qr-card&utm_campaign=ai-engineer-worldfair-2026',
-        permanent: false,
-      },
+      // In-person QR card → /founder, which books a meeting on Will's or
+      // Khaliq's calendar at random. Temporary for the same repointing reason.
+      { source: '/qr-card', destination: '/founder', permanent: false },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
       { source: '/primitives', destination: '/', permanent: true },
       { source: '/relayfile', destination: '/file', permanent: true },
       { source: '/relayfile/:path*', destination: '/file', permanent: true },
-      { source: '/auth', destination: '/docs/authentication', permanent: true },
-      { source: '/relayauth', destination: '/docs/authentication', permanent: true },
-      { source: '/relayauth/:path*', destination: '/docs/authentication', permanent: true },
-      { source: '/message', destination: '/docs/messaging', permanent: true },
-      { source: '/relaycast', destination: '/docs/messaging', permanent: true },
-      { source: '/relaycast/:path*', destination: '/docs/messaging', permanent: true },
+      { source: '/auth', destination: '/docs/relaycast-api#authentication', permanent: true },
+      { source: '/relayauth', destination: '/docs/relaycast-api#authentication', permanent: true },
+      { source: '/relayauth/:path*', destination: '/docs/relaycast-api#authentication', permanent: true },
+      { source: '/message', destination: '/docs/relaycast-api', permanent: true },
+      { source: '/relaycast', destination: '/docs/relaycast-api', permanent: true },
+      { source: '/relaycast/:path*', destination: '/docs/relaycast-api', permanent: true },
       { source: '/schedule', destination: '/docs', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
-      // Session history is documented under Relayhistory; retired product pages point to Sessions.
+      // Retired product pages. Session history lives with the current Sessions docs.
       { source: '/reflex', destination: '/teams', permanent: true },
-      { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
-      { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
+      { source: '/docs/loop', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/loop/:path*', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/relayhistory', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/relayhistory/:path*', destination: '/docs/sessions', permanent: true },
     ];
   },
 };

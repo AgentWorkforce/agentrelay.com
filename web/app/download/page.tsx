@@ -1,184 +1,138 @@
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
 
-import { cn } from '../../lib/utils';
+import { WaveDivider } from '../../components/home/icons';
+import sections from '../../components/home/home-sections.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import {
-  LINUX_TARBALLS,
-  WINDOWS_PORTABLE,
-  detectDesktopDownload,
-  downloadLabel,
-  downloadsFor,
-  platformName,
-  type DesktopPlatform,
+  DESKTOP_ASSETS,
+  type DesktopAsset,
+  type DesktopOs,
+  desktopAssetUrl,
+  detectDesktopPlatform,
 } from '../../lib/desktop-downloads';
-import { defaultOgImage } from '../../lib/og-meta';
-import { absoluteUrl, SITE_NAME } from '../../lib/site';
-import s from './download.module.css';
+import { absoluteUrl } from '../../lib/site';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
+import s from '../landing.module.css';
+import { DownloadButton } from './DownloadButton';
+import d from './download.module.css';
 
-// The recommendation comes from the request's User-Agent, so each visitor
-// gets their platform's download in the first response.
-export const dynamic = 'force-dynamic';
-
-const TITLE = 'Download Agent Relay for macOS, Windows, and Linux';
-const DESCRIPTION =
-  'Download Agent Relay for macOS, Windows, or Linux. The same local relay for Claude Code, Codex, and your other agents on every desktop platform.';
+const description =
+  'Download the Agent Relay desktop app for macOS, Linux, or Windows. It connects the coding agents on your machine to your team’s relay.';
 
 export const metadata: Metadata = {
-  title: TITLE,
-  description: DESCRIPTION,
-  alternates: {
-    canonical: absoluteUrl('/download'),
-  },
-  openGraph: {
-    siteName: SITE_NAME,
-    title: TITLE,
-    description: DESCRIPTION,
-    url: absoluteUrl('/download'),
-    type: 'website',
-    images: [defaultOgImage()],
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: TITLE,
-    description: DESCRIPTION,
-    images: [defaultOgImage().url],
-  },
+  title: 'Download Agent Relay',
+  description,
+  alternates: { canonical: absoluteUrl('/download') },
+  openGraph: { title: 'Download Agent Relay', description, url: absoluteUrl('/download') },
 };
 
-const platforms: Array<{
-  id: DesktopPlatform;
-  name: string;
-  blurb: string;
-  note: string;
-}> = [
+const PLATFORMS: readonly { os: DesktopOs; name: string; requirements: string; verify: string }[] = [
   {
-    id: 'macos',
+    os: 'macos',
     name: 'macOS',
-    blurb: 'For Apple silicon and Intel Macs.',
-    note: 'Requires macOS 13 or later. Open the disk image and drag Agent Relay to Applications.',
+    requirements: 'macOS 13 Ventura or later.',
+    verify: 'shasum -a 256 -c <file>.sha256',
   },
   {
-    id: 'windows',
-    name: 'Windows',
-    blurb: 'For Intel, AMD, and Arm PCs.',
-    note: 'Windows 10 and 11. Run the installer: it installs for your account without administrator rights. Releases are not code-signed yet, so SmartScreen may ask once; Smart App Control must be off.',
-  },
-  {
-    id: 'linux',
+    os: 'linux',
     name: 'Linux',
-    blurb: 'For x64 and arm64 distributions.',
-    note: 'Install the .deb with your package manager, or use a tarball if you prefer a relocatable install.',
+    requirements: 'glibc 2.34+ and GTK 4.6+. The background service runs under systemd.',
+    verify: 'sha256sum -c <file>.sha256',
+  },
+  {
+    os: 'windows',
+    name: 'Windows',
+    requirements:
+      'Installs for your account without admin rights. The build is unsigned, so SmartScreen may ask you to confirm: choose More info › Run anyway. If Smart App Control blocks the installer, review the release and Microsoft guidance before deciding whether to turn it off; turning it off reduces protection against untrusted apps.',
+    verify: 'Get-FileHash <file>',
   },
 ];
 
+function archName(asset: DesktopAsset): string {
+  if (asset.os === 'macos') return asset.arch === 'arm64' ? 'Apple silicon' : 'Intel';
+  return asset.arch === 'arm64' ? 'ARM64' : 'x64';
+}
+
+// Chosen from this request, so a Windows visitor's installer is in the first
+// response instead of appearing after hydration.
+export const dynamic = 'force-dynamic';
+
 export default async function DownloadPage() {
   const requestHeaders = await headers();
-  const detected = detectDesktopDownload({
-    userAgent: requestHeaders.get('user-agent') ?? '',
-    platform: requestHeaders.get('sec-ch-ua-platform'),
+  const detected = detectDesktopPlatform(requestHeaders.get('user-agent') ?? '', {
     architecture: requestHeaders.get('sec-ch-ua-arch'),
+    platform: requestHeaders.get('sec-ch-ua-platform'),
   });
 
   return (
-    <div className={s.page}>
-      <SiteNav />
+    <div className={`${s.page} ${s.messagingPage} ${s.homeLanding}`}>
+      <a className="skip-link" href="#main">
+        Skip to content
+      </a>
 
-      <main className={s.main}>
-        <section className={s.hero}>
-          <p className={s.eyebrow}>Agent Relay Desktop</p>
-          <h1 className={s.headline}>Download Agent Relay</h1>
-          <p className={s.lead}>
-            The same window for your local agents on macOS, Windows, and Linux. Sign in once and your
-            sessions, agents, and messages are there.
-          </p>
-
-          {detected ? (
-            <div className={s.recommendation}>
-              <p className={s.detected}>
-                Detected {platformName(detected.platform)}
-                {detected.arch === 'arm64' ? ' on Arm' : ''}
-              </p>
-              <a className={s.primary} href={detected.url}>
-                {downloadLabel(detected)}
-              </a>
-              <p className={s.installNote}>{detected.installNote}</p>
-              {detected.platform === 'windows' ? (
-                <p className={s.warning}>
-                  The Windows installer is not code-signed yet: SmartScreen may show <em>Windows protected your PC</em>{' '}
-                  once. Choose <strong>More info</strong> → <strong>Run anyway</strong>.
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <p className={s.choose}>Choose the download for your computer.</p>
-          )}
-        </section>
-
-        <section className={s.platforms} aria-label="All downloads">
-          {platforms.map((platform) => {
-            const items = downloadsFor(platform.id);
-            const isRecommended = detected?.platform === platform.id;
-
-            return (
-              <article
-                key={platform.id}
-                className={cn(s.platform, isRecommended && s.platformRecommended)}
-              >
-                <header className={s.platformHeader}>
-                  <h2>{platform.name}</h2>
-                  <p>{platform.blurb}</p>
-                </header>
-
-                <div className={s.choices}>
-                  {items.map((item) => {
-                    const isRecommendedChoice =
-                      detected?.platform === item.platform && detected.arch === item.arch;
-
-                    return (
-                      <a
-                        key={`${item.platform}-${item.arch}`}
-                        className={cn(s.choice, isRecommendedChoice && s.choiceRecommended)}
-                        href={item.url}
-                        aria-label={`${downloadLabel(item)} — ${item.filename}`}
-                      >
-                        <span className={s.choiceArch}>{item.archLabel}</span>
-                        <span className={s.choiceFormat}>.{item.format}</span>
-                      </a>
-                    );
-                  })}
-                </div>
-
-                {platform.id === 'windows' ? (
-                  <p className={s.alternative}>
-                    Prefer portable? <a href={WINDOWS_PORTABLE.x64}>x64 .zip</a> or{' '}
-                    <a href={WINDOWS_PORTABLE.arm64}>arm64 .zip</a>
-                  </p>
-                ) : null}
-
-                {platform.id === 'linux' ? (
-                  <p className={s.alternative}>
-                    Prefer a tarball? <a href={LINUX_TARBALLS.x64}>x64</a> or <a href={LINUX_TARBALLS.arm64}>arm64</a>
-                  </p>
-                ) : null}
-
-                <p className={s.platformNote}>{platform.note}</p>
-              </article>
-            );
-          })}
-        </section>
-
-        <section className={s.releaseNote}>
-          <p>
-            Every link points at the latest release, so it always serves the newest version. Each release also
-            publishes version-pinned files and a SHA-256 checksum for every download.
-          </p>
-          <p>
-            <a href="https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest">
-              See the latest release, checksums, and version history
+      <SiteNav
+        hideLinks
+        singleAction
+        actions={
+          <>
+            <a className={`${s.ctaSecondary} ${s.homeNavAction}`} href="/login">
+              Log in
             </a>
+            <a className={`${s.ctaPrimary} ${s.homeNavAction}`} href={teamsGoogleAuthHref('download_nav')}>
+              Sign up
+            </a>
+          </>
+        }
+      />
+
+      <main id="main">
+        <header className={d.hero}>
+          <h1 className={d.heroTitle}>Download Agent Relay</h1>
+          <p className={d.heroLine}>The desktop app connects the coding agents on your machine to your team’s relay.</p>
+          <DownloadButton initialPlatform={detected} />
+          <p className={d.agentInstall}>
+            On macOS or Linux, your coding agent can install it for you. <a href="/signup/teams">Get the setup prompt</a>
           </p>
+        </header>
+
+        <div className={sections.waveBreak}>
+          <WaveDivider />
+        </div>
+
+        <section className={d.catalog} id="all-downloads" aria-labelledby="all-downloads-title">
+          <h2 id="all-downloads-title" className={d.catalogTitle}>
+            All downloads
+          </h2>
+          <div className={d.platforms}>
+            {PLATFORMS.map((platform) => (
+              <div key={platform.os} className={d.platform}>
+                <h3 className={d.platformName}>{platform.name}</h3>
+                <ul className={d.builds}>
+                  {DESKTOP_ASSETS.filter((asset) => asset.os === platform.os).map((asset) => (
+                    <li key={asset.file} className={d.build}>
+                      <a className={d.buildLink} href={desktopAssetUrl(asset.file)}>
+                        <span className={d.buildArch}>{archName(asset)}</span>
+                        <span className={d.buildKind}>{asset.kind}</span>
+                      </a>
+                      <a
+                        className={d.checksum}
+                        href={desktopAssetUrl(`${asset.file}.sha256`)}
+                        aria-label={`SHA-256 checksum for ${asset.file}`}
+                      >
+                        SHA-256
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+                <p className={d.requirements}>{platform.requirements}</p>
+                <p className={d.verify}>
+                  Verify <code>{platform.verify}</code>
+                </p>
+              </div>
+            ))}
+          </div>
         </section>
       </main>
 

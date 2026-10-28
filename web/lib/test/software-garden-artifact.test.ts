@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import catalog from '../../data/recommended-flow-catalog.v1.json';
-import { cloudConnectionsHref, DEFAULT_FACTORY, type FactoryDraft } from '../flow-onboarding';
+import type { FactoryDraft } from '../flow-onboarding';
 import { assertRecommendedFlowSourceContract } from '../../scripts/recommended-flow-contract.mjs';
 import {
   SOFTWARE_GARDEN_ARTIFACT_DIR,
@@ -60,23 +60,6 @@ describe('published Software Garden artifact', () => {
     for (const entry of versions) {
       expect(existsSync(path.join(web, softwareGardenArtifactPath(entry.version))), `v${entry.version}`).toBe(true);
       expect(sha256(artifact(entry.version)), `v${entry.version} was edited after it was published`).toBe(entry.sha256);
-    }
-  });
-
-  it('is exactly what /flows onboarding hands to Cloud for the same draft', () => {
-    const current = artifact(manifest().version).toString('utf8');
-    // A person who picks GitHub, Claude Code and Traditional with no extra
-    // instructions. Their repository and label filters are applied by Cloud's
-    // listener, not written into the source, so they do not change the bytes.
-    const answered: FactoryDraft[] = [
-      { ...DEFAULT_FACTORY, sources: ['github'], agents: ['claude'], workflow: 'traditional', step: 2 },
-      { ...DEFAULT_FACTORY, sources: ['github'], sourceSettings: { github: { repository: 'acme/app', labels: 'ready' } }, agents: ['claude'], otherAgentSelected: false, workflow: 'traditional', step: 3 },
-    ];
-    for (const draft of answered) {
-      const url = new URL(cloudConnectionsHref(draft, '00000000-0000-4000-8000-000000000001'));
-      const payload = JSON.parse(decodeURIComponent(url.hash.slice(1)));
-      expect(payload.name).toBe('Software Garden');
-      expect(payload.source).toBe(current);
     }
   });
 

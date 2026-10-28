@@ -11,8 +11,10 @@ describe('docs versions', () => {
   it('serves v8 at bare docs paths', () => {
     expect(currentDocsVersion).toBe('v8');
     expect(getDocsVersionForPath('/docs')).toBe('v8');
-    expect(getDocsVersionForPath('/docs/cli-messaging')).toBe('v8');
-    expect(getDefaultDocsVersionForSlug('cli-messaging')).toBe('v8');
+    expect(getDocsVersionForPath('/docs/sessions')).toBe('v8');
+    expect(getDefaultDocsVersionForSlug('sessions')).toBe('v8');
+    expect(getDocsVersionForPath('/docs/cli-messaging')).toBe('v7.1.1');
+    expect(getDefaultDocsVersionForSlug('cli-messaging')).toBe('v7.1.1');
   });
 
   it('keeps legacy-only docs in the versioned archive', () => {
@@ -22,8 +24,9 @@ describe('docs versions', () => {
   });
 
   it('maps the old v8 prefix to the current bare docs path', () => {
-    expect(getDocsVersionForPath('/docs/8.0.0/cli-messaging')).toBe('v8');
-    expect(getDocsVersionHref('v8', '/docs/8.0.0/cli-messaging')).toBe('/docs/cli-messaging');
+    expect(getDocsVersionForPath('/docs/8.0.0/sessions')).toBe('v8');
+    expect(getDocsVersionHref('v8', '/docs/8.0.0/sessions')).toBe('/docs/sessions');
+    expect(getDocsVersionHref('v8', '/docs/8.0.0/cli-messaging')).toBe('/docs/introduction');
     expect(getDocsVersionHref('v7.1.1', '/docs/8.0.0/cli-messaging')).toBe('/docs/7.1.1/cli-messaging');
   });
 });

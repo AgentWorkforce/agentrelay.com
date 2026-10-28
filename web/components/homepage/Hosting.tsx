@@ -1,5 +1,5 @@
 import { GitHubStarsBadge } from '../GitHubStars';
-import { HOME_SIGNUP_HREF } from '../../lib/home-copy';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import { CloudIcon, GitHubIcon } from '../home/icons';
 import landing from '../../app/landing.module.css';
 import s from './hosting.module.css';
@@ -21,7 +21,7 @@ export function Hosting() {
             </span>
             <h3>We host it</h3>
             <p>Sign up and go. Free to start.</p>
-            <a className={`${landing.ctaPrimary} ${s.action}`} href={HOME_SIGNUP_HREF}>
+            <a className={`${landing.ctaPrimary} ${s.action}`} href={teamsGoogleAuthHref('home_hosting')}>
               Connect your agents for free
             </a>
           </article>

@@ -1,13 +1,16 @@
 import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
 
-import { SITE_EMAIL } from '../lib/site';
+import { teamsGoogleAuthHref } from '../lib/teams-cloud';
+import { DISCORD_URL, SITE_EMAIL } from '../lib/site';
 import { LogoIcon, LogoWordmark } from './SiteNav';
 import s from './site-footer.module.css';
 
 type FooterLink = {
   href: string;
   label: string;
+  /** A full browser navigation in the same tab, for server routes such as sign-in. */
+  navigate?: boolean;
   showExternalIcon?: boolean;
 };
 
@@ -18,32 +21,18 @@ type FooterColumn = {
 
 const footerColumns: FooterColumn[] = [
   {
-    title: 'Products',
+    title: 'Product',
     links: [
-      { label: 'Relay Cloud', href: 'https://agentrelay.com/cloud' },
-      { label: 'Download', href: '/download' },
-      { label: 'Flows', href: '/flows' },
-      { label: 'Skip', href: 'https://heyskip.dev' },
-      { label: 'Pear', href: '/pear' },
-    ],
-  },
-  {
-    title: 'Open Source',
-    links: [
-      { label: 'Relay', href: '/messaging' },
-      { label: 'RelayFile', href: 'https://github.com/AgentWorkforce/relayfile' },
-      { label: 'RelayAuth', href: 'https://github.com/AgentWorkforce/relayauth' },
-      { label: 'RelayFlows', href: 'https://github.com/agentworkforce/flows' },
-      { label: 'Agents', href: '/agents' },
+      { label: 'Sign up', href: teamsGoogleAuthHref('footer'), navigate: true },
+      { label: 'Desktop app', href: '/download' },
+      { label: 'Open source', href: '/open-source' },
     ],
   },
   {
     title: 'Resources',
     links: [
-      { label: 'Relay Docs', href: '/docs' },
-      { label: 'RelayFile Docs', href: '/docs/file' },
+      { label: 'Docs', href: '/docs' },
       { label: 'Brand', href: '/brand' },
-      { label: 'GitHub', href: 'https://github.com/agentworkforce/relay' },
       { label: 'Proactive Agents', href: 'https://proactiveagents.dev', showExternalIcon: true },
     ],
   },
@@ -69,7 +58,15 @@ const footerColumns: FooterColumn[] = [
   },
 ];
 
-function FooterTextLink({ href, label, showExternalIcon }: FooterLink) {
+function FooterTextLink({ href, label, navigate, showExternalIcon }: FooterLink) {
+  if (navigate) {
+    return (
+      <a href={href} className={s.link}>
+        {label}
+      </a>
+    );
+  }
+
   const isExternal = href.startsWith('http');
   const isMail = href.startsWith('mailto:');
 
@@ -146,7 +143,7 @@ export function SiteFooter() {
             </svg>
           </a>
           <a
-            href="https://discord.gg/RJGE7CHV"
+            href={DISCORD_URL}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Discord"

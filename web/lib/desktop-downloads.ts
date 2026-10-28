@@ -1,176 +1,106 @@
-const RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download';
+/** GitHub resolves `latest` server-side, so each asset name below is a stable link. */
+export const DESKTOP_RELEASES = 'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download';
 
-export type DesktopPlatform = 'macos' | 'windows' | 'linux';
+export type DesktopOs = 'macos' | 'linux' | 'windows';
 export type DesktopArch = 'arm64' | 'x64';
-export type DesktopDownloadFormat = 'dmg' | 'exe' | 'zip' | 'deb';
 
-export type DesktopDownload = {
-  platform: DesktopPlatform;
+export type DesktopAsset = {
+  os: DesktopOs;
   arch: DesktopArch;
-  format: DesktopDownloadFormat;
-  filename: string;
-  url: string;
-  /** Short architecture name for a button, such as "Apple silicon" or "x64". */
-  archLabel: string;
-  /** What to do with the file once it arrives. */
-  installNote: string;
+  file: string;
+  label: string;
+  /** The format's short name, shown beside the label. */
+  kind: string;
 };
 
-const download = (
-  platform: DesktopPlatform,
-  arch: DesktopArch,
-  format: DesktopDownloadFormat,
-  filename: string,
-  archLabel: string,
-  installNote: string,
-): DesktopDownload => ({
-  platform,
-  arch,
-  format,
-  filename,
-  url: `${RELEASES}/${filename}`,
-  archLabel,
-  installNote,
-});
-
-/**
- * Every download link the website offers, one entry per platform and
- * architecture. The stable asset names are published by relay-desktop's
- * Release workflow, so these URLs follow a new release without a website
- * deploy.
- */
-export const DESKTOP_DOWNLOADS: readonly DesktopDownload[] = [
-  download(
-    'macos',
-    'arm64',
-    'dmg',
-    'AgentRelay-macOS-arm64.dmg',
-    'Apple silicon',
-    'Open the disk image and drag Agent Relay to Applications.',
-  ),
-  download(
-    'macos',
-    'x64',
-    'dmg',
-    'AgentRelay-macOS-x64.dmg',
-    'Intel',
-    'Open the disk image and drag Agent Relay to Applications.',
-  ),
-  download(
-    'windows',
-    'x64',
-    'exe',
-    'AgentRelay-Windows-x64-Setup.exe',
-    'x64',
-    'Run the installer. It installs for your account without administrator rights.',
-  ),
-  download(
-    'windows',
-    'arm64',
-    'exe',
-    'AgentRelay-Windows-arm64-Setup.exe',
-    'Arm64',
-    'Run the installer. It installs for your account without administrator rights.',
-  ),
-  download(
-    'linux',
-    'x64',
-    'deb',
-    'AgentRelay-Linux-x64.deb',
-    'x64',
-    'Install the .deb with your package manager.',
-  ),
-  download(
-    'linux',
-    'arm64',
-    'deb',
-    'AgentRelay-Linux-arm64.deb',
-    'arm64',
-    'Install the .deb with your package manager.',
-  ),
+export const DESKTOP_ASSETS: readonly DesktopAsset[] = [
+  { os: 'macos', arch: 'arm64', file: 'AgentRelay-macOS-arm64.dmg', label: 'macOS, Apple silicon', kind: 'DMG' },
+  { os: 'macos', arch: 'x64', file: 'AgentRelay-macOS-x64.dmg', label: 'macOS, Intel', kind: 'DMG' },
+  { os: 'linux', arch: 'x64', file: 'AgentRelay-Linux-x64.deb', label: 'Linux, x64', kind: 'Debian package' },
+  { os: 'linux', arch: 'arm64', file: 'AgentRelay-Linux-arm64.deb', label: 'Linux, ARM64', kind: 'Debian package' },
+  { os: 'linux', arch: 'x64', file: 'AgentRelay-Linux-x64.tar.gz', label: 'Linux, x64', kind: 'tarball' },
+  { os: 'linux', arch: 'arm64', file: 'AgentRelay-Linux-arm64.tar.gz', label: 'Linux, ARM64', kind: 'tarball' },
+  { os: 'windows', arch: 'x64', file: 'AgentRelay-Windows-x64-Setup.exe', label: 'Windows, x64', kind: 'installer' },
+  { os: 'windows', arch: 'arm64', file: 'AgentRelay-Windows-arm64-Setup.exe', label: 'Windows, ARM64', kind: 'installer' },
+  { os: 'windows', arch: 'x64', file: 'AgentRelay-Windows-x64.zip', label: 'Windows, x64', kind: 'portable zip' },
+  { os: 'windows', arch: 'arm64', file: 'AgentRelay-Windows-arm64.zip', label: 'Windows, ARM64', kind: 'portable zip' },
 ];
 
-/**
- * The zips are the portable alternative to the Windows installer: unpack one
- * and run agent-relay.exe without installing anything.
- */
-export const WINDOWS_PORTABLE: Record<DesktopArch, string> = {
-  x64: `${RELEASES}/AgentRelay-Windows-x64.zip`,
-  arm64: `${RELEASES}/AgentRelay-Windows-arm64.zip`,
-};
-
-export const LINUX_TARBALLS: Record<DesktopArch, string> = {
-  x64: `${RELEASES}/AgentRelay-Linux-x64.tar.gz`,
-  arm64: `${RELEASES}/AgentRelay-Linux-arm64.tar.gz`,
-};
-
-export function platformName(platform: DesktopPlatform): string {
-  if (platform === 'macos') return 'macOS';
-  if (platform === 'windows') return 'Windows';
-  return 'Linux';
+export function desktopAssetUrl(file: string): string {
+  return `${DESKTOP_RELEASES}/${file}`;
 }
 
-export function downloadsFor(platform: DesktopPlatform): DesktopDownload[] {
-  return DESKTOP_DOWNLOADS.filter((item) => item.platform === platform);
-}
-
-export function downloadFor(platform: DesktopPlatform, arch: DesktopArch): DesktopDownload {
-  const match = DESKTOP_DOWNLOADS.find((item) => item.platform === platform && item.arch === arch);
-  if (!match) throw new Error(`No ${platform} ${arch} download`);
-  return match;
-}
-
-export function downloadLabel(item: DesktopDownload): string {
-  return `Download for ${platformName(item.platform)} (${item.archLabel})`;
-}
-
-export type DesktopDetectInput = {
-  userAgent: string;
-  /** `navigator.platform`, or the quoted `Sec-CH-UA-Platform` request header. */
-  platform?: string | null;
-  /** `Sec-CH-UA-Arch`, when a browser sends it. */
-  architecture?: string | null;
-};
+export type DesktopPlatform = { os: DesktopOs; arch: DesktopArch };
 
 /**
- * Work out which download to put first. Runs on the server from the request's
- * User-Agent (and Client Hint headers), so Windows visitors get the Windows
- * build in the first response instead of a Mac download that swaps after
- * hydration. When the platform is unclear, the page shows every option.
+ * Headers `/download` sends so Chromium includes architecture on the navigation
+ * itself. `Sec-CH-UA-Arch` is high-entropy and stays absent until the server
+ * asks; `Critical-CH` makes the browser retry that first request with the hint
+ * instead of showing a defaulted build. Kept in sync with `web/next.config.mjs`.
  */
-export function detectDesktopDownload(input: DesktopDetectInput): DesktopDownload | null {
-  const userAgent = input.userAgent ?? '';
-  const platformHint = (input.platform ?? '').replaceAll('"', '').toLowerCase();
+export const DOWNLOAD_CLIENT_HINT_HEADERS = {
+  'Accept-CH': 'Sec-CH-UA-Arch, Sec-CH-UA-Platform',
+  'Critical-CH': 'Sec-CH-UA-Arch, Sec-CH-UA-Platform',
+} as const;
 
-  // Phones, tablets, and ChromeOS are not desktop installs.
-  if (/iphone|ipad|ipod|android|windows phone|mobile/i.test(userAgent) || /cros/i.test(userAgent)) {
+/** Structured client-hint values arrive quoted (`"arm"`, `"Windows"`). */
+function hintValue(value: string | null | undefined): string {
+  return (value ?? '').replaceAll('"', '').trim().toLowerCase();
+}
+
+/**
+ * The visitor's platform from what the browser reports. `architecture` is the
+ * User-Agent Client Hints value (Chromium only), and `platform` is
+ * `Sec-CH-UA-Platform` for a reduced user agent that no longer names the OS.
+ * Safari and Firefox report every Mac as Intel, so a Mac without an
+ * architecture hint is taken to be Apple silicon, which every Mac sold since
+ * 2023 is; the Intel build stays one click away. iPadOS Safari also reports a
+ * Mac, and only its touch points tell it apart.
+ */
+export function detectDesktopPlatform(
+  userAgent: string,
+  {
+    architecture,
+    platform,
+    touchPoints = 0,
+  }: { architecture?: string | null; platform?: string | null; touchPoints?: number } = {},
+): DesktopPlatform | null {
+  const ua = userAgent.toLowerCase();
+  const platformHint = hintValue(platform);
+  const architectureHint = hintValue(architecture);
+  const arm = architectureHint ? architectureHint.startsWith('arm') : /\b(aarch64|arm64|armv8)\b/.test(ua);
+  const windows = platformHint === 'windows' || /windows/.test(ua);
+  if (windows) return { os: 'windows', arch: arm ? 'arm64' : 'x64' };
+  if (
+    platformHint === 'android' ||
+    platformHint === 'ios' ||
+    platformHint === 'chrome os' ||
+    /android|iphone|ipad|cros/.test(ua)
+  ) {
     return null;
   }
-
-  let platform: DesktopPlatform | null = null;
-  if (platformHint.includes('windows') || /windows|win32|win64/i.test(userAgent)) {
-    platform = 'windows';
-  } else if (platformHint.includes('mac') || /macintosh|mac os x/i.test(userAgent)) {
-    platform = 'macos';
-  } else if (platformHint.includes('linux') || /linux|x11/i.test(userAgent)) {
-    platform = 'linux';
+  if (platformHint === 'macos' || /macintosh|mac os x/.test(ua)) {
+    if (touchPoints > 1) return null;
+    return { os: 'macos', arch: architectureHint && !arm ? 'x64' : 'arm64' };
   }
-
-  if (!platform) return null;
-
-  return downloadFor(platform, detectArch(platform, userAgent, input.architecture));
+  if (platformHint === 'linux' || /linux|x11/.test(ua)) return { os: 'linux', arch: arm ? 'arm64' : 'x64' };
+  return null;
 }
 
-function detectArch(
-  platform: DesktopPlatform,
-  userAgent: string,
-  architecture: string | null | undefined,
-): DesktopArch {
-  const hint = (architecture ?? '').replaceAll('"', '').toLowerCase();
-  if (hint === 'arm' || /arm64|aarch64|armv8/i.test(userAgent)) return 'arm64';
-  if (hint === 'x86' || /x86_64|amd64|win64/i.test(userAgent)) return 'x64';
+/** The build a platform downloads first: the DMG on macOS, the Debian package on Linux, Setup on Windows. */
+export function primaryDesktopAsset(platform: DesktopPlatform): DesktopAsset {
+  return DESKTOP_ASSETS.find((asset) => asset.os === platform.os && asset.arch === platform.arch)!;
+}
 
-  // Safari does not expose the Mac's architecture. Apple silicon is the
-  // common case; Intel Macs can still choose Intel from the options below.
-  return platform === 'macos' ? 'arm64' : 'x64';
+/**
+ * The one other build offered beside the primary: the other architecture where
+ * detection can be wrong (Macs without Client Hints, Windows on Arm), and the
+ * tarball on Linux, whose architecture the user agent does report.
+ */
+export function alternateDesktopAsset(platform: DesktopPlatform): DesktopAsset {
+  if (platform.os === 'linux') {
+    const primary = primaryDesktopAsset(platform);
+    return DESKTOP_ASSETS.find((asset) => asset.os === 'linux' && asset.arch === platform.arch && asset !== primary)!;
+  }
+  return primaryDesktopAsset({ os: platform.os, arch: platform.arch === 'arm64' ? 'x64' : 'arm64' });
 }

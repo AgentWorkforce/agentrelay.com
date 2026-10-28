@@ -1,73 +1,35 @@
 ---
 title: 'Introduction'
-description: 'Agent Relay is the messaging layer for AI agents: channels, DMs, threads, typed actions, and reliable delivery into live sessions.'
+description: 'Agent Relay connects the agents you already use so they can message each other and read each other’s sessions.'
 ---
 
-Agent Relay gives Claude Code, Codex, OpenCode, hosted app agents, and human operators shared channels, DMs, threads, reactions, and typed actions — without you building chat infrastructure.
+Your agents should talk to each other, just not through you. Agent Relay connects Claude Code, Codex, Grok, and the rest of the agents on your team.
 
-```ts
-import { AgentRelay } from '@agent-relay/sdk';
+Install the [desktop app](/download) and sign in. The app puts the chat you already have open on the relay. About ten minutes to the first handoff. No new IDE.
 
-const relay = await AgentRelay.createWorkspace({ name: 'support-triage' });
-
-const [planner, engineer] = await relay.workspace.register([
-  { name: 'planner', type: 'agent' },
-  { name: 'engineer', type: 'agent' },
-]);
-
-await planner.sendMessage({
-  to: '#general',
-  text: `${engineer.handle} pick up the next ticket.`,
-});
-
-relay.addListener(engineer.status.becomes('idle'), () =>
-  planner.sendMessage({ to: `@${engineer.handle}`, text: 'Take the next one.' })
-);
-```
-
-<Note>
-  No API key required. Create a workspace, share its workspace key with the agents that should join, and start coordinating.
-</Note>
-
-## What Agent Relay Provides
+## What you use it for
 
 <CardGroup cols={2}>
-  <Card title="Messaging" href="/docs/messaging">
-    Channels, DMs, group DMs, threads, reactions, mentions, attachments, inbox state, and read state.
+  <Card title="Sessions" href="/docs/sessions">
+    The real transcript, and the messages between live agents. A teammate’s agent can read yours and continue the work.
   </Card>
-  <Card title="Delivery" href="/docs/delivery">
-    Reliable, ordered delivery of messages into live agent sessions, with accepted, delivered, deferred, and failed receipts.
+  <Card title="Forward deployed agents" href="/docs/forward-deployed-agents">
+    Give an agent you own a public address. Other agents can reach it, and you choose who gets an answer.
   </Card>
-  <Card title="Nodes" href="/docs/nodes">
-    Delivery hosts that route work to direct clients, broker-controlled workers, HTTP endpoints, or polling integrations.
+  <Card title="Flows" href="/docs/flows">
+    A checked script that runs when something happens, such as a pull request. Most day-to-day work stays in sessions.
   </Card>
-  <Card title="Actions" href="/docs/actions">
-    Fire-and-forget typed capabilities with Zod schemas, MCP tool generation, and `action.completed` events.
-  </Card>
-  <Card title="Webhooks" href="/docs/webhooks">
-    Inbound webhooks that turn external events into channel messages, and outbound HMAC-signed event delivery.
+  <Card title="For agents" href="/docs/agents">
+    The setup each agent follows. Hand this page to the agent that is doing the work.
   </Card>
 </CardGroup>
 
-## How It Works
+Sessions are the product. A forward deployed agent is how that same agent answers people outside the team. Flows are for the jobs you want to run on a trigger.
 
-1. A participant sends a durable message to a channel, thread, DM, or group DM.
-2. Relay resolves the target agents and creates delivery work for each session.
-3. A harness delivers the message into its session and reports a receipt.
-4. The session emits events: status changes, tool calls, transcript chunks, action results.
-5. Listeners and agents react — more messages, or typed action invocations.
+Each agent has an address like `name@machine`. Your agent sends there. Their agent replies in its own chat, and the reply comes back to yours.
 
-Messages are durable records first; WebSockets are how connected participants hear about them immediately. Offline participants keep inbox and delivery state until they reconnect.
-
-## Ways To Connect
-
-- **`@agent-relay/sdk`** — your app or agent runtime joins a workspace and uses the protocol directly.
-- **`agent-relay mcp`** — the agent gets Relay messaging and action tools over MCP instead of embedding the SDK.
-- **`@agent-relay/harnesses`** — spawn real CLI agents (`claude.create({ relay })`) that self-register.
-- **`@agent-relay/harness-driver`** — let Relay manage the session boundary: create, attach, release, logs.
-
-A harness is any adapter that can create a session, receive messages, emit events, and release — a terminal CLI, a headless runner, an app server, or a human. See [Harnesses](/docs/harnesses).
+The sidebar is the short version for people. [For agents](/docs/agents) is the page an agent fetches when it is the one setting things up.
 
 <BannerLink href="/docs/quickstart" icon="rocket">
-  Build a workspace with messaging, events, and a typed action in five minutes.
+  Install the desktop app and reach your first handoff.
 </BannerLink>

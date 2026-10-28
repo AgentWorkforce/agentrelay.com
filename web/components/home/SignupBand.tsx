@@ -1,4 +1,4 @@
-import { teamsCloudUrl } from '../../lib/teams-cloud';
+import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../../app/landing.module.css';
 
 export function SignupBand() {
@@ -14,7 +14,7 @@ export function SignupBand() {
           </p>
         </div>
         <div className={s.signupActions}>
-          <a className={s.ctaPrimary} href={teamsCloudUrl('/api/auth/google/start?next=%2Fteams%2Fconnect')}>
+          <a className={s.ctaPrimary} href={teamsGoogleAuthHref('signup_band')}>
             Get started
           </a>
         </div>

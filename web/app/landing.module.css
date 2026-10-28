@@ -1935,6 +1935,11 @@
   background: var(--agent-tools-band-bg);
 }
 
+/* A plain navy field keeps the homepage's message in focus. */
+.homeLanding::before {
+  background: #0d2638;
+}
+
 /* Lift the page content above the hero wash. Targeted at the two content
    siblings by name so the sticky nav (and the keyboard skip link that now
    precedes it) keep their own positioning. */
@@ -2054,10 +2059,10 @@
   margin-top: 18px;
 }
 
-/* The byte stream behind the hero. Pinned to the hero box so it never moves
+/* The animated backdrop behind the hero. Pinned to the hero box so it never moves
    the fold; the mask fades it at the edges and quiets it behind the headline
    and description so the copy stays legible. */
-.heroSection > .heroStream {
+.heroSection > .heroBackdrop {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -6610,7 +6615,7 @@
     font-size: 1rem;
   }
 
-  .heroSection > .heroStream {
+  .heroSection > .heroBackdrop {
     mask-image:
       linear-gradient(180deg, transparent 4%, #000 16%, #000 86%, transparent 100%),
       radial-gradient(ellipse 70% 26% at 50% 36%, rgba(0, 0, 0, 0.2) 55%, #000 100%);

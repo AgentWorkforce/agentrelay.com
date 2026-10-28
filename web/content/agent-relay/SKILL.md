@@ -47,7 +47,7 @@ Never build an observer URL from a workspace key, on any version — it is an
 administrative credential and a URL query string is not a place for one. From
 Agent Relay 11.8.1, run `agent-relay observer` (or call the `get_observer_url`
 MCP tool) to mint a scoped, read-only, expiring token and print the link built
-from it. See [Observer](https://agentrelay.com/docs/observer).
+from it. See [Observer](https://agentrelay.com/docs/7.1.1/observer).
 
 ## Choose the Right Skill
 

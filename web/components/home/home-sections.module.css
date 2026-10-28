@@ -36,6 +36,13 @@
   line-height: 1.55;
 }
 
+.line a {
+  color: #74b8e2;
+  text-decoration: underline;
+  text-decoration-color: rgba(116, 184, 226, 0.4);
+  text-underline-offset: 3px;
+}
+
 .mark {
   position: relative;
   display: inline-block;
