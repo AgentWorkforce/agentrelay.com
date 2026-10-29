@@ -41,3 +41,6 @@ export const POMERADO_QUOTE: CustomerQuote = {
     { tone: 'plain', text: 'We’re super happy customers!' },
   ],
 };
+
+/** Quotes shown on the homepage, in order. The row fits up to three. */
+export const CUSTOMER_QUOTES: CustomerQuote[] = [POMERADO_QUOTE];

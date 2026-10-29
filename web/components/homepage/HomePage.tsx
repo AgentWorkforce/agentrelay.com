@@ -9,7 +9,7 @@ import { MessengerSection } from './MessengerSection';
 import { MiddleOptions } from './MiddleOptions';
 import { NavActions } from './NavActions';
 import { RotatingHeadline } from './RotatingHeadline';
-import { CustomerQuote } from './CustomerQuote';
+import { CustomerQuotes } from './CustomerQuotes';
 import { Hosting } from './Hosting';
 import { SetupItem } from './Setup';
 import { TrioWaves } from './TrioWaves';
@@ -19,8 +19,8 @@ import headline from './rotating-headline.module.css';
 /**
  * The homepage: the "Stop copy-pasting between your agents" hero with one
  * sign-up button, then "Let X talk to Y", the move-faster rows, why it
- * fits how you work, a customer's quote, multi-player agent work with your agent's public
- * address, hosting, and the final call to action.
+ * fits how you work, multi-player agent work with your agent's public
+ * address, hosting, customer quotes, and the final call to action.
  */
 export function HomeLandingPage() {
   return (
@@ -51,9 +51,9 @@ export function HomeLandingPage() {
           <div className={headline.followOn}>
             <Why title="No new IDE. No new habits." last={<SetupItem />} />
           </div>
-          <CustomerQuote />
           <MessengerSection />
           <Hosting />
+          <CustomerQuotes />
           <div className={`${sections.band} ${sections.bandNight}`}>
             <FinalCta />
           </div>
