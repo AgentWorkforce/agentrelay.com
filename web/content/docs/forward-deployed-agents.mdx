@@ -97,19 +97,31 @@ mints its own identity on first startup and keeps it across broker restarts and
 VM pause/resume cycles.
 
 After creating a VM from the clean snapshot, inject `RELAY_WORKSPACE_KEY` through
-the runtime secret environment and start the broker from a stable directory:
+the runtime secret environment. Require Agent Relay 11.3.1 or later before
+starting the broker: 11.3.0 and earlier print the workspace key during `node
+up`, which exposes it in a provisioning log or agent transcript. An older
+installation may be started only by a human in a trusted, non-transcribed
+terminal.
+
+Give every VM a unique `BROKER_NAME`. Put the answering agent in the broker's
+non-secret startup configuration, then start the broker from a stable directory
+with `--spawn`. Keep the harness login itself in runtime credential storage, not
+in the snapshot:
 
 ```bash
 mkdir -p "$HOME/fleet/freestyle-node/.agentworkforce/relay"
 cd "$HOME/fleet/freestyle-node"
+agent-relay --version # must be 11.3.1 or later
 test -n "${RELAY_WORKSPACE_KEY:-}" || { echo "RELAY_WORKSPACE_KEY is not set" >&2; exit 1; }
-agent-relay node up --no-spawn --background --broker-name freestyle-node
+test -n "${BROKER_NAME:-}" || { echo "BROKER_NAME must be unique per VM" >&2; exit 1; }
+agent-relay node up --spawn --background --broker-name "$BROKER_NAME"
 ```
 
-Give every live clone a unique broker name, then verify from another trusted
-workspace client that the clones are online with different node ids. A healthy
-local process alone does not distinguish a connected node from an identity
-collision.
+Verify from another trusted workspace client that the clones are online with
+different node ids, and send a test message through the published handle to
+confirm the answering agent actually started. A healthy local broker process
+alone does not distinguish a connected node from an identity collision, and it
+does not prove the configured answering agent is online.
 
 Freestyle pause preserves the broker's memory and disk. Relay marks the node
 offline after its heartbeat liveness window and removes its capacity from
