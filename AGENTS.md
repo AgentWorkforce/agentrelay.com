@@ -8,8 +8,7 @@ These rules are repository law for every agent session in this checkout.
   Vercel, DNS, or other live-infrastructure credentials, and do not run
   commands that can deploy or mutate production.
 - Production is reached only by a reviewed pull request through CI or by
-  a human running a prepared runbook. Deploys, previews, publishing, and
-  DNS remain gated on `cmo`.
+  a human running a prepared runbook.
 - Main requires at least two recorded reviews. The author's own pass does
   not count; at least one review must come from a different agent.
   Check/status contexts such as CodeRabbit are not submitted reviews.
@@ -54,4 +53,4 @@ These rules are repository law for every agent session in this checkout.
 - Use a fresh branch or worktree from current `origin/main`.
 - Report `ACK`, progress, and `DONE` with evidence.
 - Do not merge, deploy, preview, publish, cut a release, or change DNS
-  without the applicable human and `cmo` gates.
+  without the applicable human gates.
