@@ -17,7 +17,7 @@ describe('docs markdown export for MDX components', () => {
     expect(doc?.markdown).toContain('[Flows](https://agentrelay.com/docs/flows)');
     expect(doc?.markdown).toContain('[For agents](https://agentrelay.com/docs/agents)');
     expect(doc?.markdown).toContain(
-      '[Install the desktop app and reach your first handoff.](https://agentrelay.com/docs/quickstart)'
+      '[Connect your agents from the command line.](https://agentrelay.com/docs/getting-started)'
     );
   });
 
@@ -27,10 +27,24 @@ describe('docs markdown export for MDX components', () => {
     expect(llms).toContain('# Agent Relay');
     expect(llms).toContain('https://agentrelay.com/llms-full.txt');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/quickstart.md');
+    expect(llms).toContain('https://agentrelay.com/docs/markdown/getting-started.md');
+    expect(llms.indexOf('/markdown/getting-started.md')).toBeLessThan(llms.indexOf('/markdown/quickstart.md'));
+    expect(llms).not.toContain('/markdown/hacking.md');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/relay-connect.md');
     expect(llms).toContain('## For agents');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/agents.md');
     expect(llms).not.toContain('https://agentrelay.com/docs/7.1.1/introduction');
+  });
+
+  it('exports the primary CLI guide with its privacy caveat and optional desktop link', () => {
+    const doc = getDocMarkdown('getting-started');
+
+    expect(doc?.title).toBe('Getting started');
+    expect(doc?.markdown).toContain('init --yes --tools claude,codex');
+    expect(doc?.markdown).toContain('## Session history and privacy');
+    expect(doc?.markdown).toContain('init` attaches to it instead of starting its own');
+    expect(doc?.markdown).toContain('[Desktop setup](/docs/quickstart)');
+    expect(doc?.markdown).not.toContain('hackathon');
   });
 
   it('exports the Relay Connect public guide', () => {

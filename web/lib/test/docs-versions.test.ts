@@ -26,7 +26,15 @@ describe('docs versions', () => {
   it('maps the old v8 prefix to the current bare docs path', () => {
     expect(getDocsVersionForPath('/docs/8.0.0/sessions')).toBe('v8');
     expect(getDocsVersionHref('v8', '/docs/8.0.0/sessions')).toBe('/docs/sessions');
-    expect(getDocsVersionHref('v8', '/docs/8.0.0/cli-messaging')).toBe('/docs/introduction');
+    expect(getDocsVersionHref('v8', '/docs/8.0.0/cli-messaging')).toBe('/docs/getting-started');
     expect(getDocsVersionHref('v7.1.1', '/docs/8.0.0/cli-messaging')).toBe('/docs/7.1.1/cli-messaging');
+  });
+
+  it('opens Getting started for current docs while keeping the archive landing page', () => {
+    expect(getDocsVersionHref('v8', '/docs')).toBe('/docs/getting-started');
+    expect(getDocsVersionHref('v8', '/docs/8.0.0')).toBe('/docs/getting-started');
+    expect(getDocsVersionHref('v8', '/docs/hacking')).toBe('/docs/getting-started');
+    expect(getDocsVersionHref('v8', '/docs/quickstart')).toBe('/docs/quickstart');
+    expect(getDocsVersionHref('v7.1.1', '/docs/getting-started')).toBe('/docs/7.1.1/introduction');
   });
 });

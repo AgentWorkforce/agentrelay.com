@@ -181,6 +181,13 @@ const nextConfig = {
       // Khaliq's calendar at random. Temporary for the same repointing reason.
       { source: '/qr-card', destination: '/founder', permanent: false },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
+      // The CLI guide is now the main Getting started page. Preserve its old
+      // page, markdown mirrors, and social-image URLs.
+      { source: '/docs/hacking', destination: '/docs/getting-started', permanent: true },
+      { source: '/docs/8.0.0/hacking', destination: '/docs/getting-started', permanent: true },
+      { source: '/docs/hacking.md', destination: '/docs/markdown/getting-started.md', permanent: true },
+      { source: '/docs/markdown/hacking.md', destination: '/docs/markdown/getting-started.md', permanent: true },
+      { source: '/docs/hacking/og.png', destination: '/docs/getting-started/og.png', permanent: true },
       { source: '/primitives', destination: '/', permanent: true },
       { source: '/relayfile', destination: '/file', permanent: true },
       { source: '/relayfile/:path*', destination: '/file', permanent: true },
