@@ -21,6 +21,16 @@ Automatic uploads of new sessions or all past and future sessions are opt-in und
 
 If you do not want transcripts uploaded, use the CLI-only path with its own messaging core, without reusing a running desktop core.
 
+## Which sessions join
+
+The CLI setup has these session-support limits:
+
+- **Join automatically:** Claude Code and Codex sessions in a terminal, plus Muse, Devin, OpenClaw, and Hermes sessions. Pi and OpenCode join when `init` has set them up.
+- **Should join; not yet verified with the CLI setup:** Codex app threads, Codex threads in VS Code, and local Claude Code sessions that Conductor or the Claude desktop app runs against a folder on this computer.
+- **Claude Code in the cloud does not join:** sessions running on Anthropic's side, including `claude.ai/code` and cloud sessions shown in the Claude desktop app, are never added automatically. The CLI cannot add one by hand yet. The Agent Relay desktop app can add them with its per-session switch.
+- **Not supported:** Claude Desktop chat that is not Claude Code, and Cursor Composer. Only the Cursor CLI is supported.
+- **Excluded folders:** sessions started in your home folder itself, `/tmp`, or other temporary folders never join.
+
 ## Solo: try it on one machine
 
 ### 1. Set up Relay

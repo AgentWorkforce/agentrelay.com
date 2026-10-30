@@ -41,6 +41,8 @@ describe('docs markdown export for MDX components', () => {
     expect(doc?.title).toBe('Getting started');
     expect(doc?.markdown).toContain('```bash\nnpx -y agent-relay@next init --yes\n```');
     expect(doc?.markdown).toContain('## Session history and privacy');
+    expect(doc?.markdown).toContain('## Which sessions join');
+    expect(doc?.markdown).toContain('Should join; not yet verified with the CLI setup');
     expect(doc?.markdown).toContain('init` attaches to it instead of starting its own');
     expect(doc?.markdown).toContain('[Desktop setup](/docs/quickstart)');
     expect(doc?.markdown).not.toContain('hackathon');
