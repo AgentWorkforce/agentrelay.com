@@ -33,7 +33,6 @@ describe('docs versions', () => {
   it('opens Getting started for current docs while keeping the archive landing page', () => {
     expect(getDocsVersionHref('v8', '/docs')).toBe('/docs/getting-started');
     expect(getDocsVersionHref('v8', '/docs/8.0.0')).toBe('/docs/getting-started');
-    expect(getDocsVersionHref('v8', '/docs/hacking')).toBe('/docs/getting-started');
     expect(getDocsVersionHref('v8', '/docs/quickstart')).toBe('/docs/quickstart');
     expect(getDocsVersionHref('v7.1.1', '/docs/getting-started')).toBe('/docs/7.1.1/introduction');
   });

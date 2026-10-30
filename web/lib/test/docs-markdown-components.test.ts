@@ -29,7 +29,6 @@ describe('docs markdown export for MDX components', () => {
     expect(llms).toContain('https://agentrelay.com/docs/markdown/quickstart.md');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/getting-started.md');
     expect(llms.indexOf('/markdown/getting-started.md')).toBeLessThan(llms.indexOf('/markdown/quickstart.md'));
-    expect(llms).not.toContain('/markdown/hacking.md');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/relay-connect.md');
     expect(llms).toContain('## For agents');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/agents.md');

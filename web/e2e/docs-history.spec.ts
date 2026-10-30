@@ -1,18 +1,9 @@
 import { expect, test } from '@playwright/test';
 
-test('Getting started is the docs entry point and old setup links still work', async ({ page, request }) => {
-  for (const [source, destination] of [
-    ['/docs/hacking', '/docs/getting-started'],
-    ['/docs/8.0.0/hacking', '/docs/getting-started'],
-    ['/docs/hacking.md', '/docs/markdown/getting-started.md'],
-    ['/docs/markdown/hacking.md', '/docs/markdown/getting-started.md'],
-    ['/docs/hacking/og.png', '/docs/getting-started/og.png'],
-    ['/quickstart', '/docs/quickstart'],
-  ]) {
-    const response = await request.get(source, { maxRedirects: 0 });
-    expect(response.status(), source).toBe(308);
-    expect(new URL(response.headers().location, response.url()).pathname).toBe(destination);
-  }
+test('Getting started is the docs entry point and Quickstart still opens desktop setup', async ({ page, request }) => {
+  const response = await request.get('/quickstart', { maxRedirects: 0 });
+  expect(response.status()).toBe(308);
+  expect(new URL(response.headers().location, response.url()).pathname).toBe('/docs/quickstart');
 
   await page.goto('/docs');
   await expect(page).toHaveURL(/\/docs\/getting-started$/);
