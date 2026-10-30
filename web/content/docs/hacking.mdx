@@ -9,6 +9,18 @@ You need **Node.js 22 or newer**, npm, and Claude Code or Codex installed and si
 
 Use **`agent-relay@next`** throughout this guide. On October 30, 2026, `@next` is `15.0.0-next.6`; `@latest` is `14.0.0` and does not include this setup flow.
 
+## Session history and privacy
+
+**CLI-only setup keeps transcripts on your machine.** When `init` installs and starts its own core, that core is built without the session-history and uploader component. It does not upload session history. Messages still pass through your Relay workspace, using the local or hosted server you chose.
+
+**The desktop app has different sharing behavior.** It requires a cloud sign-in. A fresh install defaults to **Only sessions I choose**; signing in alone does not select sessions for upload. Turning a session on so it can receive messages also uploads that session: **sessions on the relay are uploaded**.
+
+Automatic uploads of new sessions or all past and future sessions are opt-in under **Settings > Session sharing**. Existing saved sharing policies are preserved. Stopping uploads does not delete data already uploaded.
+
+**An existing desktop core changes which rules apply.** If the desktop app already runs a core, `init` attaches to it instead of starting its own. The desktop's upload rules then apply; running `init` does not turn history uploads off.
+
+If you do not want transcripts uploaded, use the CLI-only path with its own messaging core, without reusing a running desktop core.
+
 ## Solo: try it on one machine
 
 ### 1. Set up Relay
