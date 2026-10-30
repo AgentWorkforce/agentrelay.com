@@ -5,7 +5,7 @@ description: 'Connect your agents with the CLI: try Agent Relay on one machine o
 
 Agent Relay lets the Claude Code and Codex sessions you already use message each other. The CLI installs and starts the local core that delivers messages, plus a local server or a connection to the hosted server. **No desktop app needed.** Messages arrive inside running agent sessions as new turns, and replies come back the same way.
 
-You need **Node.js 22 or newer**, npm, and Claude Code or Codex installed and signed in. Run setup from a project folder. Sessions in your home folder or `/tmp` do not join.
+You need **Node.js 22 or newer**, npm, and at least one supported agent tool installed and ready to use. Run setup from a project folder. Sessions in your home folder or `/tmp` do not join.
 
 Use **`agent-relay@next`** throughout this guide. On October 30, 2026, `@next` is `15.0.0-next.6`; `@latest` is `14.0.0` and does not include this setup flow.
 
@@ -28,10 +28,12 @@ If you do not want transcripts uploaded, use the CLI-only path with its own mess
 In a terminal, change into your project folder and run:
 
 ```bash
-npx -y agent-relay@next init --yes --tools claude,codex
+npx -y agent-relay@next init --yes
 ```
 
-Use `--tools claude` or `--tools codex` if you only use one. This starts a private local server and sets up message delivery. No account is required. The delivery setup applies to your user on this machine, so sessions in other project folders can join too.
+This starts a private local server and sets up message delivery. No account is required. By default, setup connects every supported tool it detects: Claude Code, Codex, OpenCode, Grok, Pi, and Devin. The delivery setup applies to your user on this machine, so sessions in other project folders can join too.
+
+To limit setup to some tools, optionally add `--tools claude,codex` to any `init` command. Otherwise, leave `--tools` out to use automatic detection.
 
 Check that setup reports message injection for your selected tools. If it reports a fallback to an MCP server, resolve the reported problem and rerun setup for the automatic delivery described here.
 
@@ -72,7 +74,7 @@ Run this from a project folder, replacing `TEAM_NAME` with your team's name:
 npx -y agent-relay@next init --hosted --name TEAM_NAME --yes
 ```
 
-Setup detects installed agent tools. You can also select them explicitly with `--tools claude,codex`.
+Hosted setup uses the same automatic tool detection.
 
 The output includes a workspace key in a suggested `relay workspace join` command. **Treat that key like a password.** Run this in a private terminal and share the key privately with teammates; keep it out of commits, public chat, screenshots, and agent transcripts.
 
@@ -108,7 +110,7 @@ The DM should arrive in their running session, and their reply should arrive in 
 - **Codex reaches for the ChatGPT connector.** A new Codex session that has not received a Relay message may choose the “Agent Relay in ChatGPT” connector when asked to send its first DM. That uses your cloud account and can route to a different workspace. Decline that connector request and say “use this computer's Agent Relay, not the ChatGPT app.” Alternatively, have a teammate or the terminal sender send your agent one message first; its injected reply instructions give it the local route.
 - **An agent does not appear.** Start a fresh session in a project folder, outside your home folder and `/tmp`. Check that `init` reported message injection for that tool. If setup warns that an existing core serves another workspace, resolve that warning first: the core follows the machine's active workspace.
 - **Claude asks about MCP servers.** Claude Code was verified in its default permission mode. An existing `~/.mcp.json` may still trigger Claude's first-use questions about those servers; you do not need to relax your permissions for this guide.
-- **Other tools and platforms.** Pi and OpenCode are also supported with `--tools pi` and `--tools opencode`, but have had less testing. This guide's messaging round trips were verified on macOS with Claude Code `2.1.314` and Codex `0.163`, including Codex-to-Codex across two users. Linux and Windows binaries exist, but those paths were not tested for this guide.
+- **Other tools and platforms.** Pi and OpenCode are also detected automatically when installed, but have had less testing. This guide's messaging round trips were verified on macOS with Claude Code `2.1.314` and Codex `0.163`, including Codex-to-Codex across two users. Linux and Windows binaries exist, but those paths were not tested for this guide.
 
 ## Stop or undo setup
 

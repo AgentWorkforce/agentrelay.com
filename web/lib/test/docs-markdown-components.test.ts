@@ -39,7 +39,7 @@ describe('docs markdown export for MDX components', () => {
     const doc = getDocMarkdown('getting-started');
 
     expect(doc?.title).toBe('Getting started');
-    expect(doc?.markdown).toContain('init --yes --tools claude,codex');
+    expect(doc?.markdown).toContain('```bash\nnpx -y agent-relay@next init --yes\n```');
     expect(doc?.markdown).toContain('## Session history and privacy');
     expect(doc?.markdown).toContain('init` attaches to it instead of starting its own');
     expect(doc?.markdown).toContain('[Desktop setup](/docs/quickstart)');
