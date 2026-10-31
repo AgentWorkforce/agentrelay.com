@@ -28,13 +28,13 @@
 }
 
 .core {
-  stroke: rgb(214 236 255 / 0.75);
-  stroke-width: 1.25;
+  stroke: rgb(224 241 255 / 0.95);
+  stroke-width: 1.75;
 }
 
 .glow {
-  stroke: rgb(96 165 250 / 0.28);
-  stroke-width: 5;
+  stroke: rgb(96 165 250 / 0.55);
+  stroke-width: 7;
   filter: blur(3px);
 }
 
@@ -48,7 +48,7 @@
 }
 
 .tile {
-  --rest: 0 0 0 1px rgb(255 255 255 / 0.06), 0 12px 32px rgb(0 0 0 / 0.25);
+  --rest: 0 0 0 1px rgb(255 255 255 / 0.1), 0 12px 32px rgb(0 0 0 / 0.25);
   --fire: 0 0 0 1px rgb(147 197 253 / 0.5), 0 0 22px rgb(96 165 250 / 0.45);
   --hit: 0 0 0 1px rgb(191 219 254 / 0.7), 0 0 30px rgb(96 165 250 / 0.6);
   display: grid;
@@ -58,9 +58,9 @@
   padding: 17px;
   border-radius: 18px;
   rotate: var(--tilt);
-  background: linear-gradient(160deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.02));
+  background: linear-gradient(160deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.03));
   box-shadow: var(--rest);
-  opacity: 0.55;
+  opacity: 0.9;
 }
 
 .tile svg,
@@ -89,7 +89,7 @@
     height: 44px;
     padding: 12px;
     border-radius: 13px;
-    opacity: 0.4;
+    opacity: 0.7;
   }
 }
 
