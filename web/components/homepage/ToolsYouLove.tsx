@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { AgentToolLogo, OpenAILogo } from '../AgentToolLogos';
-import { ClaudeCodeColor, Codex } from '../brand-icons';
+import { ClaudeCodeColor, CodexColor } from '../brand-icons';
 import { FadeIn } from '../FadeIn';
 import { AGENT_TOOLS } from '../home/AgentMarks';
 import s from './tools-you-love.module.css';
@@ -9,12 +9,12 @@ import s from './tools-you-love.module.css';
 /** The agents people already run, and where they run them, most familiar first. */
 const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
   { name: 'Claude Code', where: 'Native app', logo: <AgentToolLogo provider="claude" className={s.mark} /> },
-  { name: 'Codex CLI', where: 'Terminal', logo: <Codex /> },
+  { name: 'Codex CLI', where: 'Terminal', logo: <CodexColor /> },
   { name: AGENT_TOOLS.grokbot.name, where: 'Assistant', logo: AGENT_TOOLS.grokbot.logo },
   { name: 'ChatGPT', where: 'Web app', logo: <OpenAILogo /> },
   { name: 'Claude Code', where: 'Terminal', logo: <ClaudeCodeColor /> },
   { name: 'OpenCode', where: 'Terminal', logo: AGENT_TOOLS.opencode.logo },
-  { name: 'Codex', where: 'Native app', logo: <Codex /> },
+  { name: 'Codex', where: 'Native app', logo: <CodexColor /> },
   { name: AGENT_TOOLS.conductor.name, where: 'Native app', logo: AGENT_TOOLS.conductor.logo },
   { name: AGENT_TOOLS.muse.name, where: 'Native app', logo: AGENT_TOOLS.muse.logo },
   { name: AGENT_TOOLS.capy.name, where: 'Desktop app', logo: AGENT_TOOLS.capy.logo },
