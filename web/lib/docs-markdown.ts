@@ -1,7 +1,7 @@
 import matter from 'gray-matter';
 
 import { readContentFile } from './content-store';
-import { agentDocs, docsNav, getAllDocSlugs } from './docs-nav';
+import { agentDocs, docsNav, getAllMarkdownDocSlugs, markdownOnlyDocs } from './docs-nav';
 import { absoluteUrl } from './site';
 import { providersByCategory } from './integrations';
 
@@ -132,7 +132,7 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
     return null;
   }
 
-  const canonicalUrl = `${DOCS_BASE_URL}/${slug}`;
+  const canonicalUrl = `${DOCS_BASE_URL}/${slug === 'introduction' ? 'getting-started' : slug}`;
   const markdownUrl = getDocMarkdownUrl(slug);
   // Longer agent-facing guidance belongs in the markdown mirror and full
   // bundle, without expanding the corresponding human-facing MDX page.
@@ -157,7 +157,7 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
 }
 
 export function getDocsMarkdownIndex(): string {
-  const docs = getAllDocSlugs()
+  const docs = getAllMarkdownDocSlugs()
     .map((slug) => getDocMarkdown(slug))
     .filter((doc): doc is MarkdownDoc => doc !== null);
 
@@ -204,7 +204,7 @@ function getCurrentDocsLinks(): DocsLink[] {
 }
 
 function getAgentDocsLinks(): DocsLink[] {
-  return linksFor(agentDocs);
+  return linksFor([...agentDocs, ...markdownOnlyDocs]);
 }
 
 function formatLink({ title, url, description }: DocsLink): string {
@@ -267,7 +267,7 @@ function getMarkdownBundle(slugs: string[]): string[] {
 }
 
 export function getLlmsFullText(): string {
-  const currentDocs = getMarkdownBundle(getAllDocSlugs());
+  const currentDocs = getMarkdownBundle(getAllMarkdownDocSlugs());
   const sections = [
     '# Agent Relay Full Documentation',
     '',

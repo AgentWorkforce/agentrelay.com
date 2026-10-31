@@ -181,6 +181,7 @@ const nextConfig = {
       // Khaliq's calendar at random. Temporary for the same repointing reason.
       { source: '/qr-card', destination: '/founder', permanent: false },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
+      { source: '/docs/introduction', destination: '/docs/getting-started', permanent: true },
       { source: '/primitives', destination: '/', permanent: true },
       { source: '/relayfile', destination: '/file', permanent: true },
       { source: '/relayfile/:path*', destination: '/file', permanent: true },

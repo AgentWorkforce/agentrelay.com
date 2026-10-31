@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { GET as getLlmTxt } from '../../app/llm.txt/route';
 import { GET as getLlmsTxt } from '../../app/llms.txt/route';
+import { generateStaticParams as markdownParams } from '../../app/docs/markdown/[...slug]/route';
 import { readContentFile } from '../content-store';
 import { getDoc } from '../docs';
 import { getDocMarkdown, getLlmsFullText, getLlmsText } from '../docs-markdown';
@@ -50,6 +51,7 @@ describe('docs markdown export for MDX components', () => {
     expect(llms).toContain('https://agentrelay.com/llms-full.txt');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/quickstart.md');
     expect(llms).toContain('https://agentrelay.com/docs/markdown/getting-started.md');
+    expect(llms).toContain('https://agentrelay.com/docs/markdown/introduction.md');
     expect(llms.indexOf('/markdown/getting-started.md')).toBeLessThan(llms.indexOf('/markdown/quickstart.md'));
     expect(llms).toContain('https://agentrelay.com/docs/markdown/relay-connect.md');
     expect(llms).toContain('## For agents');
@@ -82,6 +84,9 @@ describe('docs markdown export for MDX components', () => {
     expect(introduction).toContain(supplement!.trim());
     expect(full).toContain(supplement!.trim());
     expect(getDoc('introduction')?.content).not.toContain('CLI setup details');
+    expect(markdownParams()).toContainEqual({ slug: ['introduction.md'] });
+    expect(introduction).toContain('Rendered page: https://agentrelay.com/docs/getting-started');
+    expect(introduction).not.toContain('Rendered page: https://agentrelay.com/docs/introduction');
 
     for (const detail of [
       '### Session history and privacy',
