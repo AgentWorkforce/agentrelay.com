@@ -1,3 +1,4 @@
+import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
 import landing from '../../app/landing.module.css';
@@ -32,7 +33,12 @@ export function HomeLandingPage() {
       <SiteNav
         hideLinks
         singleAction
-        actions={<NavActions />}
+        actions={
+          <>
+            <GitHubStarsBadge />
+            <NavActions />
+          </>
+        }
       />
 
       <main id="main">
