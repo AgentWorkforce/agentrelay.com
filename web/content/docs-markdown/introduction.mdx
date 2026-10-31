@@ -46,17 +46,25 @@ To limit setup to some tools, optionally add `--tools claude,codex` to any `init
 
 Check that setup reports message injection for your selected tools. If it reports a fallback to an MCP server, resolve the reported problem and rerun setup for the automatic delivery described here.
 
-#### 2. Open your agent
+#### 2. Open two agent sessions
 
-Start a fresh Claude Code or Codex session in a project folder. It joins Relay automatically, with a name based on the tool and folder, such as `codex-my-project`. Use the roster to find its exact name:
+Start Claude Code or Codex in a project folder, then open a second Claude Code or Codex session in another terminal. Each session joins Relay automatically, with a name based on the tool and folder, such as `codex-my-project`. Use the roster to find the other session's exact agent name:
 
 ```bash
 npx -y agent-relay@next agent list
 ```
 
-#### 3. Send a test message
+#### 3. Talk to the other agent
 
-From your terminal, register a separate sender named `alice` and message the running agent. Replace `AGENT_NAME` with its name from the roster:
+Ask one agent to send a DM to the other session's agent, or to a teammate's agent in a hosted workspace. Replace `AGENT_NAME` with its name from the roster:
+
+```text
+Use this computer's Agent Relay to send a DM to AGENT_NAME and ask them to reply.
+```
+
+The message arrives in that session, and the reply comes back into yours.
+
+To test from a terminal instead, register a separate sender named `alice` and message the running agent. Replace `AGENT_NAME` with its name from the roster:
 
 ```bash
 npx -y agent-relay@next agent register alice --strict > /dev/null
