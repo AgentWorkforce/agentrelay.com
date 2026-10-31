@@ -69,6 +69,7 @@ export function HeroLogoCloud() {
       width = entry.contentRect.width;
       height = entry.contentRect.height;
       if (!timer) layout(spin);
+      sync();
     });
     resize.observe(root);
 
@@ -101,6 +102,7 @@ export function HeroLogoCloud() {
     let visible = true;
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
+      sync();
     });
     observer.observe(root);
 
@@ -137,50 +139,46 @@ export function HeroLogoCloud() {
     let last = 0;
 
     const frame = (now: number) => {
-      const dt = now - last;
+      // Capped so the ring doesn't jump after the browser pauses frames in a background tab.
+      const dt = Math.min(now - last, 100);
       last = now;
-      // `width` is 0 while the ring is hidden on phones.
-      if (visible && width && !document.hidden) {
-        spin += (dt / LAP) * Math.PI * 2;
-        layout(spin);
+      spin += (dt / LAP) * Math.PI * 2;
+      layout(spin);
 
-        if (now >= nextShot) {
-          const from = Math.floor(Math.random() * slots.length);
-          const to = (from + 1 + Math.floor(Math.random() * (slots.length - 1))) % slots.length;
-          fire(from, to, false, now);
-          nextShot = now + 900 + Math.random() * 1100;
-        }
-        for (let i = queue.length - 1; i >= 0; i--) {
-          if (now >= queue[i].at) {
-            fire(queue[i].from, queue[i].to, true, now);
-            queue.splice(i, 1);
-          }
-        }
-
-        // Each bolt re-aims every frame, so it lands on its target as both orbit.
-        bolts.forEach((bolt) => {
-          const progress = Math.min(1, (now - bolt.start) / bolt.duration);
-          const a = positions[bolt.from];
-          const b = positions[bolt.to];
-          const len = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
-          const head = lerp(a, b, ease(progress));
-          const tail = lerp(a, b, Math.max(0, ease(progress) - BOLT / len));
-          bolt.lines.forEach((line) => {
-            line.setAttribute('x1', String(tail.x));
-            line.setAttribute('y1', String(tail.y));
-            line.setAttribute('x2', String(head.x));
-            line.setAttribute('y2', String(head.y));
-          });
-          if (progress >= 1) land(bolt, now);
-        });
-      } else {
-        // Keep pending shots from piling up while paused.
-        nextShot = now + 1200;
+      if (now >= nextShot) {
+        const from = Math.floor(Math.random() * slots.length);
+        const to = (from + 1 + Math.floor(Math.random() * (slots.length - 1))) % slots.length;
+        fire(from, to, false, now);
+        nextShot = now + 900 + Math.random() * 1100;
       }
+      for (let i = queue.length - 1; i >= 0; i--) {
+        if (now >= queue[i].at) {
+          fire(queue[i].from, queue[i].to, true, now);
+          queue.splice(i, 1);
+        }
+      }
+
+      // Each bolt re-aims every frame, so it lands on its target as both orbit.
+      bolts.forEach((bolt) => {
+        const progress = Math.min(1, (now - bolt.start) / bolt.duration);
+        const a = positions[bolt.from];
+        const b = positions[bolt.to];
+        const len = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y));
+        const head = lerp(a, b, ease(progress));
+        const tail = lerp(a, b, Math.max(0, ease(progress) - BOLT / len));
+        bolt.lines.forEach((line) => {
+          line.setAttribute('x1', String(tail.x));
+          line.setAttribute('y1', String(tail.y));
+          line.setAttribute('x2', String(head.x));
+          line.setAttribute('y2', String(head.y));
+        });
+        if (progress >= 1) land(bolt, now);
+      });
       timer = requestAnimationFrame(frame);
     };
 
-    // Reduced motion freezes the ring where it is and clears any bolts, live as the setting changes.
+    // The loop only runs while the ring is on screen, laid out (`width` is 0 while it's hidden on phones)
+    // and motion is allowed; otherwise the ring freezes where it is and any bolts clear.
     const start = () => {
       if (timer) return;
       last = performance.now();
@@ -195,12 +193,12 @@ export function HeroLogoCloud() {
       queue.length = 0;
       layout(spin);
     };
-    const onMotion = () => (motion.matches ? stop() : start());
-    motion.addEventListener('change', onMotion);
-    onMotion();
+    const sync = () => (visible && width && !motion.matches ? start() : stop());
+    motion.addEventListener('change', sync);
+    sync();
 
     return () => {
-      motion.removeEventListener('change', onMotion);
+      motion.removeEventListener('change', sync);
       cancelAnimationFrame(timer);
       resize.disconnect();
       observer.disconnect();
