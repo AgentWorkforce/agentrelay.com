@@ -5,16 +5,18 @@ import { AgentIcons } from '../AgentSignup';
 import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
 import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../../app/landing.module.css';
+import { HeroLogoCloud } from './HeroLogoCloud';
 import home from './home-hero.module.css';
 
 /**
  * The homepage hero: the two-line headline rising in, the description, one
- * sign-up button and the backers on plain navy.
+ * sign-up button and the backers on navy, over the chatting logo cloud.
  * The button is marked so the nav can show its own once this one scrolls away.
  */
 export function HomeHero() {
   return (
     <div className={`${s.heroSection} ${home.hero}`}>
+      <HeroLogoCloud />
       <section className={`${s.heroCenter} ${home.copy}`}>
         <div className={`${s.heroCenterColumn} ${home.content}`}>
           <h1 className={`${s.headline} ${s.heroCenterHeadline}`}>
