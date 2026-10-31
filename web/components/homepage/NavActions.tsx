@@ -2,21 +2,20 @@
 
 import { useEffect, useState } from 'react';
 
-import { AgentIcons } from '../AgentSignup';
-import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
+import { Github } from '../brand-icons';
 import landing from '../../app/landing.module.css';
 import s from './nav-actions.module.css';
 
-/** Log in, plus the hero's sign-up button once the hero's own copy has scrolled out of view. */
+/** Log in, plus the hero's getting-started button once the hero's own copy has scrolled out of view. */
 export function NavActions() {
-  const [showSignup, setShowSignup] = useState(false);
+  const [showCta, setShowCta] = useState(false);
 
   useEffect(() => {
-    const heroButton = document.querySelector('[data-hero-signup]');
+    const heroButton = document.querySelector('[data-hero-cta]');
     if (!heroButton) return;
     const observer = new IntersectionObserver(([entry]) => {
       // Only once it has gone off the top, not before it first scrolls in.
-      setShowSignup(!entry.isIntersecting && entry.boundingClientRect.top < 0);
+      setShowCta(!entry.isIntersecting && entry.boundingClientRect.top < 0);
     });
     observer.observe(heroButton);
     return () => observer.disconnect();
@@ -28,16 +27,14 @@ export function NavActions() {
         Log in
       </a>
       <a
-        className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.signup}`}
-        href={teamsGoogleAuthHref('home_nav')}
-        data-shown={showSignup || undefined}
-        aria-hidden={!showSignup}
-        tabIndex={showSignup ? undefined : -1}
+        className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.cta}`}
+        href="/docs/getting-started"
+        data-shown={showCta || undefined}
+        aria-hidden={!showCta}
+        tabIndex={showCta ? undefined : -1}
       >
-        <AgentIcons mono />
-        <span>
-          Connect<span className={s.more}> your agents</span>
-        </span>
+        <Github aria-hidden="true" size={18} />
+        Get started
       </a>
     </>
   );

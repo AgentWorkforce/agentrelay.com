@@ -1,6 +1,6 @@
 /* Folded away until the hero's button scrolls off, then it slides open
    beside Log in. */
-.signup.signup {
+.cta.cta {
   max-width: 0;
   margin-left: -12px;
   padding-inline: 0;
@@ -15,7 +15,7 @@
     opacity 280ms ease;
 }
 
-.signup[data-shown] {
+.cta[data-shown] {
   max-width: 260px;
   margin-left: 0;
   padding-inline: 18px;
@@ -23,25 +23,8 @@
   opacity: 1;
 }
 
-/* Logos at nav size. */
-.signup > span:first-child {
-  width: 18px;
-  height: 18px;
-}
-
-.signup > span:first-child svg {
-  width: 18px;
-  height: 18px;
-}
-
 @media (max-width: 520px) {
-  /* Phones: just the logos and "Connect". */
-  .signup[data-shown] {
-    max-width: 150px;
+  .cta[data-shown] {
     padding-inline: 14px;
-  }
-
-  .more {
-    display: none;
   }
 }
