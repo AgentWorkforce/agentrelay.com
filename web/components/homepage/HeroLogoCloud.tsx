@@ -46,8 +46,8 @@ const ease = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
  * along a tilted ring. Tiles on the far side of the ring shrink and dim. They
  * fire laser bolts at each other as if chatting: a bolt chases its target
  * around the ring, the target glows when it lands, and about half the time it
- * answers. Paused while the hero is off screen; a still ring under reduced
- * motion; left out on phones, where the copy fills the width.
+ * answers. Paused while the hero is off screen; a still ring while reduced motion
+ * is on; left out on phones, where the copy fills the width.
  */
 export function HeroLogoCloud() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -59,14 +59,16 @@ export function HeroLogoCloud() {
     if (!root || !svg) return;
     const slots = [...root.querySelectorAll<HTMLElement>('[data-slot]')];
     const tiles = slots.map((slot) => slot.firstElementChild as HTMLElement);
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     let width = 0;
     let height = 0;
+    let spin = 0;
+    let timer = 0;
     const resize = new ResizeObserver(([entry]) => {
       width = entry.contentRect.width;
       height = entry.contentRect.height;
-      if (still) layout(0);
+      if (!timer) layout(spin);
     });
     resize.observe(root);
 
@@ -96,11 +98,6 @@ export function HeroLogoCloud() {
       });
     };
 
-    if (still) {
-      layout(0);
-      return () => resize.disconnect();
-    }
-
     let visible = true;
     const observer = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
@@ -108,7 +105,6 @@ export function HeroLogoCloud() {
     observer.observe(root);
 
     const bolts = new Set<Bolt>();
-    let timer = 0;
 
     const fire = (from: number, to: number, replying: boolean, now: number) => {
       const len = Math.hypot(positions[to].x - positions[from].x, positions[to].y - positions[from].y);
@@ -137,9 +133,8 @@ export function HeroLogoCloud() {
     };
 
     const queue: { at: number; from: number; to: number }[] = [];
-    let nextShot = performance.now() + 1200;
-    let spin = 0;
-    let last = performance.now();
+    let nextShot = 0;
+    let last = 0;
 
     const frame = (now: number) => {
       const dt = now - last;
@@ -184,9 +179,28 @@ export function HeroLogoCloud() {
       }
       timer = requestAnimationFrame(frame);
     };
-    timer = requestAnimationFrame(frame);
+
+    // Reduced motion freezes the ring where it is and clears any bolts, live as the setting changes.
+    const start = () => {
+      if (timer) return;
+      last = performance.now();
+      nextShot = last + 1200;
+      timer = requestAnimationFrame(frame);
+    };
+    const stop = () => {
+      cancelAnimationFrame(timer);
+      timer = 0;
+      bolts.forEach((bolt) => bolt.lines.forEach((line) => line.remove()));
+      bolts.clear();
+      queue.length = 0;
+      layout(spin);
+    };
+    const onMotion = () => (motion.matches ? stop() : start());
+    motion.addEventListener('change', onMotion);
+    onMotion();
 
     return () => {
+      motion.removeEventListener('change', onMotion);
       cancelAnimationFrame(timer);
       resize.disconnect();
       observer.disconnect();
