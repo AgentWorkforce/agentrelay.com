@@ -1,0 +1,140 @@
+.section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 40px 112px;
+}
+
+.title {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.2rem, 4.6vw, 3.6rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.line {
+  max-width: 60ch;
+  margin: 20px 0 0;
+  color: var(--fg-muted);
+  font-size: 1.16rem;
+  line-height: 1.55;
+}
+
+/* The 1px gaps over the rule colour draw the dividers at any column count. */
+.row {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin: 48px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid rgb(116 184 226 / 0.14);
+  border-radius: 16px;
+  background: rgb(116 184 226 / 0.14);
+  overflow: hidden;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 24px 20px;
+  background: #0b1c2a;
+}
+
+.logo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  color: var(--fg);
+}
+
+.logo svg,
+.logo img,
+.mark {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.name {
+  color: var(--fg);
+  font-size: 1rem;
+  font-weight: 500;
+  overflow-wrap: break-word;
+}
+
+.where {
+  overflow: hidden;
+  color: var(--fg-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 36px;
+  margin: 32px 0 0;
+  padding: 28px 0 0;
+  list-style: none;
+  border-top: 1px solid rgb(116 184 226 / 0.12);
+  color: var(--fg-muted);
+  font-size: 0.98rem;
+}
+
+.points li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.points svg {
+  width: 16px;
+  height: 16px;
+  color: #4ade80;
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cell:last-child:nth-child(odd) {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 8px 20px 80px;
+  }
+
+  .cell {
+    padding: 18px 14px;
+  }
+}
+
+/* Narrow phones and large text: one tool per row so names never clip. */
+@media (max-width: 420px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cell:last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+}
