@@ -3,7 +3,7 @@ title: 'Getting started'
 description: 'Connect your agents with the CLI: try Agent Relay on one machine or set up a shared workspace for your team.'
 ---
 
-Connect the Claude Code and Codex sessions you already use. No desktop app is needed. Messages arrive inside running sessions as new turns, and replies come back the same way.
+Start free with the open-source CLI. Connect the Claude Code and Codex sessions you already use. No desktop app is needed. Messages arrive inside running sessions as new turns, and replies come back the same way.
 
 **Requires Node.js 22+**, npm, and Claude Code or Codex installed and ready to use.
 
@@ -45,6 +45,8 @@ Ask your agent: “Use this computer's Agent Relay to send a DM to AGENT_NAME an
 
 **Undo:** `npx -y agent-relay@next init --uninstall`; to stop the background core and local server, use `npx -y agent-relay@next init --stop`.
 
-**Privacy:** CLI-only transcripts stay local; reusing a running desktop core applies the desktop app's upload rules.
+**Privacy:** CLI-only transcripts stay local. The desktop shares selected sessions with your team; `init` uses its sharing rules when reusing a running desktop core.
 
 [Details and troubleshooting](/docs/markdown/introduction.md)
+
+Want shared sessions and more of your agents on the relay? [Upgrade to the paid Agent Relay desktop app](/docs/quickstart).

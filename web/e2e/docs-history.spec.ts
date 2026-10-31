@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('Getting started is the docs entry point and Quickstart still opens desktop setup', async ({ page, request }) => {
+test('Getting started leads with the free CLI and Quickstart opens the desktop upgrade', async ({ page, request }) => {
   const response = await request.get('/quickstart', { maxRedirects: 0 });
   expect(response.status()).toBe(308);
   expect(new URL(response.headers().location, response.url()).pathname).toBe('/docs/quickstart');
@@ -9,6 +9,7 @@ test('Getting started is the docs entry point and Quickstart still opens desktop
   await expect(page).toHaveURL(/\/docs\/getting-started$/);
   await expect(page.getByRole('heading', { name: 'Getting started', exact: true })).toBeVisible();
   const article = page.locator('article');
+  await expect(article).toContainText('Start free with the open-source CLI.');
   await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Solo', 'Team', 'Talk']);
   await expect(article).toContainText('npx -y agent-relay@next init --yes');
   const details = article.getByRole('link', { name: 'Details and troubleshooting' });
@@ -19,10 +20,11 @@ test('Getting started is the docs entry point and Quickstart still opens desktop
   const bundle = await request.get('/llms-full.txt');
   expect(await bundle.text()).toContain('### Session history and privacy');
 
-  await page.getByRole('link', { name: 'Desktop setup (optional)', exact: true }).click();
+  await expect(page.getByRole('link', { name: 'Desktop app (upgrade)', exact: true })).toBeVisible();
+  await article.getByRole('link', { name: 'Upgrade to the paid Agent Relay desktop app', exact: true }).click();
   await expect(page).toHaveURL(/\/docs\/quickstart$/);
-  await expect(page.getByRole('heading', { name: 'Desktop setup', exact: true })).toBeVisible();
-  await expect(page.locator('article')).toContainText('The desktop app is optional.');
+  await expect(page.getByRole('heading', { name: 'Desktop app', exact: true })).toBeVisible();
+  await expect(page.locator('article')).toContainText('paid upgrade');
 });
 
 test('Back restores the shortened Getting started page and its Solo anchor', async ({ page }) => {
