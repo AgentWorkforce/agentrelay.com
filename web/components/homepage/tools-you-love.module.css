@@ -26,7 +26,7 @@
 .row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin: 48px 0 0;
+  margin: 36px 0 0;
   padding: 0;
   list-style: none;
   border: 1px solid rgb(116 184 226 / 0.14);
@@ -38,9 +38,9 @@
 .cell {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  padding: 24px 20px;
+  padding: 16px 18px;
   box-shadow: -1px -1px 0 rgb(116 184 226 / 0.14);
 }
 
@@ -48,8 +48,8 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   color: var(--fg);
 }
 
@@ -63,13 +63,13 @@
 
 .text {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
 }
 
 .name {
   color: var(--fg);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   overflow-wrap: break-word;
 }
@@ -78,7 +78,7 @@
   overflow: hidden;
   color: var(--fg-muted);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -123,12 +123,12 @@
   }
 
   .cell {
-    padding: 18px 14px;
+    padding: 14px;
   }
 }
 
 /* Narrow phones and large text: one tool per row so names never clip. */
-@media (max-width: 420px) {
+@media (max-width: 360px) {
   .row {
     grid-template-columns: minmax(0, 1fr);
   }

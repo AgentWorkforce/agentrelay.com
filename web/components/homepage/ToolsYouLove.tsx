@@ -6,28 +6,33 @@ import { FadeIn } from '../FadeIn';
 import { AGENT_TOOLS } from '../home/AgentMarks';
 import s from './tools-you-love.module.css';
 
-/** The agents people already run, and where they run them. */
+/** The agents people already run, and where they run them: apps and editors, then terminals. */
 const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
   { name: 'Claude Code', where: 'Native app', logo: <AgentToolLogo provider="claude" className={s.mark} /> },
   { name: 'Codex', where: 'Native app', logo: <Codex /> },
-  { name: 'Claude Code', where: 'Terminal', logo: <ClaudeCodeColor /> },
   { name: 'ChatGPT', where: 'Native app', logo: <OpenAILogo /> },
+  { name: 'Cursor', where: 'Editor', logo: AGENT_TOOLS.cursor.logo },
+  { name: 'Antigravity', where: 'Editor', logo: AGENT_TOOLS.antigravity.logo },
+  { name: 'Claude Code', where: 'Terminal', logo: <ClaudeCodeColor /> },
+  { name: 'Codex CLI', where: 'Terminal', logo: <Codex /> },
+  { name: 'Gemini CLI', where: 'Terminal', logo: <AgentToolLogo provider="gemini" idPrefix="tools-gemini" className={s.mark} /> },
   { name: 'OpenCode', where: 'Terminal', logo: AGENT_TOOLS.opencode.logo },
+  { name: 'Grok Build', where: 'Terminal', logo: AGENT_TOOLS.grok.logo },
 ];
 
 const POINTS = ['Your plan, your settings, your skills.', 'Mix agents in one workspace.', 'New agents added all the time.'];
 
-/** "Keep the tools you love": a ruled row of the apps and terminals we connect, with no switch required. */
+/** "No new IDE. Keep the tools you love": a ruled row of the apps and terminals we connect, with no switch required. */
 export function ToolsYouLove() {
   return (
     <section className={s.section} aria-labelledby="tools-you-love-title">
       <FadeIn direction="up">
         <h2 id="tools-you-love-title" className={s.title}>
-          Keep the tools you love
+          No new IDE. Keep the tools you love
         </h2>
         <p className={s.line}>
-          Agent Relay isn’t another agent to switch to. Keep running Claude Code, Codex, ChatGPT, and OpenCode the way
-          you do today, in the app or the terminal, on the plan you already have. We connect them; you keep your setup.
+          Agent Relay isn’t another agent to switch to. Keep running your agents the way you do today, in the app, the
+          editor or the terminal, on the plan you already have. We connect them; you keep your setup.
         </p>
       </FadeIn>
 

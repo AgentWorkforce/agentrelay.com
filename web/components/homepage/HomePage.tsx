@@ -19,9 +19,9 @@ import headline from './rotating-headline.module.css';
 
 /**
  * The homepage: the "Stop copy-pasting between your agents" hero with one
- * sign-up button, then "Let X talk to Y", the move-faster rows, the tools you keep, why it
- * fits how you work, multi-player agent work with your agent's public
- * address, hosting, and the final call to action.
+ * Get started button, then "Let X talk to Y", the move-faster rows, the
+ * tools you keep and why it fits how you work, multi-player agent work with
+ * your agent's public address, hosting, and the final call to action.
  */
 export function HomeLandingPage() {
   return (
@@ -56,7 +56,7 @@ export function HomeLandingPage() {
           </div>
           <div className={headline.followOn}>
             <ToolsYouLove />
-            <Why title="No new IDE. No new habits." last={<SetupItem />} />
+            <Why last={<SetupItem />} />
           </div>
           <MessengerSection />
           <Hosting />
