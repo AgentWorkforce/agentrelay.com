@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { OpenAILogo } from '../AgentToolLogos';
 import { ClaudeCodeColor } from '../brand-icons';
+import { CodexColor } from '../CodexColor';
 import s from './timezones.module.css';
 
 /**
@@ -76,7 +76,7 @@ export function Timezones() {
         />
         <Lane
           agent
-          mark={<OpenAILogo />}
+          mark={<CodexColor />}
           label={
             <>
               <b>Ingrid’s Codex</b> · always on

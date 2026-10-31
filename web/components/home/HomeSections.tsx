@@ -18,23 +18,10 @@ function Mark({ children }: { children: ReactNode }) {
   );
 }
 
-/** Heading block shared by the story sections: a big title and one line. */
-function SectionHeader({ id, title, line }: { id: string; title: ReactNode; line?: string }) {
+/** The why row: your tools, your team, and a last card of the page's choosing. */
+export function Why({ last }: { last: ReactNode }) {
   return (
-    <FadeIn direction="up" className={s.header}>
-      <h2 id={id} className={s.title}>
-        {title}
-      </h2>
-      {line ? <p className={s.line}>{line}</p> : null}
-    </FadeIn>
-  );
-}
-
-/** The why row under a big title: your tools, your team, and a last card of the page's choosing. */
-export function Why({ title, last }: { title: ReactNode; last: ReactNode }) {
-  return (
-    <section className={s.section} aria-labelledby="why-title">
-      <SectionHeader id="why-title" title={title} />
+    <section className={s.section} aria-label="Why Agent Relay">
       <FadeIn direction="up">
         <WhyRelay last={last} />
       </FadeIn>

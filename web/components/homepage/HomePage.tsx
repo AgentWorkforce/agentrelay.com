@@ -1,9 +1,10 @@
+import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
 import landing from '../../app/landing.module.css';
 import { HomeHero } from './HomeHero';
 import sections from '../home/home-sections.module.css';
-import { FinalCta, Why } from '../home/HomeSections';
+import { Why } from '../home/HomeSections';
 import { Distribute } from './Distribute';
 import { MessengerSection } from './MessengerSection';
 import { MiddleOptions } from './MiddleOptions';
@@ -11,15 +12,16 @@ import { NavActions } from './NavActions';
 import { RotatingHeadline } from './RotatingHeadline';
 import { Hosting } from './Hosting';
 import { SetupItem } from './Setup';
+import { ToolsYouLove } from './ToolsYouLove';
 import { TrioWaves } from './TrioWaves';
 import { Unblock } from './Unblock';
 import headline from './rotating-headline.module.css';
 
 /**
  * The homepage: the "Stop copy-pasting between your agents" hero with one
- * sign-up button, then "Let X talk to Y", the move-faster rows, why it
- * fits how you work, multi-player agent work with your agent's public
- * address, hosting, and the final call to action.
+ * Get started button, then "Let X talk to Y", the move-faster rows, the
+ * tools you keep and why it fits how you work, multi-player agent work with
+ * your agent's public address, and hosting.
  */
 export function HomeLandingPage() {
   return (
@@ -31,7 +33,12 @@ export function HomeLandingPage() {
       <SiteNav
         hideLinks
         singleAction
-        actions={<NavActions />}
+        actions={
+          <>
+            <GitHubStarsBadge />
+            <NavActions />
+          </>
+        }
       />
 
       <main id="main">
@@ -48,13 +55,11 @@ export function HomeLandingPage() {
             <Distribute />
           </div>
           <div className={headline.followOn}>
-            <Why title="No new IDE. No new habits." last={<SetupItem />} />
+            <ToolsYouLove />
+            <Why last={<SetupItem />} />
           </div>
           <MessengerSection />
           <Hosting />
-          <div className={`${sections.band} ${sections.bandNight}`}>
-            <FinalCta />
-          </div>
         </div>
       </main>
 

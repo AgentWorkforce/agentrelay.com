@@ -6,10 +6,10 @@ import { AGENT_TOOLS, type AgentTool } from '../home/AgentMarks';
 import { TypeScriptLogo } from '../home/icons';
 import s from './rotating-headline.module.css';
 
-type Tool = AgentTool | 'custom' | 'dots' | 'pi';
+export type Tool = AgentTool | 'custom' | 'dots' | 'pi';
 
 /** The agents we work with, plus one built on our SDK. */
-const TOOLS: Record<Tool, { name: string; logo: ReactNode }> = {
+export const TOOLS: Record<Tool, { name: string; logo: ReactNode }> = {
   ...AGENT_TOOLS,
   muse: { name: 'Muse', logo: <img src="/logos/muse-transparent.png" alt="" /> },
   dots: { name: 'Dots', logo: <img src="/logos/dot.webp" alt="" /> },
@@ -38,16 +38,12 @@ const PAIRS: [Tool, Tool][] = [
   ['dots', 'muse'],
   ['muse', 'grokbot'],
   ['muse', 'claude'],
-  ['pi', 'claude'],
-  ['pi', 'codex'],
   ['grok', 'codex'],
   ['custom', 'codex'],
   ['claude', 'codex'],
   ['claude', 'antigravity'],
   ['codex', 'antigravity'],
   ['codex', 'grokbot'],
-  ['codex', 'pi'],
-  ['claude', 'pi'],
   ['claude', 'dots'],
   ['claude', 'grokbot'],
   ['claude', 'muse'],
