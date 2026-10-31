@@ -177,9 +177,13 @@ const nextConfig = {
           'https://agentrelay.com/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
         permanent: false,
       },
-      // In-person QR card → /founder, which books a meeting on Will's or
-      // Khaliq's calendar at random. Temporary for the same repointing reason.
-      { source: '/qr-card', destination: '/founder', permanent: false },
+      // In-person QR card → the Agent Relay GitHub repo. Temporary for the
+      // same repointing reason.
+      {
+        source: '/qr-card',
+        destination: 'https://github.com/agentworkforce/relay',
+        permanent: false,
+      },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
       { source: '/docs/introduction', destination: '/docs/getting-started', permanent: true },
       { source: '/primitives', destination: '/', permanent: true },
