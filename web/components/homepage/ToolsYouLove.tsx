@@ -31,8 +31,6 @@ const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
   { name: 'Dots', where: 'Assistant', logo: <img src="/logos/dot.webp" alt="" /> },
 ];
 
-const POINTS = ['Your plan, your settings, your skills.', 'Mix agents in one workspace.', 'New agents added all the time.'];
-
 /** "No new IDE. Keep the tools you love": a ruled row of the apps and terminals we connect, with no switch required. */
 export function ToolsYouLove() {
   return (
@@ -60,17 +58,6 @@ export function ToolsYouLove() {
                 <span className={s.name}>{name}</span>
                 <span className={s.where}>{where}</span>
               </span>
-            </li>
-          ))}
-        </ul>
-
-        <ul className={s.points}>
-          {POINTS.map((point) => (
-            <li key={point}>
-              <svg viewBox="0 0 16 16" aria-hidden="true">
-                <path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {point}
             </li>
           ))}
         </ul>
