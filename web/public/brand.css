@@ -107,10 +107,10 @@
   --primary-hover: var(--primary-600);
   --primary-bg: var(--primary-500);
   --primary-fg: #ffffff;
-  /* The primary button: deep enough for 7:1 white text, saturated enough to lift off the navy. */
-  --cta-bg: #1f4fb8;
-  --cta-hover: #1a43a0;
-  --cta-line: #183f94;
+  /* The primary button: Curious Blue deepened for 6.5:1 white text, saturated enough to lift off the navy. */
+  --cta-bg: #265caa;
+  --cta-hover: #204c8f;
+  --cta-line: #1e447e;
   --secondary-bg: var(--secondary-100);
   --secondary-fg: var(--secondary-600);
   --line: rgba(74, 144, 194, 0.1);
