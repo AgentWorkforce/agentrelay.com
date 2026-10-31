@@ -89,6 +89,8 @@ describe('docs markdown export for MDX components', () => {
       'paid upgrade for shared sessions and more agents on the relay',
       '### Paid upgrade: desktop app',
       '### Which sessions join',
+      "`init --hosted` and `init --key` use the CLI's default hosted server; neither needs a URL.",
+      'Use `--url` only for a self-hosted server.',
       'Should join; not yet verified with the CLI setup',
       'init` attaches to it instead of starting its own',
       'claude.ai/code',

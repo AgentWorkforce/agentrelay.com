@@ -85,6 +85,8 @@ npx -y agent-relay@next init --hosted
 
 Hosted setup uses the same automatic tool detection and generates a default workspace name. `--name` is optional.
 
+`init --hosted` and `init --key` use the CLI's default hosted server; neither needs a URL. Use `--url` only for a self-hosted server.
+
 The output prints the full `npx -y agent-relay@next init --key` command for teammates, with the workspace key filled in. **Share that line privately, like a password.** Run this in a private terminal; keep the line and key out of commits, public chat, screenshots, and agent transcripts.
 
 #### 2. Each teammate runs full setup
