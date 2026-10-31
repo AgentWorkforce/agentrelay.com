@@ -1,7 +1,7 @@
 .section {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px 40px 112px;
+  padding: 24px 40px 0;
 }
 
 .title {
@@ -22,17 +22,16 @@
   line-height: 1.55;
 }
 
-/* The 1px gaps over the rule colour draw the dividers at any column count. */
+/* Each cell draws its top and left rule; the row's border and clipping hide the ones on its edge. */
 .row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 1px;
   margin: 48px 0 0;
   padding: 0;
   list-style: none;
   border: 1px solid rgb(116 184 226 / 0.14);
   border-radius: 16px;
-  background: rgb(116 184 226 / 0.14);
+  background: rgb(255 255 255 / 0.02);
   overflow: hidden;
 }
 
@@ -42,7 +41,7 @@
   gap: 14px;
   min-width: 0;
   padding: 24px 20px;
-  background: #0b1c2a;
+  box-shadow: -1px -1px 0 rgb(116 184 226 / 0.14);
 }
 
 .logo {
@@ -120,7 +119,7 @@
 
 @media (max-width: 640px) {
   .section {
-    padding: 8px 20px 80px;
+    padding: 8px 20px 0;
   }
 
   .cell {
