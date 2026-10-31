@@ -21,7 +21,7 @@ describe('docs markdown export for MDX components', () => {
         expect(markdown).toContain(`\`\`\`bash\n${command}\n\`\`\``);
       }
       expect(markdown).not.toContain('agent-relay@next init --yes');
-      expect(markdown).not.toContain('agent-relay@next init --url https://cast.agentrelay.com');
+      expect(markdown).not.toMatch(/npx -y agent-relay@next init[^\n]*--url/);
     }
     expect(getDocMarkdown('introduction')!.markdown).toContain('`relay init -i` brings back the interactive questions.');
     expect(getLlmsFullText()).toContain('`relay init -i` brings back the interactive questions.');

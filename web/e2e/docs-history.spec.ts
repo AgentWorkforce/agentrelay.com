@@ -15,7 +15,7 @@ test('Getting started leads with the free CLI and Quickstart opens the desktop u
   await expect(article).toContainText("npx -y agent-relay@next init --key 'WORKSPACE_KEY'");
   await expect(article).toContainText('Share the line it prints privately, like a password.');
   await expect(article).not.toContainText('--yes');
-  await expect(article).not.toContainText('cast.agentrelay.com');
+  await expect(article).not.toContainText('--url');
   const details = article.getByRole('link', { name: 'Details and troubleshooting' });
   await expect(details).toHaveAttribute('href', '/docs/markdown/introduction.md');
   const markdown = await request.get('/docs/markdown/introduction.md');
