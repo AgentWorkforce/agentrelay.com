@@ -1,5 +1,31 @@
 import { expect, test } from '@playwright/test';
 
+test('Introduction redirects permanently while its detailed markdown exports remain available', async ({ page, request }) => {
+  const response = await request.get('/docs/introduction?from=bookmark', { maxRedirects: 0 });
+  expect(response.status()).toBe(308);
+  const destination = new URL(response.headers().location, response.url());
+  expect(destination.pathname).toBe('/docs/getting-started');
+  expect(destination.searchParams.get('from')).toBe('bookmark');
+
+  await page.goto('/docs/introduction');
+  await expect(page).toHaveURL(/\/docs\/getting-started$/);
+  await expect(page.getByRole('heading', { name: 'Getting started', exact: true })).toBeVisible();
+  await expect(page.locator('a[href="/docs/introduction"]')).toHaveCount(0);
+
+  const markdown = await request.get('/docs/markdown/introduction.md', { maxRedirects: 0 });
+  expect(markdown.status()).toBe(200);
+  expect(markdown.headers()['content-type']).toContain('text/markdown');
+  const content = await markdown.text();
+  expect(content).toContain('## CLI setup details');
+  expect(content).toContain('### Session history and privacy');
+  const alias = await request.get('/docs/introduction.md', { maxRedirects: 0 });
+  expect(alias.status()).toBe(200);
+  expect(await alias.text()).toBe(content);
+  const bundle = await request.get('/llms-full.txt');
+  expect(bundle.status()).toBe(200);
+  expect(await bundle.text()).toContain('## CLI setup details');
+});
+
 test('Getting started leads with the free CLI and Quickstart opens the desktop upgrade', async ({ page, request }) => {
   const response = await request.get('/quickstart', { maxRedirects: 0 });
   expect(response.status()).toBe(308);
