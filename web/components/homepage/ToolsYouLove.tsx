@@ -11,7 +11,7 @@ const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
   { name: 'Claude Code', where: 'Native app', logo: <AgentToolLogo provider="claude" className={s.mark} /> },
   { name: 'Cursor', where: 'Editor', logo: AGENT_TOOLS.cursor.logo },
   { name: AGENT_TOOLS.hermes.name, where: 'Terminal', logo: AGENT_TOOLS.hermes.logo },
-  { name: AGENT_TOOLS.devin.name, where: 'Cloud', logo: AGENT_TOOLS.devin.logo },
+  { name: AGENT_TOOLS.devin.name, where: 'Terminal CLI', logo: AGENT_TOOLS.devin.logo },
   { name: 'Codex CLI', where: 'Terminal', logo: <Codex /> },
   { name: AGENT_TOOLS.conductor.name, where: 'Native app', logo: AGENT_TOOLS.conductor.logo },
   { name: 'Muse', where: 'Assistant', logo: <img src="/logos/muse-transparent.png" alt="" /> },
