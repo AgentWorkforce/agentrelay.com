@@ -134,6 +134,10 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
 
   const canonicalUrl = `${DOCS_BASE_URL}/${slug}`;
   const markdownUrl = getDocMarkdownUrl(slug);
+  // Longer agent-facing guidance belongs in the markdown mirror and full
+  // bundle, without expanding the corresponding human-facing MDX page.
+  const supplement = readContentFile(`docs-markdown/${slug}.mdx`);
+  const body = [doc.content, supplement].filter(Boolean).join('\n\n');
   const header = [
     `# ${doc.title}`,
     doc.description ? `\n${doc.description}` : '',
@@ -148,7 +152,7 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
     slug,
     title: doc.title,
     description: doc.description,
-    markdown: `${header}\n${renderMarkdownBody(doc.content)}\n`,
+    markdown: `${header}\n${renderMarkdownBody(body)}\n`,
   };
 }
 
@@ -160,7 +164,7 @@ export function getDocsMarkdownIndex(): string {
   const lines = [
     '# Agent Relay Docs (Markdown)',
     '',
-    'These markdown views are generated directly from `web/content/docs/*.mdx`.',
+    'These markdown views are generated from `web/content/docs/*.mdx` and optional `web/content/docs-markdown/*.mdx` supplements.',
     'They are meant for agents, CLI tooling, and raw browser access.',
     '',
     ...docs.map(
@@ -269,7 +273,7 @@ export function getLlmsFullText(): string {
     '',
     '> Combined Markdown documentation for Agent Relay.',
     '',
-    'Generated from `web/content/docs/*.mdx`.',
+    'Generated from `web/content/docs/*.mdx` and optional `web/content/docs-markdown/*.mdx` supplements.',
     '',
     '## Documentation',
     '',
