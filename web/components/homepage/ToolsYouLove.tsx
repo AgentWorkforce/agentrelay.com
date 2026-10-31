@@ -31,8 +31,8 @@ export function ToolsYouLove() {
           No new IDE. Keep the tools you love
         </h2>
         <p className={s.line}>
-          Agent Relay isn’t another agent to switch to. Keep running your agents the way you do today, in the app, the
-          editor or the terminal, on the plan you already have. We connect them; you keep your setup.
+          Agent Relay runs in the background so you can use the tools you already love. Don’t change your workflow or
+          force your team to change theirs. Install Agent Relay, and work like you already are.
         </p>
       </FadeIn>
 
