@@ -1,16 +1,15 @@
 import type { CSSProperties } from 'react';
 
 import { InvestorStrip } from '../InvestorStrip';
-import { AgentIcons } from '../AgentSignup';
+import { Github } from '../brand-icons';
 import { HOME_HERO_SUBTITLE, HOME_HERO_TITLE_LINES } from '../../lib/home-copy';
-import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../../app/landing.module.css';
 import { HeroLogoCloud } from './HeroLogoCloud';
 import home from './home-hero.module.css';
 
 /**
  * The homepage hero: the two-line headline rising in, the description, one
- * sign-up button and the backers on navy, over the chatting logo cloud.
+ * getting-started button and the backers on navy, inside the orbiting agents.
  * The button is marked so the nav can show its own once this one scrolls away.
  */
 export function HomeHero() {
@@ -32,8 +31,8 @@ export function HomeHero() {
           <p className={`${s.subtitle} ${s.heroCenterSubtitle}`}>{HOME_HERO_SUBTITLE}</p>
 
           <div className={`${s.heroCenterCtas} ${home.actions}`}>
-            <a className={`${s.ctaPrimary} ${s.heroCta}`} href={teamsGoogleAuthHref('home_hero')} data-hero-signup="">
-              <AgentIcons mono />
+            <a className={`${s.ctaPrimary} ${s.heroCta}`} href="/docs/getting-started" data-hero-signup="">
+              <Github aria-hidden="true" size={18} />
               Connect your agents for free
               <svg className={s.heroCtaArrow} viewBox="0 0 16 16" aria-hidden="true">
                 <path d="M3 8h9M8.5 4l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
