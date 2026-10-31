@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-import { Github } from '../brand-icons';
 import landing from '../../app/landing.module.css';
 import s from './nav-actions.module.css';
 
@@ -29,7 +28,6 @@ export function NavActions() {
       aria-hidden={!showCta}
       tabIndex={showCta ? undefined : -1}
     >
-      <Github aria-hidden="true" size={18} />
       Get started
     </a>
   );
