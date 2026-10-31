@@ -8,10 +8,34 @@ test('Getting started is the docs entry point and Quickstart still opens desktop
   await page.goto('/docs');
   await expect(page).toHaveURL(/\/docs\/getting-started$/);
   await expect(page.getByRole('heading', { name: 'Getting started', exact: true })).toBeVisible();
-  await page.getByRole('link', { name: 'Desktop setup', exact: true }).click();
+  const article = page.locator('article');
+  await expect(article.getByRole('heading', { level: 2 })).toHaveText(['Solo', 'Team', 'Talk']);
+  await expect(article).toContainText('npx -y agent-relay@next init --yes');
+  const details = article.getByRole('link', { name: 'Details and troubleshooting' });
+  await expect(details).toHaveAttribute('href', '/docs/markdown/introduction.md');
+  const markdown = await request.get('/docs/markdown/introduction.md');
+  expect(markdown.headers()['content-type']).toContain('text/markdown');
+  expect(await markdown.text()).toContain('### Which sessions join');
+  const bundle = await request.get('/llms-full.txt');
+  expect(await bundle.text()).toContain('### Session history and privacy');
+
+  await page.getByRole('link', { name: 'Desktop setup (optional)', exact: true }).click();
   await expect(page).toHaveURL(/\/docs\/quickstart$/);
   await expect(page.getByRole('heading', { name: 'Desktop setup', exact: true })).toBeVisible();
   await expect(page.locator('article')).toContainText('The desktop app is optional.');
+});
+
+test('Back restores the shortened Getting started page and its Solo anchor', async ({ page }) => {
+  await page.goto('/docs/getting-started');
+  const version = page.getByLabel('Documentation version');
+  await page.getByRole('navigation', { name: 'On this page' }).getByRole('link', { name: 'Solo', exact: true }).click();
+  await expect(page).toHaveURL(/\/docs\/getting-started#solo$/);
+  await version.selectOption('v7.1.1');
+  await expect(page).toHaveURL(/\/docs\/7\.1\.1\/introduction$/);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/docs\/getting-started#solo$/);
+  await expect(version).toHaveValue('v8');
+  await expect(page.getByRole('heading', { name: 'Getting started', exact: true })).toBeVisible();
 });
 
 // Jumping to a heading, switching docs version, then pressing Back must bring
