@@ -14,7 +14,7 @@ const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
   { name: AGENT_TOOLS.devin.name, where: 'Cloud', logo: AGENT_TOOLS.devin.logo },
   { name: 'Codex CLI', where: 'Terminal', logo: <Codex /> },
   { name: AGENT_TOOLS.conductor.name, where: 'Native app', logo: AGENT_TOOLS.conductor.logo },
-  { name: 'Gemini CLI', where: 'Terminal', logo: <AgentToolLogo provider="gemini" idPrefix="tools-gemini" className={s.mark} /> },
+  { name: 'Muse', where: 'Assistant', logo: <img src="/logos/muse-transparent.png" alt="" /> },
   { name: 'ChatGPT', where: 'Native app', logo: <OpenAILogo /> },
   { name: AGENT_TOOLS.paseo.name, where: 'Mobile app', logo: AGENT_TOOLS.paseo.logo },
   { name: AGENT_TOOLS.openclaw.name, where: 'Assistant', logo: AGENT_TOOLS.openclaw.logo },
