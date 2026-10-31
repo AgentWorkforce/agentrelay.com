@@ -4,7 +4,7 @@ import { SiteNav } from '../SiteNav';
 import landing from '../../app/landing.module.css';
 import { HomeHero } from './HomeHero';
 import sections from '../home/home-sections.module.css';
-import { FinalCta, Why } from '../home/HomeSections';
+import { Why } from '../home/HomeSections';
 import { Distribute } from './Distribute';
 import { MessengerSection } from './MessengerSection';
 import { MiddleOptions } from './MiddleOptions';
@@ -21,7 +21,7 @@ import headline from './rotating-headline.module.css';
  * The homepage: the "Stop copy-pasting between your agents" hero with one
  * Get started button, then "Let X talk to Y", the move-faster rows, the
  * tools you keep and why it fits how you work, multi-player agent work with
- * your agent's public address, hosting, and the final call to action.
+ * your agent's public address, and hosting.
  */
 export function HomeLandingPage() {
   return (
@@ -60,9 +60,6 @@ export function HomeLandingPage() {
           </div>
           <MessengerSection />
           <Hosting />
-          <div className={`${sections.band} ${sections.bandNight}`}>
-            <FinalCta />
-          </div>
         </div>
       </main>
 
