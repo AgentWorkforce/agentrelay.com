@@ -4,6 +4,7 @@ import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
+  DASHBOARD_ASSETS?: { fetch(request: Request): Promise<Response> };
   CLOUD_WEB_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -758,6 +759,21 @@ export function getOpenAiAppsChallengeResponse(
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.hostname === PRIMARY_HOST && (url.pathname === "/dashboard" || url.pathname.startsWith("/dashboard/"))) {
+      if (!env.DASHBOARD_ASSETS) return new Response("Dashboard is not available yet", {status: 503, headers: {"Cache-Control": "no-store"}});
+      if (request.method !== "GET" && request.method !== "HEAD") return new Response("Method not allowed", {status: 405, headers: {Allow: "GET, HEAD"}});
+      if (url.pathname === "/dashboard") {
+        url.pathname = "/dashboard/";
+        return Response.redirect(url.toString(), 308);
+      }
+      const assetUrl = new URL(url);
+      assetUrl.pathname = url.pathname.slice("/dashboard".length);
+      const headers = new Headers(request.headers);
+      headers.delete("cookie");
+      headers.delete("authorization");
+      return env.DASHBOARD_ASSETS.fetch(new Request(assetUrl, {method: request.method, headers}));
+    }
 
     const openAiAppsChallenge = getOpenAiAppsChallengeResponse(request, url, env);
     if (openAiAppsChallenge) {
