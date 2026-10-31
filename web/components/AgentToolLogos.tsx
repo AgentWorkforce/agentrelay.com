@@ -1,3 +1,5 @@
+import { CodexColor } from './CodexColor';
+
 export type AgentTool = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode';
 
 export const AGENT_TOOLS: AgentTool[] = ['claude', 'codex', 'opencode', 'gemini', 'copilot'];
@@ -89,7 +91,17 @@ function GeminiLogo({ className, idPrefix }: { className: string; idPrefix: stri
   );
 }
 
-/** The OpenAI mark, used for Codex. */
+/** The Claude desktop app's icon: the white starburst on a rounded orange tile. */
+export function ClaudeAppLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <rect width="24" height="24" rx="5.5" fill="#D97757" />
+      <path d={AGENT_TOOL_MARKS.claude.path} fill="#fff" transform="translate(4.2 4.2) scale(0.65)" />
+    </svg>
+  );
+}
+
+/** The OpenAI mark, used for ChatGPT. */
 export function OpenAILogo({ className, size }: { className?: string; size?: number | string }) {
   return (
     <svg viewBox="0 0 268 266" fill="none" className={className} width={size} height={size} aria-hidden="true">
@@ -135,7 +147,7 @@ export function AgentToolLogo({
 }) {
   if (provider === 'claude') return <ClaudeLogo className={className} />;
   if (provider === 'gemini') return <GeminiLogo className={className} idPrefix={idPrefix} />;
-  if (provider === 'codex') return <OpenAILogo className={className} />;
+  if (provider === 'codex') return <CodexColor className={className} />;
   if (provider === 'copilot') return <CopilotLogo className={className} />;
   return <OpenCodeLogo className={className} />;
 }

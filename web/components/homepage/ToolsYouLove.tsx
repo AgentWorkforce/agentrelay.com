@@ -1,15 +1,16 @@
 import type { ReactNode } from 'react';
 
-import { AgentToolLogo, OpenAILogo } from '../AgentToolLogos';
-import { ClaudeCodeColor, CodexColor } from '../brand-icons';
+import { ClaudeAppLogo, OpenAILogo } from '../AgentToolLogos';
+import { ClaudeCodeColor, Codex } from '../brand-icons';
+import { CodexColor } from '../CodexColor';
 import { FadeIn } from '../FadeIn';
 import { AGENT_TOOLS } from '../home/AgentMarks';
 import s from './tools-you-love.module.css';
 
 /** The agents people already run, and where they run them, most familiar first. */
 const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
-  { name: 'Claude Code', where: 'Native app', logo: <AgentToolLogo provider="claude" className={s.mark} /> },
-  { name: 'Codex CLI', where: 'Terminal', logo: <CodexColor /> },
+  { name: 'Claude Code', where: 'Native app', logo: <ClaudeAppLogo /> },
+  { name: 'Codex CLI', where: 'Terminal', logo: <Codex /> },
   { name: AGENT_TOOLS.grokbot.name, where: 'Assistant', logo: AGENT_TOOLS.grokbot.logo },
   { name: 'ChatGPT', where: 'Web app', logo: <OpenAILogo /> },
   { name: 'Claude Code', where: 'Terminal', logo: <ClaudeCodeColor /> },
@@ -38,7 +39,9 @@ export function ToolsYouLove() {
     <section className={s.section} aria-labelledby="tools-you-love-title">
       <FadeIn direction="up">
         <h2 id="tools-you-love-title" className={s.title}>
-          No new IDE. Keep the tools you love
+          No new IDE.
+          <br />
+          Keep the tools you love
         </h2>
         <p className={s.line}>
           Agent Relay runs in the background so you can use the tools you already love. Don’t change your workflow or

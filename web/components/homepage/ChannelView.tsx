@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 
-import { OpenAILogo } from '../AgentToolLogos';
 import { ClaudeCodeColor, Cursor } from '../brand-icons';
+import { CodexColor } from '../CodexColor';
 import { AppWindow, Who } from './AppWindow';
 import s from './channel-view.module.css';
 import { useSequence } from './useSequence';
@@ -27,7 +27,7 @@ const MESSAGES: { photo: string; agent?: ReactNode; name: string; time: string; 
   },
   {
     photo: '/authors/khaliq-128.webp',
-    agent: <OpenAILogo />,
+    agent: <CodexColor />,
     name: 'Khaliq’s Codex',
     time: '14:07',
     text: <>{at('cursor')} the tax provider returns the rate as a string now. Patch is up.</>,
