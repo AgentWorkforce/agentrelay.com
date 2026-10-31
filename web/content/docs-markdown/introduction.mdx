@@ -4,7 +4,7 @@ The free, open-source Agent Relay CLI lets the Claude Code and Codex sessions yo
 
 You need **Node.js 22 or newer**, npm, and at least one supported agent tool installed and ready to use. Run setup from a project folder. Sessions in your home folder or `/tmp` do not join.
 
-Use **`agent-relay@next`** throughout this guide. On October 31, 2026, `@next` is `15.0.0-next.10`; `@latest` is `14.0.0` and does not include this setup flow.
+Use **`agent-relay@next`** throughout this guide. On October 31, 2026, `@latest` is `15.0.1` and `@next` is `15.0.1-next.0`. Both include this setup flow.
 
 ### Session history and privacy
 
@@ -20,9 +20,10 @@ If you do not want transcripts uploaded, use the CLI-only path with its own mess
 
 ### Which sessions join
 
-With `agent-relay@15.0.0-next.10` and its core `15.0.6`, the CLI setup supports these surfaces:
+Both release channels include core `15.0.6`. The CLI setup has these session support and verification limits:
 
-- **Supported local coding surfaces:** Claude Code, Codex, Pi, Grok, Conductor, ChatGPT (Codex sessions), and local Claude Code sessions that the Claude desktop app runs against a folder on this computer. Pi joins when `init` has set it up.
+- **Supported local coding surfaces:** Claude Code, Codex, Pi, Grok, Conductor, and ChatGPT (Codex sessions). Pi joins when `init` has set it up.
+- **Local Claude desktop sessions:** message delivery to locally running Claude Code sessions is confirmed; replies are not yet confirmed.
 - **Other automatic joins:** Muse, Devin, OpenClaw, and Hermes sessions. OpenCode joins when `init` has set it up.
 - **Should join; not yet verified with the CLI setup:** Codex threads in VS Code.
 - **Claude Code in the cloud does not join:** sessions running on Anthropic's side, including `claude.ai/code` and cloud sessions shown in the Claude desktop app, are never added automatically. The CLI cannot add one by hand yet. The Agent Relay desktop app can add them with its per-session switch.
@@ -95,7 +96,9 @@ npx -y agent-relay@next init --hosted
 
 Hosted setup uses the same automatic tool detection and generates a default workspace name. `--name` is optional.
 
-The default server for new hosted workspaces is `https://armadillo.agentrelay.com`. `init --hosted` and `init --key` need no URL; the CLI routes existing hosted keys to their original server. Use `--url` only for a self-hosted server.
+Without the Agent Relay desktop app or an externally managed core, new hosted workspaces default to `https://armadillo.agentrelay.com`. `init --hosted` and `init --key` need no URL; the CLI routes existing hosted keys to their original server. Use `--url` only for a self-hosted server.
+
+**Desktop compatibility:** with the Agent Relay desktop app installed, `init --hosted` creates workspaces on `https://cast.agentrelay.com`. Armadillo workspace keys are refused on that machine because its desktop core currently supports cast only. For a team mixing desktop and CLI-only machines, create the hosted workspace on a desktop machine and share the printed join line privately. CLI-only teammates can join that cast workspace with `init --key`. A running core that `init` did not start, such as a desktop or service core, is treated the same way for server selection.
 
 The output prints the full `npx -y agent-relay@next init --key` command for teammates, with the workspace key filled in. **Share that line privately, like a password.** Run this in a private terminal; keep the line and key out of commits, public chat, screenshots, and agent transcripts.
 
