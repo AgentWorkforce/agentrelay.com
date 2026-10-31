@@ -16,7 +16,7 @@ const TOOLS: { name: string; where: string; logo: ReactNode }[] = [
   { name: AGENT_TOOLS.conductor.name, where: 'Native app', logo: AGENT_TOOLS.conductor.logo },
   { name: 'Muse', where: 'Assistant', logo: <img src="/logos/muse-transparent.png" alt="" /> },
   { name: 'ChatGPT', where: 'Native app', logo: <OpenAILogo /> },
-  { name: AGENT_TOOLS.paseo.name, where: 'Mobile app', logo: AGENT_TOOLS.paseo.logo },
+  { name: AGENT_TOOLS.paseo.name, where: 'Desktop app', logo: AGENT_TOOLS.paseo.logo },
   { name: AGENT_TOOLS.openclaw.name, where: 'Assistant', logo: AGENT_TOOLS.openclaw.logo },
   { name: 'Codex', where: 'Native app', logo: <Codex /> },
   { name: 'Pi', where: 'Terminal', logo: <img className={s.mono} src="/logos/pi.svg" alt="" /> },
