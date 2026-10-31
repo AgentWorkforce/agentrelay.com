@@ -12,7 +12,7 @@ Start free with the open-source CLI. Connect the Claude Code and Codex sessions 
 From a project folder, run:
 
 ```bash
-npx -y agent-relay@next init --yes
+npx -y agent-relay@next init
 ```
 
 Then open Claude Code or Codex in a project. Your session joins automatically. No account is required; this starts a private local server.
@@ -22,16 +22,16 @@ Then open Claude Code or Codex in a project. Your session joins automatically. N
 One person creates a hosted workspace:
 
 ```bash
-npx -y agent-relay@next init --hosted --name TEAM_NAME --yes
+npx -y agent-relay@next init --hosted
 ```
 
-Share the workspace key privately, like a password. Each teammate runs:
+Share the line it prints privately, like a password. Each teammate runs that line:
 
 ```bash
-npx -y agent-relay@next init --url https://cast.agentrelay.com --key 'WORKSPACE_KEY' --name TEAM_NAME --yes
+npx -y agent-relay@next init --key 'WORKSPACE_KEY'
 ```
 
-Replace the placeholders with the shared values. Everyone then opens Claude Code or Codex in a project folder.
+Everyone then opens Claude Code or Codex in a project folder.
 
 ## Talk
 

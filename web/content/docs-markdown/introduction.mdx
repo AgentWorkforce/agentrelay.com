@@ -4,7 +4,7 @@ The free, open-source Agent Relay CLI lets the Claude Code and Codex sessions yo
 
 You need **Node.js 22 or newer**, npm, and at least one supported agent tool installed and ready to use. Run setup from a project folder. Sessions in your home folder or `/tmp` do not join.
 
-Use **`agent-relay@next`** throughout this guide. On October 30, 2026, `@next` is `15.0.0-next.6`; `@latest` is `14.0.0` and does not include this setup flow.
+Use **`agent-relay@next`** throughout this guide. On October 31, 2026, `@next` is `15.0.0-next.9`; `@latest` is `14.0.0` and does not include this setup flow.
 
 ### Session history and privacy
 
@@ -35,12 +35,14 @@ The CLI setup has these session-support limits:
 In a terminal, change into your project folder and run:
 
 ```bash
-npx -y agent-relay@next init --yes
+npx -y agent-relay@next init
 ```
 
-This starts a private local server and sets up message delivery. No account is required. By default, setup connects every supported tool it detects: Claude Code, Codex, OpenCode, Grok, Pi, and Devin. The delivery setup applies to your user on this machine, so sessions in other project folders can join too.
+This starts a private local server and sets up message delivery. No account is required. By default, setup connects every supported tool it detects: Claude Code, Codex, OpenCode, Grok, Pi, and Devin. Setup asks no questions and uses global scope. The delivery setup applies to your user on this machine, so sessions in other project folders can join too. The `-y` in `npx -y` skips npm's own install prompt.
 
 To limit setup to some tools, optionally add `--tools claude,codex` to any `init` command. Otherwise, leave `--tools` out to use automatic detection.
+
+`relay init -i` brings back the interactive questions.
 
 Check that setup reports message injection for your selected tools. If it reports a fallback to an MCP server, resolve the reported problem and rerun setup for the automatic delivery described here.
 
@@ -75,25 +77,25 @@ That inbox belongs to your terminal test sender. Running Claude Code and Codex s
 
 #### 1. One person creates the workspace
 
-Run this from a project folder, replacing `TEAM_NAME` with your team's name:
+Run this from a project folder:
 
 ```bash
-npx -y agent-relay@next init --hosted --name TEAM_NAME --yes
+npx -y agent-relay@next init --hosted
 ```
 
-Hosted setup uses the same automatic tool detection.
+Hosted setup uses the same automatic tool detection and generates a default workspace name. `--name` is optional.
 
-The output includes a workspace key in a suggested `relay workspace join` command. **Treat that key like a password.** Run this in a private terminal and share the key privately with teammates; keep it out of commits, public chat, screenshots, and agent transcripts.
+The output prints the full `npx -y agent-relay@next init --key` command for teammates, with the workspace key filled in. **Share that line privately, like a password.** Run this in a private terminal; keep the line and key out of commits, public chat, screenshots, and agent transcripts.
 
 #### 2. Each teammate runs full setup
 
-From a project folder on each teammate's machine, replace `WORKSPACE_KEY` and `TEAM_NAME` with the shared values:
+From a project folder on each teammate's machine, run the line the creator shared. In this example, `WORKSPACE_KEY` stands for its private workspace key:
 
 ```bash
-npx -y agent-relay@next init --url https://cast.agentrelay.com --key 'WORKSPACE_KEY' --name TEAM_NAME --yes
+npx -y agent-relay@next init --key 'WORKSPACE_KEY'
 ```
 
-Use this full `init` command instead of the printed `workspace join` command. `workspace join` only saves the workspace; it does not configure message delivery into your agents.
+This `init` command joins the hosted workspace and configures message delivery; no `--url` or `--name` is needed. `workspace join` only saves the workspace; it does not configure message delivery into your agents.
 
 #### 3. Open agents and send a round trip
 

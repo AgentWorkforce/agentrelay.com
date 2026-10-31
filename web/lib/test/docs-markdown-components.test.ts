@@ -7,6 +7,26 @@ import { getDoc } from '../docs';
 import { getDocMarkdown, getLlmsFullText, getLlmsText } from '../docs-markdown';
 
 describe('docs markdown export for MDX components', () => {
+  it('uses the published noninteractive init commands in the human guide and both LLM exports', () => {
+    for (const markdown of [
+      getDocMarkdown('getting-started')!.markdown,
+      getDocMarkdown('introduction')!.markdown,
+      getLlmsFullText(),
+    ]) {
+      for (const command of [
+        'npx -y agent-relay@next init',
+        'npx -y agent-relay@next init --hosted',
+        "npx -y agent-relay@next init --key 'WORKSPACE_KEY'",
+      ]) {
+        expect(markdown).toContain(`\`\`\`bash\n${command}\n\`\`\``);
+      }
+      expect(markdown).not.toContain('agent-relay@next init --yes');
+      expect(markdown).not.toContain('agent-relay@next init --url https://cast.agentrelay.com');
+    }
+    expect(getDocMarkdown('introduction')!.markdown).toContain('`relay init -i` brings back the interactive questions.');
+    expect(getLlmsFullText()).toContain('`relay init -i` brings back the interactive questions.');
+  });
+
   it('renders cards and banner links without leaking JSX', () => {
     const doc = getDocMarkdown('introduction');
 
@@ -41,7 +61,7 @@ describe('docs markdown export for MDX components', () => {
     const doc = getDocMarkdown('getting-started');
 
     expect(doc?.title).toBe('Getting started');
-    expect(doc?.markdown).toContain('```bash\nnpx -y agent-relay@next init --yes\n```');
+    expect(doc?.markdown).toContain('```bash\nnpx -y agent-relay@next init\n```');
     expect(getDoc('getting-started')?.toc.map(({ text }) => text)).toEqual(['Solo', 'Team', 'Talk']);
     expect(doc?.markdown).toContain('CLI-only transcripts stay local');
     expect(doc?.markdown).toContain('Start free with the open-source CLI.');
