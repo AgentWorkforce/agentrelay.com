@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { alternateDesktopAsset, DESKTOP_ASSETS, desktopAssetUrl, detectDesktopPlatform, primaryDesktopAsset } from '../desktop-downloads';
+import {
+  DOWNLOAD_CLIENT_HINT_HEADERS,
+  alternateDesktopAsset,
+  DESKTOP_ASSETS,
+  desktopAssetUrl,
+  detectDesktopPlatform,
+  primaryDesktopAsset,
+} from '../desktop-downloads';
 
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
 const LINUX_X64 = 'Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0';
@@ -22,6 +29,20 @@ describe('detectDesktopPlatform', () => {
   it('takes Windows to be x64 unless Client Hints report Arm', () => {
     expect(detectDesktopPlatform(WINDOWS)).toEqual({ os: 'windows', arch: 'x64' });
     expect(detectDesktopPlatform(WINDOWS, { architecture: 'arm' })).toEqual({ os: 'windows', arch: 'arm64' });
+    expect(detectDesktopPlatform(WINDOWS, { architecture: '"arm"' })).toEqual({ os: 'windows', arch: 'arm64' });
+    expect(detectDesktopPlatform(MAC, { architecture: '"x86"' })).toEqual({ os: 'macos', arch: 'x64' });
+  });
+
+  it('reads a reduced user agent from the platform client hint', () => {
+    expect(detectDesktopPlatform('Mozilla/5.0', { platform: '"Windows"' })).toEqual({ os: 'windows', arch: 'x64' });
+    expect(detectDesktopPlatform('Mozilla/5.0', { platform: '"Windows"', architecture: '"arm"' })).toEqual({
+      os: 'windows',
+      arch: 'arm64',
+    });
+    expect(detectDesktopPlatform('Mozilla/5.0', { platform: '"macOS"' })).toEqual({ os: 'macos', arch: 'arm64' });
+    expect(detectDesktopPlatform('Mozilla/5.0', { platform: '"Linux"' })).toEqual({ os: 'linux', arch: 'x64' });
+    expect(detectDesktopPlatform('Mozilla/5.0', { platform: '"Android"' })).toBeNull();
+    expect(detectDesktopPlatform('Mozilla/5.0', { platform: '"Chrome OS"' })).toBeNull();
   });
 
   it('has no build for phones, tablets, or ChromeOS', () => {
@@ -61,5 +82,20 @@ describe('desktop assets', () => {
     expect(desktopAssetUrl('AgentRelay-macOS-arm64.dmg.sha256')).toBe(
       'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-macOS-arm64.dmg.sha256',
     );
+  });
+});
+
+describe('download client hints', () => {
+  it('requests architecture on /download before the page is shown', async () => {
+    // A variable keeps the untyped config out of the TypeScript module graph,
+    // the same way the dashboard header test loads it.
+    const configPath: string = '../../next.config.mjs';
+    const nextConfig = (await import(configPath)).default;
+    const rules = await (await nextConfig('phase-production-server')).headers();
+    const rule = rules.find((entry: { source: string }) => entry.source === '/download');
+    const headers = Object.fromEntries(
+      rule.headers.map((header: { key: string; value: string }) => [header.key, header.value]),
+    );
+    expect(headers).toEqual(DOWNLOAD_CLIENT_HINT_HEADERS);
   });
 });

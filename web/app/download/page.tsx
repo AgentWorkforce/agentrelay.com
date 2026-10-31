@@ -1,10 +1,17 @@
 import type { Metadata } from 'next';
+import { headers } from 'next/headers';
 
 import { WaveDivider } from '../../components/home/icons';
 import sections from '../../components/home/home-sections.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
-import { DESKTOP_ASSETS, type DesktopAsset, type DesktopOs, desktopAssetUrl } from '../../lib/desktop-downloads';
+import {
+  DESKTOP_ASSETS,
+  type DesktopAsset,
+  type DesktopOs,
+  desktopAssetUrl,
+  detectDesktopPlatform,
+} from '../../lib/desktop-downloads';
 import { absoluteUrl } from '../../lib/site';
 import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../landing.module.css';
@@ -38,7 +45,7 @@ const PLATFORMS: readonly { os: DesktopOs; name: string; requirements: string; v
     os: 'windows',
     name: 'Windows',
     requirements:
-      'Installs for your account without admin rights. The build is unsigned, so SmartScreen may ask you to confirm: choose More info › Run anyway.',
+      'Installs for your account without admin rights. The build is unsigned, so SmartScreen may ask you to confirm: choose More info › Run anyway. If Smart App Control blocks the installer, review the release and Microsoft guidance before deciding whether to turn it off; turning it off reduces protection against untrusted apps.',
     verify: 'Get-FileHash <file>',
   },
 ];
@@ -48,7 +55,17 @@ function archName(asset: DesktopAsset): string {
   return asset.arch === 'arm64' ? 'ARM64' : 'x64';
 }
 
-export default function DownloadPage() {
+// Chosen from this request, so a Windows visitor's installer is in the first
+// response instead of appearing after hydration.
+export const dynamic = 'force-dynamic';
+
+export default async function DownloadPage() {
+  const requestHeaders = await headers();
+  const detected = detectDesktopPlatform(requestHeaders.get('user-agent') ?? '', {
+    architecture: requestHeaders.get('sec-ch-ua-arch'),
+    platform: requestHeaders.get('sec-ch-ua-platform'),
+  });
+
   return (
     <div className={`${s.page} ${s.messagingPage} ${s.homeLanding}`}>
       <a className="skip-link" href="#main">
@@ -74,7 +91,7 @@ export default function DownloadPage() {
         <header className={d.hero}>
           <h1 className={d.heroTitle}>Download Agent Relay</h1>
           <p className={d.heroLine}>The desktop app connects the coding agents on your machine to your team’s relay.</p>
-          <DownloadButton />
+          <DownloadButton initialPlatform={detected} />
           <p className={d.agentInstall}>
             On macOS or Linux, your coding agent can install it for you. <a href="/signup/teams">Get the setup prompt</a>
           </p>
