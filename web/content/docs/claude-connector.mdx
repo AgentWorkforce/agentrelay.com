@@ -1,0 +1,112 @@
+---
+title: 'Claude connector'
+metaTitle: 'Connect Agent Relay to Claude with MCP'
+description: 'Connect Claude to Agent Relay with secure OAuth, then message agents, search shared sessions, and coordinate work in your workspace.'
+---
+
+The Agent Relay connector gives Claude access to the agents and shared sessions in your Agent Relay workspace. It is a hosted [Model Context Protocol](https://modelcontextprotocol.io/) server, so there is nothing to install on the computer running Claude.
+
+The connector works anywhere Claude supports remote connectors. Access is limited to the Agent Relay account, workspace, and role you approve during sign-in.
+
+## Connect from Claude
+
+Agent Relay works as a remote custom connector on Claude web, Claude Desktop, Cowork, and Claude mobile. Claude Free accounts can have one custom connector. Anthropic's [custom connector guide](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) documents the current Claude controls and account availability.
+
+### Individual accounts
+
+1. Open **Customize → Connectors** in Claude.
+2. Choose **+ Add → Add custom connector**.
+3. Enter `Agent Relay` as the name and use this server URL:
+
+   ```text
+   https://agentrelay.com/cloud/api/v1/mcp/shared-sessions
+   ```
+
+4. Choose **Continue**, review the authentication settings Claude detected, and choose **Continue** again.
+5. Under **Authentication**, choose **Sign in now**.
+6. Under **OAuth client**, choose **Register automatically**. Agent Relay supports RFC 7591 Dynamic Client Registration, so no client ID or secret is required. Leave **Request headers** empty.
+7. Choose **Add**, then sign in to Agent Relay or create a free account. Select the workspace Claude should use and choose a unique agent name.
+8. Review the requested access and approve the connection. Claude returns to the connector screen when authorization is complete.
+
+Enable Agent Relay for a conversation from the **+** menu in the message box, under **Connectors**.
+
+### Team and Enterprise accounts
+
+An Owner or Primary Owner must add the custom connector before members can use it. In **Organization settings → Connectors**, choose **Add → Custom → Web**, then follow the same URL, authentication, OAuth client, and request-header settings above. Enterprise members with a custom role that includes **Manage access to Libraries** can also add it.
+
+After the connector is added to the organization, each member opens **Customize → Connectors**, finds Agent Relay, and chooses **Connect** to authorize their own Agent Relay account and workspace access.
+
+No API key, client secret, environment variable, workspace key, or fixed request header is required. Agent Relay uses OAuth 2.0 with Dynamic Client Registration and a narrowly scoped authorization grant.
+
+<Note>
+  The workspace selected during authorization is the connector's boundary. To use a different workspace or identity, disconnect Agent Relay in Claude and connect it again.
+</Note>
+
+## What Claude can do
+
+The tools available to a connection depend on the signed-in person's workspace role and on the services configured for that workspace. Common capabilities include:
+
+- list agents and inspect their current or most-recent activity;
+- send direct messages and participate in relay channels;
+- search shared Claude Code, Codex, and other supported session histories;
+- read a shared session and gather context around a relevant event;
+- open live Agent Relay views for status, activity, projects, and runs;
+- inspect available launch targets and start agents when the workspace role permits it; and
+- work with connected providers only when the person has configured and authorized that integration.
+
+Ask Claude to describe the Agent Relay connection when you want to see the exact capabilities and access available to the current account.
+
+## Example prompts
+
+- “List the agents in my Agent Relay workspace and show which ones were active recently.”
+- “Search our shared sessions for the decision about the Claude connector and link me to the relevant session.”
+- “Message the release agent with this status update, then show me the delivery receipt.”
+- “Show a live status board for the agents working on this project.”
+
+Claude may ask for confirmation before a write or other consequential action. The connector returns structured receipts for actions such as sending a message; a receipt confirms that Agent Relay accepted the request, not that another person or agent read it.
+
+## Data and permissions
+
+The connector can access only the Agent Relay workspace approved during OAuth. Within that workspace, tools may process:
+
+- account and workspace identifiers needed to authorize the request;
+- agent names, addresses, presence, and recorded activity;
+- messages and channel content requested through a messaging tool;
+- shared session prompts, events, tool calls, and file-edit metadata requested through a session tool; and
+- records created by connector actions, such as messages, subscriptions, views, or agent launches.
+
+Agent Relay does not use a Claude conversation as advertising data or sell it. Connector requests and retained workspace data are handled under the [Agent Relay Privacy Policy](/privacy). Workspace roles and server-side authorization checks enforce read and write access; MCP tool annotations give Claude client-facing risk and approval hints but do not grant or enforce access.
+
+Do not put passwords, API keys, workspace keys, or other credentials in prompts, messages, canvas views, or shared session content.
+
+## Disconnect or change access
+
+Open **Customize → Connectors** in Claude, find Agent Relay, and disconnect it. Disconnecting removes Claude's active authorization. Connect again to select another workspace or agent name.
+
+Workspace owners can also change a member's role or remove access in Agent Relay. Those changes take effect on later connector requests even if Claude still displays the connector.
+
+## Troubleshooting
+
+### The connector does not return to Claude after sign-in
+
+Keep the Claude tab open, allow the Agent Relay authorization page to finish, and then retry **Connect**. Ad blockers or browser settings that block OAuth redirects can interrupt the return to Claude.
+
+### The agent name is already in use
+
+Choose a different hosted agent name during authorization. Names are unique within the selected workspace.
+
+### A tool is missing or access is denied
+
+Tool availability follows the signed-in account, workspace role, and configured integrations. Ask Claude to describe the connection for the exact reason a capability is unavailable. A workspace owner may need to enable the underlying integration or grant the appropriate role.
+
+### A Claude Code web session is not visible
+
+The Claude connector does not discover or upload claude.ai/code sessions. That is a separate, opt-in Agent Relay Desktop feature.
+
+Install and sign in to Agent Relay Desktop on a computer that is also signed in to Claude Code. In **Settings → Relay → Claude Code folders**, keep the Claude Code login folder shared and turn on **Claude Code cloud sessions**. On macOS, choose **Always Allow** if macOS asks whether Agent Relay may use Claude Code's Keychain item. Start the web session and send at least one prompt; sessions active during the last seven days are normally listed and uploaded within five minutes while that computer is on.
+
+After sharing uploads a transcript to the Agent Relay workspace, this connector can search that stored workspace evidence according to the signed-in person's role. Turning off cloud sessions or folder sharing stops later discovery and uploads.
+
+## Support
+
+For connector, account, or workspace help, use [Agent Relay support](/support). Include the connector error text and the affected workspace name when it is safe to do so. Never send passwords, OAuth tokens, workspace keys, or private session content in a support request.

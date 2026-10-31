@@ -16,6 +16,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Getting started', slug: 'getting-started' },
       { title: 'Desktop app (upgrade)', slug: 'quickstart' },
       { title: 'Introduction', slug: 'introduction' },
+      { title: 'Claude connector', slug: 'claude-connector' },
     ],
   },
   {
