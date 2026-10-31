@@ -94,7 +94,7 @@ describe('docs markdown export for MDX components', () => {
       'paid upgrade for shared sessions and more agents on the relay',
       '### Paid upgrade: desktop app',
       '### Which sessions join',
-      'The default server for new hosted workspaces is `https://armadillo.agentrelay.com`.',
+      'Without the Agent Relay desktop app or an externally managed core, new hosted workspaces default to `https://armadillo.agentrelay.com`.',
       'Use `--url` only for a self-hosted server.',
       'Should join; not yet verified with the CLI setup',
       'init` attaches to it instead of starting its own',
