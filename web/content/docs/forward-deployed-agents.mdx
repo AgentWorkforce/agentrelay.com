@@ -53,6 +53,83 @@ Reply in the thread arelay.to opened. A fresh message to some other address does
 
 The answering agent should run somewhere that stays up. A laptop that sleeps takes the address down with it.
 
+### Run the answering agent on a Freestyle VM
+
+[Freestyle](https://www.freestyle.sh/docs/vms) is one way to give the agent a
+persistent Linux machine without leaving a laptop awake. Use one Agent Relay
+broker per VM; that broker can host several agents. A private snapshot can carry
+the Agent Relay client and the harness binaries you support, while each VM gets
+its own Relay identity and credentials after it boots.
+
+Use the current Freestyle SDK and its `/v5` API. Older `freestyle` packages that
+target `/v1` return `401` even with a valid API key:
+
+```bash
+npm install freestyle@latest
+```
+
+Keep `FREESTYLE_API_KEY`, the Relay workspace key, node tokens, and model
+credentials out of the snapshot. Inject or enroll them at runtime. Installing
+Codex, Claude, Cursor, Gemini, Grok, or another harness does not authenticate
+it; authenticate the harness for the same Linux user that runs the broker.
+
+Before capturing a builder VM, stop its broker and remove only the broker
+identity state that must be unique per clone:
+
+```bash
+agent-relay node down --force
+rm -f -- "$HOME/.local/share/agent-relay/machine-id"
+rm -rf -- "$HOME/.local/share/agent-relay/node-tokens"
+rm -rf -- "$HOME/.local/state/agentworkforce/relay"
+rm -rf -- "$HOME/fleet/freestyle-node/.agentworkforce/relay"
+```
+
+Replace the final path with the builder's actual broker state directory. Do not
+delete the whole `~/.local/share/agent-relay` or `~/.agentworkforce/relay` tree;
+those locations can contain installed binaries and unrelated state.
+
+The machine-id cleanup is required even when the token cache is empty. Agent
+Relay derives an automatic node id from its stable machine seed, working
+directory, and workspace. If a snapshot contains that seed, two clones started
+from the same directory in the same workspace derive the same node id, and the
+second fails with `provider_instance_conflict`. With the seed absent, each clone
+mints its own identity on first startup and keeps it across broker restarts and
+VM pause/resume cycles.
+
+After creating a VM from the clean snapshot, inject `RELAY_WORKSPACE_KEY` through
+the runtime secret environment. Require Agent Relay 11.3.1 or later before
+starting the broker: 11.3.0 and earlier print the workspace key during `node
+up`, which exposes it in a provisioning log or agent transcript. An older
+installation may be started only by a human in a trusted, non-transcribed
+terminal.
+
+Give every VM a unique `BROKER_NAME`. Put the answering agent in the broker's
+non-secret startup configuration, then start the broker from a stable directory
+with `--spawn`. Keep the harness login itself in runtime credential storage, not
+in the snapshot:
+
+```bash
+mkdir -p "$HOME/fleet/freestyle-node/.agentworkforce/relay"
+cd "$HOME/fleet/freestyle-node"
+agent-relay --version # must be 11.3.1 or later
+test -n "${RELAY_WORKSPACE_KEY:-}" || { echo "RELAY_WORKSPACE_KEY is not set" >&2; exit 1; }
+test -n "${BROKER_NAME:-}" || { echo "BROKER_NAME must be unique per VM" >&2; exit 1; }
+agent-relay node up --spawn --background --broker-name "$BROKER_NAME"
+```
+
+Verify from another trusted workspace client that the clones are online with
+different node ids, and send a test message through the published handle to
+confirm the answering agent actually started. A healthy local broker process
+alone does not distinguish a connected node from an identity collision, and it
+does not prove the configured answering agent is online.
+
+Freestyle pause preserves the broker's memory and disk. Relay marks the node
+offline after its heartbeat liveness window and removes its capacity from
+placement. Starting the VM resumes the same broker process and node id. For dev
+and test machines, also set lifecycle bounds such as `idleTimeoutSeconds`,
+`ttlSeconds`, and `autoDeleteSeconds`; see [Freestyle VM
+lifecycle](https://www.freestyle.sh/docs/vms/lifecycle).
+
 ## What the agent should know
 
 Give it the notes your docs do not have: the runbook, the last incident, the reason a default is what it is. The public page can still hold the polished explanation. The agent is who answers the question that comes with a log attached.

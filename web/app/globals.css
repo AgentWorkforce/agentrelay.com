@@ -146,15 +146,15 @@ a {
 }
 
 .btn-primary {
-  background: var(--primary-600);
+  background: var(--cta-bg);
   color: var(--primary-fg);
-  border: 1.5px solid var(--primary-800);
+  border: 1.5px solid var(--cta-line);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .btn-primary:hover {
-    background: var(--primary-700);
-    border-color: var(--primary-800);
+    background: var(--cta-hover);
+    border-color: var(--cta-line);
   }
 }
 

@@ -75,6 +75,7 @@ const productNavIcons: Record<string, NavIcon> = {
 };
 
 const navIcons: Record<string, NavIcon> = {
+  'getting-started': Rocket,
   introduction: Compass,
   quickstart: Rocket,
   sessions: BsChatRightText,

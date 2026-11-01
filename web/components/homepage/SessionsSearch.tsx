@@ -2,8 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 
-import { OpenAILogo } from '../AgentToolLogos';
 import { ClaudeCodeColor, Cursor, Grok, MuseColor, OpenCode } from '../brand-icons';
+import { CodexColor } from '../CodexColor';
 import s from './messenger-section.module.css';
 
 const PEOPLE = {
@@ -23,7 +23,7 @@ type Session = {
 
 const HARNESSES = {
   'Claude Code': <ClaudeCodeColor />,
-  Codex: <OpenAILogo />,
+  Codex: <CodexColor />,
   Cursor: <Cursor />,
   Grok: <Grok />,
   Muse: <MuseColor />,

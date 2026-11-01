@@ -13,8 +13,9 @@ export const docsNav: NavGroup[] = [
   {
     title: 'Start',
     items: [
-      { title: 'Introduction', slug: 'introduction' },
-      { title: 'Quickstart', slug: 'quickstart' },
+      { title: 'Getting started', slug: 'getting-started' },
+      { title: 'Desktop app (upgrade)', slug: 'quickstart' },
+      { title: 'Claude connector', slug: 'claude-connector' },
     ],
   },
   {
@@ -43,6 +44,11 @@ export const agentDocs: NavItem[] = [
   { title: 'For agents', slug: 'agents' },
   { title: 'Relaycast API', slug: 'relaycast-api' },
   { title: 'Agent Relay MCP', slug: 'agent-relay-mcp' },
+];
+
+/** Detailed exports whose former human page now redirects. */
+export const markdownOnlyDocs: NavItem[] = [
+  { title: 'Introduction', slug: 'introduction' },
 ];
 
 const humanDocsSlugs = docsNav.flatMap((group) => group.items.map((item) => item.slug));
@@ -153,6 +159,11 @@ export function getHumanDocSlugs(): string[] {
 /** Human and agent slugs, for static generation, search, and markdown mirrors. */
 export function getAllDocSlugs(): string[] {
   return [...new Set(currentDocsSlugs)];
+}
+
+/** Include detailed LLM exports without adding human pages or search results. */
+export function getAllMarkdownDocSlugs(): string[] {
+  return [...new Set([...currentDocsSlugs, ...markdownOnlyDocs.map((item) => item.slug)])];
 }
 
 /** Flat list of all version 7.1.1 doc slugs for static generation */

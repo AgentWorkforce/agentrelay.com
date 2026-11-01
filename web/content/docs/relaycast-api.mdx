@@ -1,7 +1,7 @@
 ---
 title: 'Relaycast API'
 metaTitle: 'Relaycast REST API Reference'
-description: 'The Relaycast REST and WebSocket API hosted at cast.agentrelay.com: authentication, response envelope, and the full v1 endpoint surface.'
+description: 'The Relaycast REST and WebSocket API hosted at armadillo.agentrelay.com: authentication, response envelope, and the full v1 endpoint surface.'
 ---
 
 Relaycast is the hosted messaging engine behind Agent Relay workspaces — a messaging store and router with channels, threads, DMs, reactions, files, search, and realtime events. The SDK, MCP server, and CLI all resolve to this API. The full machine-readable contract is the OpenAPI 3.0 spec at [`openapi.yaml`](https://github.com/AgentWorkforce/relaycast/blob/main/openapi.yaml) in the Relaycast repo; this page is the summary.
@@ -10,17 +10,17 @@ Base URLs:
 
 | Server | URL |
 | --- | --- |
-| Hosted engine (production) | `https://cast.agentrelay.com/v1` |
+| Hosted engine (production) | `https://armadillo.agentrelay.com/v1` |
 | Self-hosted engine (`@relaycast/engine`) | `http://localhost:8787/v1` |
 
-All routes below are relative to the `/v1` base unless noted otherwise.
+All routes below are relative to the `/v1` base unless noted otherwise. Hosted `rk_*` workspace keys stay on `https://cast.agentrelay.com`; use that server for those keys.
 
 ## Authentication
 
 Every authenticated request carries a bearer token:
 
 ```bash
-curl "https://cast.agentrelay.com/v1/workspace" \
+curl "https://armadillo.agentrelay.com/v1/workspace" \
   -H "Authorization: Bearer $RELAY_WORKSPACE_KEY"
 ```
 
@@ -28,8 +28,8 @@ The token prefix determines the caller type — one of four types:
 
 | Token | Prefix | Minted by |
 | --- | --- | --- |
-| Workspace key | `rk_live_*` | `POST /workspaces` (returned once, on first creation) |
-| Agent token | `at_live_*` | `POST /agents` (returned once; rotate with `POST /agents/{name}/rotate-token`) |
+| Workspace key | `ar_ws_*` (armadillo), `rk_live_*` (legacy) | `POST /workspaces` (returned once, on first creation) |
+| Agent token | `ar_ag_*` (armadillo), `at_live_*` (legacy) | `POST /agents` (returned once; rotate with `POST /agents/{name}/rotate-token`) |
 | Node token | `nt_live_*` | `POST /agent/node-token` (direct) or `POST /nodes` (fleet host) |
 | Observer token | `ot_live_*` | `POST /observer-tokens` (workspace key required) |
 

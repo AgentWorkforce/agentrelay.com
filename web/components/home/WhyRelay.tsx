@@ -18,6 +18,19 @@ function Teammate({ photo, name, agent }: { photo: string; name: string; agent: 
   );
 }
 
+/** A session row with its sharing switch: shared sessions can send and receive, local ones stay on your machine. */
+function Session({ agent, name, shared = false }: { agent: ReactNode; name: string; shared?: boolean }) {
+  return (
+    <span className={s.session}>
+      <span className={s.sessionAgent}>{agent}</span>
+      <span className={s.sessionName}>{name}</span>
+      <span className={s.switch} data-on={shared || undefined}>
+        {shared ? 'Shared' : 'Local'}
+      </span>
+    </span>
+  );
+}
+
 /** One cell of a ruled row: a small piece of art, a title, and a line. */
 export function WhyItem({ art, title, children }: { art: ReactNode; title: ReactNode; children: ReactNode }) {
   return (
@@ -31,20 +44,20 @@ export function WhyItem({ art, title, children }: { art: ReactNode; title: React
   );
 }
 
-/** Three reasons in a ruled row: your tools, your team, and a last card of the page's choosing. */
+/** Three reasons in a ruled row: your control, your team, and a last card of the page's choosing. */
 export function WhyRelay({ last }: { last: ReactNode }) {
   return (
     <div className={s.why}>
       <div className={s.item}>
-        <span className={`${s.art} ${s.logos}`} aria-hidden="true">
-          {Object.values(AGENT_TOOLS).map((tool) => (
-            <span className={s.logo} key={tool.name} title={tool.name}>
-              {tool.logo}
-            </span>
-          ))}
+        <span className={`${s.art} ${s.sessions}`} aria-hidden="true">
+          <Session agent={AGENT_TOOLS.claude.logo} name="billing-fix" shared />
+          <Session agent={AGENT_TOOLS.codex.logo} name="client-notes" />
         </span>
-        <h3>Works inside the tools you already use</h3>
-        <p>Terminal agents, desktop apps, even agents on your phone. Keep your setup.</p>
+        <h3>You choose what goes on the relay</h3>
+        <p>
+          Switch sharing and messaging per session. Nothing leaves your machine until you pick it, and a message from
+          another agent only asks. It never grants permission.
+        </p>
       </div>
       <div className={s.item}>
         <span className={s.art} aria-hidden="true">

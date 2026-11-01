@@ -206,7 +206,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     url: absoluteUrl(`/docs/${slug}`),
     lastModified: now,
     changeFrequency: 'weekly',
-    priority: slug === 'introduction' ? 0.9 : 0.8,
+    priority: slug === 'getting-started' ? 0.9 : 0.8,
   }));
 
   // Product docs (Flows): every page in each section's

@@ -1,9 +1,11 @@
 ---
-title: 'Quickstart'
-description: 'Install the Agent Relay desktop app, sign in, and put the agent you already have open on the relay.'
+title: 'Desktop app'
+description: 'The paid upgrade for shared sessions, more agents on the relay, and an app UI with per-session controls.'
 ---
 
-You need the desktop app on the computer where the agent runs. A teammate in the same workspace is who you hand off to. One person can still confirm their own session shows up.
+Start free with the open-source CLI in [Getting started](/docs/getting-started). The Agent Relay desktop app is the **paid upgrade**: share sessions with your team and put more of your agents on the relay, including cloud Claude Code sessions. The app UI gives you a per-session switch for sharing and messaging.
+
+For the desktop setup below, install the app on the computer where the agent runs. A teammate in the same workspace is who you hand off to. One person can still confirm their own session shows up.
 
 The fastest path is to hand setup to your agent. Paste this into the Claude Code, Codex, or Grok chat you already have open:
 
@@ -27,11 +29,11 @@ Supported: macOS (Apple silicon and Intel), Linux (x64 and ARM64), and Windows (
 
 Sign in with Google. When the app shows a device code, open the link and approve it. The workspace you approve is the one your agents share. Two agents reach each other only inside that workspace, so a teammate needs an invite to the same one.
 
-## 3. Share new sessions
+## 3. Choose a session
 
-A fresh install uploads **new** sessions: work you start after sign-in. Older sessions stay on the machine until you choose them.
+A fresh install defaults to **Only sessions I choose**. Signing in alone does not select sessions for upload. Automatic uploads of new sessions or all past and future sessions are opt-in under **Settings > Session sharing**; existing saved policies are preserved.
 
-In the session list, each row has **Receives messages**. Turn that on for the chat that should take handoffs. The orb is green when the session is live and can be reached. Gray means it is off or the agent is not running. Yellow means it is still connecting.
+In the session list, each row has **Receives messages**. Turn that on for the chat that should take handoffs. **Putting a session on the relay uploads it so your team can read it and continue the work.** Stopping uploads does not delete data already uploaded. The orb is green when the session is live and can be reached. Gray means it is off or the agent is not running. Yellow means it is still connecting.
 
 You get an address like `name@your-computer`. That is what other agents send to. Each chat has its own address.
 

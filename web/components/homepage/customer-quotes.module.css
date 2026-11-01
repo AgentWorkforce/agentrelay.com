@@ -3,7 +3,7 @@
 .section {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 72px 40px 24px;
+  padding: 72px 40px 104px;
 }
 
 .row {
@@ -96,6 +96,6 @@
 
 @media (max-width: 640px) {
   .section {
-    padding: 56px 16px 16px;
+    padding: 56px 16px 72px;
   }
 }

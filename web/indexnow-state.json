@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 75,
+  "count": 77,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -24,6 +24,7 @@
     "https://agentrelay.com/agents/use-cases",
     "https://agentrelay.com/agents/vendor-monitor",
     "https://agentrelay.com/blog",
+    "https://agentrelay.com/blog/do-we-need-forward-deployed-agents",
     "https://agentrelay.com/blog/go-to-bed-wake-up-to-a-finished-product",
     "https://agentrelay.com/blog/humans-and-agents-all-want-the-same-thing-and-its-disgusting",
     "https://agentrelay.com/blog/introducing-agent-relay",
@@ -40,9 +41,10 @@
     "https://agentrelay.com/careers",
     "https://agentrelay.com/company",
     "https://agentrelay.com/directory",
+    "https://agentrelay.com/docs/claude-connector",
     "https://agentrelay.com/docs/flows",
     "https://agentrelay.com/docs/forward-deployed-agents",
-    "https://agentrelay.com/docs/introduction",
+    "https://agentrelay.com/docs/getting-started",
     "https://agentrelay.com/docs/quickstart",
     "https://agentrelay.com/docs/relay-connect",
     "https://agentrelay.com/docs/relayflows/build",

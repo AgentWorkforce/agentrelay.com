@@ -1,7 +1,7 @@
 import matter from 'gray-matter';
 
 import { readContentFile } from './content-store';
-import { agentDocs, docsNav, getAllDocSlugs } from './docs-nav';
+import { agentDocs, docsNav, getAllMarkdownDocSlugs, markdownOnlyDocs } from './docs-nav';
 import { absoluteUrl } from './site';
 import { providersByCategory } from './integrations';
 
@@ -132,8 +132,12 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
     return null;
   }
 
-  const canonicalUrl = `${DOCS_BASE_URL}/${slug}`;
+  const canonicalUrl = `${DOCS_BASE_URL}/${slug === 'introduction' ? 'getting-started' : slug}`;
   const markdownUrl = getDocMarkdownUrl(slug);
+  // Longer agent-facing guidance belongs in the markdown mirror and full
+  // bundle, without expanding the corresponding human-facing MDX page.
+  const supplement = readContentFile(`docs-markdown/${slug}.mdx`);
+  const body = [doc.content, supplement].filter(Boolean).join('\n\n');
   const header = [
     `# ${doc.title}`,
     doc.description ? `\n${doc.description}` : '',
@@ -148,19 +152,19 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
     slug,
     title: doc.title,
     description: doc.description,
-    markdown: `${header}\n${renderMarkdownBody(doc.content)}\n`,
+    markdown: `${header}\n${renderMarkdownBody(body)}\n`,
   };
 }
 
 export function getDocsMarkdownIndex(): string {
-  const docs = getAllDocSlugs()
+  const docs = getAllMarkdownDocSlugs()
     .map((slug) => getDocMarkdown(slug))
     .filter((doc): doc is MarkdownDoc => doc !== null);
 
   const lines = [
     '# Agent Relay Docs (Markdown)',
     '',
-    'These markdown views are generated directly from `web/content/docs/*.mdx`.',
+    'These markdown views are generated from `web/content/docs/*.mdx` and optional `web/content/docs-markdown/*.mdx` supplements.',
     'They are meant for agents, CLI tooling, and raw browser access.',
     '',
     ...docs.map(
@@ -200,7 +204,7 @@ function getCurrentDocsLinks(): DocsLink[] {
 }
 
 function getAgentDocsLinks(): DocsLink[] {
-  return linksFor(agentDocs);
+  return linksFor([...agentDocs, ...markdownOnlyDocs]);
 }
 
 function formatLink({ title, url, description }: DocsLink): string {
@@ -263,13 +267,13 @@ function getMarkdownBundle(slugs: string[]): string[] {
 }
 
 export function getLlmsFullText(): string {
-  const currentDocs = getMarkdownBundle(getAllDocSlugs());
+  const currentDocs = getMarkdownBundle(getAllMarkdownDocSlugs());
   const sections = [
     '# Agent Relay Full Documentation',
     '',
     '> Combined Markdown documentation for Agent Relay.',
     '',
-    'Generated from `web/content/docs/*.mdx`.',
+    'Generated from `web/content/docs/*.mdx` and optional `web/content/docs-markdown/*.mdx` supplements.',
     '',
     '## Documentation',
     '',

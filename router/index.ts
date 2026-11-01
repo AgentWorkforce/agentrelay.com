@@ -130,9 +130,18 @@ function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean 
 // 9728 does the same for protected-resource metadata. These canonical URLs
 // sit outside /cloud, so route them back to the Cloud app that owns the
 // metadata rather than letting the marketing app return a 404.
+//
+// https://agentrelay.com/mcp is the short MCP URL for third-party clients. Its
+// RFC 9728 document is /.well-known/oauth-protected-resource/mcp. The bare
+// root documents are fallbacks for clients that skip path insertion: the
+// protected-resource one describes /mcp, and pre-2025-06 MCP clients look
+// for authorization-server metadata at the MCP server's origin root.
 const CLOUD_OAUTH_WELL_KNOWN_REWRITES: ReadonlyArray<readonly [string, string]> = [
   ["/.well-known/oauth-authorization-server/cloud", "/cloud/.well-known/oauth-authorization-server"],
   ["/.well-known/openid-configuration/cloud", "/cloud/.well-known/openid-configuration"],
+  ["/.well-known/oauth-authorization-server", "/cloud/.well-known/oauth-authorization-server"],
+  ["/.well-known/oauth-protected-resource", "/cloud/.well-known/oauth-protected-resource/mcp"],
+  ["/.well-known/oauth-protected-resource/mcp", "/cloud/.well-known/oauth-protected-resource/mcp"],
 ];
 const CLOUD_PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource/cloud/";
 
@@ -144,6 +153,13 @@ export function rewriteCloudOAuthWellKnownPath(pathname: string): string | null 
     return `/cloud${pathname}`;
   }
   return null;
+}
+
+// The root MCP endpoint is served by the Cloud app at /cloud/mcp. Unlike the
+// discovery documents it takes every method (Streamable HTTP POSTs JSON-RPC,
+// GETs an SSE stream, DELETEs a session), so it is not limited to GET/HEAD.
+export function rewriteCloudMcpPath(pathname: string): string | null {
+  return pathname === "/mcp" || pathname === "/mcp/" ? "/cloud/mcp" : null;
 }
 
 function isCloudPath(pathname: string): boolean {
@@ -748,12 +764,14 @@ const router = {
       return openAiAppsChallenge;
     }
 
-    const oauthWellKnownPath = url.hostname === PRIMARY_HOST
-      && (request.method === "GET" || request.method === "HEAD")
-      ? rewriteCloudOAuthWellKnownPath(url.pathname)
-      : null;
-    if (oauthWellKnownPath) {
-      url.pathname = oauthWellKnownPath;
+    const cloudRewritePath = url.hostname !== PRIMARY_HOST
+      ? null
+      : rewriteCloudMcpPath(url.pathname)
+        ?? (request.method === "GET" || request.method === "HEAD"
+          ? rewriteCloudOAuthWellKnownPath(url.pathname)
+          : null);
+    if (cloudRewritePath) {
+      url.pathname = cloudRewritePath;
       request = new Request(url.toString(), request);
     }
 
