@@ -48,6 +48,7 @@ const footerColumns: FooterColumn[] = [
     title: 'Help',
     links: [
       { label: 'Support', href: '/support' },
+      { label: 'Status', href: 'https://status.agentrelay.com', showExternalIcon: true },
       { label: 'Telemetry', href: '/telemetry' },
       { label: 'Privacy', href: '/privacy' },
       { label: 'Trust', href: '/trust' },
