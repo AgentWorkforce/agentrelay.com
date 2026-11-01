@@ -9,6 +9,19 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /** @type {import('next').NextConfig} */
+// A development-only proxy target from the environment: an HTTP loopback
+// origin with no path, credentials, query or fragment.
+function devLoopbackOrigin(name) {
+  const value = process.env[name];
+  if (process.env.NODE_ENV !== 'development' || !value) return null;
+  const origin = new URL(value);
+  if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) ||
+      origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) {
+    throw new Error(`${name} must be an HTTP loopback origin, for example http://127.0.0.1:3201`);
+  }
+  return origin.origin;
+}
+
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
@@ -107,20 +120,26 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    // Keep Cloud API calls and OAuth cookies on the marketing origin locally.
-    // Only the development server may proxy to a loopback Cloud process.
-    const cloudProxy = [];
-    if (process.env.NODE_ENV === 'development' && process.env.CLOUD_DEV_ORIGIN) {
-      const origin = new URL(process.env.CLOUD_DEV_ORIGIN);
-      if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) ||
-          origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) {
-        throw new Error('CLOUD_DEV_ORIGIN must be an HTTP loopback origin, for example http://127.0.0.1:3101');
-      }
-      cloudProxy.push({ source: '/cloud/:path*', destination: `${origin.origin}/cloud/:path*` });
+    // Keep Cloud API calls, the dashboard SPA and OAuth cookies on the
+    // marketing origin locally. Only the development server may proxy, and
+    // only to loopback processes.
+    const devProxy = [];
+    const cloudOrigin = devLoopbackOrigin('CLOUD_DEV_ORIGIN');
+    if (cloudOrigin) {
+      devProxy.push({ source: '/cloud/:path*', destination: `${cloudOrigin}/cloud/:path*` });
+    }
+    const dashboardOrigin = devLoopbackOrigin('DASHBOARD_DEV_ORIGIN');
+    if (dashboardOrigin) {
+      // The SPA's Vite server uses base /dashboard/; the bare path serves its
+      // entry document so both /dashboard and /dashboard/ open the app.
+      devProxy.push(
+        { source: '/dashboard', destination: `${dashboardOrigin}/dashboard/index.html` },
+        { source: '/dashboard/:path*', destination: `${dashboardOrigin}/dashboard/:path*` },
+      );
     }
     return {
       beforeFiles: [
-        ...cloudProxy,
+        ...devProxy,
         // A dashboard link carries a single-use grant. Exchange it in a route
         // handler before any page, layout, or PostHog code can run; the handler
         // sets the session cookie and 303s to the bare dashboard URL. `value`

@@ -39,10 +39,10 @@ These rules are repository law for every agent session in this checkout.
 
 ## Working discipline
 
-- For paired local Flows onboarding, Google sign-in, and dashboard tests, use
-  `npm run dev:onboarding` from the sibling `../cloud` repo root. Cloud owns the
-  paired launcher; read `../cloud/README.md`'s Local Setup section first. Do not start
-  the two Next apps separately or use `dev:teams` for the Flows journey. Use
+- For local signup, Google sign-in, dashboard, desktop and Flows onboarding
+  tests, use `npm run dev` from the sibling `../cloud` repo root. Cloud owns the
+  launcher; read `../cloud/README.md`'s Local Setup section first. Do not start
+  the Next apps separately or use `dev:teams` for these journeys. Use
   the printed local URL exactly. Identify occupied ports and their owning
   checkouts before stopping servers. Never substitute production for a missing
   local service or print environment secrets. GitHub/ChatGPT auth requires real
