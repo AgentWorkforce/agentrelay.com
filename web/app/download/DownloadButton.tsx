@@ -22,23 +22,38 @@ const EVERY_PLATFORM: readonly DesktopPlatform[] = [
   { os: 'windows', arch: 'x64' },
 ];
 
-/** Leads with the build for the visitor's OS and architecture. */
-export function DownloadButton() {
-  const [platform, setPlatform] = useState<DesktopPlatform | null>(null);
+/**
+ * Leads with the build for the visitor's OS and architecture. `initialPlatform`
+ * is the server's read of this request, so that build is in the first HTML
+ * response. The effect replaces it only once a client-only signal arrives:
+ * touch points (iPad) or Chromium's high-entropy architecture. It does not
+ * apply a user-agent-only guess first, which would overwrite a server
+ * architecture hint with the x64 or Apple-silicon default.
+ */
+export function DownloadButton({ initialPlatform = null }: { initialPlatform?: DesktopPlatform | null }) {
+  const [platform, setPlatform] = useState<DesktopPlatform | null>(initialPlatform);
 
   useEffect(() => {
     let cancelled = false;
     const nav = navigator as UADataNavigator;
-    const detect = (architecture?: string) => {
-      if (!cancelled) {
-        setPlatform(detectDesktopPlatform(nav.userAgent, { architecture, touchPoints: nav.maxTouchPoints }));
-      }
+    const apply = (architecture?: string) => {
+      if (cancelled) return;
+      const next = detectDesktopPlatform(nav.userAgent, { architecture, touchPoints: nav.maxTouchPoints });
+      setPlatform((current) => {
+        // Keep the server's architecture when the client learned nothing new
+        // and still agrees on the OS. An empty hint must not flip Windows on
+        // Arm back to the x64 default.
+        if (!architecture && current && next && next.os === current.os) return current;
+        return next;
+      });
     };
-    detect();
-    nav.userAgentData
-      ?.getHighEntropyValues(['architecture'])
-      .then(({ architecture }) => detect(architecture || undefined))
-      .catch(() => {});
+
+    const pending = nav.userAgentData?.getHighEntropyValues(['architecture']);
+    if (pending) {
+      pending.then(({ architecture }) => apply(architecture || undefined)).catch(() => apply());
+    } else {
+      apply();
+    }
     return () => {
       cancelled = true;
     };

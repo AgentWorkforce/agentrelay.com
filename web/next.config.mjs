@@ -104,6 +104,17 @@ const nextConfig = {
           { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
         ],
       },
+      {
+        // Chromium withholds Sec-CH-UA-Arch until the response asks for it.
+        // Critical-CH retries the navigation with that hint, so the download
+        // page can name the Intel or Arm build in the response the visitor
+        // actually sees. Values match DOWNLOAD_CLIENT_HINT_HEADERS.
+        source: '/download',
+        headers: [
+          { key: 'Accept-CH', value: 'Sec-CH-UA-Arch, Sec-CH-UA-Platform' },
+          { key: 'Critical-CH', value: 'Sec-CH-UA-Arch, Sec-CH-UA-Platform' },
+        ],
+      },
     ];
   },
   async rewrites() {
