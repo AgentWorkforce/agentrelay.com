@@ -118,6 +118,16 @@ const nextConfig = {
       }
       cloudProxy.push({ source: '/cloud/:path*', destination: `${origin.origin}/cloud/:path*` });
     }
+    if (process.env.NODE_ENV === 'development' && process.env.DASHBOARD_DEV_ORIGIN) {
+      const origin = new URL(process.env.DASHBOARD_DEV_ORIGIN);
+      if (origin.protocol !== 'http:' || !['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname) || origin.username || origin.password || origin.pathname !== '/' || origin.search || origin.hash) {
+        throw new Error('DASHBOARD_DEV_ORIGIN must be an HTTP loopback origin');
+      }
+      cloudProxy.push(
+        { source: '/dashboard', destination: `${origin.origin}/dashboard/index.html` },
+        { source: '/dashboard/:path+', destination: `${origin.origin}/dashboard/:path+` },
+      );
+    }
     return {
       beforeFiles: [
         ...cloudProxy,
