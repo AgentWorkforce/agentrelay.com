@@ -1,0 +1,101 @@
+/* A quiet row of customer quotes: up to three small message bubbles (tail at
+   bottom-left) with each speaker's avatar and company under the tail. */
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 72px 40px 104px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+}
+
+.card {
+  display: flex;
+  flex: 1 1 300px;
+  flex-direction: column;
+  max-width: 460px;
+  margin: 0;
+}
+
+.bubble {
+  flex: 1;
+  margin: 0;
+  padding: 20px 22px;
+  border: 1px solid rgba(160, 205, 235, 0.14);
+  border-radius: 16px 16px 16px 3px;
+  background: rgba(6, 16, 28, 0.5);
+}
+
+.bubble p {
+  margin: 0;
+  color: rgba(214, 228, 240, 0.62);
+  font-size: 0.95rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.lead {
+  color: #fff;
+  font-weight: 600;
+}
+
+.key {
+  color: rgba(237, 244, 251, 0.88);
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0 2px;
+}
+
+.avatar {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  overflow: hidden;
+  border: 1px solid rgba(160, 205, 235, 0.2);
+  border-radius: 8px 8px 8px 2px;
+}
+
+/* The source photo is a half-length portrait; crop in on the face. */
+.avatar img {
+  position: absolute;
+  top: -2px;
+  left: -16px;
+  width: 70px;
+  max-width: none;
+  height: 70px;
+}
+
+.name {
+  display: block;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.role {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(214, 228, 240, 0.6);
+  font-size: 0.8rem;
+}
+
+.role img {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: 56px 16px 72px;
+  }
+}

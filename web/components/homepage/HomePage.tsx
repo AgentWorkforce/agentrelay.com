@@ -10,6 +10,7 @@ import { MessengerSection } from './MessengerSection';
 import { MiddleOptions } from './MiddleOptions';
 import { NavActions } from './NavActions';
 import { RotatingHeadline } from './RotatingHeadline';
+import { CustomerQuotes } from './CustomerQuotes';
 import { Hosting } from './Hosting';
 import { SetupItem } from './Setup';
 import { ToolsYouLove } from './ToolsYouLove';
@@ -21,7 +22,7 @@ import headline from './rotating-headline.module.css';
  * The homepage: the "Stop copy-pasting between your agents" hero with one
  * Get started button, then "Let X talk to Y", the move-faster rows, the
  * tools you keep and why it fits how you work, multi-player agent work with
- * your agent's public address, and hosting.
+ * your agent's public address, hosting, and customer quotes.
  */
 export function HomeLandingPage() {
   return (
@@ -60,6 +61,7 @@ export function HomeLandingPage() {
           </div>
           <MessengerSection />
           <Hosting />
+          <CustomerQuotes />
         </div>
       </main>
 
