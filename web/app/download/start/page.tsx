@@ -39,10 +39,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
           {asset ? (
             <div className={s.status}>
               <DownloadMarker href={desktopAssetUrl(asset.file)} />
-              <span>
-                Download started · <a href={desktopAssetUrl(asset.file)}>Download again</a> ·{' '}
-                <a href="/download#all-downloads">Other builds</a>
-              </span>
+              <span>Download started</span>
             </div>
           ) : (
             <p className={s.status}>
@@ -51,6 +48,13 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
           )}
 
           <p className={s.lead}>When it finishes, open Agent Relay and sign in. It connects your agents from there.</p>
+
+          {asset ? (
+            <p className={s.fallback}>
+              Didn’t start? <a href={desktopAssetUrl(asset.file)}>Download again</a> ·{' '}
+              <a href="/download#all-downloads">Other builds</a>
+            </p>
+          ) : null}
         </div>
       </main>
 
