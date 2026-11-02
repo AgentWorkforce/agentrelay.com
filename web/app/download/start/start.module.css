@@ -1,25 +1,61 @@
-/* While the app downloads: the promise in one headline, then the picture of
-   it. Claude Code on one laptop and Codex on another, joined through Agent
-   Relay; a question travels across and the answer comes back, once. Sign-up
-   sits underneath. */
+/* While the app downloads, a split like sign-in: the task on the left (status,
+   the promise, sign-up), and on the right every agent we connect, wired
+   through Agent Relay, with messages travelling sender → relay → recipient. */
 
-.main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  max-width: 880px;
-  margin: 0 auto;
-  padding: 148px 24px 128px;
-  text-align: center;
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+  background: #0b1c2a;
+  color: var(--fg);
 }
 
-/* ---- Download status ---- */
+@media (min-width: 960px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ---- Left: the task ---- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  padding: 36px clamp(24px, 6vw, 88px) 56px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  color: #fff;
+}
+
+.brand svg:first-child {
+  width: auto;
+  height: 26px;
+  color: #74b8e2;
+}
+
+.brand svg:nth-child(2) {
+  width: auto;
+  height: 22px;
+  color: #fff;
+}
+
+.content {
+  width: 100%;
+  max-width: 540px;
+  margin: auto 0;
+  padding-top: 64px;
+}
 
 .status {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 32px;
+  margin: 0 0 28px;
   color: var(--fg-faint);
   font-size: 0.86rem;
 }
@@ -34,13 +70,11 @@
   text-underline-offset: 3px;
 }
 
-/* ---- The promise ---- */
-
 .title {
   margin: 0;
   color: #fff;
   font-family: var(--font-heading), sans-serif;
-  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-size: clamp(2.2rem, 3.6vw, 3.1rem);
   font-weight: 600;
   letter-spacing: -0.04em;
   line-height: 1.04;
@@ -54,196 +88,190 @@
 .lead {
   margin: 16px 0 0;
   color: var(--fg-muted);
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   line-height: 1.5;
   text-wrap: balance;
 }
 
-/* ---- The relay ---- */
-
-.relay {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  width: 100%;
-  margin: 72px 0 0;
-  user-select: none;
-  pointer-events: none;
-}
-
-.agent {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 128px;
-}
-
-.tile {
-  display: grid;
-  place-items: center;
-  width: 76px;
-  height: 76px;
-  border: 1px solid rgba(160, 205, 235, 0.16);
-  border-radius: 22px 22px 22px 5px;
-  background: #0d1825;
-  color: #fff;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.05) inset,
-    0 18px 40px rgba(2, 7, 14, 0.45);
-}
-
-.agentName {
-  margin-top: 14px;
-  color: var(--fg);
-  font-size: 0.95rem;
-  font-weight: 600;
-}
-
-.agentWhere {
-  margin-top: 2px;
-  color: var(--fg-faint);
-  font-size: 0.82rem;
-}
-
-/* The wire sits level with the middle of the tiles. */
-.wire {
-  position: relative;
-  height: 76px;
-}
-
-.line {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  left: 12px;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(116, 184, 226, 0.15), rgba(116, 184, 226, 0.6), rgba(116, 184, 226, 0.15));
-}
-
-.hub {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  display: grid;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  border: 1px solid rgba(116, 184, 226, 0.4);
-  border-radius: 14px 14px 14px 3px;
-  background: #102639;
-  color: #74b8e2;
-  transform: translate(-50%, -50%);
-  animation: relayPulse 5s ease-out both;
-}
-
-.hub svg {
-  width: 24px;
-  height: 20px;
-  color: inherit;
-}
-
-/* Lights up as each message passes through. */
-@keyframes relayPulse {
-  0%,
-  24%,
-  40%,
-  70%,
-  86%,
-  100% {
-    box-shadow: 0 0 0 0 rgba(116, 184, 226, 0);
-  }
-  31%,
-  78% {
-    box-shadow: 0 0 0 8px rgba(116, 184, 226, 0.16);
-  }
-}
-
-/* A packet spans the wire and carries its bubble from one end to the other;
-   translateX percentages are of the wire, so the trip scales with it. */
-.packet {
-  position: absolute;
-  right: 0;
-  left: 0;
-  display: flex;
-  justify-content: center;
-}
-
-.ask {
-  bottom: calc(50% + 34px);
-  animation: ask 1.8s cubic-bezier(0.45, 0, 0.25, 1) 0.6s both;
-}
-
-.answer {
-  top: calc(50% + 34px);
-  animation: answer 1.8s cubic-bezier(0.45, 0, 0.25, 1) 3s both;
-}
-
-.bubble {
-  padding: 8px 12px;
-  font-size: 0.85rem;
-  line-height: 1.3;
-  white-space: nowrap;
-}
-
-.ask .bubble {
-  border-radius: 12px 12px 12px 3px;
-  background: #2d6a9c;
-  color: #fff;
-}
-
-.answer .bubble {
-  border: 1px solid rgba(160, 205, 235, 0.2);
-  border-radius: 12px 12px 3px 12px;
-  background: #13283a;
-  color: var(--fg);
-}
-
-@keyframes ask {
-  0% {
-    opacity: 0;
-    transform: translateX(-30%);
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(30%);
-  }
-}
-
-@keyframes answer {
-  0% {
-    opacity: 0;
-    transform: translateX(30%);
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(-30%);
-  }
-}
-
-/* ---- Sign-up ---- */
-
 .signup {
-  margin-top: 88px;
+  margin-top: 48px;
 }
 
 .signup h2 {
   margin: 0;
   color: var(--fg);
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
 }
 
 .providers {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 260px));
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  max-width: 340px;
+  margin-top: 14px;
+}
+
+/* ---- Right: the network ---- */
+
+.showcase {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: 56px 24px;
+  border-left: 1px solid rgba(160, 205, 235, 0.08);
+  background:
+    radial-gradient(60% 60% at 50% 50%, rgba(116, 184, 226, 0.14), transparent 70%),
+    #08131d;
+}
+
+/* Cells are 1 unit with 0.22-unit gaps, so wire endpoints in page.tsx line
+   up with tile centres at any --cell. */
+.network {
+  --cell: 64px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, var(--cell));
+  grid-template-rows: repeat(5, var(--cell));
+  gap: calc(var(--cell) * 0.22);
+  margin: 0;
+  user-select: none;
+  pointer-events: none;
+}
+
+.wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.wires line {
+  stroke: rgba(116, 184, 226, 0.16);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+/* A short bright dash runs the wire; it is invisible between trips. */
+.wires .pulseIn,
+.wires .pulseOut {
+  stroke: #c4e6fb;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 24 200;
+  filter: drop-shadow(0 0 3px rgba(116, 184, 226, 0.9));
+  opacity: 0;
+  animation: 9s linear infinite;
+}
+
+.wires .pulseIn {
+  animation-name: wireIn;
+}
+
+.wires .pulseOut {
+  animation-name: wireOut;
+}
+
+/* Sender → relay: from the tile end of the wire to the hub end. */
+@keyframes wireIn {
+  0% {
+    stroke-dashoffset: -100;
+    opacity: 1;
+  }
+  6.6% {
+    stroke-dashoffset: 24;
+    opacity: 1;
+  }
+  6.7%,
+  100% {
+    stroke-dashoffset: 24;
+    opacity: 0;
+  }
+}
+
+/* Relay → recipient: from the hub end out to the tile. */
+@keyframes wireOut {
+  0% {
+    stroke-dashoffset: 24;
+    opacity: 1;
+  }
+  6.6% {
+    stroke-dashoffset: -100;
+    opacity: 1;
+  }
+  6.7%,
+  100% {
+    stroke-dashoffset: -100;
+    opacity: 0;
+  }
+}
+
+.agent {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  border: 1px solid rgba(160, 205, 235, 0.14);
+  border-radius: 18px 18px 18px 4px;
+  background: #0f1d2b;
+  box-shadow: 0 12px 28px rgba(2, 7, 14, 0.4);
+}
+
+.agent svg,
+.agent img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.mono {
+  filter: brightness(0) invert(1);
+}
+
+/* A tile lights up as it sends, and again as a message lands. */
+.hit {
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgba(159, 211, 245, 0.75),
+    0 0 24px rgba(116, 184, 226, 0.5);
+  opacity: 0;
+  animation: hit 9s ease-out infinite;
+}
+
+@keyframes hit {
+  0% {
+    opacity: 1;
+  }
+  10%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.hub {
+  display: grid;
+  place-items: center;
+  grid-row: 2 / 5;
+  grid-column: 2 / 5;
+  place-self: center;
+  width: calc(var(--cell) * 1.5);
+  height: calc(var(--cell) * 1.5);
+  border: 1px solid rgba(116, 184, 226, 0.45);
+  border-radius: 26px 26px 26px 6px;
+  background: #102639;
+  box-shadow:
+    0 0 0 10px rgba(116, 184, 226, 0.05),
+    0 24px 60px rgba(2, 7, 14, 0.5);
+  color: #74b8e2;
+}
+
+.hub svg {
+  width: 52%;
+  height: auto;
+  color: inherit;
 }
 
 /* ---- The download marker ---- */
@@ -259,8 +287,7 @@
   border-radius: 9px 9px 9px 2px;
   transition:
     background-color 240ms ease,
-    border-color 240ms ease,
-    color 240ms ease;
+    border-color 240ms ease;
 }
 
 .markerDownload {
@@ -304,10 +331,10 @@
   transform: scale(0.6);
 }
 
+/* Settled: the brand blue filled in, never a green that the page has nowhere else. */
 .markerDownload[data-settled] {
-  border-color: rgba(40, 200, 64, 0.5);
-  background: rgba(40, 200, 64, 0.12);
-  color: #4cd964;
+  border-color: rgba(116, 184, 226, 0.6);
+  background: rgba(116, 184, 226, 0.16);
 }
 
 .markerDownload[data-settled] .arrow,
@@ -326,18 +353,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .arrow,
-  .hub {
+  .hit,
+  .wires .pulseIn,
+  .wires .pulseOut {
     animation: none;
-  }
-
-  .ask {
-    animation: none;
-    transform: translateX(30%);
-  }
-
-  .answer {
-    animation: none;
-    transform: translateX(-30%);
   }
 
   .marker,
@@ -348,107 +367,23 @@
   }
 }
 
-/* ---- Narrow screens: the relay turns vertical, Claude Code above Codex,
-   and the messages travel up and down beside the line ---- */
+/* ---- Stacked: the task first, the network beneath ---- */
 
-@keyframes askDown {
-  0% {
-    opacity: 0;
-    transform: translateY(-30%);
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(30%);
-  }
-}
-
-@keyframes answerUp {
-  0% {
-    opacity: 0;
-    transform: translateY(30%);
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(-30%);
-  }
-}
-
-@media (max-width: 640px) {
-  .main {
-    padding: 112px 16px 88px;
+@media (max-width: 959px) {
+  .content {
+    padding-top: 56px;
   }
 
-  .relay {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    margin-top: 56px;
+  .showcase {
+    border-top: 1px solid rgba(160, 205, 235, 0.08);
+    border-left: 0;
+  }
+
+  .network {
+    --cell: min(52px, calc((100vw - 64px) / 5.88));
   }
 
   .agent {
-    width: auto;
-  }
-
-  .wire {
-    width: 100%;
-    height: 220px;
-  }
-
-  .line {
-    top: 12px;
-    right: auto;
-    bottom: 12px;
-    left: 50%;
-    width: 1px;
-    height: auto;
-    background: linear-gradient(180deg, rgba(116, 184, 226, 0.15), rgba(116, 184, 226, 0.6), rgba(116, 184, 226, 0.15));
-  }
-
-  .packet {
-    top: 0;
-    bottom: 0;
-    align-items: center;
-  }
-
-  .ask {
-    right: 0;
-    bottom: 0;
-    left: calc(50% + 34px);
-    justify-content: flex-start;
-    animation-name: askDown;
-  }
-
-  .answer {
-    top: 0;
-    right: calc(50% + 34px);
-    left: 0;
-    justify-content: flex-end;
-    animation-name: answerUp;
-  }
-
-  .bubble {
-    max-width: 136px;
-    font-size: 0.78rem;
-    text-align: left;
-    white-space: normal;
-  }
-
-  .providers {
-    grid-template-columns: minmax(0, 320px);
-  }
-}
-
-@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
-  .ask {
-    transform: translateY(30%);
-  }
-
-  .answer {
-    transform: translateY(-30%);
+    padding: 14px;
   }
 }
