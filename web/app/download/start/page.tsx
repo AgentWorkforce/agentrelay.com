@@ -22,7 +22,8 @@ export const metadata: Metadata = {
 /** One line on what to do with the file, shown under the download status. */
 const INSTALL_HINT: Record<DesktopOs, (asset: DesktopAsset) => string> = {
   macos: () => 'Open it and drag Agent Relay into Applications.',
-  windows: () => 'Unsigned build: if SmartScreen asks, choose More info › Run anyway.',
+  windows: (asset) =>
+    `${asset.file.endsWith('.zip') ? 'Unzip it and open Agent Relay.' : 'Run the installer.'} If SmartScreen asks, choose More info › Run anyway.`,
   linux: (asset) => (asset.file.endsWith('.deb') ? `sudo apt install ./${asset.file}` : 'Unpack it for a per-user install.'),
 };
 
