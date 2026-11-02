@@ -5,6 +5,7 @@ import {
   desktopAssetByFile,
   desktopAssetUrl,
   desktopStartHref,
+  shouldStartDownload,
   detectDesktopPlatform,
   primaryDesktopAsset,
 } from '../desktop-downloads';
@@ -80,5 +81,23 @@ describe('download start page', () => {
     }
     expect(desktopAssetByFile('evil.exe')).toBeUndefined();
     expect(desktopAssetByFile(undefined)).toBeUndefined();
+  });
+});
+
+describe('shouldStartDownload', () => {
+  const href = desktopAssetUrl('AgentRelay-macOS-arm64.dmg');
+
+  it('downloads on a fresh page load', () => {
+    expect(shouldStartDownload(href, 'navigate', new Set())).toBe(true);
+  });
+
+  it('does not download again on a reload or Back/Forward', () => {
+    expect(shouldStartDownload(href, 'reload', new Set())).toBe(false);
+    expect(shouldStartDownload(href, 'back_forward', new Set())).toBe(false);
+  });
+
+  it('does not download again when this document already started the build', () => {
+    expect(shouldStartDownload(href, 'navigate', new Set([href]))).toBe(false);
+    expect(shouldStartDownload(desktopAssetUrl('AgentRelay-Linux-x64.deb'), 'navigate', new Set([href]))).toBe(true);
   });
 });

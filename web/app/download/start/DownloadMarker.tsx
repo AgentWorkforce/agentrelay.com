@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { shouldStartDownload } from '../../../lib/desktop-downloads';
 import s from './start.module.css';
 
 /** Long enough for the arrow to drop into the tray twice before it settles. */
@@ -25,8 +26,7 @@ export function DownloadMarker({ href }: { href: string }) {
   useEffect(() => {
     if (alreadyStarted.current === null) {
       const [navigation] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-      alreadyStarted.current =
-        startedThisDocument.has(href) || navigation?.type === 'reload' || navigation?.type === 'back_forward';
+      alreadyStarted.current = !shouldStartDownload(href, navigation?.type, startedThisDocument);
       if (!alreadyStarted.current) {
         startedThisDocument.add(href);
         window.location.assign(href);

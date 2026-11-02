@@ -38,6 +38,16 @@ export function desktopStartHref(file: string): string {
   return `/download/start?build=${encodeURIComponent(file)}`;
 }
 
+/**
+ * Whether the start page should download `href` now: on a fresh page load,
+ * but not on a reload or Back/Forward, and not when this document already
+ * started it (a return through client-side navigation remounts the page).
+ */
+export function shouldStartDownload(href: string, navigationType: string | undefined, startedThisDocument: ReadonlySet<string>): boolean {
+  if (startedThisDocument.has(href)) return false;
+  return navigationType !== 'reload' && navigationType !== 'back_forward';
+}
+
 export function desktopAssetByFile(file: string | undefined): DesktopAsset | undefined {
   return DESKTOP_ASSETS.find((asset) => asset.file === file);
 }
