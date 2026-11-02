@@ -1,152 +1,267 @@
-/* Setting up after a download: one left-aligned column on navy, a title, then
-   four steps on a single rail. Each step's marker is the relay's message shape
-   (tail at bottom-left): green once done, blue for the step you are on, an
-   outline for what comes next. Step one's marker animates the download. */
+/* While the app downloads: the two things worth knowing, said once. Left, the
+   download's status, the promise (install it, then forget it) and sign-up.
+   Right, a Claude Code window that plays the other half: you ask, your agent
+   messages a teammate's agent, the answer lands in your chat, while Agent
+   Relay sits in the corner, running. */
 
 .main {
-  max-width: 640px;
+  display: grid;
+  grid-template-areas:
+    'copy demo'
+    'signup demo';
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  column-gap: 72px;
+  max-width: 1160px;
   margin: 0 auto;
-  padding: 152px 24px 120px;
+  padding: 152px 40px 128px;
 }
 
-.header {
-  margin-bottom: 56px;
+.copy {
+  grid-area: copy;
 }
 
-.title {
+.demo {
+  grid-area: demo;
+  align-self: center;
   margin: 0;
-  color: #fff;
-  font-family: var(--font-heading), sans-serif;
-  font-size: clamp(2.25rem, 5vw, 3rem);
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  line-height: 1.05;
 }
 
-.lead {
-  margin: 14px 0 0;
-  color: var(--fg-muted);
-  font-size: 1.1rem;
-  line-height: 1.55;
+.signup {
+  grid-area: signup;
 }
 
-/* ---- The rail ---- */
+/* ---- Download status ---- */
 
-.steps {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.step {
-  position: relative;
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
-  gap: 20px;
-  padding-bottom: 40px;
-}
-
-.step:not(:last-child)::before {
-  position: absolute;
-  top: 44px;
-  bottom: 8px;
-  left: 17.5px;
-  width: 1px;
-  background: rgba(160, 205, 235, 0.16);
-  content: '';
-}
-
-.step[data-state='done']:not(:last-child)::before {
-  background: linear-gradient(180deg, rgba(40, 200, 64, 0.45), rgba(160, 205, 235, 0.16));
-}
-
-.marker {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid rgba(160, 205, 235, 0.22);
-  border-radius: 11px 11px 11px 3px;
-  color: var(--fg-faint);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.85rem;
-  transition:
-    background-color 240ms ease,
-    border-color 240ms ease,
-    color 240ms ease;
-}
-
-.step[data-state='current'] .marker {
-  border-color: transparent;
-  background: #2d6a9c;
-  color: #fff;
-}
-
-.stepBody {
-  padding-top: 6px;
-}
-
-.stepBody h2 {
-  margin: 0;
-  color: #fff;
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.stepBody p {
-  margin: 8px 0 0;
-  color: var(--fg-muted);
-  font-size: 0.97rem;
-  line-height: 1.6;
-  text-wrap: pretty;
-}
-
-.step[data-state='next'] h2 {
-  color: rgba(237, 244, 251, 0.78);
-}
-
-.step[data-state='next'] p {
-  color: rgba(168, 184, 200, 0.75);
-}
-
-.stepBody p a,
-.more a {
-  color: #74b8e2;
-  text-decoration: none;
-}
-
-.stepBody p a:hover,
-.more a:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.stepBody strong {
-  color: var(--fg);
-  font-weight: 600;
-}
-
-.stepBody code {
-  padding: 1px 6px;
-  border-radius: 6px 6px 6px 2px;
-  background: rgba(116, 184, 226, 0.12);
-  color: #cfe6f5;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.88em;
-}
-
-.stepBody .file {
-  display: inline-flex;
+.status {
+  display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 12px;
+  margin: 0 0 40px;
+}
+
+.status p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.statusTitle {
   color: var(--fg);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.82rem;
 }
 
-/* ---- Step one: the download marker ---- */
+.statusHint {
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+}
+
+.status a,
+.signup p a {
+  color: #74b8e2;
+  text-decoration: none;
+}
+
+.status a:hover,
+.signup p a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- The promise ---- */
+
+.title {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+}
+
+/* One sentence per line: the promise reads as two beats. */
+.title span {
+  display: block;
+}
+
+.lead {
+  max-width: 42ch;
+  margin: 20px 0 0;
+  color: var(--fg-muted);
+  font-size: 1.12rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+/* ---- Sign-up ---- */
+
+.signup {
+  margin-top: 44px;
+}
+
+.signup h2 {
+  margin: 0;
+  color: var(--fg);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.providers {
+  display: grid;
+  gap: 10px;
+  max-width: 340px;
+  margin-top: 14px;
+}
+
+.signup p {
+  margin: 14px 0 0;
+  color: var(--fg-faint);
+  font-size: 0.86rem;
+}
+
+/* ---- The window ---- */
+
+.window {
+  overflow: hidden;
+  border: 1px solid rgba(160, 205, 235, 0.14);
+  border-radius: 20px 20px 20px 4px;
+  background: #0a1520;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 30px 80px rgba(2, 7, 14, 0.5),
+    0 8px 24px rgba(2, 7, 14, 0.35);
+  user-select: none;
+  pointer-events: none;
+}
+
+.windowBar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(160, 205, 235, 0.1);
+  color: var(--fg-muted);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+/* Agent Relay in the corner: present, running, out of the way. */
+.running {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 3px 9px;
+  border-radius: 8px 8px 8px 2px;
+  background: rgba(40, 200, 64, 0.1);
+  color: #7fe08f;
+  font-size: 0.74rem;
+}
+
+.runningDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #28c840;
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 300px;
+  padding: 22px;
+}
+
+.line {
+  margin: 0;
+  font-size: 0.93rem;
+  line-height: 1.5;
+  animation: arrive 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.you {
+  align-self: flex-end;
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px 14px 3px 14px;
+  background: #2d6a9c;
+  color: #fff;
+  animation-delay: 400ms;
+}
+
+.sent {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.78rem;
+  animation-delay: 1300ms;
+}
+
+.relayMark svg {
+  display: block;
+  width: 16px;
+  height: 13px;
+  color: #74b8e2;
+}
+
+.incoming {
+  max-width: 88%;
+  padding: 12px 14px;
+  border: 1px solid rgba(116, 184, 226, 0.28);
+  border-radius: 14px 14px 14px 3px;
+  background: rgba(16, 38, 57, 0.7);
+  color: var(--fg);
+  animation-delay: 2600ms;
+}
+
+.from {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  color: #9ccbea;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.74rem;
+}
+
+.agent {
+  max-width: 88%;
+  color: var(--fg);
+  animation-delay: 3500ms;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- The download marker ---- */
+
+.marker {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(160, 205, 235, 0.22);
+  border-radius: 10px 10px 10px 3px;
+  transition:
+    background-color 240ms ease,
+    border-color 240ms ease,
+    color 240ms ease;
+}
 
 .markerDownload {
   overflow: hidden;
@@ -156,9 +271,9 @@
 
 .markerDownload svg {
   position: absolute;
-  inset: 8px;
-  width: 20px;
-  height: 20px;
+  inset: 7px;
+  width: 18px;
+  height: 18px;
 }
 
 /* The arrow drops into the tray twice while the download starts. */
@@ -210,7 +325,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .arrow {
+  .arrow,
+  .line {
     animation: none;
   }
 
@@ -222,85 +338,32 @@
   }
 }
 
-/* ---- Step two: sign-up ---- */
+/* ---- One column ---- */
 
-.providers {
-  display: grid;
-  gap: 10px;
-  max-width: 340px;
-  margin-top: 18px;
-}
-
-.stepBody .aside {
-  color: var(--fg-faint);
-  font-size: 0.85rem;
-}
-
-/* ---- Hand-off and help ---- */
-
-.handoff {
-  margin: 8px 0 0 56px;
-  padding: 18px 18px 18px 20px;
-  border: 1px solid rgba(160, 205, 235, 0.14);
-  border-radius: 16px 16px 16px 3px;
-}
-
-.handoff p {
-  margin: 0 0 12px;
-  color: var(--fg-muted);
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-
-.prompt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 10px 10px 14px;
-  border-radius: 10px 10px 10px 2px;
-  background: #08111a;
-}
-
-.prompt code {
-  overflow-wrap: anywhere;
-  color: #cfe6f5;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.84rem;
-}
-
-/* 32px to the eye, a 44px target to the finger. */
-.prompt .copy {
-  position: relative;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  color: var(--fg-muted);
-}
-
-.prompt .copy::before {
-  position: absolute;
-  inset: -6px;
-  content: '';
-}
-
-.more {
-  margin: 28px 0 0 56px;
-  color: var(--fg-faint);
-  font-size: 0.9rem;
-}
-
-@media (max-width: 640px) {
+@media (max-width: 920px) {
   .main {
-    padding: 116px 16px 88px;
+    grid-template-areas:
+      'copy'
+      'demo'
+      'signup';
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    max-width: 620px;
+    padding: 128px 24px 96px;
   }
 
-  .step {
-    gap: 14px;
+  .demo {
+    margin-top: 40px;
+  }
+}
+
+@media (max-width: 520px) {
+  .main {
+    padding: 112px 16px 80px;
   }
 
-  .handoff,
-  .more {
-    margin-left: 0;
+  .chat {
+    min-height: 0;
+    padding: 18px;
   }
 }
