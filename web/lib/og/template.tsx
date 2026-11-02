@@ -51,7 +51,7 @@ export type LoadedFonts = {
  * A missing glyph silently falls back to satori's default font, which would
  * break the typography, so the subset must be exhaustive for what we render.
  */
-const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?\'’"#·—–-→@()/&%';
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?\'’“”"#·—–-→@()/&%\u00a0\u2011';
 
 /**
  * Fetch a Google Font for embedding into the OG image.

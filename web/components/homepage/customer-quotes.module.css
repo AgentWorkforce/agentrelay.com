@@ -48,6 +48,11 @@
   color: rgba(237, 244, 251, 0.88);
 }
 
+.accent {
+  color: #74b8e2;
+  font-weight: 600;
+}
+
 .who {
   display: flex;
   align-items: center;

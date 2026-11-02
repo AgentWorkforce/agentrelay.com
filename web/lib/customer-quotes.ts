@@ -5,8 +5,8 @@
  */
 export type QuoteSegment = {
   text: string;
-  /** `lead` is the bold opening line, `key` the brighter claim, `plain` the rest. */
-  tone: 'lead' | 'key' | 'plain';
+  /** `lead` is bold white, `key` a brighter claim, `accent` the brand-blue takeaway, `plain` the rest. */
+  tone: 'lead' | 'key' | 'accent' | 'plain';
 };
 
 export type CustomerQuote = {
@@ -54,8 +54,9 @@ export const SERG_POST: CustomerQuote = {
   avatar: '/img/customers/serg.jpg',
   post: { href: 'https://x.com/sg_HGA/status/2116514305143123972', replyingTo: '@UltraLinx' },
   segments: [
-    { tone: 'lead', text: '@agent_relay does this automatically with no workarounds.' },
-    { tone: 'plain', text: 'Highly recommend' },
+    { tone: 'plain', text: '@agent_relay does this automatically' },
+    { tone: 'lead', text: 'with no workarounds.' },
+    { tone: 'accent', text: 'Highly recommend' },
   ],
 };
 

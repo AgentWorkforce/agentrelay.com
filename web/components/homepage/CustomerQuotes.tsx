@@ -5,6 +5,7 @@ import s from './customer-quotes.module.css';
 const toneClass: Record<QuoteSegment['tone'], string> = {
   lead: s.lead,
   key: s.key,
+  accent: s.accent,
   plain: s.plain,
 };
 
