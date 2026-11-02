@@ -86,7 +86,8 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
             <div className={s.status}>
               <DownloadMarker href={desktopAssetUrl(asset.file)} />
               <span>
-                Download started · <a href={desktopAssetUrl(asset.file)}>Download again</a>
+                Download started · <a href={desktopAssetUrl(asset.file)}>Download again</a> ·{' '}
+                <a href="/download#all-downloads">Other builds</a>
               </span>
             </div>
           ) : (
