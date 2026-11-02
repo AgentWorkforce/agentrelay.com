@@ -7,27 +7,33 @@ import s from './start.module.css';
 /** Long enough for the arrow to drop into the tray twice before it settles. */
 const SETTLE_MS = 1900;
 
+/** Builds started in this document; client-side navigation back here keeps it. */
+const startedThisDocument = new Set<string>();
+
 /**
  * Step one's marker. Opening the page starts the download (GitHub answers the
  * release link with an attachment, so the browser saves the file and stays
  * here); the arrow drops into the tray while it starts, then becomes a check.
- * A reload, or coming Back from sign-in, shows the check without downloading
- * the file a second time; every fresh visit from a download button downloads.
+ * A reload, a Back from sign-in, or returning through in-app navigation shows
+ * the check without downloading the file a second time; every fresh page load
+ * from a download button downloads.
  */
 export function DownloadMarker({ href }: { href: string }) {
-  const handled = useRef(false);
+  const alreadyStarted = useRef<boolean | null>(null);
   const [settled, setSettled] = useState(false);
 
   useEffect(() => {
-    const [navigation] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
-    const alreadyStarted = navigation?.type === 'reload' || navigation?.type === 'back_forward';
-
-    if (!handled.current) {
-      handled.current = true;
-      if (!alreadyStarted) window.location.assign(href);
+    if (alreadyStarted.current === null) {
+      const [navigation] = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+      alreadyStarted.current =
+        startedThisDocument.has(href) || navigation?.type === 'reload' || navigation?.type === 'back_forward';
+      if (!alreadyStarted.current) {
+        startedThisDocument.add(href);
+        window.location.assign(href);
+      }
     }
 
-    const instant = alreadyStarted || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const instant = alreadyStarted.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const timer = setTimeout(() => setSettled(true), instant ? 0 : SETTLE_MS);
     return () => clearTimeout(timer);
   }, [href]);
