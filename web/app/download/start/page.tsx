@@ -5,16 +5,13 @@ import { LockKeyhole, MessagesSquare, MonitorCog } from 'lucide-react';
 import { AGENT_TOOLS, type AgentTool } from '../../../components/home/AgentMarks';
 import { LogoIcon, LogoWordmark } from '../../../components/SiteNav';
 import { desktopAssetByFile, desktopAssetUrl } from '../../../lib/desktop-downloads';
-import { signInHref } from '../../../lib/login';
 import { absoluteUrl } from '../../../lib/site';
-import { teamsGoogleAuthHref } from '../../../lib/teams-cloud';
-import { SignInButton } from '../../login/sign-in-button';
 import { DownloadMarker } from './DownloadMarker';
 import s from './start.module.css';
 
 export const metadata: Metadata = {
   title: 'Downloading Agent Relay',
-  description: 'What the Agent Relay app does on your computer, and why it runs there. Create your account while it downloads.',
+  description: 'What the Agent Relay app does on your computer, and what to do once it has downloaded.',
   alternates: { canonical: absoluteUrl('/download') },
   robots: { index: false, follow: true },
 };
@@ -53,17 +50,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
             </p>
           )}
 
-          <p className={s.lead}>Create your account while it downloads. Then open the app and sign in with the same account.</p>
-
-          <section className={s.signup} aria-labelledby="signup-title">
-            <h2 id="signup-title" className="sr-only">
-              Create your account
-            </h2>
-            <div className={s.providers}>
-              <SignInButton provider="google" href={teamsGoogleAuthHref('download_start')} />
-              <SignInButton provider="microsoft" href={signInHref('microsoft', { next: '/teams/connect' })} />
-            </div>
-          </section>
+          <p className={s.lead}>When it finishes, open Agent Relay and sign in. It connects your agents from there.</p>
         </div>
       </main>
 

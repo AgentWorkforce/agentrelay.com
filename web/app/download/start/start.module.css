@@ -1,5 +1,5 @@
 /* While the app downloads, a split like sign-in: the task on the left (the promise,
-   the download status, the next step, sign-up), and on the right, plainly, what the
+   the download status, the next step), and on the right, plainly, what the
    app does on your computer and what it shares. Nothing moves but the
    download marker. */
 
@@ -90,16 +90,7 @@
   text-wrap: balance;
 }
 
-.signup {
-  margin-top: 36px;
-}
 
-.providers {
-  display: grid;
-  gap: 10px;
-  max-width: 340px;
-  margin-top: 14px;
-}
 
 /* ---- Right: what it does on your computer ---- */
 
