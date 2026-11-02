@@ -11,13 +11,18 @@ export type QuoteSegment = {
 
 export type CustomerQuote = {
   name: string;
+  /** Job title, or a social handle when the quote is a public post. */
   title: string;
-  company: string;
+  company?: string;
   /** Public paths under `web/public`. */
   avatar: string;
-  companyLogo: string;
+  /** The avatar is a half-length portrait and is cropped in on the face. */
+  avatarPortrait?: boolean;
+  companyLogo?: string;
   /** Shareable rendered card, linkable at agentrelay.com<image>. */
-  image: string;
+  image?: string;
+  /** The public post the quote comes from. */
+  post?: { href: string; replyingTo?: string };
   segments: QuoteSegment[];
 };
 
@@ -26,6 +31,7 @@ export const POMERADO_QUOTE: CustomerQuote = {
   title: 'Founder',
   company: 'Pomerado',
   avatar: '/img/customers/akshay-manglik.png',
+  avatarPortrait: true,
   companyLogo: '/img/customers/pomerado.png',
   image: '/img/customer-quote-pomerado.png',
   segments: [
@@ -42,5 +48,16 @@ export const POMERADO_QUOTE: CustomerQuote = {
   ],
 };
 
+export const SERG_POST: CustomerQuote = {
+  name: 'Serg',
+  title: '@sg_HGA',
+  avatar: '/img/customers/serg.jpg',
+  post: { href: 'https://x.com/sg_HGA/status/2116514305143123972', replyingTo: '@UltraLinx' },
+  segments: [
+    { tone: 'lead', text: '@agent_relay does this automatically with no workarounds.' },
+    { tone: 'plain', text: 'Highly recommend' },
+  ],
+};
+
 /** Quotes shown on the homepage, in order. The row fits up to three. */
-export const CUSTOMER_QUOTES: CustomerQuote[] = [POMERADO_QUOTE];
+export const CUSTOMER_QUOTES: CustomerQuote[] = [POMERADO_QUOTE, SERG_POST];

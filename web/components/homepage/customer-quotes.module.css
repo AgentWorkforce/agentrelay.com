@@ -22,6 +22,7 @@
 }
 
 .bubble {
+  position: relative;
   flex: 1;
   margin: 0;
   padding: 20px 22px;
@@ -64,14 +65,46 @@
   border-radius: 8px 8px 8px 2px;
 }
 
-/* The source photo is a half-length portrait; crop in on the face. */
 .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Half-length portraits: crop in on the face. */
+.portrait img {
   position: absolute;
   top: -2px;
   left: -16px;
   width: 70px;
   max-width: none;
   height: 70px;
+}
+
+/* The X mark in the bubble's corner links to the original post. */
+.post {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px 8px 8px 2px;
+  color: rgba(214, 228, 240, 0.6);
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.post:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.context {
+  display: block;
+  margin-bottom: 6px;
+  color: rgba(214, 228, 240, 0.5);
+  font-size: 0.8rem;
 }
 
 .name {

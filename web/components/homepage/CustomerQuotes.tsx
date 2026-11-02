@@ -1,4 +1,5 @@
 import { CUSTOMER_QUOTES, type CustomerQuote, type QuoteSegment } from '../../lib/customer-quotes';
+import { XIcon } from '../home/icons';
 import s from './customer-quotes.module.css';
 
 const toneClass: Record<QuoteSegment['tone'], string> = {
@@ -10,7 +11,13 @@ const toneClass: Record<QuoteSegment['tone'], string> = {
 function QuoteCard({ quote }: { quote: CustomerQuote }) {
   return (
     <figure className={s.card}>
-      <blockquote className={s.bubble}>
+      <blockquote className={s.bubble} cite={quote.post?.href}>
+        {quote.post ? (
+          <a className={s.post} href={quote.post.href} target="_blank" rel="noopener noreferrer" aria-label={`View ${quote.name}’s post on X`}>
+            <XIcon size={16} />
+          </a>
+        ) : null}
+        {quote.post?.replyingTo ? <span className={s.context}>Replying to {quote.post.replyingTo}</span> : null}
         <p>
           {quote.segments.map(({ tone, text }, i) => (
             <span key={i} className={toneClass[tone]}>
@@ -21,15 +28,20 @@ function QuoteCard({ quote }: { quote: CustomerQuote }) {
         </p>
       </blockquote>
       <figcaption className={s.who}>
-        <span className={s.avatar}>
+        <span className={`${s.avatar} ${quote.avatarPortrait ? s.portrait : ''}`}>
           <img src={quote.avatar} alt="" width={200} height={200} loading="lazy" />
         </span>
         <span>
           <span className={s.name}>{quote.name}</span>
           <span className={s.role}>
-            {quote.title},{' '}
-            <img src={quote.companyLogo} alt="" width={16} height={16} loading="lazy" />
-            {quote.company}
+            {quote.title}
+            {quote.company ? (
+              <>
+                ,{' '}
+                {quote.companyLogo ? <img src={quote.companyLogo} alt="" width={16} height={16} loading="lazy" /> : null}
+                {quote.company}
+              </>
+            ) : null}
           </span>
         </span>
       </figcaption>
