@@ -24,6 +24,7 @@ export function NavActions() {
   return (
     <DesktopDownloadCta
       className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.cta}`}
+      placement="nav"
       iconSize={15}
       data-shown={showCta || undefined}
       aria-hidden={!showCta}

@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { usePostHog } from '@posthog/next';
 
-import { shouldStartDownload } from '../../../lib/desktop-downloads';
+import { captureDesktopDownload } from '../../../lib/desktop-download-analytics';
+import { type DesktopAsset, desktopAssetUrl, shouldStartDownload } from '../../../lib/desktop-downloads';
 import s from './start.module.css';
 
 /** Long enough for the arrow to drop into the tray twice before it settles. */
@@ -25,7 +27,9 @@ const LABELS = {
  * navigation downloads nothing, shows the check at once and says where the
  * earlier file went; every fresh page load from a download button downloads.
  */
-export function DownloadStatus({ href }: { href: string }) {
+export function DownloadStatus({ asset }: { asset: DesktopAsset }) {
+  const href = desktopAssetUrl(asset.file);
+  const ph = usePostHog();
   const alreadyStarted = useRef<boolean | null>(null);
   const [outcome, setOutcome] = useState<keyof typeof LABELS>('pending');
   const [settled, setSettled] = useState(false);
@@ -36,6 +40,7 @@ export function DownloadStatus({ href }: { href: string }) {
       alreadyStarted.current = !shouldStartDownload(href, navigation?.type, startedThisDocument);
       if (!alreadyStarted.current) {
         startedThisDocument.add(href);
+        captureDesktopDownload(ph, 'started', asset);
         window.location.assign(href);
       }
     }
@@ -44,7 +49,7 @@ export function DownloadStatus({ href }: { href: string }) {
     const instant = alreadyStarted.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const timer = setTimeout(() => setSettled(true), instant ? 0 : SETTLE_MS);
     return () => clearTimeout(timer);
-  }, [href]);
+  }, [href, asset, ph]);
 
   return (
     <>

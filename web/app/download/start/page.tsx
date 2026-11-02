@@ -38,7 +38,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
 
           {asset ? (
             <div className={s.status}>
-              <DownloadStatus href={desktopAssetUrl(asset.file)} />
+              <DownloadStatus asset={asset} />
             </div>
           ) : (
             <p className={s.status}>
