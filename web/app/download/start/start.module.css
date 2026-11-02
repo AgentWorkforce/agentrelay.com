@@ -1,5 +1,5 @@
-/* While the app downloads, a split like sign-in: the task on the left (status,
-   the promise, sign-up, the next step), and on the right, plainly, what the
+/* While the app downloads, a split like sign-in: the task on the left (the promise,
+   the download status, the next step, sign-up), and on the right, plainly, what the
    app does on your computer and what it shares. Nothing moves but the
    download marker. */
 
@@ -56,7 +56,7 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  margin: 0 0 28px;
+  margin: 20px 0 0;
   color: var(--fg-faint);
   font-size: 0.86rem;
 }
@@ -116,14 +116,6 @@
   background: #08131d;
 }
 
-.explainerTitle {
-  margin: 0 0 32px;
-  color: var(--fg-faint);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 
 .facts {
   display: grid;

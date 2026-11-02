@@ -37,6 +37,10 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
         </Link>
 
         <div className={s.content}>
+          <h1 className={s.title}>
+            <span>Install it once.</span> <span>Then forget it’s there.</span>
+          </h1>
+
           {asset ? (
             <div className={s.status}>
               <DownloadMarker href={desktopAssetUrl(asset.file)} />
@@ -51,9 +55,6 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
             </p>
           )}
 
-          <h1 className={s.title}>
-            <span>Install it once.</span> <span>Then forget it’s there.</span>
-          </h1>
           <p className={s.lead}>Create your account while it downloads. Then open the app and sign in with the same account.</p>
 
           <section className={s.signup} aria-labelledby="signup-title">
@@ -68,10 +69,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
         </div>
       </main>
 
-      <aside className={s.explainer} aria-labelledby="explainer-title">
-        <h2 id="explainer-title" className={s.explainerTitle}>
-          What it does on your computer
-        </h2>
+      <aside className={s.explainer} aria-label="What Agent Relay does on your computer">
         <ul className={s.facts}>
           <li className={s.fact}>
             <span className={s.factIcon} aria-hidden="true">
