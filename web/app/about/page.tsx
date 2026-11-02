@@ -6,6 +6,7 @@ import { HomePosterText } from '../../components/home/HomePosterText';
 import { ScribbleUnderline } from '../../components/home/icons';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { DEFAULT_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import s from '../landing.module.css';
@@ -66,20 +67,10 @@ export const metadata: Metadata = {
 };
 
 export default function AboutPage() {
-  const navGetStartedLink = (
-    <Link href="/docs" className={`${s.ctaPrimary} ${s.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
-  const mobileGetStartedLink = (
-    <Link href="/docs" className={`${s.ctaPrimary} ${s.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
 
   return (
     <div className={`${s.page} ${s.homePage}`}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main className={s.homeMain}>
         <HomePosterText visual="relay" />

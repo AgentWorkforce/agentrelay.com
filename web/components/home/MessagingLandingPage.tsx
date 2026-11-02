@@ -1,7 +1,7 @@
 import { DurableWorkflowFeature } from './DeliveryFeature';
-import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
+import { SiteNavActions } from '../SiteNavActions';
 import { Deploy } from './Deploy';
 import { Hero } from './Hero';
 import { HowItWorks } from './HowItWorks';
@@ -17,7 +17,7 @@ export function MessagingLandingPage() {
         Skip to content
       </a>
 
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
         <Hero />

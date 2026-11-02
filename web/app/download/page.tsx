@@ -4,9 +4,9 @@ import { WaveDivider } from '../../components/home/icons';
 import sections from '../../components/home/home-sections.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { DESKTOP_ASSETS, type DesktopAsset, type DesktopOs, desktopAssetUrl } from '../../lib/desktop-downloads';
 import { absoluteUrl } from '../../lib/site';
-import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../landing.module.css';
 import { DownloadButton } from './DownloadButton';
 import d from './download.module.css';
@@ -55,20 +55,7 @@ export default function DownloadPage() {
         Skip to content
       </a>
 
-      <SiteNav
-        hideLinks
-        singleAction
-        actions={
-          <>
-            <a className={`${s.ctaSecondary} ${s.homeNavAction}`} href="/login">
-              Log in
-            </a>
-            <a className={`${s.ctaPrimary} ${s.homeNavAction}`} href={teamsGoogleAuthHref('download_nav')}>
-              Sign up
-            </a>
-          </>
-        }
-      />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
         <header className={d.hero}>

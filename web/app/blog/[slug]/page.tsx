@@ -14,11 +14,11 @@ import { HighlightedPre } from '../../../components/docs/HighlightedCode';
 import { SignupBand } from '../../../components/home/SignupBand';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { getAllPosts, getPost, slugifyHeading } from '../../../lib/blog';
 import { getAuthorInitials, getBlogAuthor } from '../../../lib/blog-authors';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../../lib/site';
-import landingStyles from '../../landing.module.css';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -134,16 +134,6 @@ export default async function BlogPostPage({ params }: PageProps) {
     .slice(0, 4);
   const postUrl = absoluteUrl(`/blog/${slug}`);
   const imageUrl = post.frontmatter.coverImage || absoluteUrl(`/blog/${slug}/og.png`);
-  const navGetStartedLink = (
-    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
-  const mobileGetStartedLink = (
-    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -264,7 +254,7 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   return (
     <div className={styles.blogPage}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <section className={styles.postHero}>
         <div className={styles.postHeroInner}>

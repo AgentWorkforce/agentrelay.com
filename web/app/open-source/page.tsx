@@ -6,10 +6,10 @@ import sections from '../../components/home/home-sections.module.css';
 import { LiveStarsProvider, StarCount, TotalStars } from '../../components/open-source/LiveStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { DEFAULT_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { fetchOrgRepoStats, GITHUB_ORG, GITHUB_ORG_URL, OSS_CATEGORIES, type OssRepo } from '../../lib/open-source';
 import { absoluteUrl, DISCORD_URL, SITE_NAME } from '../../lib/site';
-import { teamsGoogleAuthHref } from '../../lib/teams-cloud';
 import s from '../landing.module.css';
 import o from './open-source.module.css';
 
@@ -91,20 +91,7 @@ export default async function OpenSourcePage() {
           Skip to content
         </a>
 
-        <SiteNav
-          hideLinks
-          singleAction
-          actions={
-            <>
-              <a className={`${s.ctaSecondary} ${s.homeNavAction}`} href="/login">
-                Log in
-              </a>
-              <a className={`${s.ctaPrimary} ${s.homeNavAction}`} href={teamsGoogleAuthHref('open_source_nav')}>
-                Sign up
-              </a>
-            </>
-          }
-        />
+        <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
         <main id="main">
           <header className={o.hero}>

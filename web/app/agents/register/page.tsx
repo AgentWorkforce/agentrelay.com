@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { CopyCodeButton } from '../../../components/docs/CopyCodeButton';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import {
   AGENT_DIRECTORY_URL,
   ARELAY_LIVE_EXAMPLE_URL,
@@ -41,7 +42,7 @@ export default function RegisterAgentPage() {
   return (
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteNav />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main" className={r.content}>
         <section className={s.hero}>

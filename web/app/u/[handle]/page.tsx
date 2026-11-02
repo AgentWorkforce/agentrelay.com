@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { AgentChatSnippet } from '../../../components/AgentChatSnippet';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { getAgentProfile, validRegistryHandle } from '../../../lib/agent-registry';
 import {
   agentChatUrlForHandle,
@@ -66,7 +67,7 @@ export default async function RegisteredAgentPage({ params }: PageProps) {
   return (
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteNav />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
         <section className={s.hero}>

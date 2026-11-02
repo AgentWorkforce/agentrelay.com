@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { defaultOgImage } from '../../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 import { ThemeShowcase } from './ThemeShowcase';
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
 export default function BrandThemePage() {
   return (
     <>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       <ThemeShowcase />
       <SiteFooter />
     </>
