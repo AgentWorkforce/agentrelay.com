@@ -12,7 +12,7 @@ const toneClass: Record<QuoteSegment['tone'], string> = {
 function QuoteCard({ quote }: { quote: CustomerQuote }) {
   return (
     <figure className={s.card}>
-      <blockquote className={s.bubble} cite={quote.post?.href}>
+      <blockquote className={`${s.bubble} ${quote.post ? s.hasPost : ''}`} cite={quote.post?.href}>
         {quote.post ? (
           <a className={s.post} href={quote.post.href} target="_blank" rel="noopener noreferrer" aria-label={`View ${quote.name}’s post on X`}>
             <XIcon size={16} />

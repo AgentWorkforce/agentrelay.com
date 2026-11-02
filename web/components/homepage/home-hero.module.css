@@ -53,7 +53,7 @@
 
 /* Wide enough for "Download for Windows" and its logo, so swapping from the
    placeholder label to the visitor's OS never changes the button's width. */
-@media (min-width: 641px) {
+@media (min-width: 601px) {
   .downloadCta {
     min-width: 17.5rem;
   }

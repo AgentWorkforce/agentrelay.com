@@ -100,6 +100,11 @@
   transition: color 150ms ease, background-color 150ms ease;
 }
 
+/* Keeps the quote's lines clear of the X link and its full tap area. */
+.hasPost {
+  padding-right: 56px;
+}
+
 /* 28px to the eye, a 44px target to the finger. */
 .post::before {
   position: absolute;
