@@ -79,11 +79,7 @@
   font-weight: 600;
   letter-spacing: -0.04em;
   line-height: 1.04;
-}
-
-/* One sentence per line: two beats. */
-.title span {
-  display: block;
+  text-wrap: balance;
 }
 
 .lead {

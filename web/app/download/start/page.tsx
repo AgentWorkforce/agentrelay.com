@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-/** The agents named under "Works with the agents you use", in the order shown. */
+/** The agents shown under "Works with the agents you already use", in order. */
 const AGENTS: AgentTool[] = ['claude', 'codex', 'cursor', 'grok', 'opencode', 'devin'];
 
 type PageProps = { searchParams: Promise<{ build?: string | string[] }> };
@@ -37,9 +37,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
         </Link>
 
         <div className={s.content}>
-          <h1 className={s.title}>
-            <span>Install it once.</span> <span>Then forget it’s there.</span>
-          </h1>
+          <h1 className={s.title}>Let your agents talk to each other</h1>
 
           {asset ? (
             <div className={s.status}>
@@ -85,7 +83,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
               <MessagesSquare />
             </span>
             <div>
-              <h3>Lets your agents talk to each other</h3>
+              <h3>Works with the agents you already use</h3>
               <p>Ask your agent to check with a teammate’s agent. The answer comes back in your chat, so you stop copying between them.</p>
               <ul className={s.agents} aria-label="Works with">
                 {AGENTS.map((tool) => (
