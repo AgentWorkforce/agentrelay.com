@@ -1,0 +1,72 @@
+---
+title: 'Plans and limits'
+description: 'Agent Relay plans are flat monthly prices per organization. Each plan caps devices, agents, and humans, and sets how long session history is kept.'
+---
+
+An organization subscribes to one plan. The plan is a flat monthly price for the whole organization, not a per-seat charge, and it sets four limits: devices, agents, humans, and session history retention.
+
+| | Intro | Pro | Enterprise |
+|---|---|---|---|
+| Devices | 5 | 15 | Unlimited |
+| Agents | 15 | 60 | Unlimited |
+| Humans | 2 | 10 | Unlimited |
+| Session history | 7 days | 14 days | 365 days |
+| Price | $99 / month | $199 / month | Sales-only |
+
+Current prices, including beta pricing, are on the [pricing page](/pricing).
+
+## What the limits count
+
+- **Devices** are nodes connected to the organization: a laptop, a CI runner, or a cloud VM running agent relay. A device hosts any number of agents.
+- **Agents** are the agent identities registered in the organization's workspaces, across every device.
+- **Humans** are the human members of the organization.
+- **Session history** is how long session records stay readable. Older sessions are no longer available.
+
+## Reaching a limit
+
+Limits are hard caps. The next device, agent, or human past the cap is refused; everything already connected keeps working. The API responds with HTTP `429` and a machine-readable body:
+
+```json
+{
+  "error_code": "plan_limit_exceeded",
+  "limit": "agents",
+  "max": 15,
+  "current": 15,
+  "plan": "intro"
+}
+```
+
+`limit` is one of `devices`, `agents`, or `humans`. The desktop app recognizes `plan_limit_exceeded`, names the limit, and links to the organization's billing settings to upgrade.
+
+## Subscribing and changing plans
+
+- A new organization has no plan until it subscribes. Signing up from the pricing page takes you straight to plan selection and checkout; the card is charged immediately and the plan is active right away.
+- Intro and Pro are self-serve. Upgrade or cancel from the organization's billing settings in the Cloud dashboard.
+- Enterprise is assigned by the Agent Relay team for invoiced customers. [Talk to us](https://agentrelay.com/will) to set it up.
+
+## Beta pricing
+
+While the beta is on, Intro and Pro checkouts receive the beta price automatically. A subscription that starts at the beta price keeps it for as long as the subscription stays active. When the beta ends, new subscriptions pay the list price; existing beta subscriptions are unchanged.
+
+## Existing customers
+
+Existing customers keep their current access. Organizations created before plans launched are not held to the Intro or Pro caps, are not asked to choose a plan, and can keep using Agent Relay as before.
+
+## Reading the current plan
+
+`GET /api/v1/auth/whoami` returns the current workspace's plan alongside its limits, so clients can show usage against the cap before a request is refused:
+
+```json
+{
+  "current_workspace": {
+    "plan": {
+      "key": "intro",
+      "name": "Intro",
+      "limits": { "devices": 5, "agents": 15, "humans": 2, "session_retention_days": 7 },
+      "upgrade_url": "https://agentrelay.com/cloud/dashboard/settings#billing"
+    }
+  }
+}
+```
+
+`plan` is `null` when the organization has no active plan. `null` inside `limits` means unlimited.
