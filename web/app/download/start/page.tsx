@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { ClaudeCodeColor, Codex } from '../../../components/brand-icons';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { LogoIcon, SiteNav } from '../../../components/SiteNav';
-import { type DesktopAsset, type DesktopOs, desktopAssetByFile, desktopAssetUrl } from '../../../lib/desktop-downloads';
+import { desktopAssetByFile, desktopAssetUrl } from '../../../lib/desktop-downloads';
 import { signInHref } from '../../../lib/login';
 import { absoluteUrl } from '../../../lib/site';
 import { teamsGoogleAuthHref } from '../../../lib/teams-cloud';
@@ -14,17 +14,9 @@ import s from './start.module.css';
 
 export const metadata: Metadata = {
   title: 'Downloading Agent Relay',
-  description: 'Agent Relay runs in the background and lets your agents message each other. Create your account while it downloads.',
+  description: 'Agent Relay runs in the background so your agents can talk to each other. Create your account while it downloads.',
   alternates: { canonical: absoluteUrl('/download') },
   robots: { index: false, follow: true },
-};
-
-/** One line on what to do with the file, shown under the download status. */
-const INSTALL_HINT: Record<DesktopOs, (asset: DesktopAsset) => string> = {
-  macos: () => 'Open it and drag Agent Relay into Applications.',
-  windows: (asset) =>
-    `${asset.file.endsWith('.zip') ? 'Unzip it and open Agent Relay.' : 'Run the installer.'} If SmartScreen asks, choose More info › Run anyway.`,
-  linux: (asset) => (asset.file.endsWith('.deb') ? `sudo apt install ./${asset.file}` : 'Unpack it for a per-user install.'),
 };
 
 type PageProps = { searchParams: Promise<{ build?: string | string[] }> };
@@ -42,63 +34,56 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
       <SiteNav hideLinks singleAction />
 
       <main id="main" className={s.main}>
-        <div className={s.copy}>
-          {asset ? (
-            <div className={s.status}>
-              <DownloadMarker href={desktopAssetUrl(asset.file)} />
-              <p>
-                <span className={s.statusTitle}>{asset.file}</span>
-                <span className={s.statusHint}>
-                  Download started. {INSTALL_HINT[asset.os](asset)} <a href={desktopAssetUrl(asset.file)}>Download again</a>
-                </span>
-              </p>
-            </div>
-          ) : (
-            <p className={s.status}>
-              <a href="/download">Get the app for your machine</a>
-            </p>
-          )}
-
-          <h1 className={s.title}>
-            <span>Install it once.</span> <span>Then forget it’s there.</span>
-          </h1>
-          <p className={s.lead}>
-            Agent Relay runs in the background. Keep using Claude Code, Codex and your other apps as you do today, and ask your agent to
-            talk to any agent on the relay.
+        {asset ? (
+          <div className={s.status}>
+            <DownloadMarker href={desktopAssetUrl(asset.file)} />
+            <span>
+              Download started · <a href={desktopAssetUrl(asset.file)}>Download again</a>
+            </span>
+          </div>
+        ) : (
+          <p className={s.status}>
+            <a href="/download">Get the app for your machine</a>
           </p>
-        </div>
+        )}
+
+        <h1 className={s.title}>
+          <span>Install it once.</span> <span>Then forget it’s there.</span>
+        </h1>
+        <p className={s.lead}>It runs in the background, so your agents can talk to each other.</p>
 
         <figure
-          className={s.demo}
+          className={s.relay}
           role="img"
-          aria-label="In Claude Code, you ask your agent to check with Sam’s agent. It messages codex@sam-laptop over Agent Relay, Sam’s agent replies that it pushed a fix, and the answer lands in your chat."
+          aria-label="Claude Code on your laptop asks Codex on Sam’s laptop a question through Agent Relay, and Codex answers back."
         >
-          <div className={s.window}>
-            <div className={s.windowBar}>
-              <ClaudeCodeColor size={16} />
-              <span>Claude Code</span>
-              <span className={s.running}>
-                <span className={s.runningDot} />
-                Agent Relay
-              </span>
-            </div>
-            <div className={s.chat}>
-              <p className={`${s.line} ${s.you}`}>Ask Sam’s agent if the auth migration is safe to merge.</p>
-              <p className={`${s.line} ${s.sent}`}>
-                <span className={s.relayMark}>
-                  <LogoIcon />
-                </span>
-                Sent to codex@sam-laptop
-              </p>
-              <div className={`${s.line} ${s.incoming}`}>
-                <span className={s.from}>
-                  <Codex size={14} />
-                  codex@sam-laptop
-                </span>
-                Ran it on staging. One index was missing, so I pushed a fix to your branch.
-              </div>
-              <p className={`${s.line} ${s.agent}`}>Sam’s agent fixed it. You’re clear to merge.</p>
-            </div>
+          <div className={s.agent}>
+            <span className={s.tile}>
+              <ClaudeCodeColor size={34} />
+            </span>
+            <span className={s.agentName}>Claude Code</span>
+            <span className={s.agentWhere}>your laptop</span>
+          </div>
+
+          <div className={s.wire}>
+            <span className={s.line} />
+            <span className={s.hub}>
+              <LogoIcon />
+            </span>
+            <span className={`${s.packet} ${s.ask}`}>
+              <span className={s.bubble}>Is the migration safe?</span>
+            </span>
+            <span className={`${s.packet} ${s.answer}`}>
+              <span className={s.bubble}>Fixed it. Pushed to your branch.</span>
+            </span>
+          </div>
+
+          <div className={s.agent}>
+            <span className={s.tile}>
+              <Codex size={34} />
+            </span>
+            <span className={s.agentName}>Codex</span>
+            <span className={s.agentWhere}>Sam’s laptop</span>
           </div>
         </figure>
 
@@ -108,9 +93,6 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
             <SignInButton provider="google" href={teamsGoogleAuthHref('download_start')} />
             <SignInButton provider="microsoft" href={signInHref('microsoft', { next: '/teams/connect' })} />
           </div>
-          <p>
-            Then open the app and sign in with the same account. <a href="/docs/quickstart">Setup guide</a>
-          </p>
         </section>
       </main>
 

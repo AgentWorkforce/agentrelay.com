@@ -1,70 +1,35 @@
-/* While the app downloads: the two things worth knowing, said once. Left, the
-   download's status, the promise (install it, then forget it) and sign-up.
-   Right, a Claude Code window that plays the other half: you ask, your agent
-   messages a teammate's agent, the answer lands in your chat, while Agent
-   Relay sits in the corner, running. */
+/* While the app downloads: the promise in one headline, then the picture of
+   it. Claude Code on one laptop and Codex on another, joined through Agent
+   Relay; a question travels across and the answer comes back, once. Sign-up
+   sits underneath. */
 
 .main {
-  display: grid;
-  grid-template-areas:
-    'copy demo'
-    'signup demo';
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-rows: auto 1fr;
-  column-gap: 72px;
-  max-width: 1160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 880px;
   margin: 0 auto;
-  padding: 152px 40px 128px;
-}
-
-.copy {
-  grid-area: copy;
-}
-
-.demo {
-  grid-area: demo;
-  align-self: center;
-  margin: 0;
-}
-
-.signup {
-  grid-area: signup;
+  padding: 148px 24px 128px;
+  text-align: center;
 }
 
 /* ---- Download status ---- */
 
 .status {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  margin: 0 0 40px;
-}
-
-.status p {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-}
-
-.statusTitle {
-  color: var(--fg);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.82rem;
-}
-
-.statusHint {
+  gap: 10px;
+  margin: 0 0 32px;
   color: var(--fg-faint);
-  font-size: 0.82rem;
+  font-size: 0.86rem;
 }
 
-.status a,
-.signup p a {
+.status a {
   color: #74b8e2;
   text-decoration: none;
 }
 
-.status a:hover,
-.signup p a:hover {
+.status a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -75,30 +40,196 @@
   margin: 0;
   color: #fff;
   font-family: var(--font-heading), sans-serif;
-  font-size: clamp(2.2rem, 4vw, 3rem);
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
   font-weight: 600;
   letter-spacing: -0.04em;
   line-height: 1.04;
 }
 
-/* One sentence per line: the promise reads as two beats. */
+/* One sentence per line: two beats. */
 .title span {
   display: block;
 }
 
 .lead {
-  max-width: 42ch;
-  margin: 20px 0 0;
+  margin: 16px 0 0;
   color: var(--fg-muted);
-  font-size: 1.12rem;
-  line-height: 1.55;
-  text-wrap: pretty;
+  font-size: 1.1rem;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+/* ---- The relay ---- */
+
+.relay {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  width: 100%;
+  margin: 72px 0 0;
+  user-select: none;
+  pointer-events: none;
+}
+
+.agent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 128px;
+}
+
+.tile {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border: 1px solid rgba(160, 205, 235, 0.16);
+  border-radius: 22px 22px 22px 5px;
+  background: #0d1825;
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05) inset,
+    0 18px 40px rgba(2, 7, 14, 0.45);
+}
+
+.agentName {
+  margin-top: 14px;
+  color: var(--fg);
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.agentWhere {
+  margin-top: 2px;
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+}
+
+/* The wire sits level with the middle of the tiles. */
+.wire {
+  position: relative;
+  height: 76px;
+}
+
+.line {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  left: 12px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(116, 184, 226, 0.15), rgba(116, 184, 226, 0.6), rgba(116, 184, 226, 0.15));
+}
+
+.hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid rgba(116, 184, 226, 0.4);
+  border-radius: 14px 14px 14px 3px;
+  background: #102639;
+  color: #74b8e2;
+  transform: translate(-50%, -50%);
+  animation: relayPulse 5s ease-out both;
+}
+
+.hub svg {
+  width: 24px;
+  height: 20px;
+  color: inherit;
+}
+
+/* Lights up as each message passes through. */
+@keyframes relayPulse {
+  0%,
+  24%,
+  40%,
+  70%,
+  86%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(116, 184, 226, 0);
+  }
+  31%,
+  78% {
+    box-shadow: 0 0 0 8px rgba(116, 184, 226, 0.16);
+  }
+}
+
+/* A packet spans the wire and carries its bubble from one end to the other;
+   translateX percentages are of the wire, so the trip scales with it. */
+.packet {
+  position: absolute;
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.ask {
+  bottom: calc(50% + 34px);
+  animation: ask 1.8s cubic-bezier(0.45, 0, 0.25, 1) 0.6s both;
+}
+
+.answer {
+  top: calc(50% + 34px);
+  animation: answer 1.8s cubic-bezier(0.45, 0, 0.25, 1) 3s both;
+}
+
+.bubble {
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.ask .bubble {
+  border-radius: 12px 12px 12px 3px;
+  background: #2d6a9c;
+  color: #fff;
+}
+
+.answer .bubble {
+  border: 1px solid rgba(160, 205, 235, 0.2);
+  border-radius: 12px 12px 3px 12px;
+  background: #13283a;
+  color: var(--fg);
+}
+
+@keyframes ask {
+  0% {
+    opacity: 0;
+    transform: translateX(-30%);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(30%);
+  }
+}
+
+@keyframes answer {
+  0% {
+    opacity: 0;
+    transform: translateX(30%);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-30%);
+  }
 }
 
 /* ---- Sign-up ---- */
 
 .signup {
-  margin-top: 44px;
+  margin-top: 88px;
 }
 
 .signup h2 {
@@ -110,140 +241,9 @@
 
 .providers {
   display: grid;
-  gap: 10px;
-  max-width: 340px;
-  margin-top: 14px;
-}
-
-.signup p {
-  margin: 14px 0 0;
-  color: var(--fg-faint);
-  font-size: 0.86rem;
-}
-
-/* ---- The window ---- */
-
-.window {
-  overflow: hidden;
-  border: 1px solid rgba(160, 205, 235, 0.14);
-  border-radius: 20px 20px 20px 4px;
-  background: #0a1520;
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.05) inset,
-    0 30px 80px rgba(2, 7, 14, 0.5),
-    0 8px 24px rgba(2, 7, 14, 0.35);
-  user-select: none;
-  pointer-events: none;
-}
-
-.windowBar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(160, 205, 235, 0.1);
-  color: var(--fg-muted);
-  font-size: 0.82rem;
-  font-weight: 500;
-}
-
-/* Agent Relay in the corner: present, running, out of the way. */
-.running {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  padding: 3px 9px;
-  border-radius: 8px 8px 8px 2px;
-  background: rgba(40, 200, 64, 0.1);
-  color: #7fe08f;
-  font-size: 0.74rem;
-}
-
-.runningDot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #28c840;
-}
-
-.chat {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(2, minmax(0, 260px));
   gap: 12px;
-  min-height: 300px;
-  padding: 22px;
-}
-
-.line {
-  margin: 0;
-  font-size: 0.93rem;
-  line-height: 1.5;
-  animation: arrive 320ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-.you {
-  align-self: flex-end;
-  max-width: 80%;
-  padding: 10px 14px;
-  border-radius: 14px 14px 3px 14px;
-  background: #2d6a9c;
-  color: #fff;
-  animation-delay: 400ms;
-}
-
-.sent {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--fg-faint);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.78rem;
-  animation-delay: 1300ms;
-}
-
-.relayMark svg {
-  display: block;
-  width: 16px;
-  height: 13px;
-  color: #74b8e2;
-}
-
-.incoming {
-  max-width: 88%;
-  padding: 12px 14px;
-  border: 1px solid rgba(116, 184, 226, 0.28);
-  border-radius: 14px 14px 14px 3px;
-  background: rgba(16, 38, 57, 0.7);
-  color: var(--fg);
-  animation-delay: 2600ms;
-}
-
-.from {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-  color: #9ccbea;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.74rem;
-}
-
-.agent {
-  max-width: 88%;
-  color: var(--fg);
-  animation-delay: 3500ms;
-}
-
-@keyframes arrive {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
+  margin-top: 16px;
 }
 
 /* ---- The download marker ---- */
@@ -253,10 +253,10 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 1px solid rgba(160, 205, 235, 0.22);
-  border-radius: 10px 10px 10px 3px;
+  border-radius: 9px 9px 9px 2px;
   transition:
     background-color 240ms ease,
     border-color 240ms ease,
@@ -271,9 +271,9 @@
 
 .markerDownload svg {
   position: absolute;
-  inset: 7px;
-  width: 18px;
-  height: 18px;
+  inset: 6px;
+  width: 16px;
+  height: 16px;
 }
 
 /* The arrow drops into the tray twice while the download starts. */
@@ -326,8 +326,18 @@
 
 @media (prefers-reduced-motion: reduce) {
   .arrow,
-  .line {
+  .hub {
     animation: none;
+  }
+
+  .ask {
+    animation: none;
+    transform: translateX(30%);
+  }
+
+  .answer {
+    animation: none;
+    transform: translateX(-30%);
   }
 
   .marker,
@@ -338,32 +348,107 @@
   }
 }
 
-/* ---- One column ---- */
+/* ---- Narrow screens: the relay turns vertical, Claude Code above Codex,
+   and the messages travel up and down beside the line ---- */
 
-@media (max-width: 920px) {
-  .main {
-    grid-template-areas:
-      'copy'
-      'demo'
-      'signup';
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto;
-    max-width: 620px;
-    padding: 128px 24px 96px;
+@keyframes askDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-30%);
   }
-
-  .demo {
-    margin-top: 40px;
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(30%);
   }
 }
 
-@media (max-width: 520px) {
+@keyframes answerUp {
+  0% {
+    opacity: 0;
+    transform: translateY(30%);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-30%);
+  }
+}
+
+@media (max-width: 640px) {
   .main {
-    padding: 112px 16px 80px;
+    padding: 112px 16px 88px;
   }
 
-  .chat {
-    min-height: 0;
-    padding: 18px;
+  .relay {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    margin-top: 56px;
+  }
+
+  .agent {
+    width: auto;
+  }
+
+  .wire {
+    width: 100%;
+    height: 220px;
+  }
+
+  .line {
+    top: 12px;
+    right: auto;
+    bottom: 12px;
+    left: 50%;
+    width: 1px;
+    height: auto;
+    background: linear-gradient(180deg, rgba(116, 184, 226, 0.15), rgba(116, 184, 226, 0.6), rgba(116, 184, 226, 0.15));
+  }
+
+  .packet {
+    top: 0;
+    bottom: 0;
+    align-items: center;
+  }
+
+  .ask {
+    right: 0;
+    bottom: 0;
+    left: calc(50% + 34px);
+    justify-content: flex-start;
+    animation-name: askDown;
+  }
+
+  .answer {
+    top: 0;
+    right: calc(50% + 34px);
+    left: 0;
+    justify-content: flex-end;
+    animation-name: answerUp;
+  }
+
+  .bubble {
+    max-width: 136px;
+    font-size: 0.78rem;
+    text-align: left;
+    white-space: normal;
+  }
+
+  .providers {
+    grid-template-columns: minmax(0, 320px);
+  }
+}
+
+@media (max-width: 640px) and (prefers-reduced-motion: reduce) {
+  .ask {
+    transform: translateY(30%);
+  }
+
+  .answer {
+    transform: translateY(-30%);
   }
 }
