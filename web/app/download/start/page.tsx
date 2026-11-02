@@ -6,7 +6,7 @@ import { AGENT_TOOLS, type AgentTool } from '../../../components/home/AgentMarks
 import { LogoIcon, LogoWordmark } from '../../../components/SiteNav';
 import { desktopAssetByFile, desktopAssetUrl } from '../../../lib/desktop-downloads';
 import { absoluteUrl } from '../../../lib/site';
-import { DownloadMarker } from './DownloadMarker';
+import { DownloadStatus } from './DownloadStatus';
 import s from './start.module.css';
 
 export const metadata: Metadata = {
@@ -38,8 +38,7 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
 
           {asset ? (
             <div className={s.status}>
-              <DownloadMarker href={desktopAssetUrl(asset.file)} />
-              <span>Download started</span>
+              <DownloadStatus href={desktopAssetUrl(asset.file)} />
             </div>
           ) : (
             <p className={s.status}>
