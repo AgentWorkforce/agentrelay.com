@@ -1,0 +1,16 @@
+/* The label is hidden, not removed, until the visitor's OS is read, then fades
+   in: the button's surface holds its place and the text never swaps in view.
+   Without scripts the getting-started label simply shows. */
+.cta {
+  transition: color 150ms ease;
+}
+
+.cta[data-detecting] {
+  color: transparent;
+}
+
+@media (scripting: none) {
+  .cta[data-detecting] {
+    color: inherit;
+  }
+}

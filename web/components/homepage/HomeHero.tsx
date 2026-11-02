@@ -33,7 +33,7 @@ export function HomeHero() {
 
           <div className={`${s.heroCenterCtas} ${home.actions}`}>
             <DesktopDownloadCta
-              className={`${s.ctaPrimary} ${s.heroCta}`}
+              className={`${s.ctaPrimary} ${s.heroCta} ${home.downloadCta}`}
               data-hero-cta=""
               fallback={
                 <>

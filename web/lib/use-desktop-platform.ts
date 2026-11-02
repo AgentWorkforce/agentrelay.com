@@ -7,11 +7,12 @@ type UADataNavigator = Navigator & {
 };
 
 /**
- * The visitor's desktop platform, read after hydration. `null` on the server,
- * before detection, and on phones, tablets and anything else without a desktop build.
+ * The visitor's desktop platform, read after hydration: `undefined` on the
+ * server and until detection runs, `null` on phones, tablets and anything else
+ * without a desktop build.
  */
-export function useDesktopPlatform(): DesktopPlatform | null {
-  const [platform, setPlatform] = useState<DesktopPlatform | null>(null);
+export function useDesktopPlatform(): DesktopPlatform | null | undefined {
+  const [platform, setPlatform] = useState<DesktopPlatform | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;

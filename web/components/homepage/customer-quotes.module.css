@@ -100,15 +100,24 @@
   transition: color 150ms ease, background-color 150ms ease;
 }
 
-.post:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+/* 28px to the eye, a 44px target to the finger. */
+.post::before {
+  position: absolute;
+  inset: -8px;
+  content: '';
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .post:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+  }
 }
 
 .context {
   display: block;
   margin-bottom: 6px;
-  color: rgba(214, 228, 240, 0.5);
+  color: rgba(214, 228, 240, 0.6);
   font-size: 0.8rem;
 }
 

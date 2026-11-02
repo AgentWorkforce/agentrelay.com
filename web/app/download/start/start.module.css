@@ -206,7 +206,7 @@
   transform: scale(1);
   transition:
     opacity 200ms ease,
-    transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -215,7 +215,9 @@
   }
 
   .marker,
-  .markerDownload[data-settled] svg {
+  .markerDownload[data-settled] .arrow,
+  .markerDownload[data-settled] .tray,
+  .markerDownload[data-settled] .check {
     transition: none;
   }
 }
@@ -267,9 +269,19 @@
   font-size: 0.84rem;
 }
 
-.copy {
+/* 32px to the eye, a 44px target to the finger. */
+.prompt .copy {
+  position: relative;
   flex: none;
+  width: 32px;
+  height: 32px;
   color: var(--fg-muted);
+}
+
+.prompt .copy::before {
+  position: absolute;
+  inset: -6px;
+  content: '';
 }
 
 .more {

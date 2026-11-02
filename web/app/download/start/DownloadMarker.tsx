@@ -11,18 +11,32 @@ const SETTLE_MS = 1900;
  * Step one's marker. Opening the page starts the download (GitHub answers the
  * release link with an attachment, so the browser saves the file and stays
  * here); the arrow drops into the tray while it starts, then becomes a check.
+ * The tab remembers each build it started, so a reload or a Back from sign-in
+ * shows the check without downloading the file a second time.
  */
 export function DownloadMarker({ href }: { href: string }) {
-  const started = useRef(false);
+  const handled = useRef(false);
   const [settled, setSettled] = useState(false);
 
   useEffect(() => {
-    if (!started.current) {
-      started.current = true;
-      window.location.assign(href);
+    const key = `agentrelay:download-started:${href}`;
+    let alreadyStarted = false;
+    try {
+      alreadyStarted = sessionStorage.getItem(key) !== null;
+    } catch {}
+
+    if (!handled.current) {
+      handled.current = true;
+      if (!alreadyStarted) {
+        window.location.assign(href);
+        try {
+          sessionStorage.setItem(key, '1');
+        } catch {}
+      }
     }
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const timer = setTimeout(() => setSettled(true), reduced ? 0 : SETTLE_MS);
+
+    const instant = alreadyStarted || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const timer = setTimeout(() => setSettled(true), instant ? 0 : SETTLE_MS);
     return () => clearTimeout(timer);
   }, [href]);
 
