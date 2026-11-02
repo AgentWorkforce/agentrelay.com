@@ -67,7 +67,10 @@ export default async function DownloadStartPage({ searchParams }: PageProps) {
         </div>
       </main>
 
-      <aside className={s.explainer} aria-label="What Agent Relay does on your computer">
+      <aside className={s.explainer} aria-labelledby="explainer-title">
+        <h2 id="explainer-title" className="sr-only">
+          What Agent Relay does on your computer
+        </h2>
         <ul className={s.facts}>
           <li className={s.fact}>
             <span className={s.factIcon} aria-hidden="true">
