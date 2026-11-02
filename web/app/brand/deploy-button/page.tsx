@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { absoluteUrl } from '../../../lib/site';
 import { DeployButtonShowcase } from './DeployButtonShowcase';
 
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 export default function DeployButtonPage() {
   return (
     <>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       <DeployButtonShowcase />
       <SiteFooter />
     </>

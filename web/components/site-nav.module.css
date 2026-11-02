@@ -190,6 +190,14 @@
   }
 }
 
+/* The narrowest phones keep only the last action (the download or sign-up
+   button) beside the logo; the GitHub stars no longer fit. */
+@media (max-width: 400px) {
+  .singleAction .actions > :not(:last-child) {
+    display: none;
+  }
+}
+
 .hamburger {
   display: none;
   align-items: center;

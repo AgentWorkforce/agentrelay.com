@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
-import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { agentAsset, allAgentSlugs, getAgent } from '../../../lib/agents';
 import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 import { AgentDetail } from './AgentDetail';
@@ -46,7 +46,7 @@ export default async function AgentPage({ params }: PageProps) {
 
   return (
     <>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       <AgentDetail agent={agent} />
       <SiteFooter />
     </>

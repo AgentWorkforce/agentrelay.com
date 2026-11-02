@@ -46,12 +46,13 @@ export type LoadedFonts = {
 /**
  * Full glyph set requested from Google Fonts so every rendered character — the
  * uppercase letters produced by `text-transform: uppercase`, digits, and every
- * punctuation mark we emit (em/en dash, curly apostrophe, arrow, middot, hash,
- * at, slash, ampersand, percent, parens) — is present in the downloaded subset.
+ * punctuation mark we emit (em/en dash, curly apostrophe and double quotes,
+ * arrow, middot, hash, at, slash, ampersand, percent, parens, non-breaking
+ * space and hyphen) — is present in the downloaded subset.
  * A missing glyph silently falls back to satori's default font, which would
  * break the typography, so the subset must be exhaustive for what we render.
  */
-const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?\'’"#·—–-→@()/&%';
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?\'’“”"#·—–-→@()/&%\u00a0\u2011';
 
 /**
  * Fetch a Google Font for embedding into the OG image.

@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import { BrandShowcase } from './BrandShowcase';
 
@@ -51,7 +51,7 @@ export const metadata: Metadata = {
 export default function BrandPage() {
   return (
     <>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       <BrandShowcase />
       <SiteFooter />
     </>

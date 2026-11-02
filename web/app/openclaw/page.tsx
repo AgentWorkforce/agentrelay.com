@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 
 import { CopyInstructionsButton } from '../../components/CopyInstructionsButton';
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_HOST, SITE_NAME } from '../../lib/site';
 import s from './openclaw.module.css';
@@ -67,7 +67,7 @@ const steps = [
 export default function OpenClawPage() {
   return (
     <div className={s.page}>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main className={s.main}>
         <section className={s.hero}>

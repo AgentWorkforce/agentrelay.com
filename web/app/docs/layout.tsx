@@ -6,6 +6,7 @@ import { DocsSearch } from '../../components/docs/DocsSearch';
 import { DocsGitHubStarsBadgeServer } from '../../components/DocsGitHubStarsBadgeServer';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { NavDownloadButton } from '../../components/SiteNavActions';
 import styles from '../../components/docs/docs.module.css';
 import { getSearchIndex } from '../../lib/docs';
 import { productBasePath, productSections, getProductSearchIndex } from '../../lib/product-docs';
@@ -30,8 +31,18 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
       <div className={styles.docsPage}>
         <SiteNav
           center={<DocsSearch index={searchIndex} productScopes={productScopes} />}
-          actions={<DocsGitHubStarsBadgeServer />}
-          mobileMenuContent={<DocsNav variant="mobileMenu" />}
+          actions={
+            <>
+              <DocsGitHubStarsBadgeServer />
+              <NavDownloadButton />
+            </>
+          }
+          mobileMenuContent={
+            <>
+              <DocsNav variant="mobileMenu" />
+              <NavDownloadButton />
+            </>
+          }
           hideMobileDocsLink
         />
         <div className={styles.docsBody}>

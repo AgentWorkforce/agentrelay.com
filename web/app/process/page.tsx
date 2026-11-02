@@ -2,9 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { FadeIn } from '../../components/FadeIn';
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { absoluteUrl } from '../../lib/site';
 import s from './process.module.css';
 
@@ -58,7 +58,7 @@ const offerings = [
 export default function ProcessPage() {
   return (
     <div className={s.page}>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main>
         <section className={s.hero}>

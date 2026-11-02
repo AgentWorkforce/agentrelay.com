@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { absoluteUrl, SITE_EMAIL } from '../../lib/site';
 import s from '../legal.module.css';
 
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default function SupportPage() {
   return (
     <div className={s.page}>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main className={s.content}>
         <h1 className={s.title}>Agent Relay support</h1>

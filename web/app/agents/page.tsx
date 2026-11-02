@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import { AgentsGallery } from './AgentsGallery';
 
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function AgentsPage() {
   return (
     <>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       <AgentsGallery />
       <SiteFooter />
     </>

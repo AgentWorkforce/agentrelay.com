@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { AGENT_DIRECTORY_PATH, getAgentDirectory, type AgentDirectory } from '../../lib/agent-directory';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
@@ -47,7 +48,7 @@ export default async function AgentDirectoryPage() {
   return (
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteNav />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
         <section className={s.hero}>

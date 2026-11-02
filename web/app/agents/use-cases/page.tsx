@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../../components/GitHubStars';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { absoluteUrl, SITE_NAME } from '../../../lib/site';
 import { UseCasesContent } from './UseCasesContent';
 
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default function UseCasesPage() {
   return (
     <>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       <UseCasesContent />
       <SiteFooter />
     </>
