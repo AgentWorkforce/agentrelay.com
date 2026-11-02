@@ -37,7 +37,12 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
               <NavDownloadButton />
             </>
           }
-          mobileMenuContent={<DocsNav variant="mobileMenu" />}
+          mobileMenuContent={
+            <>
+              <DocsNav variant="mobileMenu" />
+              <NavDownloadButton />
+            </>
+          }
           hideMobileDocsLink
         />
         <div className={styles.docsBody}>
