@@ -1,19 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
 import {
   alternateDesktopAsset,
   type DesktopPlatform,
   desktopAssetUrl,
-  detectDesktopPlatform,
   primaryDesktopAsset,
 } from '../../lib/desktop-downloads';
+import { useDesktopPlatform } from '../../lib/use-desktop-platform';
 import s from './download.module.css';
-
-type UADataNavigator = Navigator & {
-  userAgentData?: { getHighEntropyValues(hints: string[]): Promise<{ architecture?: string }> };
-};
 
 /** What the server renders, and what a visitor whose OS can't be read gets: every platform. */
 const EVERY_PLATFORM: readonly DesktopPlatform[] = [
@@ -24,25 +18,7 @@ const EVERY_PLATFORM: readonly DesktopPlatform[] = [
 
 /** Leads with the build for the visitor's OS and architecture. */
 export function DownloadButton() {
-  const [platform, setPlatform] = useState<DesktopPlatform | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    const nav = navigator as UADataNavigator;
-    const detect = (architecture?: string) => {
-      if (!cancelled) {
-        setPlatform(detectDesktopPlatform(nav.userAgent, { architecture, touchPoints: nav.maxTouchPoints }));
-      }
-    };
-    detect();
-    nav.userAgentData
-      ?.getHighEntropyValues(['architecture'])
-      .then(({ architecture }) => detect(architecture || undefined))
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const platform = useDesktopPlatform();
 
   if (!platform) {
     return (

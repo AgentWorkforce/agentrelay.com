@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 
 import landing from '../../app/landing.module.css';
+import { DesktopDownloadCta } from './DesktopDownloadCta';
 import s from './nav-actions.module.css';
 
-/** The hero's getting-started button, shown in the nav once the hero's own copy has scrolled out of view. */
+/** The hero's download button, shown in the nav once the hero's own copy has scrolled out of view. */
 export function NavActions() {
   const [showCta, setShowCta] = useState(false);
 
@@ -21,14 +22,13 @@ export function NavActions() {
   }, []);
 
   return (
-    <a
+    <DesktopDownloadCta
       className={`${landing.ctaPrimary} ${landing.homeNavAction} ${s.cta}`}
-      href="/docs/getting-started"
+      iconSize={15}
       data-shown={showCta || undefined}
       aria-hidden={!showCta}
       tabIndex={showCta ? undefined : -1}
-    >
-      Get started
-    </a>
+      fallback="Get started"
+    />
   );
 }

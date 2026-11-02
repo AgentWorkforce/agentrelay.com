@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { alternateDesktopAsset, DESKTOP_ASSETS, desktopAssetUrl, detectDesktopPlatform, primaryDesktopAsset } from '../desktop-downloads';
+import {
+  alternateDesktopAsset,
+  DESKTOP_ASSETS,
+  desktopAssetByFile,
+  desktopAssetUrl,
+  desktopStartHref,
+  detectDesktopPlatform,
+  primaryDesktopAsset,
+} from '../desktop-downloads';
 
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
 const LINUX_X64 = 'Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0';
@@ -61,5 +69,16 @@ describe('desktop assets', () => {
     expect(desktopAssetUrl('AgentRelay-macOS-arm64.dmg.sha256')).toBe(
       'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-macOS-arm64.dmg.sha256',
     );
+  });
+});
+
+describe('download start page', () => {
+  it('links each build to the start page and resolves only known builds back', () => {
+    for (const asset of DESKTOP_ASSETS) {
+      const build = new URL(desktopStartHref(asset.file), 'https://agentrelay.com').searchParams.get('build') ?? undefined;
+      expect(desktopAssetByFile(build)).toBe(asset);
+    }
+    expect(desktopAssetByFile('evil.exe')).toBeUndefined();
+    expect(desktopAssetByFile(undefined)).toBeUndefined();
   });
 });

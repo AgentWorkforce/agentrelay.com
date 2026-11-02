@@ -4,6 +4,9 @@ export const DESKTOP_RELEASES = 'https://github.com/AgentWorkforce/relay-desktop
 export type DesktopOs = 'macos' | 'linux' | 'windows';
 export type DesktopArch = 'arm64' | 'x64';
 
+/** The OS's own name, as used in "Download for macOS". */
+export const DESKTOP_OS_NAMES: Record<DesktopOs, string> = { macos: 'macOS', linux: 'Linux', windows: 'Windows' };
+
 export type DesktopAsset = {
   os: DesktopOs;
   arch: DesktopArch;
@@ -28,6 +31,15 @@ export const DESKTOP_ASSETS: readonly DesktopAsset[] = [
 
 export function desktopAssetUrl(file: string): string {
   return `${DESKTOP_RELEASES}/${file}`;
+}
+
+/** The page a download button opens: it starts `file` downloading and explains what is being installed. */
+export function desktopStartHref(file: string): string {
+  return `/download/start?build=${encodeURIComponent(file)}`;
+}
+
+export function desktopAssetByFile(file: string | undefined): DesktopAsset | undefined {
+  return DESKTOP_ASSETS.find((asset) => asset.file === file);
 }
 
 export type DesktopPlatform = { os: DesktopOs; arch: DesktopArch };

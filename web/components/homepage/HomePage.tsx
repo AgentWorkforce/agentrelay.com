@@ -20,7 +20,7 @@ import headline from './rotating-headline.module.css';
 
 /**
  * The homepage: the "Stop copy-pasting between your agents" hero with one
- * Get started button, then "Let X talk to Y", the move-faster rows, the
+ * download button, then "Let X talk to Y", the move-faster rows, the
  * tools you keep and why it fits how you work, multi-player agent work with
  * your agent's public address, hosting, and customer quotes.
  */
