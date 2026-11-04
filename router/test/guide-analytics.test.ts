@@ -4,6 +4,7 @@ import worker, {
   carriesDashboardGrant,
   getGuideAnalyticsHandle,
   isAgentPageRequestPath,
+  isSelfhostDocsPath,
 } from "../index.js";
 import {
   classifyClient,
@@ -168,6 +169,40 @@ describe("router dashboard recorder exclusion", () => {
     expect(isAgentPageRequestPath("/user")).toBe(false);
     expect(carriesDashboardGrant(new URL("https://agentrelay.com/x?Grant=1"))).toBe(true);
     expect(carriesDashboardGrant(new URL("https://agentrelay.com/x?granted=1"))).toBe(false);
+  });
+});
+
+describe("router self-hosting docs recorder exclusion", () => {
+  it("never records the gated docs pages or Cloud's runbook API", async () => {
+    const cloudWorker = vi.fn(async () => new Response('{"entitled":true,"doc":{"markdown":"SENTINEL-RUNBOOK"}}', { status: 200 }));
+    const { put, upstream, fetch } = setup(200, { CLOUD_WEB_WORKER: { fetch: cloudWorker } });
+    upstream.mockImplementation(async () => new Response("<h1>SENTINEL-RUNBOOK</h1>", { status: 200 }));
+    await fetch("https://agentrelay.com/docs/self-hosting", { headers: AGENT });
+    await fetch("https://agentrelay.com/docs/self-hosting/upgrades", { headers: AGENT });
+    await fetch("https://agentrelay.com/cloud/api/v1/me/selfhost-docs?doc=upgrades", { headers: AGENT });
+    await fetch("https://agentrelay.com/cloud/docs/self-hosting/upgrades", { headers: AGENT });
+    expect(upstream).toHaveBeenCalledTimes(2);
+    expect(cloudWorker).toHaveBeenCalledTimes(2);
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("matches only the gated paths", () => {
+    for (const path of [
+      "/docs/self-hosting",
+      "/docs/self-hosting/",
+      "/docs/self-hosting/upgrades",
+      "/Docs/Self-Hosting/upgrades",
+      "/cloud/docs/self-hosting/upgrades",
+      "/cloud/api/v1/me/selfhost-docs",
+      "/docs/%73elf-hosting/upgrades",
+      "/cloud/api/v1/me/selfhost%2Ddocs",
+      "/docs/%E0%A4%A",
+    ]) {
+      expect(isSelfhostDocsPath(path), path).toBe(true);
+    }
+    for (const path of ["/docs", "/docs/self-hostingx", "/docs/sessions", "/cloud/api/v1/me/integrations", "/self-hosting"]) {
+      expect(isSelfhostDocsPath(path), path).toBe(false);
+    }
   });
 });
 

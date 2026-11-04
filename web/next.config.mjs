@@ -86,6 +86,20 @@ const nextConfig = {
         source: '/well-known/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
       },
+      ...['/docs/self-hosting', '/docs/self-hosting/:path*'].map((source) => ({
+        // Gated self-hosting docs (lib/selfhost-docs.ts): rendered per reader
+        // after Cloud verifies the session and the organization's entitlement.
+        // No shared cache (Cloudflare edge, OpenNext, browser) may store them,
+        // and no index may list them. Kept in sync with SELFHOST_DOCS_HEADERS
+        // (asserted by lib/test/selfhost-docs.test.ts).
+        source,
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'none'; object-src 'none'" },
+        ],
+      })),
       {
         // The owner analytics dashboard: private, never cached, never framed,
         // never leaks its URL. The grant-bearing first request is rewritten to
