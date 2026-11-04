@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../components/SiteFooter', () => ({ SiteFooter: () => null }));
 vi.mock('../../components/SiteNav', () => ({ SiteNav: () => null }));
+vi.mock('../../components/GitHubStars', () => ({ GitHubStarsBadge: () => null }));
 
 import sitemap from '../../app/sitemap';
 import PricingPage, { metadata } from '../../app/pricing/page';
@@ -15,6 +16,8 @@ import {
   PLAN_LIMITS,
   SALES_HREF,
   displayedPrice,
+  billedPrice,
+  pricingCta,
   limitLines,
   pricingTiers,
   showsBetaPrice,
@@ -23,20 +26,25 @@ import {
 const html = renderToStaticMarkup(<PricingPage />);
 
 describe('pricing page', () => {
-  it('shows the three tiers with the contract limits', () => {
+  it('shows all four tiers with their limits', () => {
+    expect(html).toContain('>Free<');
+    expect(html).toContain('1 device');
+    expect(html).toContain('3 active agents');
+    expect(html).toContain('1 human');
+    expect(html).toContain('1-day session history');
     expect(html).toContain('>Intro<');
     expect(html).toContain('>Pro<');
     expect(html).toContain('>Enterprise<');
     expect(html).toContain('5 devices');
-    expect(html).toContain('15 agents');
+    expect(html).toContain('15 active agents');
     expect(html).toContain('2 humans');
     expect(html).toContain('7-day session history');
     expect(html).toContain('15 devices');
-    expect(html).toContain('60 agents');
+    expect(html).toContain('40 active agents');
     expect(html).toContain('10 humans');
     expect(html).toContain('14-day session history');
     expect(html).toContain('Unlimited devices');
-    expect(html).toContain('Unlimited agents');
+    expect(html).toContain('Unlimited active agents');
     expect(html).toContain('Unlimited humans');
     expect(html).toContain('1 year of session history');
   });
@@ -70,8 +78,9 @@ describe('pricing page', () => {
   });
 
   it('uses the customer-facing product name only', () => {
-    expect(html.toLowerCase()).not.toContain('relaycast');
-    expect(html.toLowerCase()).not.toContain('broker');
+    const text = html.replace(/<[^>]*>/g, '').toLowerCase();
+    expect(text).not.toContain('relaycast');
+    expect(text).not.toContain('broker');
   });
 
   it('has a canonical URL and appears in the sitemap', () => {
@@ -82,18 +91,54 @@ describe('pricing page', () => {
 });
 
 describe('pricing data', () => {
-  it('matches the canonical plan limits', () => {
+  it('bills ten months for an annual term, including when beta pricing ends', () => {
+    const [free, intro, pro, enterprise] = pricingTiers;
+    expect(billedPrice(free, 'monthly')).toBe(0);
+    expect(billedPrice(free, 'annual')).toBe(0);
+    expect(showsBetaPrice(free)).toBe(false);
+    expect(billedPrice(intro, 'annual', true)).toBe(490);
+    expect(billedPrice(pro, 'annual', true)).toBe(990);
+    expect(billedPrice(intro, 'annual', false)).toBe(990);
+    expect(billedPrice(pro, 'annual', false)).toBe(1990);
+    expect(billedPrice(intro, 'monthly', true)).toBe(49);
+    expect(billedPrice(pro, 'monthly', true)).toBe(99);
+    expect(billedPrice(enterprise, 'annual')).toBeNull();
+  });
+
+  it('preserves the CTA and carries annual billing through the sign-in redirect', () => {
+    for (const tier of pricingTiers) {
+      const annual = pricingCta(tier, 'annual');
+      expect(annual.label).toBe(tier.cta.label);
+      if (tier.key === 'enterprise') {
+        expect(annual.href).toBe(SALES_HREF);
+      } else if (tier.key === 'free') {
+        expect(annual).toEqual(tier.cta);
+        expect(annual.href).toBe(googleSignInHref({ next: '/onboarding/plan?plan=free' }));
+      } else {
+        const url = new URL(annual.href, 'https://agentrelay.com');
+        expect(url.pathname).toBe('/cloud/api/auth/google/start');
+        const next = new URL(url.searchParams.get('next')!, 'https://agentrelay.com');
+        expect(next.pathname).toBe('/onboarding/plan');
+        expect(next.searchParams.get('plan')).toBe(tier.key);
+        expect(next.searchParams.get('billing')).toBe('annual');
+      }
+      expect(pricingCta(tier, 'monthly')).toEqual(tier.cta);
+    }
+  });
+
+  it('matches the proposed plan allowances', () => {
     expect(PLAN_LIMITS).toEqual({
+      free: { devices: 1, agents: 3, humans: 1, session_retention_days: 1 },
       intro: { devices: 5, agents: 15, humans: 2, session_retention_days: 7 },
-      pro: { devices: 15, agents: 60, humans: 10, session_retention_days: 14 },
+      pro: { devices: 15, agents: 40, humans: 10, session_retention_days: 14 },
       enterprise: { devices: null, agents: null, humans: null, session_retention_days: 365 },
     });
-    expect(pricingTiers.map((tier) => tier.key)).toEqual(['intro', 'pro', 'enterprise']);
+    expect(pricingTiers.map((tier) => tier.key)).toEqual(['free', 'intro', 'pro', 'enterprise']);
     expect(pricingTiers.filter((tier) => tier.highlighted).map((tier) => tier.key)).toEqual(['pro']);
   });
 
   it('is a single switch: beta off shows list prices with no strikethrough', () => {
-    const [intro, pro, enterprise] = pricingTiers;
+    const [, intro, pro, enterprise] = pricingTiers;
     expect(displayedPrice(intro, true)).toBe(49);
     expect(displayedPrice(pro, true)).toBe(99);
     expect(displayedPrice(intro, false)).toBe(99);
@@ -107,7 +152,7 @@ describe('pricing data', () => {
   it('renders enterprise limits as unlimited with one year of history', () => {
     expect(limitLines(PLAN_LIMITS.enterprise)).toEqual([
       'Unlimited devices',
-      'Unlimited agents',
+      'Unlimited active agents',
       'Unlimited humans',
       '1 year of session history',
     ]);
@@ -120,7 +165,8 @@ describe('plans and limits docs page', () => {
     expect(slugs).toContain('plans-and-limits');
     const doc = getDoc('plans-and-limits');
     expect(doc?.frontmatter.title).toBe('Plans and limits');
-    expect(doc?.content).toContain('plan_limit_exceeded');
+    expect(doc?.content).toContain('Overage applies as soon as active agents exceed');
+    expect(doc?.content).toContain('no added charge or hard block');
     expect(doc?.content).toContain('Existing customers keep their current access');
     expect(sitemap().map((entry) => entry.url)).toContain('https://agentrelay.com/docs/plans-and-limits');
   });

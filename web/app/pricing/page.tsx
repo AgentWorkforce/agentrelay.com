@@ -1,25 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowRight, Bot, History, Monitor, Users } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import { Github } from '../../components/brand-icons';
+import { GitHubStarsBadge } from '../../components/GitHubStars';
 
-import { FadeIn } from '../../components/FadeIn';
 import { SiteFooter } from '../../components/SiteFooter';
-import { SiteNav } from '../../components/SiteNav';
 import { defaultOgImage } from '../../lib/og-meta';
-import {
-  BETA_PRICING_ACTIVE,
-  BETA_PRICING_NOTE,
-  displayedPrice,
-  limitLines,
-  pricingTiers,
-  showsBetaPrice,
-  type PricingTier,
-} from '../../lib/pricing';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
+import { PricingContent } from './PricingContent';
 import s from './pricing.module.css';
 
 const pricingDescription =
-  'Agent Relay plans: one flat monthly price per organization for devices, agents, humans, and session history. Intro, Pro, and Enterprise.';
+  'Agent Relay plans: an organization base price with active-agent overage. Intro includes 15 active agents; Pro includes 40. No overage charges for humans or devices.';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -43,23 +35,26 @@ export const metadata: Metadata = {
   },
 };
 
-const limitIcons = [Monitor, Bot, Users, History] as const;
-
 const faq = [
+  {
+    question: 'What counts as an active agent?',
+    answer:
+      'Each month, we use the higher of two counts: agents that sent messages on at least 3 days, or agents active on your busiest day. Changing worker IDs does not count as adding new agents.',
+  },
   {
     question: 'What counts as a device?',
     answer:
-      'A device is a node connected to your organization: a laptop, a CI runner, or a cloud VM running agent relay. One device can host many agents. Agents and humans are counted separately from devices.',
+      'A laptop, CI runner, or cloud VM connected to your organization. One device can run many agents.',
   },
   {
     question: 'What happens when I reach a limit?',
     answer:
-      'The next device, agent, or human past your plan’s cap is refused with a clear message. Nothing already connected is disconnected. The desktop app tells you which limit you reached and links to upgrade.',
+      'On Free, upgrade when you need more room. On Intro and Pro, extra active agents are billed monthly in blocks of 5: $15 per block on Intro and $10 on Pro. Humans and devices have no overage fees. Above 100 agents, talk to us about Enterprise.',
   },
   {
     question: 'Can I change plans?',
     answer:
-      'Yes. Upgrade from Intro to Pro, or cancel, from your organization’s billing settings. Plans are monthly and billed per organization, not per seat. Enterprise is set up with our team.',
+      'Under this pricing model, Intro automatically upgrades to Pro when Pro costs less. Choose monthly or annual billing at signup. Annual billing includes two months free on the base plan; agent overage is always billed monthly.',
   },
   {
     question: 'How do limits apply to existing customers?',
@@ -68,111 +63,30 @@ const faq = [
   },
 ];
 
-function Price({ tier }: { tier: PricingTier }) {
-  const price = displayedPrice(tier);
-
-  if (price === null) {
-    return (
-      <div className={s.priceBlock}>
-        <span className={s.priceCustom}>Custom</span>
-        <span className={s.priceMeta}>Invoiced annually or monthly</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className={s.priceBlock}>
-      <div className={s.priceRow}>
-        {showsBetaPrice(tier) && (
-          <span className={s.listPrice}>
-            <span className={s.visuallyHidden}>List price </span>${tier.listPrice}
-          </span>
-        )}
-        <span className={s.price}>
-          <span className={s.visuallyHidden}>{showsBetaPrice(tier) ? 'Beta price ' : 'Price '}</span>
-          ${price}
-          <span className={s.per}>/mo</span>
-        </span>
-      </div>
-      <span className={s.priceMeta}>per organization, billed monthly</span>
-    </div>
-  );
-}
-
-function TierCard({ tier, index }: { tier: PricingTier; index: number }) {
-  const lines = limitLines(tier.limits);
-  const isSales = tier.key === 'enterprise';
-
-  return (
-    <FadeIn className={`${s.tier} ${tier.highlighted ? s.tierHighlighted : ''}`} delay={index * 80}>
-      <div className={s.tierHeader}>
-        <h2 className={s.tierName}>{tier.name}</h2>
-        {tier.highlighted && <span className={s.tierFlag}>Most popular</span>}
-      </div>
-      <p className={s.tierTagline}>{tier.tagline}</p>
-
-      <Price tier={tier} />
-
-      <ul className={s.limits} aria-label={`${tier.name} plan limits`}>
-        {lines.map((line, lineIndex) => {
-          const Icon = limitIcons[lineIndex];
-          return (
-            <li key={line}>
-              <Icon aria-hidden="true" />
-              <span>{line}</span>
-            </li>
-          );
-        })}
-      </ul>
-
-      <div className={s.tierActions}>
-        <a className={tier.highlighted ? s.ctaPrimary : s.ctaSecondary} href={tier.cta.href}>
-          {tier.cta.label}
-          <ArrowRight aria-hidden="true" />
-        </a>
-        {showsBetaPrice(tier) && <p className={s.betaNote}>{BETA_PRICING_NOTE}</p>}
-        {isSales && <p className={s.betaNote}>Assigned by our team. Never self-serve.</p>}
-      </div>
-    </FadeIn>
-  );
-}
-
 export default function PricingPage() {
   return (
     <div className={s.page}>
-      <SiteNav />
-
-      <main className={s.main}>
+      <PricingContent hero={
         <section className={s.hero}>
-          <FadeIn className={s.heroInner}>
-            <p className={s.eyebrow}>Pricing</p>
-            <h1 className={s.title}>One flat price per organization.</h1>
+          <div className={s.heroInner}>
+            <h1 className={s.title}>Start free. Grow at your pace.</h1>
             <p className={s.lead}>
-              No seats and no metering. Pick the size of agent team you run, connect your devices, and invite the
-              humans who work alongside them.
+              One plan for your people, agents, and devices.
             </p>
-            {BETA_PRICING_ACTIVE && <span className={s.betaBadge}>Beta pricing is on</span>}
-          </FadeIn>
+          </div>
         </section>
 
-        <section className={s.tiers} aria-label="Plans">
-          {pricingTiers.map((tier, index) => (
-            <TierCard key={tier.key} tier={tier} index={index} />
-          ))}
-        </section>
-
+      }>
         <section className={s.faq} aria-labelledby="pricing-faq">
-          <FadeIn>
-            <h2 id="pricing-faq" className={s.faqTitle}>
-              Questions
-            </h2>
-          </FadeIn>
+          <h2 id="pricing-faq" className={s.faqTitle}>
+            Questions
+          </h2>
           <dl className={s.faqList}>
-            {faq.map((item, index) => (
-              <FadeIn className={s.faqItem} delay={index * 60} key={item.question}>
+            {faq.map((item) => (
+              <div className={s.faqItem} key={item.question}>
                 <dt>{item.question}</dt>
                 <dd>{item.answer}</dd>
-              </FadeIn>
+              </div>
             ))}
           </dl>
           <p className={s.faqFoot}>
@@ -183,7 +97,20 @@ export default function PricingPage() {
             docs.
           </p>
         </section>
-      </main>
+        <section className={s.openSource} aria-labelledby="pricing-open-source">
+          <div className={s.githubMark} aria-hidden="true"><Github /></div>
+          <div className={s.openSourceContent}>
+            <h2 id="pricing-open-source">Proudly open source.</h2>
+            <p>You can self-host the messaging engine on your own infrastructure.</p>
+            <div className={s.openSourceLinks}>
+              <Link className={s.openSourceCta} href="/docs/relaycast-api#self-hosting">
+                Self-hosting docs <ArrowRight aria-hidden="true" />
+              </Link>
+              <GitHubStarsBadge showRepo className={s.repoButton} />
+            </div>
+          </div>
+        </section>
+      </PricingContent>
 
       <SiteFooter />
     </div>

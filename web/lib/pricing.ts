@@ -1,10 +1,16 @@
 import { googleSignInHref } from './login';
 
 /**
- * Agent Relay plans as the pricing page and docs present them. Limits mirror
- * the canonical `PLAN_LIMITS` table Cloud enforces; `null` means unlimited.
+ * Agent Relay plans as the pricing page and docs present them. These are the proposed marketing allowances; Cloud billing enforcement is
+ * maintained separately. `null` means unlimited.
  */
-export type PlanKey = 'intro' | 'pro' | 'enterprise';
+export type PlanKey = 'free' | 'intro' | 'pro' | 'enterprise';
+export type BillingPeriod = 'monthly' | 'annual';
+
+const ANNUAL_BILLED_MONTHS = 10;
+export const AGENT_BLOCK_SIZE = 5;
+export const AGENT_OVERAGE_RATES = { intro: 3, pro: 2 } as const;
+export const ENTERPRISE_AGENT_THRESHOLD = 100;
 
 export type PlanLimits = {
   devices: number | null;
@@ -14,8 +20,9 @@ export type PlanLimits = {
 };
 
 export const PLAN_LIMITS: Record<PlanKey, PlanLimits> = {
+  free: { devices: 1, agents: 3, humans: 1, session_retention_days: 1 },
   intro: { devices: 5, agents: 15, humans: 2, session_retention_days: 7 },
-  pro: { devices: 15, agents: 60, humans: 10, session_retention_days: 14 },
+  pro: { devices: 15, agents: 40, humans: 10, session_retention_days: 14 },
   enterprise: { devices: null, agents: null, humans: null, session_retention_days: 365 },
 };
 
@@ -46,6 +53,16 @@ export type PricingTier = {
 
 export const pricingTiers: readonly PricingTier[] = [
   {
+    key: 'free',
+    name: 'Free',
+    tagline: 'Try Relay on your own.',
+    listPrice: 0,
+    betaPrice: null,
+    limits: PLAN_LIMITS.free,
+    highlighted: false,
+    cta: { label: 'Start for free', href: googleSignInHref({ next: '/onboarding/plan?plan=free' }) },
+  },
+  {
     key: 'intro',
     name: 'Intro',
     tagline: 'One builder and a small crew of agents across a few machines.',
@@ -68,7 +85,7 @@ export const pricingTiers: readonly PricingTier[] = [
   {
     key: 'enterprise',
     name: 'Enterprise',
-    tagline: 'Unlimited devices, agents, humans; 1 year history. Invoiced, with deployment options.',
+    tagline: 'For larger teams with custom deployment needs.',
     listPrice: null,
     betaPrice: null,
     limits: PLAN_LIMITS.enterprise,
@@ -80,6 +97,25 @@ export const pricingTiers: readonly PricingTier[] = [
 /** Price shown on the card: the beta price while the beta is on, else the list price. */
 export function displayedPrice(tier: PricingTier, betaActive: boolean = BETA_PRICING_ACTIVE): number | null {
   return betaActive && tier.betaPrice !== null ? tier.betaPrice : tier.listPrice;
+}
+
+export function billedPrice(
+  tier: PricingTier,
+  period: BillingPeriod,
+  betaActive: boolean = BETA_PRICING_ACTIVE,
+): number | null {
+  const monthlyPrice = displayedPrice(tier, betaActive);
+  return monthlyPrice === null ? null : monthlyPrice * (period === 'annual' ? ANNUAL_BILLED_MONTHS : 1);
+}
+
+export function pricingCta(tier: PricingTier, period: BillingPeriod): PricingTier['cta'] {
+  if (period === 'annual' && (tier.key === 'intro' || tier.key === 'pro')) {
+    return {
+      label: tier.cta.label,
+      href: googleSignInHref({ next: `/onboarding/plan?plan=${tier.key}&billing=annual` }),
+    };
+  }
+  return tier.cta;
 }
 
 /** True when the card shows the list price struck through next to the beta price. */
@@ -101,7 +137,7 @@ export function formatRetention(days: number | null): string {
 export function limitLines(limits: PlanLimits): readonly string[] {
   return [
     formatCount(limits.devices, { one: 'device', many: 'devices' }),
-    formatCount(limits.agents, { one: 'agent', many: 'agents' }),
+    formatCount(limits.agents, { one: 'active agent', many: 'active agents' }),
     formatCount(limits.humans, { one: 'human', many: 'humans' }),
     formatRetention(limits.session_retention_days),
   ];
