@@ -60,3 +60,21 @@ for (const [path, target, content] of redirects) {
   assert.match(await response.text(), content, `${path}: expected page content is missing`);
   console.log(`Worker smoke: ${path} redirects to ${target}`);
 }
+
+// The gated self-hosting docs (lib/selfhost-docs.ts) render per reader in the
+// Worker and must never come from a shared cache. A signed-out request is sent
+// to sign in, uncached; it never reaches Cloud, so this needs no credentials.
+for (const [path, next] of [
+  ['/docs/self-hosting', '/docs/self-hosting'],
+  ['/docs/self-hosting/upgrades', '/docs/self-hosting/upgrades'],
+]) {
+  const response = await fetch(new URL(path, base), { redirect: 'manual', signal: AbortSignal.timeout(15000) });
+  assert.ok([303, 307, 308].includes(response.status), `${path}: expected a sign-in redirect, got ${response.status}`);
+  const location = new URL(response.headers.get('location') ?? '', base);
+  assert.equal(location.pathname, '/login', `${path}: redirected to ${location}`);
+  assert.equal(location.searchParams.get('next'), next, `${path}: wrong return path`);
+  assert.match(response.headers.get('cache-control') ?? '', /private/, `${path}: missing private Cache-Control`);
+  assert.match(response.headers.get('cache-control') ?? '', /no-store/, `${path}: missing no-store Cache-Control`);
+  assert.match(response.headers.get('x-robots-tag') ?? '', /noindex/, `${path}: missing X-Robots-Tag noindex`);
+  console.log(`Worker smoke: ${path} redirects a signed-out reader to sign in, uncached`);
+}

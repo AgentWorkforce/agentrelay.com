@@ -41,3 +41,7 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify no private self-hosting docs in the build
+        working-directory: web
+        run: node scripts/selfhost-docs-leak-check.mjs check .next

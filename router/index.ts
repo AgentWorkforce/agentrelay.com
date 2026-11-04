@@ -302,6 +302,14 @@ export function isAgentPageRequestPath(pathname: string): boolean {
   return /^\/u(?:\/|$)/i.test(pathname);
 }
 
+// The gated self-hosting docs: the rendered pages, Cloud's runbook API that
+// feeds them, and Cloud's sign-in return hop. Their bodies are entitled
+// customers' private runbooks, so they stay out of the replay corpus.
+export function isSelfhostDocsPath(pathname: string): boolean {
+  return /^\/(?:cloud\/)?docs\/self-hosting(?:\/|$)/i.test(pathname)
+    || /^\/cloud\/api\/v1\/me\/selfhost-docs(?:\/|$)/i.test(pathname);
+}
+
 // Dashboard grants are single-use bearer credentials. Any request carrying a
 // grant parameter, on any path, stays out of the replay corpus.
 export function carriesDashboardGrant(url: URL): boolean {
@@ -864,10 +872,12 @@ const router = {
     // Conversation URLs are bearer secrets and request bodies are private chat
     // content, so neither the new route nor the existing Cloud fallback belongs
     // in the replay corpus. Agent pages and guides mint a conversation URL in
-    // every response, so they stay out too, however they were reached.
+    // every response, so they stay out too, however they were reached. So do
+    // the gated self-hosting docs and Cloud's runbook API behind them.
     const recorderRequestClone = recorderEnv
       && !relayAgentRoute
       && !isAgentPageRequestPath(url.pathname)
+      && !isSelfhostDocsPath(url.pathname)
       && !carriesDashboardGrant(url)
       ? (request.clone() as unknown as Request)
       : null;

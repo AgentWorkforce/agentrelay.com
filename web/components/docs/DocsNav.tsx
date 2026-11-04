@@ -226,6 +226,24 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
           </ul>
         </div>
       ))}
+      {!productSection && docsVersion === 'v8' && (
+        <div className={styles.navGroup}>
+          <h4 className={styles.navGroupTitle}>Customers</h4>
+          <ul className={styles.navList}>
+            <li>
+              {/* Gated per reader (app/docs/self-hosting): never prefetch it from public pages. */}
+              <Link
+                href="/docs/self-hosting"
+                prefetch={false}
+                className={`${styles.navLink} ${pathname?.startsWith('/docs/self-hosting') ? styles.navLinkActive : ''}`}
+              >
+                <PiLockKeyDuotone className={styles.navIcon} aria-hidden="true" />
+                <span className={styles.navLabel}>Self-hosting</span>
+              </Link>
+            </li>
+          </ul>
+        </div>
+      )}
     </nav>
   );
 }
