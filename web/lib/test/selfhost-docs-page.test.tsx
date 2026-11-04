@@ -45,9 +45,11 @@ const MARKDOWN = [
   '',
   '<script>alert(1)</script>',
   '',
-  '[bad](javascript:alert(1)) [good](https://github.com/AgentWorkforce/helm-charts)',
+  '[bad](javascript:alert(1)) [good](https://github.com/AgentWorkforce/helm-charts) [slashy](/\\evil.example)',
   '',
   '## Install the chart',
+  '',
+  '## Install the chart 1',
 ].join('\n');
 const PRIVATE_STRINGS = [PRIVATE_TITLE, PRIVATE_BODY, PRIVATE_DESCRIPTION, 'CANARY-b81e', 'Install the chart'];
 
@@ -140,10 +142,14 @@ describe('self-hosting docs page', () => {
     expect(html).toContain('aria-label="Copy code"');
     expect(html).toContain('id="install-the-chart"');
     expect(html).toContain('id="install-the-chart-1"');
+    expect(html).toContain('id="install-the-chart-1-1"');
     expect(html).toContain('<table>');
     // raw HTML and unsafe links never render
     expect(html).not.toContain('<script>');
     expect(html).not.toContain('javascript:');
+    // remark-rehype percent-encodes the backslash, so "/\\host" stays an on-site path
+    expect(html).toContain('href="/%5Cevil.example"');
+    expect(html).not.toMatch(/href="\/\\|href="\/\//);
     expect(html).toContain('href="https://github.com/AgentWorkforce/helm-charts"');
     // replays never capture runbook text
     expect(html).toContain('ph-sensitive');

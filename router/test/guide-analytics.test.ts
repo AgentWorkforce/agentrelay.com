@@ -194,6 +194,9 @@ describe("router self-hosting docs recorder exclusion", () => {
       "/Docs/Self-Hosting/upgrades",
       "/cloud/docs/self-hosting/upgrades",
       "/cloud/api/v1/me/selfhost-docs",
+      "/docs/%73elf-hosting/upgrades",
+      "/cloud/api/v1/me/selfhost%2Ddocs",
+      "/docs/%E0%A4%A",
     ]) {
       expect(isSelfhostDocsPath(path), path).toBe(true);
     }

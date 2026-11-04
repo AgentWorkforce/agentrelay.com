@@ -57,6 +57,8 @@ function linkRunbookReferences(tree: MdastRoot) {
 /** Only same-site paths, fragments, https and mailto links survive; anything else renders as text. */
 function safeHref(href: unknown): string | null {
   if (typeof href !== 'string') return null;
+  // A backslash or control character can turn "/\\host" into a protocol-relative URL.
+  if (/[\\\u0000-\u001f\u007f]/.test(href)) return null;
   if (href.startsWith('#') || (href.startsWith('/') && !href.startsWith('//'))) return href;
   try {
     const url = new URL(href);
@@ -69,15 +71,23 @@ function safeHref(href: unknown): string | null {
 function headingIds(tree: HastRoot): TocItem[] {
   const toc: TocItem[] = [];
   const seen = new Map<string, number>();
+  const used = new Set<string>();
   const visit = (node: HastRoot | Element) => {
     for (const child of node.children) {
       if (child.type !== 'element') continue;
       if (child.tagName === 'h2' || child.tagName === 'h3') {
         const text = textOf(child).trim();
         const base = slugify(text) || 'section';
-        const count = seen.get(base) ?? 0;
+        // Count every id handed out, generated suffixes included, so a later
+        // heading literally named "x-1" cannot collide with a deduped "x".
+        let count = seen.get(base) ?? 0;
+        let id = count === 0 ? base : `${base}-${count}`;
+        while (used.has(id)) {
+          count += 1;
+          id = `${base}-${count}`;
+        }
         seen.set(base, count + 1);
-        const id = count === 0 ? base : `${base}-${count}`;
+        used.add(id);
         child.properties = { ...child.properties, id };
         toc.push({ id, text, level: child.tagName === 'h2' ? 2 : 3 });
       } else {

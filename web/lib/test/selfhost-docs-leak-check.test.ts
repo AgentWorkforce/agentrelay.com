@@ -56,11 +56,15 @@ describe('selfhost docs leak check', () => {
       'server/app/docs/self-hosting.html': '<html></html>',
       'assets/docs/self-hosting/upgrades.rsc': 'x',
       'server/app/docs/self-hosting/[[...slug]]/page.js': 'export default function Page(){}',
-      'prerender-manifest.json': JSON.stringify({ routes: { '/docs/flows': {}, '/docs/self-hosting/upgrades': {} } }),
+      'prerender-manifest.json': JSON.stringify({
+        routes: { '/docs/flows': {}, '/docs/self-hosting/upgrades': {} },
+        dynamicRoutes: { '/docs/self-hosting/[[...slug]]': {} },
+      }),
     });
     const findings = scan(dir, new Set(['0000000000000000']));
     expect(findings.sort()).toEqual([
       'assets/docs/self-hosting/upgrades.rsc: build output under the gated /docs/self-hosting route',
+      'prerender-manifest.json: /docs/self-hosting/[[...slug]] is prerendered',
       'prerender-manifest.json: /docs/self-hosting/upgrades is prerendered',
       'server/app/docs/self-hosting.html: build output under the gated /docs/self-hosting route',
     ]);
@@ -75,6 +79,7 @@ describe('selfhost docs leak check', () => {
   it('ships a fingerprint file made with the checker settings', () => {
     const data = JSON.parse(readFileSync(new URL('../../security/selfhost-runbook-fingerprints.json', import.meta.url), 'utf8'));
     expect(data.window).toBe(12);
+    expect(data.sample).toBe(4);
     expect(data.hashes.length).toBeGreaterThan(500);
     for (const hash of data.hashes.slice(0, 50)) expect(hash).toMatch(/^[0-9a-f]{16}$/);
   });

@@ -110,6 +110,13 @@ describe('fetchSelfhostDocs', () => {
     }
   });
 
+  it('is unavailable, not an error, when the Cloud origin is misconfigured', async () => {
+    vi.stubEnv('SELFHOST_DOCS_CLOUD_ORIGIN', 'http://cloud.example.com');
+    const fetcher = reply(200, { entitled: true, docs: DOCS });
+    expect(await fetchSelfhostDocs(SESSION, undefined, fetcher)).toEqual({ kind: 'unavailable' });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('refuses an oversized reply', async () => {
     const huge = JSON.stringify({ entitled: true, docs: DOCS, doc: { ...DOC, markdown: 'x'.repeat(600_000) } });
     const fetcher = vi.fn(async () => new Response(huge, { status: 200 })) as unknown as typeof fetch;

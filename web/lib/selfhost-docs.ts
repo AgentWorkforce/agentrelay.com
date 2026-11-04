@@ -138,9 +138,10 @@ export async function fetchSelfhostDocs(
 ): Promise<SelfhostDocsResult> {
   if (!validCloudSession(session)) return { kind: 'unauthenticated' };
   if (doc !== undefined && !DOC_PATTERN.test(doc)) return { kind: 'unavailable' };
-  const url = new URL('/cloud/api/v1/me/selfhost-docs', cloudApiOrigin());
-  if (doc) url.searchParams.set('doc', doc);
   try {
+    // Inside the try: a misconfigured origin is "unavailable", never a 500.
+    const url = new URL('/cloud/api/v1/me/selfhost-docs', cloudApiOrigin());
+    if (doc) url.searchParams.set('doc', doc);
     const response = await fetcher(url.toString(), {
       method: 'GET',
       cache: 'no-store',

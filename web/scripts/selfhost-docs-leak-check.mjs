@@ -57,12 +57,8 @@ export function windowHashes(text, { sampleOnly = false } = {}) {
 }
 
 function* walk(dir) {
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return;
-  }
+  // A directory that cannot be read fails the check: never pass on a partial scan.
+  const entries = readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
@@ -95,7 +91,11 @@ export function scan(dir, fingerprints) {
       continue;
     }
     if (!TEXT_EXTENSIONS.has(path.extname(file))) continue;
-    if (statSync(file).size > MAX_FILE_BYTES) continue;
+    if (statSync(file).size > MAX_FILE_BYTES) {
+      // Fail closed rather than skip what cannot be scanned.
+      findings.push(`${rel}: larger than ${MAX_FILE_BYTES} bytes, too large to scan`);
+      continue;
+    }
     const words = tokens(readFileSync(file, 'utf8'));
     for (let i = 0; i + WINDOW <= words.length; i += 1) {
       const hash = windowHash(words.slice(i, i + WINDOW));
@@ -108,7 +108,8 @@ export function scan(dir, fingerprints) {
   // The prerender manifest must not list a gated route.
   const manifest = path.join(dir, 'prerender-manifest.json');
   if (existsSync(manifest)) {
-    const routes = Object.keys(JSON.parse(readFileSync(manifest, 'utf8')).routes ?? {});
+    const data = JSON.parse(readFileSync(manifest, 'utf8'));
+    const routes = [...Object.keys(data.routes ?? {}), ...Object.keys(data.dynamicRoutes ?? {})];
     for (const route of routes.filter((r) => r.startsWith('/docs/self-hosting'))) {
       findings.push(`prerender-manifest.json: ${route} is prerendered`);
     }
@@ -118,6 +119,12 @@ export function scan(dir, fingerprints) {
 
 function check(dirs) {
   const fingerprints = loadFingerprints();
+  // Named directories must exist (a typo must not pass); the defaults may be partly absent.
+  const missing = dirs.filter((d) => !existsSync(d));
+  if (missing.length) {
+    console.error(`selfhost-docs-leak-check: missing build output: ${missing.join(', ')}`);
+    process.exit(2);
+  }
   const targets = (dirs.length ? dirs : ['.next', '.open-next']).map((d) => path.resolve(d)).filter((d) => existsSync(d));
   if (targets.length === 0) {
     console.error('selfhost-docs-leak-check: no build output found (.next or .open-next). Build first.');
@@ -158,7 +165,15 @@ function fingerprint(args) {
   }
   const publicHashes = publicSourceHashes();
   const hashes = new Set();
-  const files = readdirSync(dir).filter((name) => name.endsWith('.md')).sort();
+  // relay-agent's build-knowledge.ts allows only flat .md files here; refuse
+  // anything else rather than silently leave it unfingerprinted.
+  const entries = readdirSync(dir, { withFileTypes: true });
+  const strays = entries.filter((entry) => !entry.isFile() || !entry.name.endsWith('.md')).map((entry) => entry.name);
+  if (strays.length) {
+    console.error(`fingerprint: ${dir} may contain only .md files, found: ${strays.join(', ')}`);
+    process.exit(2);
+  }
+  const files = entries.map((entry) => entry.name).sort();
   for (const name of files) {
     for (const hash of windowHashes(readFileSync(path.join(dir, name), 'utf8'), { sampleOnly: true })) {
       if (!publicHashes.has(hash)) hashes.add(hash);

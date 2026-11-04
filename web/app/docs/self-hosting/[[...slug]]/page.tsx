@@ -168,7 +168,8 @@ function RunbookNav({ docs, active }: { docs: SelfhostDocSummary[]; active?: str
 
 /**
  * Entitled layout. `ph-sensitive` is the PostHog session-recording block
- * selector (app/WebsitePostHogProvider.tsx), so replays never capture runbook text.
+ * selector (app/WebsitePostHogProvider.tsx), so replays never capture runbook
+ * text, and `ph-no-capture` keeps autocapture from sending clicked element text.
  */
 function EntitledShell({
   title,
@@ -186,7 +187,7 @@ function EntitledShell({
   children: ReactNode;
 }) {
   return (
-    <div className={`${styles.articleWrapper} ph-sensitive`}>
+    <div className={`${styles.articleWrapper} ph-sensitive ph-no-capture`}>
       <article className={styles.article}>
         <p className={s.eyebrow}>
           <Link href={selfhostDocPath()} prefetch={false}>
