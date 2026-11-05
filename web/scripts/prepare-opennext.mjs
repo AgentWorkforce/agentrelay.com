@@ -9,7 +9,7 @@ const adapter = new URL('../cli/build/patches/plugins/', import.meta.resolve('@o
 const adapterPackage = new URL('../../package.json', import.meta.resolve('@opennextjs/cloudflare'));
 assert.equal(JSON.parse(await readFile(adapterPackage, 'utf8')).version, '1.20.1',
   'Reassess the Next 16.4 compatibility patches when upgrading OpenNext');
-assert.equal(JSON.parse(await readFile(new URL(import.meta.resolve('next/package.json')), 'utf8')).version, '16.4.0',
+assert.equal(JSON.parse(await readFile(new URL(import.meta.resolve('next/package.json')), 'utf8')).version, '16.4.3',
   'Reassess the OpenNext compatibility patches when upgrading Next');
 // Like OpenNext's original patch, this installs only its default/remote cache
 // handlers. A future named custom cache handler needs an explicit integration.
