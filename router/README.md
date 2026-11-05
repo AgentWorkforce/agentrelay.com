@@ -70,3 +70,23 @@ the first production deploy does not require manual Cloudflare setup.
                                      │         /web (NextJs App)          │                                        
                                      └────────────────────────────────────┘                                        
 ```
+
+### Standalone dashboard
+
+`/dashboard` redirects to `/dashboard/`. `/dashboard/*` uses the optional
+`DASHBOARD_ASSETS` service binding, with `/dashboard` stripped from the upstream
+asset path. Cookies/authorization are not forwarded to this static service.
+`/login` remains the marketing login page and `/cloud/api/*` remains Cloud,
+so API requests receive Cloud's existing HttpOnly session cookie on the apex.
+
+Deployment order (human/CI only): publish the relay-dashboard static asset Worker
+named `relay-dashboard`, deploy Cloud's `/dashboard/` OAuth return support, then
+add `{ "binding": "DASHBOARD_ASSETS", "service": "relay-dashboard" }` to this
+router's services and deploy. The binding is intentionally not enabled until the
+service exists. Without it, `/dashboard/*` returns an explicit uncached 503.
+Rollback removes the binding; existing `/cloud/dashboard/*` is unaffected.
+
+Local shared-origin development: run the Cloud-owned launcher, passing
+`DASHBOARD_DEV_ORIGIN=http://127.0.0.1:5173` to the marketing process. This adds
+only a loopback development rewrite. Use the gateway URL (normally
+`http://localhost:3100/dashboard/`), not Vite's port, for cookie/OAuth testing.
