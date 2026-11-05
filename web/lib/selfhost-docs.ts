@@ -21,7 +21,11 @@ export const SELFHOST_HELM_CHART_SOURCE = 'https://github.com/AgentWorkforce/hel
 
 /** The hosted MCP that carries `ask_customer_support`, the guided-install agent. */
 export const CLOUD_MCP_URL = 'https://agentrelay.com/cloud/api/v1/mcp/shared-sessions';
-export const GUIDED_INSTALL_DOC = 'guided-gke-install';
+/** The guided-install runbooks, one per supported cloud; the setup agent runs the one the reader picks. */
+export const GUIDED_INSTALL_DOCS = [
+  { cloud: 'GKE', name: 'guided-gke-install', label: 'Google Cloud (GKE)' },
+  { cloud: 'EKS', name: 'guided-eks-install', label: 'AWS (EKS)' },
+] as const;
 
 export const SELFHOST_ACCESS_EMAIL = 'founders@agentrelay.com';
 
@@ -182,13 +186,14 @@ export async function fetchSelfhostDocs(
 /** Reading order for the sidebar; runbooks this list does not know follow in Cloud's order. */
 const DOC_ORDER = [
   'gke-install-runbook',
+  'eks-install',
   'guided-gke-install',
+  'guided-eks-install',
   'upgrades',
   'backup-and-restore',
   'telemetry-levels',
   'durable-actors-mode',
   'troubleshooting',
-  'eks-install',
   'support-and-escalation',
 ];
 

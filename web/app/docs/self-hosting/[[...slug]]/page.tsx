@@ -15,7 +15,7 @@ import {
   CLOUD_MCP_URL,
   CLOUD_SESSION_COOKIE,
   fetchSelfhostDocs,
-  GUIDED_INSTALL_DOC,
+  GUIDED_INSTALL_DOCS,
   orderSelfhostDocs,
   parseSelfhostSlug,
   SELFHOST_ACCESS_EMAIL,
@@ -50,8 +50,9 @@ type PageProps = {
   params: Promise<{ slug?: string[] }>;
 };
 
-const SETUP_AGENT_PROMPT =
-  'Use the ask_customer_support tool to walk me through the guided self-hosted Agent Relay install on GKE (selfhost:guided-gke-install), one verified stage at a time.';
+function setupAgentPrompt(cloud: string, doc: string): string {
+  return `Use the ask_customer_support tool to walk me through the guided self-hosted Agent Relay install on ${cloud} (selfhost:${doc}), one verified stage at a time.`;
+}
 const CLAUDE_CODE_MCP_COMMAND = `claude mcp add --transport http agent-relay ${CLOUD_MCP_URL}`;
 
 export default async function SelfHostingPage({ params }: PageProps) {
@@ -238,13 +239,16 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
   return (
     <EntitledShell
       title="Self-hosting Agent Relay"
-      description="Run Agent Relay in your own cloud account with the agent-relay Helm chart. These runbooks are the same ones the setup agent follows."
+      description="Run Agent Relay in your own cloud account, on Google Cloud (GKE) or AWS (EKS), with the agent-relay Helm chart. These runbooks are the same ones the setup agent follows."
       docs={docs}
       toc={OVERVIEW_TOC}
     >
-      <CardGroup cols={3}>
-        <Card title="Install on GKE" href={selfhostDocPath('gke-install-runbook')} prefetch={false}>
-          The reference install, from prerequisites to the end-to-end check.
+      <CardGroup cols={2}>
+        <Card title="Install on Google Cloud (GKE)" href={selfhostDocPath('gke-install-runbook')} prefetch={false}>
+          What you need and every step, from prerequisites to the end-to-end check.
+        </Card>
+        <Card title="Install on AWS (EKS)" href={selfhostDocPath('eks-install')} prefetch={false}>
+          What you need and every step, from prerequisites to the end-to-end check.
         </Card>
         <Card title="Ask the setup agent" href="#setup-agent">
           Let your coding agent run the guided install, one verified stage at a time.
@@ -257,19 +261,23 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
       <h2 id="architecture">Architecture</h2>
       <p>
         One chart installs the dashboard, the control-plane API (relay-cloud-api), messaging (relaycast), session
-        history (relayhistory) and auth (relayauth) in a single namespace behind one HTTPS load balancer. Relayflows
-        is opt-in. Dashed parts of the diagram are previews.
+        history (relayhistory) and auth (relayauth) in a single namespace behind one HTTPS load balancer, on GKE or
+        EKS. Relayflows is opt-in. Dashed parts of the diagram are optional.
       </p>
       <figure className={s.diagram}>
         <a href="/img/self-hosting/agent-relay-architecture.svg" target="_blank" rel="noopener">
           {/* eslint-disable-next-line @next/next/no-img-element -- static SVG diagram, opened full size on click */}
           <img
             src="/img/self-hosting/agent-relay-architecture.svg"
-            alt="Agent Relay self-hosted architecture on GKE: clients, the HTTPS load balancer, and the relay-dashboard, relay-cloud-api, relaycast, relayhistory, relayauth and opt-in relayflows services with their data stores"
+            alt="Agent Relay self-hosted architecture, drawn for GKE: clients, the HTTPS load balancer, and the relay-dashboard, relay-cloud-api, relaycast, relayhistory, relayauth and opt-in relayflows services with their data stores"
             loading="lazy"
           />
         </a>
-        <figcaption>Components and data stores. Select the diagram to open it full size.</figcaption>
+        <figcaption>
+          Components and data stores, drawn for GKE. On EKS the same services run behind an ALB with an ACM
+          certificate, with Pod Identity instead of Workload Identity, S3 instead of GCS, and PostgreSQL on
+          RDS/Aurora or CloudNativePG instead of Cloud SQL. Select the diagram to open it full size.
+        </figcaption>
       </figure>
       <figure className={s.diagram}>
         <a href="/img/self-hosting/agent-relay-request-flow.svg" target="_blank" rel="noopener">
@@ -295,8 +303,9 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
 
       <h2 id="setup-agent">Ask the setup agent</h2>
       <p>
-        The setup agent walks your own coding agent through the{' '}
-        <Link href={selfhostDocPath(GUIDED_INSTALL_DOC)} prefetch={false}>guided GKE install</Link>. Your agent runs the commands
+        The setup agent walks your own coding agent through the guided install on{' '}
+        <Link href={selfhostDocPath(GUIDED_INSTALL_DOCS[0].name)} prefetch={false}>GKE</Link> or{' '}
+        <Link href={selfhostDocPath(GUIDED_INSTALL_DOCS[1].name)} prefetch={false}>EKS</Link>. Your agent runs the commands
         with your credentials; the setup agent checks each stage&rsquo;s output before the next one, and stops for
         your go-ahead before anything that changes your cloud account. It never asks for secret values.
       </p>
@@ -309,8 +318,13 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
           <Link href="/docs/claude-connector">Claude connector</Link>).
         </li>
         <li>
-          Ask your agent:
-          <CommandBlock code={SETUP_AGENT_PROMPT} label="Copy prompt" />
+          Ask your agent, for your cloud:
+          {GUIDED_INSTALL_DOCS.map((guided) => (
+            <div key={guided.name}>
+              <p>{guided.label}:</p>
+              <CommandBlock code={setupAgentPrompt(guided.cloud, guided.name)} label="Copy prompt" />
+            </div>
+          ))}
         </li>
       </ol>
       <Note>
