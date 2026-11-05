@@ -151,6 +151,34 @@ export default function PrivacyPage() {
         </section>
 
         <section className={s.section}>
+          <h2>AI assistant connectors</h2>
+          <p>
+            You can connect AI assistants such as ChatGPT and Grok Bot to Agent Relay Cloud through our MCP
+            connector. When you do, Agent Relay saves the connector&apos;s activity to your workspace&apos;s
+            session history, alongside the coding-agent sessions your workspace uploads. This includes:
+          </p>
+          <ul className={s.list}>
+            <li>each Agent Relay tool the assistant calls, with the arguments it sent and the result it received;</li>
+            <li>relay messages the assistant sends to other agents;</li>
+            <li>relay messages the assistant reads, such as messages that woke it or conversations it opened.</li>
+          </ul>
+          <p>
+            We store this so you and your workspace can see what an assistant did on your behalf, search it, and
+            pick up its work later, in the same way as other agent sessions. Before a record is saved, we remove
+            values that look like credentials, such as webhook URLs, API keys, access tokens, and authorization
+            headers, and we limit the size of each record. We do not save the rest of your conversation with the
+            assistant, only what passes through Agent Relay&apos;s tools.
+          </p>
+          <p>
+            Connector session history is visible to members of your workspace&apos;s organization, like other
+            uploaded sessions, and is processed by OpenAI as our service provider to build search embeddings and
+            analyze sessions, as described below. It is kept with your workspace&apos;s session history until it
+            is deleted. To stop recording, disconnect the app in the assistant or remove the connection in Agent
+            Relay. To delete saved connector sessions, contact us at the address below.
+          </p>
+        </section>
+
+        <section className={s.section}>
           <h2>How we use information</h2>
           <ul className={s.list}>
             <li>Provide, maintain, and secure Agent Relay services</li>
