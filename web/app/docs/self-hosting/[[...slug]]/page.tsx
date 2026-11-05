@@ -244,11 +244,11 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
       toc={OVERVIEW_TOC}
     >
       <CardGroup cols={2}>
-        <Card title="Install on GKE" href={selfhostDocPath('gke-install-runbook')} prefetch={false}>
-          Google Cloud reference install, from prerequisites to the end-to-end check.
+        <Card title="Install on Google Cloud (GKE)" href={selfhostDocPath('gke-install-runbook')} prefetch={false}>
+          What you need and every step, from prerequisites to the end-to-end check.
         </Card>
-        <Card title="Install on EKS" href={selfhostDocPath('eks-install')} prefetch={false}>
-          AWS reference install, from prerequisites to the end-to-end check.
+        <Card title="Install on AWS (EKS)" href={selfhostDocPath('eks-install')} prefetch={false}>
+          What you need and every step, from prerequisites to the end-to-end check.
         </Card>
         <Card title="Ask the setup agent" href="#setup-agent">
           Let your coding agent run the guided install, one verified stage at a time.
@@ -262,7 +262,7 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
       <p>
         One chart installs the dashboard, the control-plane API (relay-cloud-api), messaging (relaycast), session
         history (relayhistory) and auth (relayauth) in a single namespace behind one HTTPS load balancer, on GKE or
-        EKS. Relayflows is opt-in. Dashed parts of the diagram are previews.
+        EKS. Relayflows is opt-in. Dashed parts of the diagram are optional.
       </p>
       <figure className={s.diagram}>
         <a href="/img/self-hosting/agent-relay-architecture.svg" target="_blank" rel="noopener">
@@ -276,7 +276,7 @@ function OverviewPage({ docs }: { docs: SelfhostDocSummary[] }) {
         <figcaption>
           Components and data stores, drawn for GKE. On EKS the same services run behind an ALB with an ACM
           certificate, with Pod Identity instead of Workload Identity, S3 instead of GCS, and PostgreSQL on
-          CloudNativePG instead of Cloud SQL. Select the diagram to open it full size.
+          RDS/Aurora or CloudNativePG instead of Cloud SQL. Select the diagram to open it full size.
         </figcaption>
       </figure>
       <figure className={s.diagram}>
