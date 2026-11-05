@@ -170,6 +170,11 @@ describe('self-hosting docs page', () => {
     expect(html).toContain('id="setup-agent"');
     expect(html).toContain('Ask the setup agent');
     expect(html).toContain('href="/docs/self-hosting/guided-gke-install"');
+    expect(html).toContain('href="/docs/self-hosting/guided-eks-install"');
+    expect(html).toContain('href="/docs/self-hosting/gke-install-runbook"');
+    expect(html).toContain('href="/docs/self-hosting/eks-install"');
+    expect(html).toContain('install on GKE (selfhost:guided-gke-install)');
+    expect(html).toContain('install on EKS (selfhost:guided-eks-install)');
     expect(html).toContain('claude mcp add --transport http agent-relay https://agentrelay.com/cloud/api/v1/mcp/shared-sessions');
     expect(html).toContain(PRIVATE_TITLE);
   });
