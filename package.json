@@ -8,7 +8,8 @@
   },
   "workspaces": [
     "web",
-    "router"
+    "router",
+    "examples/a2a-adapter"
   ],
   "scripts": {
     "dev": "npm --workspace web run dev",

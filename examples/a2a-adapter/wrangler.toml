@@ -1,0 +1,15 @@
+name = "a2a-adapter"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+# arelay.to only accepts an agent card served from your verified domain or a
+# subdomain of it, so serve this Worker there. Match src/config.ts publicOrigin.
+# routes = [{ pattern = "agents.acme.com", custom_domain = true }]
+
+# For src/adapters/forward-http.ts:
+# [vars]
+# UPSTREAM_URL = "https://internal.acme.com/agent/chat"
+
+# Secrets are never stored here. Set them with:
+#   npx wrangler secret put A2A_BEARER_TOKEN   (optional, see README)
+#   npx wrangler secret put ANTHROPIC_API_KEY  (for src/adapters/claude.ts)
