@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
+    agentUpgrade: 'security',
     // Default ("loose") chunking merged unrelated route CSS into one
     // render-blocking file: the homepage was shipping the /brand, /enterprise,
     // /telemetry and /legal stylesheets — about 60% of its critical CSS —
