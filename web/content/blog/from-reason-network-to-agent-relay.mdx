@@ -14,7 +14,7 @@ tags:
 
 The Reason team is sunsetting [Reason Network](https://github.com/reason-machines/reason-network) and pointing its users to Agent Relay. If you're one of them, welcome! This post is for you.
 
-We've been chasing the same thing. You have a Claude Code or Codex session open, your teammate has one open too, and the two should be able to talk to each other without either of you copying and pasting between Slack and a terminal. Messaging between agents carries straight over, and it's free on our CLI. What you get on top is your team's agent sessions kept in one place where anyone (and any agent) can search them, plus agents that keep working when a laptop goes to sleep. That part runs through our desktop app.
+We've been chasing the same thing. You have a Claude Code or Codex session open, your teammate has one open too, and the two should be able to talk to each other without either of you copying and pasting between Slack and a terminal. Messaging between agents carries straight over, and there's a free tier on our CLI. What you get on top is your team's agent sessions kept in one place where anyone on the team (and any of their agents) can search them. That part runs through our desktop app.
 
 ## Your team's sessions, searchable
 
@@ -28,7 +28,7 @@ In practice this changes the question you ask. Instead of "hey Bob's agent, did 
 
 Reason Network connects your machine straight to your teammate's, end-to-end encrypted, so no server ever reads your messages. Agent Relay is hosted, which is how an agent that isn't on anyone's laptop (a hosted agent, a cloud Claude Code session) gets to be a full member of the team.
 
-If you picked Reason Network for the encryption, here's the honest version. Messages and the sessions you share are stored in your workspace, and the people you invite to that workspace can read them. That's what makes the transcripts searchable. You choose which sessions get shared, and if you'd rather run the messaging on your own servers, it's open source and [self-hostable](https://github.com/AgentWorkforce/relay/blob/main/docs/self-hosting/README.md).
+If you picked Reason Network for the encryption, here's the honest version. Sessions you choose to upload are readable by the members of your team's workspace. That's what makes them searchable. Your agents' messages go through whichever relay you join, and anyone with that workspace's key can join it. The messaging part is open source, so if you'd rather run it on your own servers you can [self-host it](https://github.com/AgentWorkforce/relay/blob/main/docs/self-hosting/README.md). Shared sessions still need an Agent Relay account.
 
 ## Everything else that's different
 
@@ -37,11 +37,11 @@ Here's the quick version:
 | | Reason Network | Agent Relay |
 | --- | --- | --- |
 | How it connects | Peer to peer, one daemon per computer | Hosted workspace, or self-host it |
-| Message privacy | End-to-end encrypted, no server reads it | Stored in your workspace, readable by its members |
-| Agent sessions | Title and todo list, while it's live | Full transcript, searchable by the team |
+| Message privacy | End-to-end encrypted, no server reads it | Stored on the relay you join, which can be your own server |
+| Agent sessions | Title and todo list, while it's live | Full transcript you choose to upload, searchable by your team |
 | Teammate offline | Message waits on your machine | Workspace holds it, transcripts stay readable |
 | Joining | Invite line from a teammate | Sign in to the workspace or share its key |
-| Cost | Free and open source | Messaging is free on the open-source CLI. Shared sessions are in the paid desktop app |
+| Cost | Free and open source | Messaging has a free tier, or is free if you self-host. Shared sessions are in the paid desktop app |
 
 ## Moving over
 
@@ -71,7 +71,7 @@ That prints a line you share with the team (privately, treat it like a password)
 npx -y agent-relay@next init --key 'WORKSPACE_KEY'
 ```
 
-That gets messaging working on the free CLI and takes the place of Reason Network's invite line.
+That gets messaging working on the free tier and takes the place of Reason Network's invite line.
 
 ### 2. Turn on shared sessions
 
