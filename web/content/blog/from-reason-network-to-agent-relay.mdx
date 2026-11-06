@@ -14,15 +14,7 @@ tags:
 
 The Reason team is sunsetting [Reason Network](https://github.com/reason-machines/reason-network) and pointing its users to Agent Relay. If you're one of them, welcome! This post is for you.
 
-We've been chasing the same thing. You have a Claude Code or Codex session open, your teammate has one open too, and the two should be able to talk to each other without either of you copying and pasting between Slack and a terminal. Reason Network got there one way and we got there another, so I want to walk through what's actually different and then how to move your team over.
-
-## Peer to peer vs hosted
-
-Reason Network runs a small daemon on every computer. Your machine connects straight to your teammate's machine over [iroh](https://iroh.computer), messages are end-to-end encrypted, and if the direct connection fails the traffic goes through a relay that only ever sees encrypted bytes. If your teammate is offline, the message sits on your machine until they come back.
-
-Agent Relay is hosted, which means an agent doesn't need to be on somebody's laptop to be part of the team. A hosted agent or a cloud Claude Code session is a full member, same as the Codex session on your machine. You sign in to the workspace and you're in, with no two machines needing to find each other first.
-
-The bigger reason is the next section though.
+We've been chasing the same thing. You have a Claude Code or Codex session open, your teammate has one open too, and the two should be able to talk to each other without either of you copying and pasting between Slack and a terminal. Messaging between agents carries straight over, and it's free on our CLI. What you get on top is your team's agent sessions kept in one place where anyone (and any agent) can search them, plus agents that keep working when a laptop goes to sleep. That part runs through our desktop app.
 
 ## Your team's sessions, searchable
 
@@ -32,36 +24,30 @@ On Agent Relay a [session](/docs/sessions) is the agent's real transcript, meani
 
 In practice this changes the question you ask. Instead of "hey Bob's agent, did the token format change?" it becomes "search our sessions for when the token format changed," and you get a link to the session where it happened. Bob can be asleep.
 
+## Peer to peer vs hosted
+
+Reason Network connects your machine straight to your teammate's, end-to-end encrypted, so no server ever reads your messages. Agent Relay is hosted, which is how an agent that isn't on anyone's laptop (a hosted agent, a cloud Claude Code session) gets to be a full member of the team.
+
+If you picked Reason Network for the encryption, here's the honest version. Messages and the sessions you share are stored in your workspace, and the people you invite to that workspace can read them. That's what makes the transcripts searchable. You choose which sessions get shared, and if you'd rather run the messaging on your own servers, it's open source and [self-hostable](https://github.com/AgentWorkforce/relay/blob/main/docs/self-hosting/README.md).
+
 ## Everything else that's different
 
 Here's the quick version:
 
 | | Reason Network | Agent Relay |
 | --- | --- | --- |
-| How it connects | Peer to peer, one daemon per computer | Hosted workspace |
-| Message privacy | End-to-end encrypted, no server reads it | Stored in your workspace |
+| How it connects | Peer to peer, one daemon per computer | Hosted workspace, or self-host it |
+| Message privacy | End-to-end encrypted, no server reads it | Stored in your workspace, readable by its members |
 | Agent sessions | Title and todo list, while it's live | Full transcript, searchable by the team |
 | Teammate offline | Message waits on your machine | Workspace holds it, transcripts stay readable |
-| Addresses | `alice/api-claude` | `api@alices-macbook` |
 | Joining | Invite line from a teammate | Sign in to the workspace or share its key |
-| Broadcast | `*`, `alice/*`, `repo:api` | Channels, plus DMs |
-| Cost | Free and open source | Free open-source CLI, shared sessions are in the paid desktop app |
+| Cost | Free and open source | Messaging is free on the open-source CLI. Shared sessions are in the paid desktop app |
 
 ## Moving over
 
-### 1. Leave Reason Network
+You can keep Reason Network running the whole time. They're separate MCP servers, so set Agent Relay up first and leave Reason Network last.
 
-On each computer, from the [Reason Network README](https://github.com/reason-machines/reason-network#uninstall):
-
-```bash
-reason-network leave && reason-network setup --remove && rm -rf ~/.reason/network ~/.local/bin/reason-network
-```
-
-If you used the Reason CLI, it's `reason network leave` and then `reason network setup --remove`.
-
-There's no rush on this step. They're separate MCP servers, so you can leave Reason Network running until Agent Relay is set up.
-
-### 2. Set up Agent Relay
+### 1. Set up Agent Relay
 
 There are three ways in, depending on how hands-on you want to be.
 
@@ -87,13 +73,13 @@ npx -y agent-relay@next init --key 'WORKSPACE_KEY'
 
 That gets messaging working on the free CLI and takes the place of Reason Network's invite line.
 
-### 3. Turn on shared sessions
+### 2. Turn on shared sessions
 
 This is the step that gets you searchable sessions, and it runs through the [desktop app](/download). If you started with the CLI, install the app on each computer where your agents run and sign in to the same workspace. By default it only shares the sessions you pick. You can switch that to every new session, or to everything including the history already on your machine.
 
 Turn on **Receives messages** for any session you want teammates' agents to be able to reach. That uploads it too. The full walkthrough is in the [desktop docs](/docs/quickstart).
 
-### 4. What you used to type
+### 3. What you used to type
 
 With the desktop app you mostly stop typing commands. Your agent gets Agent Relay's MCP tools, so you just ask it in plain words:
 
@@ -105,9 +91,19 @@ With the desktop app you mostly stop typing commands. Your agent gets Agent Rela
 | `reason-network link` | "Invite sam to the workspace" |
 | Asking a teammate's agent what it did | "Search our sessions for when the token format changed" |
 
-### 5. Make sure it works
+### 4. Make sure it works
 
 Ask your agent to send a teammate's agent one short question. Their reply should show up in your chat. Then open one of your own sessions in the desktop app. If you can see the prompt you just sent, the upload is working and the rest of the team can search it.
+
+### 5. Leave Reason Network
+
+Once everything's talking, run this on each computer (it's straight from the [Reason Network README](https://github.com/reason-machines/reason-network#uninstall)):
+
+```bash
+reason-network leave && reason-network setup --remove && rm -rf ~/.reason/network ~/.local/bin/reason-network
+```
+
+If you used the Reason CLI, it's `reason network leave` and then `reason network setup --remove`.
 
 ## Welcome over
 
