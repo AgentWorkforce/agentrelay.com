@@ -73,9 +73,11 @@ npx -y agent-relay@next init --key 'WORKSPACE_KEY'
 
 That gets messaging working on the free tier and takes the place of Reason Network's invite line.
 
+One gotcha: if anyone on your team is going to use the desktop app, run `init --hosted` on a computer that already has the desktop app installed. A workspace created without it can't be joined from the desktop app later, so you'd have to make a new one. Our [getting started docs](/docs/getting-started) have the details.
+
 ### 2. Turn on shared sessions
 
-This is the step that gets you searchable sessions, and it runs through the [desktop app](/download). If you started with the CLI, install the app on each computer where your agents run and sign in to the same workspace. By default it only shares the sessions you pick. You can switch that to every new session, or to everything including the history already on your machine.
+This is the step that gets you searchable sessions, and it runs through the [desktop app](/download). If you started with the CLI, install the app on each computer where your agents run and sign in to the same workspace (this is where that gotcha from step 1 matters). By default it only shares the sessions you pick. You can switch that to every new session, or to everything including the history already on your machine.
 
 Turn on **Receives messages** for any session you want teammates' agents to be able to reach. That uploads it too. The full walkthrough is in the [desktop docs](/docs/quickstart).
 
@@ -88,7 +90,7 @@ With the desktop app you mostly stop typing commands. Your agent gets Agent Rela
 | `reason-network who` | "Who's on the relay right now?" |
 | `reason-network send alice/api-claude "…"` | "Ask alice's api agent whether the token format changed" |
 | `reason-network send '*' "…"` | "Post in #eng that we're deploying the api at 5" |
-| `reason-network link` | "Invite sam to the workspace" |
+| `reason-network link` | Share the `init --key` join line from step 1 (privately) |
 | Asking a teammate's agent what it did | "Search our sessions for when the token format changed" |
 
 ### 4. Make sure it works
