@@ -4,6 +4,7 @@ import {
   alternateDesktopAsset,
   type DesktopPlatform,
   desktopAssetUrl,
+  desktopStartHref,
   primaryDesktopAsset,
 } from '../../lib/desktop-downloads';
 import { useDesktopPlatform } from '../../lib/use-desktop-platform';
@@ -27,7 +28,7 @@ export function DownloadButton() {
           {EVERY_PLATFORM.map((choice) => {
             const asset = primaryDesktopAsset(choice);
             return (
-              <a key={asset.file} className={`btn btn-secondary ${s.choice}`} href={desktopAssetUrl(asset.file)}>
+              <a key={asset.file} className={`btn btn-secondary ${s.choice}`} href={asset.os === 'macos' ? desktopStartHref(asset.file) : desktopAssetUrl(asset.file)}>
                 {asset.label}
                 <span className={s.choiceKind}>{asset.kind}</span>
               </a>
@@ -46,12 +47,12 @@ export function DownloadButton() {
 
   return (
     <div className={s.actions}>
-      <a className={`btn btn-primary ${s.primary}`} href={desktopAssetUrl(asset.file)}>
+      <a className={`btn btn-primary ${s.primary}`} href={asset.os === 'macos' ? desktopStartHref(asset.file) : desktopAssetUrl(asset.file)}>
         Download for {asset.label}
       </a>
       <p className={s.heroNote}>
         {asset.kind} · <a href={desktopAssetUrl(`${asset.file}.sha256`)}>SHA-256</a> · Not your machine?{' '}
-        <a href={desktopAssetUrl(alternate.file)}>
+        <a href={alternate.os === 'macos' ? desktopStartHref(alternate.file) : desktopAssetUrl(alternate.file)}>
           {alternate.label} {alternate.kind}
         </a>{' '}
         or <a href="#all-downloads">all downloads</a>
