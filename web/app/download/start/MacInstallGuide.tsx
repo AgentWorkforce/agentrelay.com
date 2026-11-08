@@ -6,77 +6,74 @@ import { RELAY_MARK_PATHS } from '../../../lib/relay-mark';
 import { DownloadStatus } from './DownloadStatus';
 import s from './mac-install-guide.module.css';
 
-function AppIcon({ x, y, size = 68 }: { x: number; y: number; size?: number }) {
+/* The scenes use the macOS system font and shared, full-size Finder controls. */
+function MacScene({ kind, file }: { kind: 'open' | 'install' | 'launch'; file?: string }) {
+  const id = `mac-${kind}`;
   return (
-    <g transform={`translate(${x} ${y}) scale(${size / 80})`}>
-      <rect width="80" height="80" rx="19" fill="#173e58" stroke="#49738e" />
-      <g transform="translate(13 18) scale(.48)" fill="#a4d7f5">
-        <path d={RELAY_MARK_PATHS[0]} fillRule="evenodd" clipRule="evenodd" />
-        <path d={RELAY_MARK_PATHS[1]} opacity=".5" />
+    <svg viewBox="0 0 400 280" aria-hidden="true" focusable="false" fontFamily="-apple-system, BlinkMacSystemFont, Helvetica Neue, sans-serif">
+      <defs>
+        <linearGradient id={`${id}-paper`} x2="0" y2="1"><stop stopColor="#fff" /><stop offset="1" stopColor="#e9ebee" /></linearGradient>
+        <linearGradient id={`${id}-disk`} x2="0" y2="1"><stop stopColor="#e4e8eb" /><stop offset=".5" stopColor="#adb6bf" /><stop offset="1" stopColor="#e3e7eb" /></linearGradient>
+        <linearGradient id={`${id}-folder`} x2="0" y2="1"><stop stopColor="#80dcfc" /><stop offset="1" stopColor="#28a9e7" /></linearGradient>
+        <linearGradient id={`${id}-app`} x2="0" y2="1"><stop stopColor="#203e58" /><stop offset="1" stopColor="#0c1d2b" /></linearGradient>
+        <filter id={`${id}-shadow`} x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dy="7" stdDeviation="8" floodColor="#233446" floodOpacity=".19" /></filter>
+        <filter id={`${id}-icon-shadow`} x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dy="2" stdDeviation="1.5" floodOpacity=".22" /></filter>
+      </defs>
+      <rect width="400" height="280" fill="#e4ecf1" />
+      <g filter={`url(#${id}-shadow)`}>
+        <rect x="19" y="28" width="362" height="225" rx="10" fill="#fff" stroke="#b9c0c6" />
+        <path d="M29 28h342a10 10 0 0 1 10 10v35H19V38a10 10 0 0 1 10-10Z" fill="#f1f0f0" />
+        <path d="M19 73h362" stroke="#d7d7d7" />
+        <circle cx="36" cy="50" r="5.5" fill="#ff5f57" stroke="#e44942" strokeWidth=".6" />
+        <circle cx="54" cy="50" r="5.5" fill="#febc2e" stroke="#dfa125" strokeWidth=".6" />
+        <circle cx="72" cy="50" r="5.5" fill="#28c840" stroke="#1eab32" strokeWidth=".6" />
+        <text x="220" y="55" textAnchor="middle" fontSize="14" fontWeight="600" fill="#343434">{kind === 'open' ? 'Downloads' : kind === 'install' ? 'Agent Relay' : 'Applications'}</text>
       </g>
-    </g>
-  );
-}
-
-function Folder({ x, y }: { x: number; y: number }) {
-  return (
-    <g transform={`translate(${x} ${y})`}>
-      <path d="M0 15a7 7 0 0 1 7-7h22l9 9h39a7 7 0 0 1 7 7v43a7 7 0 0 1-7 7H7a7 7 0 0 1-7-7Z" fill="#629bbf" />
-      <rect y="24" width="84" height="50" rx="7" fill="#8cbdd9" />
-      <path d="m30 59 12-24 12 24M34 51h16" fill="none" stroke="#3e6e8c" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-    </g>
-  );
-}
-
-function OpenIllustration({ file }: { file: string }) {
-  return (
-    <svg viewBox="0 0 360 230" aria-hidden="true" focusable="false">
-      <rect x="29" y="35" width="302" height="178" rx="11" fill="#172735" stroke="#364957" />
-      <path d="M29 70h302" stroke="#364957" />
-      <g fill="#6e7e8b"><circle cx="46" cy="52" r="3" /><circle cx="57" cy="52" r="3" /><circle cx="68" cy="52" r="3" /></g>
-      <text x="180" y="56" fill="#9eafbd" textAnchor="middle" fontSize="11">Downloads</text>
-      <rect x="45" y="91" width="270" height="84" rx="8" fill="#22394a" stroke="#5884a1" />
-      <path d="M64 111h22l9 9v33H64Z" fill="#c8dce8" /><path d="M86 111v9h9" fill="none" stroke="#7494a9" />
-      <text x="109" y="125" fill="#edf4f8" fontSize="10" fontWeight="600">{file}</text>
-      <text x="109" y="148" fill="#a5b8c8" fontSize="11">Disk image · Open to install</text>
-      <path d="m268 163 2 33 8-9 11 4-21-28Z" fill="#eef6fc" stroke="#10212f" strokeWidth="2" strokeLinejoin="round" />
+      {kind === 'open' ? (
+        <>
+          <g transform="translate(166 91)" filter={`url(#${id}-icon-shadow)`}>
+            <path d="M0 0h44l23 23v83H0Z" fill={`url(#${id}-paper)`} stroke="#c8cbd0" />
+            <path d="M44 0v23h23" fill="#e4e6e9" stroke="#c8cbd0" />
+            <rect x="9" y="46" width="48" height="47" rx="4" fill={`url(#${id}-disk)`} stroke="#909aa4" />
+            <path d="M14 51h38v29H14Z" fill="#d5dade" stroke="#9da7ae" />
+            <ellipse cx="33" cy="65" rx="12" ry="10" fill="#bbc3c9" stroke="#a5aeb5" />
+            <circle cx="33" cy="65" r="3" fill="#dfe3e6" />
+            <path d="M13 87h31" stroke="#74818d" strokeWidth="3" /><circle cx="50" cy="87" r="1.5" fill="#5f9c54" />
+          </g>
+          <rect x="105" y="205" width="190" height="23" rx="5" fill="#2764ce" />
+          <text x="200" y="221" textAnchor="middle" fill="#fff" fontSize="12.5" fontWeight="500">{file && file.length < 29 ? file : 'Agent Relay.dmg'}</text>
+          <Cursor x={227} y={175} />
+        </>
+      ) : (
+        <>
+          {kind === 'launch' && <><rect x="20" y="74" width="91" height="168" fill="#f0f1f3" /><text x="31" y="98" fill="#81858a" fontSize="10" fontWeight="600">Favorites</text><rect x="26" y="108" width="79" height="25" rx="5" fill="#d9dee5" /><text x="33" y="125" fill="#3e454e" fontSize="11">Applications</text><text x="33" y="153" fill="#656b72" fontSize="11">Downloads</text></>}
+          <g transform={`translate(${kind === 'install' ? 70 : 190} 108)`}>
+            {kind === 'launch' && <rect x="-14" y="-14" width="106" height="105" rx="6" fill="#e5e5e7" />}
+            <rect width="76" height="76" rx="17" fill={`url(#${id}-app)`} stroke="#4c6172" filter={`url(#${id}-icon-shadow)`} />
+            <path d="M17 2h42" stroke="#ffffff" strokeOpacity=".25" strokeLinecap="round" />
+            <g transform="translate(12 17) scale(.46)" fill="#85c5ec"><path d={RELAY_MARK_PATHS[0]} fillRule="evenodd" clipRule="evenodd" /><path d={RELAY_MARK_PATHS[1]} opacity=".5" /></g>
+            {kind === 'launch' && <rect x="-7" y="93" width="90" height="22" rx="4" fill="#2764ce" />}
+            <text x="38" y="108" textAnchor="middle" fontSize="13" fill={kind === 'launch' ? '#fff' : '#333'}>Agent Relay</text>
+          </g>
+          {kind === 'install' ? <>
+            <path d="M171 148h43m-10-10 10 10-10 10" fill="none" stroke="#a1a7ad" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" />
+            <g transform="translate(246 108)" filter={`url(#${id}-icon-shadow)`}>
+              <path d="M0 13a5 5 0 0 1 5-5h24l8 8h44a5 5 0 0 1 5 5v47H0Z" fill="#28a8e4" stroke="#1e99d3" />
+              <path d="M0 27a5 5 0 0 1 5-5h76a5 5 0 0 1 5 5v43a5 5 0 0 1-5 5H5a5 5 0 0 1-5-5Z" fill={`url(#${id}-folder)`} stroke="#41b9ed" />
+              <path d="M5 24h76" stroke="#c5f1ff" strokeOpacity=".8" />
+              <g stroke="#1188c3" strokeWidth="4" strokeLinecap="round"><path d="m33 38 18 29M49 38 31 67M27 59h30" /><path d="m34 36 18 29M50 36 32 65M28 57h30" stroke="#a8e6fd" strokeOpacity=".5" strokeWidth="1" /></g>
+            </g>
+            <text x="289" y="216" textAnchor="middle" fontSize="13" fill="#333">Applications</text>
+            <Cursor x={125} y={165} />
+          </> : <Cursor x={246} y={166} />}
+        </>
+      )}
     </svg>
   );
 }
 
-function InstallIllustration() {
-  return (
-    <svg viewBox="0 0 360 230" aria-hidden="true" focusable="false">
-      <rect x="28" y="35" width="304" height="178" rx="11" fill="#172735" stroke="#364957" />
-      <path d="M28 70h304" stroke="#364957" />
-      <g fill="#6e7e8b"><circle cx="45" cy="52" r="3" /><circle cx="56" cy="52" r="3" /><circle cx="67" cy="52" r="3" /></g>
-      <text x="180" y="56" fill="#9eafbd" textAnchor="middle" fontSize="11">Agent Relay</text>
-      <AppIcon x={57} y={94} />
-      <rect x="220" y="85" width="94" height="109" rx="12" fill="none" stroke="#496376" strokeDasharray="5 5" />
-      <Folder x={225} y={91} />
-      <path d="M143 130h58m-7-7 7 7-7 7" stroke="#83b5d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <text x="91" y="184" fill="#b8cad7" textAnchor="middle" fontSize="10">Agent Relay</text>
-      <text x="267" y="184" fill="#b8cad7" textAnchor="middle" fontSize="10">Applications</text>
-    </svg>
-  );
-}
-
-function LaunchIllustration() {
-  return (
-    <svg viewBox="0 0 360 230" aria-hidden="true" focusable="false">
-      <rect x="28" y="35" width="304" height="178" rx="11" fill="#172735" stroke="#364957" />
-      <path d="M28 70h304M108 70v143" stroke="#364957" />
-      <g fill="#6e7e8b"><circle cx="45" cy="52" r="3" /><circle cx="56" cy="52" r="3" /><circle cx="67" cy="52" r="3" /></g>
-      <text x="180" y="56" fill="#9eafbd" textAnchor="middle" fontSize="11">Applications</text>
-      <g stroke="#607d92" strokeWidth="4" strokeLinecap="round"><path d="M43 98h47M43 119h36M43 140h43" /></g>
-      <rect x="130" y="83" width="105" height="115" rx="9" fill="#244359" />
-      <AppIcon x={149} y={94} />
-      <text x="183" y="184" fill="#e1eff8" textAnchor="middle" fontSize="11">Agent Relay</text>
-      <path d="m214 150 2 33 8-9 11 4-21-28Z" fill="#eef6fc" stroke="#10212f" strokeWidth="2" strokeLinejoin="round" />
-      <rect x="255" y="98" width="51" height="51" rx="12" fill="#293e4e" />
-      <path d="M269 123h23m-12-12v24" stroke="#536f84" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
+function Cursor({ x, y }: { x: number; y: number }) {
+  return <path transform={`translate(${x} ${y})`} d="M0 0v31l8-8 6 14 6-3-6-13h12Z" fill="#181818" stroke="#fff" strokeWidth="2" strokeLinejoin="round" />;
 }
 
 export function MacInstallGuide({ asset }: { asset: DesktopAsset }) {
@@ -93,9 +90,9 @@ export function MacInstallGuide({ asset }: { asset: DesktopAsset }) {
           <p>You’re three steps away from connecting your agents.</p>
         </div>
         <ol className={s.steps} aria-label="Install Agent Relay on your Mac">
-          <li><div className={s.illustration}><OpenIllustration file={asset.file} /></div><span className={s.number}>Step 1</span><h2>Open</h2><p>Open the downloaded <strong>.dmg</strong> file from your Downloads folder.</p></li>
-          <li><div className={s.illustration}><InstallIllustration /></div><span className={s.number}>Step 2</span><h2>Install</h2><p>Drag Agent Relay into your <strong>Applications</strong> folder.</p></li>
-          <li><div className={s.illustration}><LaunchIllustration /></div><span className={s.number}>Step 3</span><h2>Launch</h2><p>Open Agent Relay from <strong>Applications</strong>, then sign in to connect your agents.</p></li>
+          <li><div className={s.illustration}><MacScene kind="open" file={asset.file} /></div><span className={s.number}>Step 1</span><h2>Open</h2><p>Open the downloaded <strong>.dmg</strong> file from your Downloads folder.</p></li>
+          <li><div className={s.illustration}><MacScene kind="install" /></div><span className={s.number}>Step 2</span><h2>Install</h2><p>Drag Agent Relay into your <strong>Applications</strong> folder.</p></li>
+          <li><div className={s.illustration}><MacScene kind="launch" /></div><span className={s.number}>Step 3</span><h2>Launch</h2><p>Open Agent Relay from <strong>Applications</strong>, then sign in to connect your agents.</p></li>
         </ol>
         <p className={s.fallback}>Didn’t start? <a href={desktopAssetUrl(asset.file)}>Download again</a><span aria-hidden="true"> · </span><Link href="/download#all-downloads">Other builds</Link></p>
       </main>
