@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 78,
+  "count": 79,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -46,6 +46,7 @@
     "https://agentrelay.com/docs/flows",
     "https://agentrelay.com/docs/forward-deployed-agents",
     "https://agentrelay.com/docs/getting-started",
+    "https://agentrelay.com/docs/headless-server",
     "https://agentrelay.com/docs/quickstart",
     "https://agentrelay.com/docs/relay-connect",
     "https://agentrelay.com/docs/relayflows/build",
