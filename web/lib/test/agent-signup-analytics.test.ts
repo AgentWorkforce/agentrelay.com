@@ -109,4 +109,22 @@ describe('agent signup funnel', () => {
     expect(JSON.stringify(clean)).not.toContain(token);
     expect(clean.properties.$current_url).toBe('https://agentrelay.com/login?next=%2Fdashboard&invite_token=[redacted]');
   });
+  it('scrubs events-shim capability tokens and the page link fragment, and drops its API traffic from replay', () => {
+    const t = (prefix: string) => `${prefix}${'A1b2_C3-d4'.repeat(4)}xyz`;
+    const mcp = `https://agentrelay.com/cloud/api/v1/events-shim/t/${t('esm_')}/mcp`;
+    const fragment = new URLSearchParams({ k: t('esk_'), m: mcp }).toString();
+    const event = {
+      event: '$autocapture',
+      properties: {
+        $current_url: `https://agentrelay.com/mcp-events-shim#${fragment}`,
+        $el_text: `claude mcp add --transport http webhooks ${mcp}`,
+        nested: [{ hook: `https://agentrelay.com/cloud/api/v1/events-shim/h/${t('esh_')}/bearer`, token: t('esb_') }],
+      },
+    };
+    const clean = JSON.stringify(sanitizeSignupAnalytics(event));
+    for (const prefix of ['esm_', 'esk_', 'esh_', 'esb_']) expect(clean).not.toContain(t(prefix));
+    expect(clean).toContain('https://agentrelay.com/mcp-events-shim#[redacted]');
+    expect(maskSignupNetworkRequest({ name: 'https://agentrelay.com/cloud/api/v1/events-shim/shims/current' })).toBeNull();
+    expect(maskSignupNetworkRequest({ name: '/cloud/api/v1/events-shim/shims' })).toBeNull();
+  });
 });
