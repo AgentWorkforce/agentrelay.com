@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { teamsCloudUrl } from '../../lib/teams-cloud';
+import { CodeBlock, CopyButton } from './CodeBlock';
 import s from './events-shim.module.css';
 
 /** Mounted by Agent Relay Cloud; see `@agent-relay/events-shim`. */
@@ -113,38 +114,6 @@ function saveSession(session: Session | null) {
   const url = new URL(window.location.href);
   url.hash = session ? new URLSearchParams({ k: session.manageToken, m: session.mcpUrl }).toString() : '';
   window.history.replaceState(null, '', url.toString());
-}
-
-function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      type="button"
-      className={s.copy}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1600);
-        } catch {
-          /* Clipboard blocked; the text is selectable. */
-        }
-      }}
-    >
-      {copied ? 'Copied' : label}
-    </button>
-  );
-}
-
-function CodeBlock({ code }: { code: string }) {
-  return (
-    <div className={s.codeBlock}>
-      <pre>
-        <code>{code}</code>
-      </pre>
-      <CopyButton text={code} />
-    </div>
-  );
 }
 
 function relative(iso: string): string {
@@ -308,6 +277,9 @@ export function EventsShimTry() {
         <p className={s.lead}>
           One MCP server, one webhook URL. Every post is delivered into your agent&apos;s session through Agent Relay, so an{' '}
           <strong>idle agent wakes up</strong> and acts on it. No polling loop, no restarts.
+        </p>
+        <p className={s.crossLink}>
+          Building your own MCP? <Link href="/mcp-events-shim/api">Use our API to wake agents with your own messages →</Link>
         </p>
         {ready && !session && (
           <div className={s.start}>
@@ -493,6 +465,7 @@ export function EventsShimTry() {
             <p>
               Why it wakes: Agent Relay delivers each post into the session itself, the same way agents message each other, so the
               agent doesn&apos;t need to be mid-turn or polling. <Link href="/download">Get Agent Relay</Link> ·{' '}
+              <Link href="/mcp-events-shim/api">Use the API from your own MCP</Link> ·{' '}
               <Link href="/docs">Docs</Link>
             </p>
           </section>
