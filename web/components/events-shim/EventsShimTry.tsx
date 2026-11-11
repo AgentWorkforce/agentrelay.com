@@ -29,7 +29,7 @@ interface FeedEvent {
   event_type: string | null;
   content_type: string;
   body: string;
-  delivery: 'woken' | 'pending' | 'read';
+  delivery: 'sending' | 'woken' | 'pending' | 'read';
   wake_error: string | null;
 }
 
@@ -495,7 +495,7 @@ export function EventsShimTry() {
                       <span className={s.seq}>#{event.seq}</span>
                       <span className={s.eventType}>{event.event_type ?? event.mode}</span>
                       <span className={`${s.badge} ${s[`badge_${event.delivery}`]}`}>
-                        {event.delivery === 'woken' ? 'woke agent' : event.delivery === 'read' ? 'read by agent' : 'waiting'}
+                        {event.delivery === 'woken' ? 'woke agent' : event.delivery === 'read' ? 'read by agent' : event.delivery === 'sending' ? 'waking…' : 'waiting'}
                       </span>
                       <time className={s.time} dateTime={event.received_at}>
                         {relative(event.received_at)}
