@@ -384,7 +384,8 @@ export function EventsShimTry() {
               <li>
                 Posts to the open URL reach the agent marked as untrusted data, never as instructions. A{' '}
                 <code>text/plain</code> post to a verified URL (bearer, GitHub, Stripe, Linear) is delivered verbatim, so only
-                senders holding that secret can choose the agent&apos;s words.
+                senders holding that secret can choose the agent&apos;s words. A signed provider URL wraps a JSON body as
+                data whatever its header says.
               </li>
             </ul>
             {status && <p className={`${s.status} ${s[`status_${status.tone}`]}`}>{status.text}</p>}

@@ -46,7 +46,7 @@ curl -X POST "$WEBHOOK_URL" \\
   -H 'Content-Type: text/plain' \\
   -H 'Idempotency-Key: task_42' \\
   --data 'New task t_42 is waiting. Read it with get_task on the acme MCP, then ack it.'
-# → 202 { "ok": true, "seq": 7, "wake": "forwarded" }`;
+# → 202 { "ok": true, "seq": 7, "wake": "forwarding" }`;
 
 const STATUS = `curl ${BASE}/shims/current -H "Authorization: Bearer $MANAGE_TOKEN"
 # → { "agent": { "connected": true, "wake": "linked" },
@@ -136,8 +136,10 @@ export default function McpEventsShimApiPage() {
           <div className={s.prose}>
             <p style={{ marginTop: '1rem' }}>
               <strong>Verbatim on authenticated URLs.</strong> A <code>text/plain</code> post to the bearer URL (or a GitHub,
-              Stripe or Linear signed URL) is delivered as exactly that text, so you control the prompt. Posts to the open URL
-              are always wrapped and marked as untrusted, because anyone holding that URL can send them.
+              Stripe or Linear signed URL) is delivered as exactly that text, trimmed and cut at 6,000 characters, so you
+              control the prompt. On signed provider URLs the body must be plain text, not a JSON event, since the signature
+              does not cover <code>Content-Type</code>. Posts to the open URL are always wrapped and marked as untrusted,
+              because anyone holding that URL can send them.
             </p>
             <p>
               <strong>Once per key.</strong> Retries with the same <code>Idempotency-Key</code> wake the agent once.
