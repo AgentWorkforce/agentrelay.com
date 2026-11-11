@@ -153,7 +153,11 @@ export function EventsShimTry() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setSession(readSession());
+    const restored = readSession();
+    // Keep the page link (fragment) in step with an inbox restored from this browser,
+    // so copying or bookmarking the address still opens it.
+    if (restored) saveSession(restored);
+    setSession(restored);
     setReady(true);
   }, []);
 
@@ -252,10 +256,12 @@ export function EventsShimTry() {
   const hookUrl = feed?.webhook_urls[mode] ?? '';
   const curl = useMemo(() => {
     const lines = [`curl -X POST '${hookUrl}'`, `  -H 'Content-Type: application/json'`, `  -H 'Idempotency-Key: demo-1'`];
-    if (mode === 'bearer') lines.push(`  -H 'Authorization: Bearer ${bearerToken ?? '<your token>'}'`);
+    // Never put the live token in a copyable command: it would land in shell history
+    // and process listings. Senders read it from the environment.
+    if (mode === 'bearer') lines.push(`  -H "Authorization: Bearer $WEBHOOK_TOKEN"`);
     lines.push(`  -d '{"hello":"from curl"}'`);
     return lines.join(' \\\n');
-  }, [hookUrl, mode, bearerToken]);
+  }, [hookUrl, mode]);
 
   const status = !feed
     ? null
@@ -409,6 +415,11 @@ export function EventsShimTry() {
                 {(mode === 'open' || mode === 'bearer') && (
                   <>
                     <p className={s.label}>Try it</p>
+                    {mode === 'bearer' && (
+                      <p className={s.fine}>
+                        Set <code>WEBHOOK_TOKEN</code> to your token in your shell or secret store first.
+                      </p>
+                    )}
                     <CodeBlock code={curl} />
                   </>
                 )}
