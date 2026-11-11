@@ -12,7 +12,7 @@ export function sanitizeSignupAnalytics<T>(event: T | null): T | null {
       .replace(/(\/api\/v1\/signup\/agent\/sessions\/)[0-9a-f-]{36}/gi, '$1[redacted]')
       // Events-shim capabilities: MCP, webhook, manage and bearer tokens, and the page link fragment.
       .replace(/(es[mhkb]_)[A-Za-z0-9_-]{43}/g, '$1[redacted]')
-      .replace(/(\/mcp-events-shim)#[^\s"']*/gi, '$1#[redacted]');
+      .replace(/(\/mcp-events-shim(?:\/api)?(?:\?[^#\s"']*)?)#[^\s"']*/gi, '$1#[redacted]');
     if (!value || typeof value !== 'object') return value;
     if (seen.has(value)) return seen.get(value);
     if (Array.isArray(value)) {

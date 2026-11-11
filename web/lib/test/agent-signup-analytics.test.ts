@@ -124,6 +124,8 @@ describe('agent signup funnel', () => {
     const clean = JSON.stringify(sanitizeSignupAnalytics(event));
     for (const prefix of ['esm_', 'esk_', 'esh_', 'esb_']) expect(clean).not.toContain(t(prefix));
     expect(clean).toContain('https://agentrelay.com/mcp-events-shim#[redacted]');
+    const withQuery = sanitizeSignupAnalytics({ url: `https://agentrelay.com/mcp-events-shim?utm_source=x#k=esk_${encodeURIComponent('%')}abc&m=${encodeURIComponent(mcp)}` })!;
+    expect(withQuery.url).toBe('https://agentrelay.com/mcp-events-shim?utm_source=x#[redacted]');
     expect(maskSignupNetworkRequest({ name: 'https://agentrelay.com/cloud/api/v1/events-shim/shims/current' })).toBeNull();
     expect(maskSignupNetworkRequest({ name: '/cloud/api/v1/events-shim/shims' })).toBeNull();
   });

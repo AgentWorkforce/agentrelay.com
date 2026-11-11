@@ -45,13 +45,13 @@ const AGENTS = [
   {
     id: 'claude-code',
     label: 'Claude Code',
-    command: (url: string) => `claude mcp add --transport http webhooks ${url}`,
+    command: (url: string) => `claude mcp add --transport http webhooks ${shellQuote(url)}`,
     wakes: true,
   },
   {
     id: 'codex',
     label: 'Codex',
-    command: (url: string) => `codex mcp add webhooks --url ${url}`,
+    command: (url: string) => `codex mcp add webhooks --url ${shellQuote(url)}`,
     wakes: true,
   },
   {
@@ -71,7 +71,7 @@ const AGENTS = [
   {
     id: 'gemini',
     label: 'Gemini CLI',
-    command: (url: string) => `gemini mcp add --transport http webhooks ${url}`,
+    command: (url: string) => `gemini mcp add --transport http webhooks ${shellQuote(url)}`,
     wakes: false,
   },
   {
@@ -91,13 +91,48 @@ const MODES: { id: Mode; label: string; help: string }[] = [
   { id: 'bearer', label: 'Bearer token', help: 'Senders include Authorization: Bearer <token>. Generate one below; it is shown once.' },
 ];
 
+const TOKEN = /^[A-Za-z0-9_-]{43}$/;
+
+/** The MCP URL this page's API issues: `<api>/t/esm_<43>/mcp` on the API's own origin. */
+function isOurMcpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const api = new URL(API, window.location.origin);
+    const prefix = `${api.pathname.replace(/\/$/, '')}/t/esm_`;
+    if (url.origin !== api.origin || url.search || url.hash || url.username || url.password) return false;
+    if (!url.pathname.startsWith(prefix) || !url.pathname.endsWith('/mcp')) return false;
+    return TOKEN.test(url.pathname.slice(prefix.length, -'/mcp'.length));
+  } catch {
+    return false;
+  }
+}
+
+function isSession(value: unknown): value is Session {
+  if (!value || typeof value !== 'object') return false;
+  const { manageToken, mcpUrl } = value as Record<string, unknown>;
+  return (
+    typeof manageToken === 'string' &&
+    manageToken.startsWith('esk_') &&
+    TOKEN.test(manageToken.slice(4)) &&
+    typeof mcpUrl === 'string' &&
+    isOurMcpUrl(mcpUrl)
+  );
+}
+
+/** One shell word, whatever it contains. */
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
 function readSession(): Session | null {
   try {
     const hash = new URLSearchParams(window.location.hash.slice(1));
-    const fromHash = hash.get('k') && hash.get('m') ? { manageToken: hash.get('k')!, mcpUrl: hash.get('m')! } : null;
-    if (fromHash) return fromHash;
+    // A page link can be crafted by anyone: accept only what this page's API issues,
+    // so a link cannot make the page show someone else's command to copy and run.
+    const fromHash = { manageToken: hash.get('k'), mcpUrl: hash.get('m') };
+    if (isSession(fromHash)) return fromHash;
     const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-    if (saved && typeof saved === 'object' && 'manageToken' in saved && 'mcpUrl' in saved) return saved as Session;
+    if (isSession(saved)) return saved;
   } catch {
     /* Storage can be unavailable; the page still works for this tab. */
   }
@@ -162,8 +197,10 @@ export function EventsShimTry() {
   }, []);
 
   const load = useCallback(
-    async (current: Session) => {
-      const response = await api('/shims/current', { token: current.manageToken });
+    async (current: Session, signal: AbortSignal) => {
+      const response = await api('/shims/current', { token: current.manageToken, signal });
+      // A late answer for an inbox this page has since left must not touch the current one.
+      if (signal.aborted) return;
       if (response.status === 404) {
         saveSession(null);
         setSession(null);
@@ -172,7 +209,9 @@ export function EventsShimTry() {
         return;
       }
       if (!response.ok) throw new Error(`Feed unavailable (HTTP ${response.status}).`);
-      setFeed((await response.json()) as Feed);
+      const next = (await response.json()) as Feed;
+      if (signal.aborted) return;
+      setFeed(next);
       setError(null);
     },
     [],
@@ -181,12 +220,13 @@ export function EventsShimTry() {
   useEffect(() => {
     if (!session) return;
     let stopped = false;
+    const controller = new AbortController();
     const tick = async () => {
       if (document.visibilityState === 'visible') {
         try {
-          await load(session);
+          await load(session, controller.signal);
         } catch (failure) {
-          setError(failure instanceof Error ? failure.message : 'Feed unavailable.');
+          if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : 'Feed unavailable.');
         }
       }
       if (!stopped) timer.current = setTimeout(tick, POLL_MS);
@@ -194,6 +234,7 @@ export function EventsShimTry() {
     void tick();
     return () => {
       stopped = true;
+      controller.abort();
       if (timer.current) clearTimeout(timer.current);
     };
   }, [session, load]);
@@ -243,7 +284,7 @@ export function EventsShimTry() {
       if (!response.ok) throw new Error(body.message || 'Could not save the secret.');
       if (body.secret) setBearerToken(body.secret);
       setSecretDraft('');
-      await load(session);
+      await load(session, new AbortController().signal);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save the secret.');
     } finally {
@@ -340,7 +381,11 @@ export function EventsShimTry() {
                   </li>
                 </>
               )}
-              <li>Webhook bodies reach the agent marked as untrusted data, never as instructions.</li>
+              <li>
+                Posts to the open URL reach the agent marked as untrusted data, never as instructions. A{' '}
+                <code>text/plain</code> post to a verified URL (bearer, GitHub, Stripe, Linear) is delivered verbatim, so only
+                senders holding that secret can choose the agent&apos;s words.
+              </li>
             </ul>
             {status && <p className={`${s.status} ${s[`status_${status.tone}`]}`}>{status.text}</p>}
           </section>
