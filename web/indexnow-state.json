@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 79,
+  "count": 81,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -66,6 +66,8 @@
     "https://agentrelay.com/file",
     "https://agentrelay.com/flows",
     "https://agentrelay.com/flows/plugins",
+    "https://agentrelay.com/mcp-events-shim",
+    "https://agentrelay.com/mcp-events-shim/api",
     "https://agentrelay.com/open-source",
     "https://agentrelay.com/openclaw",
     "https://agentrelay.com/openclaw/skill",
