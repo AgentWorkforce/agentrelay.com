@@ -41,39 +41,34 @@ interface Feed {
   events: FeedEvent[];
 }
 
+const RELAYFILE_SETUP = 'npx relayfile@latest setup --provider github --local-dir ./relayfile-mount';
+/** relayfile hands each event to `forward` as JSON on stdin; no event field is put into the shell command. */
+const relayfileListen = (webhookUrl: string) =>
+  [
+    'npx relayfile@latest listen --provider github --background \\',
+    `  --run ${shellQuote(`npx -y @agent-relay/events-shim@latest forward --stdin --url ${shellQuote(webhookUrl)}`)}`,
+  ].join('\n');
+
+/** One command per agent CLI: adds the MCP server its own way (and the webhooks skill where the tool reads skills). */
+const setupCommand = (flag: string) => (url: string) =>
+  `npx @agent-relay/events-shim@latest setup ${shellQuote(url)} --${flag}`;
+
 const AGENTS = [
   {
     id: 'claude-code',
     label: 'Claude Code',
-    command: (url: string) => `claude mcp add --transport http webhooks ${shellQuote(url)}`,
+    note: 'Adds the MCP server, installs the webhooks skill and remembers the inbox.',
+    command: setupCommand('claude'),
     wakes: true,
+    listener: true,
   },
-  {
-    id: 'codex',
-    label: 'Codex',
-    command: (url: string) => `codex mcp add webhooks --url ${shellQuote(url)}`,
-    wakes: true,
-  },
-  {
-    id: 'cursor',
-    label: 'Cursor',
-    note: 'Add to ~/.cursor/mcp.json',
-    command: (url: string) => JSON.stringify({ mcpServers: { webhooks: { url } } }, null, 2),
-    wakes: false,
-  },
-  {
-    id: 'opencode',
-    label: 'opencode',
-    note: 'Add to opencode.json',
-    command: (url: string) => JSON.stringify({ mcp: { webhooks: { type: 'remote', url } } }, null, 2),
-    wakes: true,
-  },
-  {
-    id: 'gemini',
-    label: 'Gemini CLI',
-    command: (url: string) => `gemini mcp add --transport http webhooks ${shellQuote(url)}`,
-    wakes: false,
-  },
+  { id: 'codex', label: 'Codex', note: 'Adds the MCP server and the webhooks skill.', command: setupCommand('codex'), wakes: true, listener: false },
+  { id: 'cursor', label: 'Cursor', note: 'Adds the server to ~/.cursor/mcp.json.', command: setupCommand('cursor'), wakes: false },
+  { id: 'opencode', label: 'opencode', note: 'Adds the server to opencode.json.', command: setupCommand('opencode'), wakes: true, listener: false },
+  { id: 'muse', label: 'Muse', note: 'Adds the server to Muse settings.json.', command: setupCommand('muse'), wakes: true, listener: false },
+  { id: 'gemini', label: 'Gemini CLI', command: setupCommand('gemini'), wakes: false },
+  { id: 'grok', label: 'Grok', command: setupCommand('grok'), wakes: true, listener: false },
+  { id: 'devin', label: 'Devin', command: setupCommand('devin'), wakes: true, listener: false },
   {
     id: 'other',
     label: 'Any MCP client',
@@ -371,7 +366,14 @@ export function EventsShimTry() {
                     With <Link href="/download">Agent Relay</Link> running, the agent links its own session (one command it runs itself) and
                     each post is injected into the session, waking it within seconds, even when idle.
                   </li>
-                  <li>Without Agent Relay, the agent keeps a background <code>wait_for_webhook</code> call open and wakes when it returns.</li>
+                  {'listener' in agent && agent.listener ? (
+                    <li>
+                      Without Agent Relay, the agent runs <code>npx @agent-relay/events-shim listen</code> in the background. It exits
+                      with the next post, which wakes the idle agent, and the agent starts it again. Nothing else to install.
+                    </li>
+                  ) : (
+                    <li>This client wakes only under Agent Relay. Without it, the agent reads posts when you ask.</li>
+                  )}
                 </>
               ) : (
                 <>
@@ -512,6 +514,27 @@ export function EventsShimTry() {
                 ))}
               </ol>
             )}
+          </section>
+
+          <section className={s.section}>
+            <h2 className={s.sectionTitle}>GitHub, Slack, Linear and more, through relayfile</h2>
+            <p className={s.note}>
+              Wake the agent on provider events without setting up each provider&apos;s webhook or secret. Connect the
+              provider once (a browser opens to sign in), then forward its events into this inbox:
+            </p>
+            <CodeBlock code={RELAYFILE_SETUP} />
+            <CodeBlock code={relayfileListen(feed?.webhook_urls.open ?? '<your webhook URL>')} />
+            <ul className={s.bullets}>
+              <li>
+                Each event (a PR opened, a Slack message, a Linear issue moved) arrives as a post naming the file that
+                changed, and wakes the agent like any other post. The agent reads the file under{' '}
+                <code>./relayfile-mount</code>.
+              </li>
+              <li>
+                Swap <code>github</code> for <code>slack</code>, <code>linear</code>, <code>notion</code> or any provider
+                relayfile supports. Repeated deliveries of the same change arrive once.
+              </li>
+            </ul>
           </section>
 
           <section className={s.limits}>
