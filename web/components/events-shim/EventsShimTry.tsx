@@ -49,43 +49,26 @@ const relayfileListen = (webhookUrl: string) =>
     `  --run ${shellQuote(`npx -y @agent-relay/events-shim@latest forward --stdin --url ${shellQuote(webhookUrl)}`)}`,
   ].join('\n');
 
+/** One command per agent CLI: adds the MCP server its own way (and the webhooks skill where the tool reads skills). */
+const setupCommand = (flag: string) => (url: string) =>
+  `npx @agent-relay/events-shim@latest setup ${shellQuote(url)} --${flag}`;
+
 const AGENTS = [
   {
     id: 'claude-code',
     label: 'Claude Code',
-    note: 'One command: adds the MCP server, installs the webhooks skill and remembers the inbox.',
-    command: (url: string) => `npx @agent-relay/events-shim@latest setup ${shellQuote(url)}`,
+    note: 'Adds the MCP server, installs the webhooks skill and remembers the inbox.',
+    command: setupCommand('claude'),
     wakes: true,
     listener: true,
   },
-  {
-    id: 'codex',
-    label: 'Codex',
-    command: (url: string) => `codex mcp add webhooks --url ${shellQuote(url)}`,
-    wakes: true,
-    listener: false,
-  },
-  {
-    id: 'cursor',
-    label: 'Cursor',
-    note: 'Add to ~/.cursor/mcp.json',
-    command: (url: string) => JSON.stringify({ mcpServers: { webhooks: { url } } }, null, 2),
-    wakes: false,
-  },
-  {
-    id: 'opencode',
-    label: 'opencode',
-    note: 'Add to opencode.json',
-    command: (url: string) => JSON.stringify({ mcp: { webhooks: { type: 'remote', url } } }, null, 2),
-    wakes: true,
-    listener: false,
-  },
-  {
-    id: 'gemini',
-    label: 'Gemini CLI',
-    command: (url: string) => `gemini mcp add --transport http webhooks ${shellQuote(url)}`,
-    wakes: false,
-  },
+  { id: 'codex', label: 'Codex', note: 'Adds the MCP server and the webhooks skill.', command: setupCommand('codex'), wakes: true, listener: false },
+  { id: 'cursor', label: 'Cursor', note: 'Adds the server to ~/.cursor/mcp.json.', command: setupCommand('cursor'), wakes: false },
+  { id: 'opencode', label: 'opencode', note: 'Adds the server to opencode.json.', command: setupCommand('opencode'), wakes: true, listener: false },
+  { id: 'muse', label: 'Muse', note: 'Adds the server to Muse settings.json.', command: setupCommand('muse'), wakes: true, listener: false },
+  { id: 'gemini', label: 'Gemini CLI', command: setupCommand('gemini'), wakes: false },
+  { id: 'grok', label: 'Grok', command: setupCommand('grok'), wakes: true, listener: false },
+  { id: 'devin', label: 'Devin', command: setupCommand('devin'), wakes: true, listener: false },
   {
     id: 'other',
     label: 'Any MCP client',
