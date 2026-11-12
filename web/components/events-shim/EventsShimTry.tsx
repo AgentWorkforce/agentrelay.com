@@ -45,7 +45,7 @@ const RELAYFILE_SETUP = 'npx relayfile@latest setup --provider github --local-di
 /** relayfile hands each event to `forward` as JSON on stdin; no event field is put into the shell command. */
 const relayfileListen = (webhookUrl: string) =>
   [
-    'npx relayfile@latest listen --provider github --background \\',
+    "npx relayfile@latest listen --path '/github/**' --background \\",
     `  --run ${shellQuote(`npx -y @agent-relay/events-shim@latest forward --stdin --url ${shellQuote(webhookUrl)}`)}`,
   ].join('\n');
 
