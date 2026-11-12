@@ -42,10 +42,12 @@ interface Feed {
 }
 
 const RELAYFILE_SETUP = 'npx relayfile@latest setup --provider github --local-dir ./relayfile-mount';
-const RELAYFILE_LISTEN = [
-  'npx relayfile@latest listen --provider github --background \\',
-  "  --run 'npx -y @agent-relay/events-shim@latest forward --provider {{provider}} --type {{type}} --path {{path}} --revision {{revision}}'",
-].join('\n');
+/** relayfile hands each event to `forward` as JSON on stdin; no event field is put into the shell command. */
+const relayfileListen = (webhookUrl: string) =>
+  [
+    'npx relayfile@latest listen --provider github --background \\',
+    `  --run ${shellQuote(`npx -y @agent-relay/events-shim@latest forward --stdin --url ${shellQuote(webhookUrl)}`)}`,
+  ].join('\n');
 
 const AGENTS = [
   {
@@ -538,7 +540,7 @@ export function EventsShimTry() {
               provider once (a browser opens to sign in), then forward its events into this inbox:
             </p>
             <CodeBlock code={RELAYFILE_SETUP} />
-            <CodeBlock code={RELAYFILE_LISTEN} />
+            <CodeBlock code={relayfileListen(feed?.webhook_urls.open ?? '<your webhook URL>')} />
             <ul className={s.bullets}>
               <li>
                 Each event (a PR opened, a Slack message, a Linear issue moved) arrives as a post naming the file that
