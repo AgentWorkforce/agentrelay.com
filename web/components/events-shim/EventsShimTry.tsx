@@ -41,18 +41,27 @@ interface Feed {
   events: FeedEvent[];
 }
 
+const RELAYFILE_SETUP = 'npx relayfile@latest setup --provider github --local-dir ./relayfile-mount';
+const RELAYFILE_LISTEN = [
+  'npx relayfile@latest listen --provider github --background \\',
+  "  --run 'npx -y @agent-relay/events-shim@latest forward --provider {{provider}} --type {{type}} --path {{path}} --revision {{revision}}'",
+].join('\n');
+
 const AGENTS = [
   {
     id: 'claude-code',
     label: 'Claude Code',
-    command: (url: string) => `claude mcp add --transport http webhooks ${shellQuote(url)}`,
+    note: 'One command: adds the MCP server, installs the webhooks skill and remembers the inbox.',
+    command: (url: string) => `npx @agent-relay/events-shim@latest setup ${shellQuote(url)}`,
     wakes: true,
+    listener: true,
   },
   {
     id: 'codex',
     label: 'Codex',
     command: (url: string) => `codex mcp add webhooks --url ${shellQuote(url)}`,
     wakes: true,
+    listener: false,
   },
   {
     id: 'cursor',
@@ -67,6 +76,7 @@ const AGENTS = [
     note: 'Add to opencode.json',
     command: (url: string) => JSON.stringify({ mcp: { webhooks: { type: 'remote', url } } }, null, 2),
     wakes: true,
+    listener: false,
   },
   {
     id: 'gemini',
@@ -371,7 +381,14 @@ export function EventsShimTry() {
                     With <Link href="/download">Agent Relay</Link> running, the agent links its own session (one command it runs itself) and
                     each post is injected into the session, waking it within seconds, even when idle.
                   </li>
-                  <li>Without Agent Relay, the agent keeps a background <code>wait_for_webhook</code> call open and wakes when it returns.</li>
+                  {'listener' in agent && agent.listener ? (
+                    <li>
+                      Without Agent Relay, the agent runs <code>npx @agent-relay/events-shim listen</code> in the background. It exits
+                      with the next post, which wakes the idle agent, and the agent starts it again. Nothing else to install.
+                    </li>
+                  ) : (
+                    <li>This client wakes only under Agent Relay. Without it, the agent reads posts when you ask.</li>
+                  )}
                 </>
               ) : (
                 <>
@@ -512,6 +529,27 @@ export function EventsShimTry() {
                 ))}
               </ol>
             )}
+          </section>
+
+          <section className={s.section}>
+            <h2 className={s.sectionTitle}>GitHub, Slack, Linear and more, through relayfile</h2>
+            <p className={s.note}>
+              Wake the agent on provider events without setting up each provider&apos;s webhook or secret. Connect the
+              provider once (a browser opens to sign in), then forward its events into this inbox:
+            </p>
+            <CodeBlock code={RELAYFILE_SETUP} />
+            <CodeBlock code={RELAYFILE_LISTEN} />
+            <ul className={s.bullets}>
+              <li>
+                Each event (a PR opened, a Slack message, a Linear issue moved) arrives as a post naming the file that
+                changed, and wakes the agent like any other post. The agent reads the file under{' '}
+                <code>./relayfile-mount</code>.
+              </li>
+              <li>
+                Swap <code>github</code> for <code>slack</code>, <code>linear</code>, <code>notion</code> or any provider
+                relayfile supports. Repeated deliveries of the same change arrive once.
+              </li>
+            </ul>
           </section>
 
           <section className={s.limits}>
