@@ -1,4 +1,4 @@
-/* Gated self-hosting docs. Built on components/docs/docs.module.css and the
+/* Self-hosting guides and agent runbooks. Built on components/docs/docs.module.css and the
    site tokens (--fg, --line, --primary …), so light and dark themes follow
    the rest of the docs. */
 
@@ -85,70 +85,19 @@
   }
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin: 1.25rem 0;
-}
-
-.actions a.primaryAction,
-.actions a.secondaryAction {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.5rem;
-  padding: 0 1.1rem;
-  border-radius: 999px;
-  font-size: 0.9rem;
+.groupTitle {
+  margin: 0.8rem 0 0.25rem;
+  color: var(--fg-muted);
+  font-size: 0.68rem;
   font-weight: 600;
-  text-decoration: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-/* .article a styles links; these two are buttons. */
-.actions a.primaryAction {
-  background: var(--primary);
-  border: 1px solid var(--primary);
-  color: #fff;
-}
-
-.actions a.secondaryAction {
-  border: 1px solid var(--line);
-  color: var(--fg);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .actions a.primaryAction:hover {
-    background: var(--primary-hover);
-    border-color: var(--primary-hover);
-  }
-  .actions a.secondaryAction:hover {
-    border-color: var(--fg-muted);
-  }
-}
-
-.diagram {
-  margin: 1.25rem 0 1.75rem;
-}
-
-/* The SVGs are drawn on white; keep a white plate in dark mode too. */
-.diagram a {
-  display: block;
-  padding: 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 0.75rem;
-  background: #fff;
-}
-
-.diagram img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-.diagram figcaption {
-  margin-top: 0.5rem;
+.counterpart {
+  margin: -0.4rem 0 1.2rem;
   color: var(--fg-faint);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 .footerNote {

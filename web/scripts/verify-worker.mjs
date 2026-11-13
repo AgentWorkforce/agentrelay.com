@@ -61,20 +61,25 @@ for (const [path, target, content] of redirects) {
   console.log(`Worker smoke: ${path} redirects to ${target}`);
 }
 
-// The gated self-hosting docs (lib/selfhost-docs.ts) render per reader in the
-// Worker and must never come from a shared cache. A signed-out request is sent
-// to sign in, uncached; it never reaches Cloud, so this needs no credentials.
-for (const [path, next] of [
-  ['/docs/self-hosting', '/docs/self-hosting'],
-  ['/docs/self-hosting/upgrades', '/docs/self-hosting/upgrades'],
+// The self-hosting guides are public and prerendered (lib/selfhost-docs.ts):
+// each page, its Markdown mirror and the downloadable helper files must serve
+// from the built Worker without a session.
+for (const [path, type, content] of [
+  ['/docs/self-hosting', /text\/html/, /Self-hosting Agent Relay/],
+  ['/docs/self-hosting/install-eks', /text\/html/, /Install on EKS/],
+  ['/docs/self-hosting/agents/install-eks', /text\/html/, /Agent runbook/],
+  ['/docs/self-hosting/install-gke.md', /text\/markdown/, /# Install on GKE/],
+  ['/docs/self-hosting/agents.md', /text\/markdown/, /Never print, log, paste or summarize a secret/],
+  ['/self-hosting/files/eks/SHA256SUMS', null, /  rds-setup\.sh\n/],
 ]) {
   const response = await fetch(new URL(path, base), { redirect: 'manual', signal: AbortSignal.timeout(15000) });
-  assert.ok([303, 307, 308].includes(response.status), `${path}: expected a sign-in redirect, got ${response.status}`);
-  const location = new URL(response.headers.get('location') ?? '', base);
-  assert.equal(location.pathname, '/login', `${path}: redirected to ${location}`);
-  assert.equal(location.searchParams.get('next'), next, `${path}: wrong return path`);
-  assert.match(response.headers.get('cache-control') ?? '', /private/, `${path}: missing private Cache-Control`);
-  assert.match(response.headers.get('cache-control') ?? '', /no-store/, `${path}: missing no-store Cache-Control`);
-  assert.match(response.headers.get('x-robots-tag') ?? '', /noindex/, `${path}: missing X-Robots-Tag noindex`);
-  console.log(`Worker smoke: ${path} redirects a signed-out reader to sign in, uncached`);
+  assert.equal(response.status, 200, `${path}: Worker returned ${response.status}`);
+  if (type) assert.match(response.headers.get('content-type') ?? '', type, `${path}: wrong content type`);
+  // Cloudflare marks every *.workers.dev preview URL noindex; check our own
+  // headers only where Cloudflare doesn't add one (local wrangler and prod).
+  if (!new URL(base).hostname.endsWith('.workers.dev')) {
+    assert.doesNotMatch(response.headers.get('x-robots-tag') ?? '', /noindex/, `${path}: must be indexable`);
+  }
+  assert.match(await response.text(), content, `${path}: expected content is missing`);
+  console.log(`Worker smoke: ${path} is public`);
 }

@@ -302,20 +302,19 @@ export function isAgentPageRequestPath(pathname: string): boolean {
   return /^\/u(?:\/|$)/i.test(pathname);
 }
 
-// The gated self-hosting docs: the rendered pages, Cloud's runbook API that
-// feeds them, and Cloud's sign-in return hop. Their bodies are entitled
-// customers' private runbooks, so they stay out of the replay corpus.
-// Matched on the decoded path (so /docs/%73elf-hosting is excluded too), and
-// an undecodable path fails closed.
-export function isSelfhostDocsPath(pathname: string): boolean {
+// Cloud's self-hosting runbook API returns the private support runbooks to
+// entitled customers, so its responses stay out of the replay corpus. (The
+// public guides at /docs/self-hosting are ordinary docs pages and need no
+// exclusion.) Matched on the decoded path (so /cloud/api/v1/me/selfhost%2Ddocs
+// is excluded too), and an undecodable path fails closed.
+export function isSelfhostRunbookApiPath(pathname: string): boolean {
   let decoded: string;
   try {
     decoded = decodeURIComponent(pathname);
   } catch {
     return true;
   }
-  return /^\/(?:cloud\/)?docs\/self-hosting(?:\/|$)/i.test(decoded)
-    || /^\/cloud\/api\/v1\/me\/selfhost-docs(?:\/|$)/i.test(decoded);
+  return /^\/cloud\/api\/v1\/me\/selfhost-docs(?:\/|$)/i.test(decoded);
 }
 
 // Dashboard grants are single-use bearer credentials. Any request carrying a
@@ -880,12 +879,12 @@ const router = {
     // Conversation URLs are bearer secrets and request bodies are private chat
     // content, so neither the new route nor the existing Cloud fallback belongs
     // in the replay corpus. Agent pages and guides mint a conversation URL in
-    // every response, so they stay out too, however they were reached. So do
-    // the gated self-hosting docs and Cloud's runbook API behind them.
+    // every response, so they stay out too, however they were reached. So does
+    // Cloud's private self-hosting runbook API.
     const recorderRequestClone = recorderEnv
       && !relayAgentRoute
       && !isAgentPageRequestPath(url.pathname)
-      && !isSelfhostDocsPath(url.pathname)
+      && !isSelfhostRunbookApiPath(url.pathname)
       && !carriesDashboardGrant(url)
       ? (request.clone() as unknown as Request)
       : null;

@@ -1,15 +1,16 @@
-// Request-time markdown rendering for the gated self-hosting runbooks.
+// Markdown rendering for the self-hosting guides (lib/selfhost-docs.ts).
 //
-// The public docs compile MDX at build time; MDX's evaluate() needs
-// `new Function`, which the Cloudflare Workers runtime forbids, and the
-// runbooks must never be in the build anyway. So this renders plain GFM
-// markdown with no code evaluation: remark parses it, remark-rehype turns it
-// into HTML nodes with raw HTML dropped, and hast-util-to-jsx-runtime builds
-// React elements with the docs site's own heading and code-block components.
+// The rest of the docs compile MDX with evaluate(), which needs `new Function`.
+// The guides are plain GFM Markdown with shell snippets full of braces and
+// angle brackets, so they are rendered without any code evaluation instead:
+// remark parses them, remark-rehype turns them into HTML nodes with raw HTML
+// (including HTML comments) dropped, and hast-util-to-jsx-runtime builds React
+// elements with the docs site's own code-block component. Pages render at
+// build time (and ISR), so the guides ship in the build like any other doc.
 
 import type { Element, ElementContent, Root as HastRoot } from 'hast';
 import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
-import type { InlineCode, Link, Parent, Root as MdastRoot, RootContent } from 'mdast';
+import type { Root as MdastRoot } from 'mdast';
 import type React from 'react';
 import { Fragment } from 'react';
 import { jsx, jsxs } from 'react/jsx-runtime';
@@ -22,36 +23,11 @@ import { CopyCodeButton } from '../components/docs/CopyCodeButton';
 import styles from '../components/docs/docs.module.css';
 import { slugify } from '../components/docs/mdx-components';
 import type { TocItem } from './docs';
-import { selfhostDocPath } from './selfhost-docs';
-
-const RUNBOOK_REFERENCE = /^selfhost:([a-z0-9][a-z0-9-]{0,63})$/;
 
 function textOf(node: ElementContent | Element): string {
   if (node.type === 'text') return node.value;
   if (node.type === 'element') return node.children.map(textOf).join('');
   return '';
-}
-
-/**
- * The runbooks cite each other as `selfhost:<name>` (the form the support
- * agent uses). For a reader that becomes a link to the runbook's page.
- */
-function linkRunbookReferences(tree: MdastRoot) {
-  const visit = (parent: Parent) => {
-    parent.children = parent.children.map((child): RootContent => {
-      if (child.type === 'link') return child;
-      if (child.type === 'inlineCode') {
-        const match = RUNBOOK_REFERENCE.exec((child as InlineCode).value);
-        if (match) {
-          const link: Link = { type: 'link', url: selfhostDocPath(match[1]), children: [child] };
-          return link;
-        }
-      }
-      if ('children' in child) visit(child as Parent);
-      return child;
-    });
-  };
-  visit(tree);
 }
 
 /** Only same-site paths, fragments, https and mailto links survive; anything else renders as text. */
@@ -129,15 +105,14 @@ function SafeLink({ href, children }: React.AnchorHTMLAttributes<HTMLAnchorEleme
 const components = {
   pre: CodeBlock,
   a: SafeLink,
-  // Runbooks carry no images; never let markdown load a remote one.
+  // The guides carry no images; never let markdown load a remote one.
   img: () => null,
 };
 
 export function renderSelfhostMarkdown(markdown: string): { content: React.ReactNode; toc: TocItem[] } {
   const processor = unified().use(remarkParse).use(remarkGfm);
   const mdast = processor.runSync(processor.parse(markdown)) as MdastRoot;
-  linkRunbookReferences(mdast);
-  // allowDangerousHtml stays off: raw HTML in a runbook is dropped, not rendered.
+  // allowDangerousHtml stays off: raw HTML in a guide is dropped, not rendered.
   const hast = unified().use(remarkRehype).runSync(mdast) as HastRoot;
   const toc = headingIds(hast);
   const content = toJsxRuntime(hast, {
