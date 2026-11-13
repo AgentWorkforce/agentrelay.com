@@ -17,8 +17,8 @@ off again. With Okta on, people **don't need accounts created**: an Okta user
 assigned to the app, whose email domain you allow, joins as a member the first
 time they sign in. Nothing here is sent to Agent Relay.
 
-These steps are written for EKS. A real Okta organization hasn't been run
-through them yet, so tell us if a step differs. On GKE they are the same, using step 11 of
+These steps are written for EKS, and were run end to end against a real Okta
+organization. On GKE they are the same, using step 11 of
 [Install on GKE](/docs/self-hosting/install-gke) for the upgrade. Any OIDC provider works the same way:
 create a web app with the redirect below and use its issuer.
 
@@ -40,9 +40,9 @@ ALLOWED_DOMAIN=<your email domain> \
 The script:
 
 - asks for the API token without echoing it;
+- uses your Okta org as the issuer (see [Issuer](#issuer) below);
 - creates an OIDC web app with the redirect `https://<domain>/login/oidc/callback`;
 - assigns the group;
-- picks the issuer;
 - stores the client secret in the cluster (`agent-relay-secrets`, key
   `oidc-client-secret`) and in `~/.agent-relay-install`;
 - prints the lines for step 2.
@@ -63,8 +63,17 @@ kubectl -n agent-relay create secret generic agent-relay-secrets \
   --from-file=$HOME/.agent-relay-install/secret-files/agent-relay-secrets --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-The issuer is `https://<org>.okta.com/oauth2/default` if you have Okta API
-Access Management, otherwise `https://<org>.okta.com`.
+<a id="issuer"></a>**Issuer.** Use your org's issuer, `https://<org>.okta.com`. It needs no
+extra Okta setup, and it's what `okta-setup.sh` uses. A custom authorization
+server such as `https://<org>.okta.com/oauth2/default` also works, but only once
+it has an access policy with a rule that allows the Authorization Code grant for
+this app. Without one, every sign-in fails with "You are not allowed to access
+this app" (`no_matching_policy` in Okta's System Log). To have the script use a
+custom server, also set `OKTA_ISSUER=https://<org>.okta.com/oauth2/<id>`; it
+warns if that server has no access policy.
+
+The `kubectl apply` rebuilds the whole `agent-relay-secrets` Secret from that
+folder, so run it only with the complete folder from the install.
 
 **Using helm-secrets or vals** ([Secrets](/docs/self-hosting/secrets))? After
 this step, rerun your secrets commands. They pick up the new
@@ -102,7 +111,7 @@ The client ID isn't secret; it's fine in `values.yaml`.
 Run the `helm upgrade` from step 11 of the install, then:
 
 ```sh
-curl -s "https://api.$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oidc}'
+curl -s "https://$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oidc}'
 ```
 
 **Done when:**
@@ -112,6 +121,16 @@ curl -s "https://api.$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oid
 - someone in the group can sign in with it and lands in your organization as a
   member;
 - someone outside the group is refused by Okta.
+
+People sign in under the Okta app's authentication policy. Okta's default for
+new apps requires two factors, so someone without Okta Verify or a passkey is
+asked to enrol one first. Change the app's policy in Okta (Applications ›
+Agent Relay › Sign On) if that isn't what you want.
+
+**Sign-in fails?** Okta's System Log (Reports › System Log) names the reason:
+`no_matching_policy` means the issuer's authorization server needs an access
+policy (see [Issuer](#issuer)); "User is not assigned to the client
+application" means the person isn't in the group.
 
 <!-- agent
 ASK THE HUMAN for approval before the helm upgrade. The last two checks need
