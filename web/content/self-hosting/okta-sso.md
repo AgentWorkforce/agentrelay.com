@@ -3,6 +3,15 @@ title: Single sign-on with Okta
 description: Add Okta (OIDC) sign-in to a running install, beside password sign-in, in four steps.
 ---
 
+> **Enterprise feature.** Single sign-on is part of Agent Relay Enterprise and
+> needs an Enterprise agreement for production use. See
+> [Licensing](/docs/self-hosting/overview#licensing).
+
+<!-- agent
+STOP before step 1 and ask the human to confirm their organization has an Agent
+Relay Enterprise agreement, or that this is an evaluation install.
+-->
+
 **Safe to try:** password sign-in stays on beside Okta, and step 4 turns Okta
 off again. With Okta on, people **don't need accounts created**: an Okta user
 assigned to the app, whose email domain you allow, joins as a member the first

@@ -63,6 +63,33 @@ Okta](/docs/self-hosting/okta-sso), [after the
 install](/docs/self-hosting/after-install) (titles and summaries) and the
 [desktop app rollout](/docs/self-hosting/desktop-app).
 
+## Licensing
+
+- **Free to self-host.** Any organization can run the self-hosted stack in its
+  own cloud account and change it for its own use. Today the code is
+  Apache-2.0. From an upcoming release, the self-hosted stack and the desktop
+  app move to the [Functional Source License](https://fsl.software)
+  (FSL-1.1-Apache-2.0): you can still self-host and modify it at any size, but
+  you can't offer it as a competing hosted service, and each release becomes
+  Apache-2.0 two years after it ships. Releases already published keep their
+  Apache-2.0 license.
+- **Enterprise features need an Agent Relay Enterprise agreement** for
+  production use: single sign-on ([Okta and other OIDC
+  providers](/docs/self-hosting/okta-sso)), SCIM provisioning, audit logs, and
+  hard delete and retention controls.
+- **Agent Relay Enterprise also includes** desktop app builds signed for your
+  domain, supported releases with tested upgrades, and support with an SLA.
+
+To talk about an Enterprise agreement, email
+[founders@agentrelay.com](mailto:founders@agentrelay.com).
+
+<!-- agent
+Before enabling an Enterprise feature (single sign-on, SCIM, audit logs, hard
+delete or retention controls) for production use, ask the human to confirm their
+organization has an Agent Relay Enterprise agreement. Do not decide this
+yourself.
+-->
+
 ## Releases
 
 | Release | Chart | Tested on |
