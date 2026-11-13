@@ -17,9 +17,9 @@ off again. With Okta on, people **don't need accounts created**: an Okta user
 assigned to the app, whose email domain you allow, joins as a member the first
 time they sign in. Nothing here is sent to Agent Relay.
 
-These steps were written and tested on EKS. On GKE they are the same, using
-step 11 of [Install on GKE](/docs/self-hosting/install-gke) for the upgrade,
-but they haven't been run there yet. Any OIDC provider works the same way:
+These steps are written for EKS. A real Okta organization hasn't been run
+through them yet, so tell us if a step differs. On GKE they are the same, using step 11 of
+[Install on GKE](/docs/self-hosting/install-gke) for the upgrade. Any OIDC provider works the same way:
 create a web app with the redirect below and use its issuer.
 
 ## 1. Create the Okta app and store its secret (Okta admin, about 2 minutes)
@@ -90,7 +90,10 @@ Under `relay-control:` in `values.yaml`:
         clientId: <client ID>
         allowedDomains: [<your email domain>]
         displayName: Okta
+      autoJoinDomains: [<your email domain>]
   ```
+
+`autoJoinDomains` (beside `oidc:`) lets those people join without an invite.
 
 The client ID isn't secret; it's fine in `values.yaml`.
 
@@ -106,7 +109,8 @@ curl -s "https://api.$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oid
 
 - `oidc` shows `Okta`;
 - `https://<domain>/login` shows **Continue with Okta** beside the password form;
-- someone in the group can sign in with it;
+- someone in the group can sign in with it and lands in your organization as a
+  member;
 - someone outside the group is refused by Okta.
 
 <!-- agent
@@ -116,5 +120,5 @@ real people: ASK THE HUMAN to try both and report the result.
 
 ## 4. To turn it off
 
-Remove the `oidc:` block and the `oidcClientSecret` line from `values.yaml`,
+Remove the `oidc:` block, `autoJoinDomains` and the `oidcClientSecret` line from `values.yaml`,
 then run the `helm upgrade` again. Password sign-in keeps working throughout.
