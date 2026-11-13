@@ -47,7 +47,9 @@ The script:
   `oidc-client-secret`) and in `~/.agent-relay-install`;
 - prints the lines for step 2.
 
-It never prints the token or the client secret.
+It never prints the token or the client secret. Run it once: it stops if an
+active Okta app labelled "Agent Relay" already exists. To start over, deactivate
+and delete that app in Okta first.
 
 **Done when:** it prints `client secret stored`, followed by the values for
 step 2.
@@ -70,7 +72,7 @@ it has an access policy with a rule that allows the Authorization Code grant for
 this app. Without one, every sign-in fails with "You are not allowed to access
 this app" (`no_matching_policy` in Okta's System Log). To have the script use a
 custom server, also set `OKTA_ISSUER=https://<org>.okta.com/oauth2/<id>`; it
-warns if that server has no access policy.
+stops before creating anything if that server has no access policy.
 
 The `kubectl apply` rebuilds the whole `agent-relay-secrets` Secret from that
 folder, so run it only with the complete folder from the install.
@@ -123,8 +125,8 @@ curl -s "https://$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oidc}'
 - someone outside the group is refused by Okta.
 
 People sign in under the Okta app's authentication policy. Okta's default for
-new apps requires two factors, so someone without Okta Verify or a passkey is
-asked to enrol one first. Change the app's policy in Okta (Applications ›
+new apps requires two factors, so on first sign-in people are asked to set up
+Okta Verify or a passkey. Change the app's policy in Okta (Applications ›
 Agent Relay › Sign On) if that isn't what you want.
 
 **Sign-in fails?** Okta's System Log (Reports › System Log) names the reason:
