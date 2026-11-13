@@ -9,6 +9,11 @@
 #   ALLOWED_DOMAIN=<email domain, e.g. example.com> \
 #     bash okta-setup.sh
 #
+# The issuer is the org authorization server (OKTA_ORG). To use a custom
+# authorization server, also set OKTA_ISSUER=https://<your-org>.okta.com/oauth2/<id>;
+# it then needs an access policy and rule allowing the Authorization Code grant
+# for this app, or every sign-in fails with "no_matching_policy".
+#
 # It asks for an Okta API token (Okta Admin > Security > API > Tokens) without
 # echoing it. The token and the client secret are never printed. Needs curl,
 # jq and kubectl.
@@ -23,12 +28,13 @@ CFG="$(mktemp)"; chmod 600 "$CFG"; trap 'rm -f "$CFG"' EXIT
 printf 'header = "Authorization: SSWS %s"\n' "$OKTA_TOKEN" > "$CFG"; unset OKTA_TOKEN
 okta() { curl -fsS -K "$CFG" -H 'Accept: application/json' -H 'Content-Type: application/json' "$@"; }
 
-# 1. Issuer: Okta's default custom authorization server if you have one, else the org server.
-if curl -fsS -o /dev/null "$OKTA_ORG/oauth2/default/.well-known/openid-configuration" 2>/dev/null; then
-  ISSUER="$OKTA_ORG/oauth2/default"
-else
-  ISSUER="$OKTA_ORG"
-fi
+# 1. Issuer: the org authorization server, which needs no extra Okta setup.
+# Set OKTA_ISSUER to use a custom authorization server instead (for example
+# $OKTA_ORG/oauth2/default); it must have an access policy that allows this app.
+ISSUER="${OKTA_ISSUER:-$OKTA_ORG}"
+ISSUER="${ISSUER%/}"
+curl -fsS -o /dev/null "$ISSUER/.well-known/openid-configuration" ||
+  { echo "no OpenID configuration at $ISSUER" >&2; exit 1; }
 echo "issuer: $ISSUER"
 
 # 2. The group must exist.
@@ -57,6 +63,13 @@ echo "group assigned: $OKTA_GROUP"
 # 5. Store the client secret with the other install secrets, and in the cluster.
 ( umask 077; jq -jr .credentials.oauthClient.client_secret <<<"$APP" > "$DIR/oidc-client-secret" )
 unset APP
+if [ "$ISSUER" != "$OKTA_ORG" ]; then
+  AS_ID="${ISSUER##*/oauth2/}"
+  POLICIES="$(okta "$OKTA_ORG/api/v1/authorizationServers/$AS_ID/policies" 2>/dev/null)" || POLICIES=unknown
+  if [ "$POLICIES" = "[]" ]; then
+    echo "WARNING: authorization server $AS_ID has no access policy; sign-in will fail until you add one" >&2
+  fi
+fi
 kubectl -n "$NS" create secret generic agent-relay-secrets --from-file="$DIR" \
   --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 echo "client secret stored in Secret agent-relay-secrets (key oidc-client-secret)"
