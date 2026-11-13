@@ -26,7 +26,8 @@ create a web app with the redirect below and use its issuer.
 
 From the `agent-relay-install` folder, with `kubectl` access and an Okta API
 token (Okta Admin › Security › API › Tokens). `okta-setup.sh` came with step 1's
-files:
+files. It writes to your current `kubectl` context, so check that first with
+`kubectl config current-context`:
 
 ```sh
 source settings.sh
@@ -110,7 +111,10 @@ The client ID isn't secret; it's fine in `values.yaml`.
 
 ## 3. Apply and check
 
-Run the `helm upgrade` from step 11 of the install, then:
+Run the same `helm upgrade` you installed with (step 11 of the install), with
+every `-f` file and `--set` you used then, for example a release images
+overlay from an upgrade. Helm replaces the release's values rather than merging
+them, so leaving one out undoes it. Then:
 
 ```sh
 curl -s "https://$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oidc}'
@@ -118,7 +122,8 @@ curl -s "https://$DOMAIN/cloud/api/v1/auth/login-config" | jq '{methods, oidc}'
 
 **Done when:**
 
-- `oidc` shows `Okta`;
+- `oidc` shows `{"displayName": "Okta"}` (`methods` stays `["password"]`;
+  that's expected);
 - `https://<domain>/login` shows **Continue with Okta** beside the password form;
 - someone in the group can sign in with it and lands in your organization as a
   member;
@@ -143,3 +148,11 @@ real people: ASK THE HUMAN to try both and report the result.
 
 Remove the `oidc:` block, `autoJoinDomains` and the `oidcClientSecret` line from `values.yaml`,
 then run the `helm upgrade` again. Password sign-in keeps working throughout.
+If that leaves `auth:` or `secretKeys:` with nothing under it, delete that line
+too: an empty key removes the chart's defaults, and Helm refuses the upgrade.
+
+To remove the stored secret as well, delete
+`~/.agent-relay-install/secret-files/agent-relay-secrets/oidc-client-secret` and
+rerun the `kubectl apply` from step 1. Then deactivate and delete the Agent
+Relay app in Okta. People who joined through Okta stay members until an owner
+removes them in **Settings → Members**.
