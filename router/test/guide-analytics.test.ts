@@ -4,7 +4,7 @@ import worker, {
   carriesDashboardGrant,
   getGuideAnalyticsHandle,
   isAgentPageRequestPath,
-  isSelfhostDocsPath,
+  isSelfhostRunbookApiPath,
 } from "../index.js";
 import {
   classifyClient,
@@ -172,36 +172,35 @@ describe("router dashboard recorder exclusion", () => {
   });
 });
 
-describe("router self-hosting docs recorder exclusion", () => {
-  it("never records the gated docs pages or Cloud's runbook API", async () => {
+describe("router self-hosting runbook API recorder exclusion", () => {
+  it("never records Cloud's private runbook API", async () => {
     const cloudWorker = vi.fn(async () => new Response('{"entitled":true,"doc":{"markdown":"SENTINEL-RUNBOOK"}}', { status: 200 }));
-    const { put, upstream, fetch } = setup(200, { CLOUD_WEB_WORKER: { fetch: cloudWorker } });
-    upstream.mockImplementation(async () => new Response("<h1>SENTINEL-RUNBOOK</h1>", { status: 200 }));
-    await fetch("https://agentrelay.com/docs/self-hosting", { headers: AGENT });
-    await fetch("https://agentrelay.com/docs/self-hosting/upgrades", { headers: AGENT });
+    const { put, fetch } = setup(200, { CLOUD_WEB_WORKER: { fetch: cloudWorker } });
     await fetch("https://agentrelay.com/cloud/api/v1/me/selfhost-docs?doc=upgrades", { headers: AGENT });
-    await fetch("https://agentrelay.com/cloud/docs/self-hosting/upgrades", { headers: AGENT });
-    expect(upstream).toHaveBeenCalledTimes(2);
+    await fetch("https://agentrelay.com/cloud/api/v1/me/selfhost%2Ddocs", { headers: AGENT });
     expect(cloudWorker).toHaveBeenCalledTimes(2);
     expect(put).not.toHaveBeenCalled();
   });
 
-  it("matches only the gated paths", () => {
+  it("matches only the runbook API, not the public guides", () => {
+    for (const path of [
+      "/cloud/api/v1/me/selfhost-docs",
+      "/cloud/api/v1/me/selfhost-docs/",
+      "/Cloud/API/v1/me/selfhost-docs",
+      "/cloud/api/v1/me/selfhost%2Ddocs",
+      "/cloud/api/v1/me/%E0%A4%A",
+    ]) {
+      expect(isSelfhostRunbookApiPath(path), path).toBe(true);
+    }
     for (const path of [
       "/docs/self-hosting",
-      "/docs/self-hosting/",
       "/docs/self-hosting/upgrades",
-      "/Docs/Self-Hosting/upgrades",
-      "/cloud/docs/self-hosting/upgrades",
-      "/cloud/api/v1/me/selfhost-docs",
-      "/docs/%73elf-hosting/upgrades",
-      "/cloud/api/v1/me/selfhost%2Ddocs",
-      "/docs/%E0%A4%A",
+      "/docs/self-hosting/agents/install-eks.md",
+      "/self-hosting/files/eks/rds-setup.sh",
+      "/cloud/api/v1/me/selfhost-docsx",
+      "/cloud/api/v1/me/integrations",
     ]) {
-      expect(isSelfhostDocsPath(path), path).toBe(true);
-    }
-    for (const path of ["/docs", "/docs/self-hostingx", "/docs/sessions", "/cloud/api/v1/me/integrations", "/self-hosting"]) {
-      expect(isSelfhostDocsPath(path), path).toBe(false);
+      expect(isSelfhostRunbookApiPath(path), path).toBe(false);
     }
   });
 });

@@ -56,13 +56,6 @@ jobs:
         working-directory: web
         run: npx opennextjs-cloudflare populateCache remote
 
-      # The gated self-hosting runbooks are fetched per request from Cloud and
-      # must never be in what is uploaded: no prerendered gated route, no
-      # fingerprinted runbook text in the assets, cache or Worker bundle.
-      - name: Verify no private self-hosting docs in the build
-        working-directory: web
-        run: node scripts/selfhost-docs-leak-check.mjs check .next .open-next
-
       - name: Deploy to Cloudflare
         working-directory: web
         env:

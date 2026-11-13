@@ -30,7 +30,7 @@ import {
 import { BsChatRightText } from 'react-icons/bs';
 import { FaReact } from 'react-icons/fa';
 import { GrSwift } from 'react-icons/gr';
-import { PiBroadcastFill, PiLockKeyDuotone } from 'react-icons/pi';
+import { PiBroadcastFill, PiHardDrivesDuotone, PiLockKeyDuotone } from 'react-icons/pi';
 import { RiLayout5Line } from 'react-icons/ri';
 import { SiClaude, SiPython, SiTypescript } from 'react-icons/si';
 
@@ -228,19 +228,20 @@ export function DocsNav({ variant = 'sidebar' }: { variant?: 'sidebar' | 'mobile
       ))}
       {!productSection && docsVersion === 'v8' && (
         <div className={styles.navGroup}>
-          <h4 className={styles.navGroupTitle}>Customers</h4>
+          <h4 className={styles.navGroupTitle}>Self-hosting</h4>
           <ul className={styles.navList}>
-            <li>
-              {/* Gated per reader (app/docs/self-hosting): never prefetch it from public pages. */}
-              <Link
-                href="/docs/self-hosting"
-                prefetch={false}
-                className={`${styles.navLink} ${pathname?.startsWith('/docs/self-hosting') ? styles.navLinkActive : ''}`}
-              >
-                <PiLockKeyDuotone className={styles.navIcon} aria-hidden="true" />
-                <span className={styles.navLabel}>Self-hosting</span>
-              </Link>
-            </li>
+            {/* Each page also lists every guide in its own sidebar (app/docs/self-hosting). */}
+            {[
+              { href: '/docs/self-hosting', label: 'Guides', active: pathname?.startsWith('/docs/self-hosting') && !pathname.startsWith('/docs/self-hosting/agents') },
+              { href: '/docs/self-hosting/agents', label: 'For coding agents', active: pathname?.startsWith('/docs/self-hosting/agents') },
+            ].map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className={`${styles.navLink} ${item.active ? styles.navLinkActive : ''}`}>
+                  <PiHardDrivesDuotone className={styles.navIcon} aria-hidden="true" />
+                  <span className={styles.navLabel}>{item.label}</span>
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       )}

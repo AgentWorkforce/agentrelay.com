@@ -4,6 +4,7 @@ import { allAgentSlugs } from '../lib/agents';
 import { getAllPosts } from '../lib/blog';
 import { getHumanDocSlugs } from '../lib/docs-nav';
 import { productBasePath, productSections } from '../lib/product-docs-nav';
+import { getSelfhostSitemapPaths } from '../lib/selfhost-docs';
 import { absoluteUrl } from '../lib/site';
 
 // ISR so OpenNext serves it from the incremental cache on Cloudflare Workers;
@@ -229,6 +230,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     )
   );
 
+  // Self-hosting guides. Their agent runbooks are listed in llms.txt instead.
+  const selfhostRoutes: MetadataRoute.Sitemap = getSelfhostSitemapPaths().map((path) => ({
+    url: absoluteUrl(path),
+    lastModified: now,
+    changeFrequency: 'weekly',
+    priority: path === '/docs/self-hosting' ? 0.8 : 0.7,
+  }));
+
   const agentRoutes: MetadataRoute.Sitemap = allAgentSlugs().map((slug) => ({
     url: absoluteUrl(`/agents/${slug}`),
     lastModified: now,
@@ -247,5 +256,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...productDocsRoutes, ...blogRoutes];
+  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...selfhostRoutes, ...productDocsRoutes, ...blogRoutes];
 }

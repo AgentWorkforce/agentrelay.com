@@ -4,6 +4,7 @@ import { readContentFile } from './content-store';
 import { agentDocs, docsNav, getAllMarkdownDocSlugs, markdownOnlyDocs } from './docs-nav';
 import { absoluteUrl } from './site';
 import { providersByCategory } from './integrations';
+import { getSelfhostGuides, getSelfhostMarkdown, selfhostMarkdownPath } from './selfhost-docs';
 
 const DOCS_BASE_URL = absoluteUrl('/docs');
 
@@ -207,6 +208,14 @@ function getAgentDocsLinks(): DocsLink[] {
   return linksFor([...agentDocs, ...markdownOnlyDocs]);
 }
 
+function getSelfhostLinks(audience: 'human' | 'agent'): DocsLink[] {
+  return getSelfhostGuides().map((guide) => ({
+    title: audience === 'agent' ? `${guide.title} (agent runbook)` : guide.title,
+    url: absoluteUrl(selfhostMarkdownPath(guide.slug, audience)),
+    description: guide.description,
+  }));
+}
+
 function formatLink({ title, url, description }: DocsLink): string {
   return `- [${title}](${url})${description ? `: ${description}` : ''}`;
 }
@@ -246,6 +255,21 @@ export function getLlmsText(): string {
     '',
     ...getAgentDocsLinks().map(formatLink),
     '',
+    '## Self-hosting',
+    '',
+    'Run Agent Relay in your own AWS (EKS) or Google Cloud (GKE) account. Human guides first; each has an agent runbook with the same steps plus checks and stop points.',
+    '',
+    ...getSelfhostLinks('human').map(formatLink),
+    '',
+    '### Self-hosting runbooks for agents',
+    '',
+    formatLink({
+      title: 'Rules for coding agents',
+      url: absoluteUrl(selfhostMarkdownPath(undefined, 'agent')),
+      description: 'Read first: never print secrets, ask the human before every change, and where to stop.',
+    }),
+    ...getSelfhostLinks('agent').map(formatLink),
+    '',
     '## Optional',
     '',
     formatLink({
@@ -268,6 +292,10 @@ function getMarkdownBundle(slugs: string[]): string[] {
 
 export function getLlmsFullText(): string {
   const currentDocs = getMarkdownBundle(getAllMarkdownDocSlugs());
+  const selfhostDocs = getSelfhostGuides()
+    .map((guide) => getSelfhostMarkdown(guide.slug, 'human'))
+    .filter((markdown): markdown is string => markdown !== null)
+    .map((markdown) => markdown.trim());
   const sections = [
     '# Agent Relay Full Documentation',
     '',
@@ -278,6 +306,10 @@ export function getLlmsFullText(): string {
     '## Documentation',
     '',
     currentDocs.join('\n\n---\n\n'),
+    '',
+    '## Self-hosting',
+    '',
+    selfhostDocs.join('\n\n---\n\n'),
     '',
   ];
 

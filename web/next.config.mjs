@@ -24,7 +24,7 @@ const nextConfig = {
   },
   outputFileTracingRoot: path.resolve(__dirname, '..'),
   outputFileTracingIncludes: {
-    '/*': ['content/docs/**/*', 'content/blog/**/*'],
+    '/*': ['content/docs/**/*', 'content/blog/**/*', 'content/self-hosting/**/*'],
     // The Pear OG card embeds these at render time.
     '/pear/og.png': ['public/img/pear-app.png', 'public/brand-kit/pear-icon-transparent.png'],
   },
@@ -41,6 +41,12 @@ const nextConfig = {
     config.module.rules.push({
       test: /\.mdx$/,
       include: path.resolve(__dirname, 'content'),
+      type: 'asset/source',
+    });
+    // The self-hosting guides are plain Markdown (lib/selfhost-docs.ts).
+    config.module.rules.push({
+      test: /\.md$/,
+      include: path.resolve(__dirname, 'content/self-hosting'),
       type: 'asset/source',
     });
 
@@ -64,6 +70,10 @@ const nextConfig = {
       '/docs/markdown/:path*',
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
+      '/docs/self-hosting/markdown/:path*',
+      '/docs/self-hosting/:slug([^/]+\\.md)',
+      '/docs/self-hosting/agents/:slug([^/]+\\.md)',
+      '/self-hosting/files/:path*',
       '/.well-known/:path*',
       '/u/:handle/agent.md',
       '/agents/register/checklist.md',
@@ -87,20 +97,6 @@ const nextConfig = {
         source: '/well-known/:path*',
         headers: [{ key: 'X-Robots-Tag', value: 'noindex' }],
       },
-      ...['/docs/self-hosting', '/docs/self-hosting/:path*'].map((source) => ({
-        // Gated self-hosting docs (lib/selfhost-docs.ts): rendered per reader
-        // after Cloud verifies the session and the organization's entitlement.
-        // No shared cache (Cloudflare edge, OpenNext, browser) may store them,
-        // and no index may list them. Kept in sync with SELFHOST_DOCS_HEADERS
-        // (asserted by lib/test/selfhost-docs.test.ts).
-        source,
-        headers: [
-          { key: 'Cache-Control', value: 'private, no-store' },
-          { key: 'X-Robots-Tag', value: 'noindex, nofollow' },
-          { key: 'Referrer-Policy', value: 'no-referrer' },
-          { key: 'Content-Security-Policy', value: "frame-ancestors 'none'; base-uri 'none'; object-src 'none'" },
-        ],
-      })),
       {
         // The owner analytics dashboard: private, never cached, never framed,
         // never leaks its URL. The grant-bearing first request is rewritten to
@@ -157,6 +153,13 @@ const nextConfig = {
         // Append .md to any docs URL to get its markdown mirror. afterFiles
         // runs after static routes (so /docs/markdown.md is untouched) but
         // before the /docs/[slug] dynamic page.
+        // Self-hosting guides and agent runbooks: same convention, served from
+        // app/docs/self-hosting/markdown. Listed before the generic rule, which
+        // would otherwise send /docs/self-hosting.md to the main docs.
+        { source: '/docs/self-hosting.md', destination: '/docs/self-hosting/markdown/index.md' },
+        { source: '/docs/self-hosting/agents.md', destination: '/docs/self-hosting/markdown/agents.md' },
+        { source: '/docs/self-hosting/agents/:slug([^/]+\\.md)', destination: '/docs/self-hosting/markdown/agents/:slug' },
+        { source: '/docs/self-hosting/:slug([^/]+\\.md)', destination: '/docs/self-hosting/markdown/:slug' },
         { source: '/docs/:slug([^/]+\\.md)', destination: '/docs/markdown/:slug' },
       ],
     };
