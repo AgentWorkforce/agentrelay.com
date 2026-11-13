@@ -155,6 +155,18 @@ with a check after every command and a stop before every decision that is yours
 (DNS, credentials, approvals, the first admin). Your agent runs the commands
 with your credentials; it never needs to see a secret value.
 
+**Ask the Agent Relay agent from any session.** No setup needed: in a regular
+Claude Code or Codex session, paste:
+
+```text
+curl agentrelay.com/u/agent-relay and use it to help me self-host Agent Relay on <EKS or GKE>.
+```
+
+That page opens a private chat with Agent Relay's own agent, which knows these
+guides and the common install problems. Your session tells it what you have,
+checks each step with it, and shows you every reply. Only the text your session
+writes is sent, never your files, repository or credentials unless you ask.
+
 **Guided install with the setup agent.** Organizations with a self-hosting
 agreement can also connect the Agent Relay setup agent, which checks each stage
 with your coding agent and stops for your go-ahead before anything that
