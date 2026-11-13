@@ -66,13 +66,14 @@ install](/docs/self-hosting/after-install) (titles and summaries) and the
 ## Licensing
 
 - **Free to self-host.** Any organization can run the self-hosted stack in its
-  own cloud account and change it for its own use. Today the code is
-  Apache-2.0. From an upcoming release, the self-hosted stack and the desktop
-  app move to the [Functional Source License](https://fsl.software)
-  (FSL-1.1-Apache-2.0): you can still self-host and modify it at any size, but
-  you can't offer it as a competing hosted service, and each release becomes
-  Apache-2.0 two years after it ships. Releases already published keep their
-  Apache-2.0 license.
+  own cloud account and change it for its own use. From release
+  `agent-relay-2026.11.2`, the install tooling in
+  [AgentWorkforce/infra](https://github.com/AgentWorkforce/infra) (Helm charts,
+  Terraform and scripts) is licensed under the [Functional Source
+  License](https://fsl.software) (FSL-1.1-ALv2): you can self-host and modify
+  it at any size, but you can't offer it as a competing hosted service, and
+  each release becomes Apache-2.0 two years after it ships. Earlier releases
+  stay Apache-2.0.
 - **Enterprise features need an Agent Relay Enterprise agreement** for
   production use: single sign-on ([Okta and other OIDC
   providers](/docs/self-hosting/okta-sso)), SCIM provisioning, audit logs, and
