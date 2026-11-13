@@ -72,6 +72,7 @@ Next, in values.yaml under relay-control:
       clientId: $CLIENT_ID
       allowedDomains: [$ALLOWED_DOMAIN]
       displayName: Okta
+    autoJoinDomains: [$ALLOWED_DOMAIN]   # beside oidc:, lets these users join without an invite
 
 Then run the helm upgrade from step 11 of the install guide (agentrelay.com/docs/self-hosting).
 Back up ~/.agent-relay-install again: it now holds the Okta client secret.
