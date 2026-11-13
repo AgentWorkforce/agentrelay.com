@@ -75,7 +75,11 @@ for (const [path, type, content] of [
   const response = await fetch(new URL(path, base), { redirect: 'manual', signal: AbortSignal.timeout(15000) });
   assert.equal(response.status, 200, `${path}: Worker returned ${response.status}`);
   if (type) assert.match(response.headers.get('content-type') ?? '', type, `${path}: wrong content type`);
-  assert.doesNotMatch(response.headers.get('x-robots-tag') ?? '', /noindex/, `${path}: must be indexable`);
+  // Cloudflare marks every *.workers.dev preview URL noindex; check our own
+  // headers only where Cloudflare doesn't add one (local wrangler and prod).
+  if (!new URL(base).hostname.endsWith('.workers.dev')) {
+    assert.doesNotMatch(response.headers.get('x-robots-tag') ?? '', /noindex/, `${path}: must be indexable`);
+  }
   assert.match(await response.text(), content, `${path}: expected content is missing`);
   console.log(`Worker smoke: ${path} is public`);
 }
