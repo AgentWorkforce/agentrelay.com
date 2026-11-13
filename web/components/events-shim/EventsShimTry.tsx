@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { teamsCloudUrl } from '../../lib/teams-cloud';
 import { CodeBlock, CopyButton } from './CodeBlock';
+import { KeepInbox } from './KeepInbox';
 import s from './events-shim.module.css';
 
 /** Mounted by Agent Relay Cloud; see `@agent-relay/events-shim`. */
@@ -334,6 +335,7 @@ export function EventsShimTry() {
         {error && <p className={s.error} role="alert">{error}</p>}
       </section>
 
+      {session && <KeepInbox manageToken={session.manageToken} />}
       {session && (
         <>
           <section className={s.section}>
