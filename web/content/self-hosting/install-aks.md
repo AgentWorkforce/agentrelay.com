@@ -8,9 +8,8 @@ Install Agent Relay on Azure Kubernetes Service. It follows
 forces. Run the steps in order and check each **Done when** line before you
 move on.
 
-**Preview.** This guide needs chart **agent-relay 0.7.7** or later in
-`oci://ghcr.io/agentworkforce/charts`. Until it is published there, wait or ask
-[support](/docs/self-hosting/support).
+**Release:** `agent-relay-2026.11.2` (chart 0.7.7). **Community-contributed**:
+proven once on AKS, see [Known limits](#known-limits).
 
 **Status: community-contributed, proven once.** One fresh install on
 2026-11-14 (AKS 1.36, East US 2) of release **agent-relay-2026.11.0** (chart
@@ -20,9 +19,9 @@ operator device approval worked, two agents exchanged messages through
 Relaycast, and an uploaded session was indexed. See
 [Known limits](#known-limits) before a production rollout.
 
-This guide installs the published chart **agent-relay 0.7.7** (sessions-pipeline
-0.8.32) from `oci://ghcr.io/agentworkforce/charts`, the first release that
-carries `searchIndexer.locker.credentials`. Earlier releases do not render the
+This guide installs release **agent-relay-2026.11.2** (chart agent-relay 0.7.7,
+sessions-pipeline 0.8.32), the first release that carries
+`searchIndexer.locker.credentials`. Earlier releases do not render the
 indexer's MinIO keys, so its uploads are never indexed.
 
 The files are in [`docs/azure-install`](https://github.com/AgentWorkforce/infra/tree/main/docs/azure-install)
@@ -30,7 +29,7 @@ of the infra repository.
 
 | File | What it is |
 |---|---|
-| [`values.yaml`](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/values.yaml) | Site values, applied after the chart package's `values-eks.yaml` |
+| [`values.yaml`](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/values.yaml) | Site values, applied after the chart package's `values-eks.yaml` and before the release's `release-images.values.yaml` |
 | [`postgres-tls.yaml`](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/postgres-tls.yaml) | cert-manager Issuers and Certificates: a 10-year CA and the server certificate for the in-cluster Postgres |
 | [`postgres-values.yaml`](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/postgres-values.yaml) | Overrides for `deps/cnpg-cluster-values.yaml` (the pinned HoopDb Postgres) |
 | [`postgres-setup.sh`](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/postgres-setup.sh) | Databases, roles and credential files: the `selfhosted` counterpart of `rds-setup.sh` and `cloud-sql-setup.sh` |
@@ -57,17 +56,30 @@ not change.
 
 Tools: `az`, `kubectl`, `helm` 3.10+, `jq`, `yq`, `openssl`.
 
-The chart comes from the registry; nothing is built from a checkout. Clone the
-[infra repository](https://github.com/AgentWorkforce/infra) only for this directory's files and the pinned `deps/` values, and
-pull the chart package for its `values-eks.yaml`. Every later command runs
-in `docs/azure-install`:
+The chart and its image pins come from the release's assets; nothing is built
+from a checkout. The [infra repository](https://github.com/AgentWorkforce/infra)
+supplies only the guide's files and the pinned `deps/` values. Every later
+command runs in `docs/azure-install`:
 
 ```sh
 git clone https://github.com/AgentWorkforce/infra.git && cd infra/docs/azure-install
-CHART=oci://ghcr.io/agentworkforce/charts/agent-relay
-CHART_VERSION=0.7.7
-helm pull "$CHART" --version "$CHART_VERSION" --untar -d chart
+mkdir release && gh release download agent-relay-2026.11.2 -R AgentWorkforce/infra -D release
+(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.7.tgz) | tail -1
+# Public GHCR images: no mirror root.
+sed 's#__IMAGE_MIRROR_ROOT__/##' release/release-images.values.yaml > release-images.values.yaml
+CHART=release/agent-relay-0.7.7.tgz
 ```
+
+No `gh`? Download the same assets from the
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.2)
+into `release/`.
+
+**Done when:** every checksum line ends in `OK` (the last is
+`release-notes.md: OK`).
+
+<!-- agent
+STOP if any checksum is not OK.
+-->
 
 ## 1. Cluster
 
@@ -130,12 +142,11 @@ lasts 90 days and rotates.
 ## 4. Databases and roles
 
 ```sh
-export SERVICES_IMAGE=ghcr.io/agentworkforce/sessions-pipeline@sha256:<the release's services digest>
+export SERVICES_IMAGE="$(yq '."sessions-pipeline".worker.image | .repository + "@" + .digest' release-images.values.yaml)"
 bash postgres-setup.sh pre
 ```
 
 <!-- agent
-ASK THE HUMAN for the release's services image digest; never guess it.
 The script prints no password: do not cat or print the files under
 ~/.agent-relay-install. STOP if it does not end with "pre done".
 -->
@@ -190,14 +201,19 @@ Never print, cat or paste the files under ~/.agent-relay-install/secret-files.
 ## 6. Install
 
 ```sh
-helm upgrade --install agent-relay "$CHART" --version "$CHART_VERSION" --namespace agent-relay \
-  -f chart/agent-relay/values-eks.yaml -f values.yaml --timeout 25m
+helm upgrade --install agent-relay "$CHART" --namespace agent-relay \
+  -f release/agent-relay/values-eks.yaml -f values.yaml -f release-images.values.yaml --timeout 25m
 for j in $(kubectl -n agent-relay get jobs -o name | grep -E 'relay-control-migrate|agent-relay-worker-migrate'); do
   kubectl -n agent-relay wait --for=condition=complete "$j" --timeout=20m
 done
 ```
 
 **Done when:** both migrate Jobs complete.
+
+<!-- agent
+ASK THE HUMAN for approval before the first helm command. STOP if a release
+named agent-relay already exists in the namespace: that is an upgrade.
+-->
 
 **Expected:** the read API, ingest edge, search indexer and the
 `search-indexer-bootstrap` Job fail until step 7, as on EKS.
@@ -208,8 +224,8 @@ done
 bash postgres-setup.sh post
 kubectl -n agent-relay rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n agent-relay get jobs -o name | grep search-indexer-bootstrap); do kubectl -n agent-relay delete "$j"; done
-helm upgrade --install agent-relay "$CHART" --version "$CHART_VERSION" --namespace agent-relay \
-  -f chart/agent-relay/values-eks.yaml -f values.yaml --timeout 25m
+helm upgrade --install agent-relay "$CHART" --namespace agent-relay \
+  -f release/agent-relay/values-eks.yaml -f values.yaml -f release-images.values.yaml --timeout 25m
 kubectl -n agent-relay wait --for=condition=complete "$(kubectl -n agent-relay get jobs -o name | grep search-indexer-bootstrap)" --timeout=10m
 kubectl -n agent-relay rollout status deploy --timeout=10m
 bash postgres-setup.sh finalize
@@ -269,8 +285,8 @@ sessions-pipeline:
 ```
 
 ```sh
-helm upgrade agent-relay "$CHART" --version "$CHART_VERSION" --namespace agent-relay \
-  -f chart/agent-relay/values-eks.yaml -f values.yaml --timeout 25m
+helm upgrade agent-relay "$CHART" --namespace agent-relay \
+  -f release/agent-relay/values-eks.yaml -f values.yaml -f release-images.values.yaml --timeout 25m
 kubectl -n agent-relay wait --for=condition=complete --timeout=2h \
   job -l app.kubernetes.io/component=output-facts-bootstrap
 ```
@@ -284,7 +300,7 @@ codes and verification are in the
 ## Known limits
 
 - Any release other than agent-relay-2026.11.0 (patched); `values.yaml` renders
-  against agent-relay 0.7.7 but was not installed from it.
+  against agent-relay-2026.11.2 but was not installed from it.
 - The output facts bootstrap (step 10).
 - Azure Database for PostgreSQL, Azure Blob Storage, Application Gateway.
 - NetworkPolicy enforcement beyond a default install, private clusters,
