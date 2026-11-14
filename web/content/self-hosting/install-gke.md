@@ -7,7 +7,7 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 **Done when** line before you move on. Expect about an hour and a half, most of
 it waiting on Google Cloud: the HTTPS certificate alone can take up to an hour.
 
-**Release:** `agent-relay-2026.11.5` (infra commit `ef3f69ab`, chart 0.7.10).
+**Release:** `agent-relay-2026.11.6` (infra commit `6b98a4ab`, chart 0.7.11).
 Read [Known limits](#known-limits) before a production rollout.
 
 **You need:**
@@ -55,14 +55,14 @@ curl -fsSLO "$base/SHA256SUMS"
 for f in $(awk '{print $2}' SHA256SUMS); do curl -fsSLO "$base/$f"; done
 shasum -a 256 -c SHA256SUMS
 git clone https://github.com/AgentWorkforce/infra.git
-git -C infra checkout agent-relay-2026.11.5
-test "$(git -C infra rev-parse HEAD)" = ef3f69ab8e557fb9282eb292b6975c210501c61f && echo "release ok"
-mkdir release && gh release download agent-relay-2026.11.5 -R AgentWorkforce/infra -D release
-(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.10.tgz) | tail -1
+git -C infra checkout agent-relay-2026.11.6
+test "$(git -C infra rev-parse HEAD)" = 6b98a4abb7d9ac280d8512ef557c16aef53fd93d && echo "release ok"
+mkdir release && gh release download agent-relay-2026.11.6 -R AgentWorkforce/infra -D release
+(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.11.tgz) | tail -1
 ```
 
 No `gh`? Download the same assets from the
-[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.5)
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.6)
 into `release/`.
 
 Tools: `gcloud` (with `gke-gcloud-auth-plugin`), `terraform` 1.11 or later (or
@@ -275,7 +275,7 @@ export MIRROR_ROOT=<region>-docker.pkg.dev/<project id>/agent-relay-mirror
 export NAMESPACE=agent-relay
 export HELM_RELEASE=agent-relay
 export STATIC_IP_NAME=agent-relay-ingress
-export SERVICES_IMAGE=$MIRROR_ROOT/ghcr.io/agentworkforce/sessions-pipeline@sha256:ba02f1498d53a089da7ff8fdb7e47215f561c55d9f292e1995b7b5c97d9c37a1
+export SERVICES_IMAGE=$MIRROR_ROOT/ghcr.io/agentworkforce/sessions-pipeline@sha256:3d9c0a4dff67c92da30964857713e625f3f967bc2ff98851614a70adbb4fe3fe
 export PSQL_IMAGE=$MIRROR_ROOT/ghcr.io/cloudnative-pg/postgresql@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
 export CHART="$INSTALL_DIR/release/agent-relay"
@@ -411,7 +411,7 @@ instead of this block. vals works with Google Secret Manager.
 ## 11. Install with Helm
 
 ```sh
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.10.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.11.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -447,7 +447,7 @@ done
 bash cloud-sql-setup.sh post
 kubectl -n $NAMESPACE rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n $NAMESPACE get jobs -o name | grep search-indexer-bootstrap); do kubectl -n $NAMESPACE delete "$j"; done
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.10.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.11.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -558,27 +558,126 @@ credential. STOP on anything but "first admin set".
 - **Problems:** [Troubleshooting](/docs/self-hosting/troubleshooting), then
   [Support](/docs/self-hosting/support).
 
+## Re-stamp sessions uploaded before 2026.11.6 (upgrades only)
+
+Releases 2026.11.1 to 2026.11.5 recorded sessions uploaded to GCS as if they
+were in S3, so the read API refuses them (`501`). 2026.11.6 records new uploads
+correctly; this one-off tool fixes the rows written before. A fresh 2026.11.6
+install doesn't need it. It changes only rows whose objects it finds in your
+bucket, writes nothing in plan mode, and is safe to rerun.
+
+Run it in a terminal where you ran `cd agent-relay-install && source settings.sh`
+(step 7): it needs `NAMESPACE`, `REGION` and `SESSIONS_BUCKET` from there.
+
+```sh
+IMG="$(kubectl -n $NAMESPACE get deploy agent-relay-read-api -o jsonpath='{.spec.template.spec.containers[0].image}')"
+CA_SHA="$(kubectl -n $NAMESPACE get deploy agent-relay-read-api -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="SESSION_POSTGRES_CA_SHA256")].value}')"
+restamp() {  # restamp plan | restamp apply
+  [ -n "$NAMESPACE" ] && [ -n "$REGION" ] && [ -n "$SESSIONS_BUCKET" ] && [ -n "$CA_SHA" ] && [ -n "$IMG" ] \
+    || { echo "missing settings: run 'source settings.sh' (step 7) first"; return 1; }
+  APPLY=""; [ "$1" = apply ] && APPLY=", --apply"
+  kubectl -n $NAMESPACE delete pod index-restamp --ignore-not-found
+  kubectl -n $NAMESPACE apply -f - <<YAML
+apiVersion: v1
+kind: Pod
+metadata: { name: index-restamp }
+spec:
+  restartPolicy: Never
+  serviceAccountName: agent-relay-read-api
+  automountServiceAccountToken: false
+  securityContext: { runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000, seccompProfile: { type: RuntimeDefault } }
+  volumes:
+    - { name: tmp, emptyDir: { sizeLimit: 64Mi } }
+    - { name: ca, configMap: { name: cloud-sql-ca } }
+    - { name: url, secret: { secretName: agent-relay-secrets, defaultMode: 0400, items: [ { key: HOOPDB_MIGRATION_URL, path: url } ] } }
+  containers:
+    - name: restamp
+      image: $IMG
+      command: [bun, run, /app/src/session-pipeline/index-provider-restamp.ts$APPLY]
+      env:
+        - { name: LOCKER_PROVIDER, value: gcs }
+        - { name: LOCKER_BUCKET, value: "$SESSIONS_BUCKET" }
+        - { name: LOCKER_REGION, value: "$REGION" }
+        - { name: SESSION_POSTGRES_TLS_PROFILE, value: custom-ca }
+        - { name: SESSION_POSTGRES_CA_FILE, value: /etc/restamp-ca/ca.crt }
+        - { name: SESSION_POSTGRES_CA_SHA256, value: "$CA_SHA" }
+        - { name: INDEX_PROVIDER_RESTAMP_DATABASE_URL_FILE, value: /run/restamp/url }
+        - { name: HOME, value: /tmp }
+      securityContext: { allowPrivilegeEscalation: false, readOnlyRootFilesystem: true, capabilities: { drop: [ALL] } }
+      volumeMounts:
+        - { name: tmp, mountPath: /tmp }
+        - { name: ca, mountPath: /etc/restamp-ca, readOnly: true }
+        - { name: url, mountPath: /run/restamp, readOnly: true }
+YAML
+  t=0
+  until p="$(kubectl -n $NAMESPACE get pod index-restamp -o jsonpath='{.status.phase}')"; [ "$p" = Succeeded ] || [ "$p" = Failed ]; do
+    sleep 5; t=$((t + 5))
+    [ $t -lt 600 ] || { echo "index-restamp still $p after 10 min"; kubectl -n $NAMESPACE describe pod index-restamp | tail -20; return 1; }
+  done
+  kubectl -n $NAMESPACE logs index-restamp | tail -1
+  kubectl -n $NAMESPACE get pod index-restamp -o jsonpath='exit {.status.containerStatuses[0].state.terminated.exitCode}{"\n"}'
+}
+restamp plan
+```
+
+Check the plan's JSON line, and keep a copy of it: `restamp apply` replaces the
+pod, so its output is gone afterwards. `scanned` is the rows still recorded as
+S3, `proven` those whose objects are in your bucket (they will be fixed) and
+`unproven` those left alone. Then apply it:
+
+```sh
+restamp apply
+kubectl -n $NAMESPACE delete pod index-restamp
+```
+
+**Done when:** the last JSON line shows `"complete":true` with `restamped`
+equal to the `proven` in the plan line you kept, and `exit 0`.
+
+- **`missing settings`:** this terminal hasn't run `source settings.sh`.
+- **`still Pending after 10 min`:** the `describe` output shows why (usually an
+  image pull from your mirror). Fix it, then run the same command again.
+
+- **`exit 3`:** incomplete (a page limit, or a row refused mid-run). Run
+  `restamp apply` again.
+- **`exit 5`:** done, but `guard_skipped` rows were kept by a database guard
+  (an erase fence, or a publication still in progress). Rerunning won't change
+  them; send us the JSON line.
+- **`exit 2`:** misconfigured (for example `LOCKER_BUCKET` is empty). Nothing
+  was read or written.
+- **`exit 4`:** any other error; check `kubectl -n $NAMESPACE logs index-restamp`
+  and run it again.
+
 ## Known limits
 
-What release `agent-relay-2026.11.5` doesn't do on GKE yet:
+What release `agent-relay-2026.11.6` doesn't do on GKE yet:
 
-1. **Transcripts and session metadata don't open on Cloud Storage yet.**
-   Uploads, the session list, event timelines and search work. Opening a
-   session's transcript or metadata (`GET /v1/sessions/<id>/turns` and
-   `/metadata`) answers `501 turns_canonical_pointer_invalid`. A fix is in
-   progress; sessions already uploaded are covered by it.
-2. **No automated install or upgrade.** The install is the manual sequence
+1. **Upgrading from 2026.11.5 or earlier: re-stamp once.** Those releases
+   recorded sessions uploaded to Cloud Storage as if they were in S3, so their
+   reads answer `501`. After the upgrade, run
+   [Re-stamp sessions uploaded before 2026.11.6](#re-stamp-sessions-uploaded-before-2026116-upgrades-only)
+   once. A fresh install doesn't need it.
+2. **Long sessions need the longer read deadline.** The read API reads a
+   session's chunks one after another (about 30 ms each from Cloud Storage), so
+   the default 3 s deadline fails sessions of more than about 100 chunks
+   (`501 turns_canonical_deadline`). The downloadable `values.yaml` sets
+   `READ_API_CANONICAL_DEADLINE_MS=15000`; keep it. Parallel reads come in a
+   later release.
+3. **`/turns` and `/metadata` are empty on self-host.** They serve Agent Relay
+   conversation-turn records, which only the hosted service produces, so
+   `/turns` answers with no turns and `/metadata` with `404`. `/events` and the
+   dashboard carry the whole transcript.
+4. **No automated install or upgrade.** The install is the manual sequence
    above, and upgrades are manual Helm upgrades with a Cloud SQL backup first.
-3. **Search runs in PostgreSQL, not OpenSearch.** Fine for a first install, but
+5. **Search runs in PostgreSQL, not OpenSearch.** Fine for a first install, but
    not sized for search at large scale.
-4. **Memorystore without AUTH.** The services can't send Redis credentials, so
+6. **Memorystore without AUTH.** The services can't send Redis credentials, so
    the instance uses TLS with AUTH off. Keep it reachable only from the
    cluster's VPC.
-5. **Not highly available.** The control API, dashboard, Relaycast and search
+7. **Not highly available.** The control API, dashboard, Relaycast and search
    indexer each run one replica.
-6. **Not covered by this guide:** GKE Autopilot, Shared VPC, and titles and
+8. **Not covered by this guide:** GKE Autopilot, Shared VPC, and titles and
    summaries with a model.
-7. **Desktop builds don't update themselves.** The control API's signed desktop
+9. **Desktop builds don't update themselves.** The control API's signed desktop
    update feed isn't available on Google Cloud yet. A newer desktop version
    means installing the new build over the old one. See
    [Desktop app rollout](/docs/self-hosting/desktop-app).
