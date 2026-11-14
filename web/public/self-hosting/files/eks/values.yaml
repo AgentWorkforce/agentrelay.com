@@ -20,14 +20,13 @@
 # workload using it takes both from here. To move to a newer build or a new image
 # name, change only that line. See the Images table at agentrelay.com/docs/self-hosting/install-eks.
 x-pins:
-  services-image: &services_image { repository: __IMAGE_REPO_PREFIX__/sessions-pipeline, digest: "sha256:77022c5b6a1d30f96f921d703eb27a1acada8ec273ad84aebdde24f8eddce305" }
-  webapp-image: &webapp_image { repository: __IMAGE_REPO_PREFIX__/relay-webapp, digest: "sha256:dfdf6db66808d8fa6a2921e8bfcea2dfd6b0cd78fb1bb636fbb4bd3302bc21fa" }
+  services-image: &services_image { repository: __IMAGE_REPO_PREFIX__/sessions-pipeline, digest: "sha256:42ccfba3c085d525846045a646b4c82cf8a849367ec94751934b3749fa90a36f" }
+  webapp-image: &webapp_image { repository: __IMAGE_REPO_PREFIX__/relay-webapp, digest: "sha256:8cadf08921b16ac4a19d0c4daecad1813e521bdfc9b141fb284415fd6349d499" }
 
 components:
   relaycast: true
   relayauth: false
   sessionsPipeline: true
-  relayhistory: false
   control: true
   webapp: true
   relayflows: false
@@ -56,7 +55,7 @@ relaycast:
     postgres:
       image:
         repository: __IMAGE_REPO_PREFIX__/relaycast-self-host
-        digest: sha256:ab9dd6781e68f09d5e2e686a17088f9ad533978ef13d974a47d6c212d8eedbde
+        digest: sha256:cc2a79f02d39978fa04322b5a45497737ff137bc2a5db5615c7eee690030de83
   postgresCa:
     enabled: true
     configMap: rds-ca
@@ -197,7 +196,7 @@ sessions-pipeline:
     outputFacts:
       enabled: true
 
-  # Reserved native-consumer cadence for the qualified cutover. The 2026.11.0
+  # Reserved native-consumer cadence for the qualified cutover. The 2026.11.3
   # pack runs searchIndexer and leaves nativeConsumer disabled; if the native
   # consumer is enabled by a reviewed site overlay, reconcile every minute and
   # retain a lookback wider than that cadence.
@@ -280,7 +279,7 @@ sessions-pipeline:
 relay-control:
   image:
     repository: __IMAGE_REPO_PREFIX__/relay-control
-    digest: sha256:0b9c5a077b49b31178cc669e7c1d532f39e64c840087ca41636bb84a6c62631c
+    digest: sha256:e0611386a080b4e8e0c0629fdb23f5cf48027e7ceed77322b8086337e54f5112
   # The chart allows one replica: login and device rate limits are per process.
   replicaCount: 1
   existingSecret: agent-relay-secrets
