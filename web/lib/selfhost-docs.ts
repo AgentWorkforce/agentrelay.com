@@ -36,6 +36,7 @@ export const SELFHOST_GUIDES: readonly SelfhostGuideEntry[] = [
   { slug: 'iam-pod-identity', group: 'Install on AWS' },
   { slug: 'install-gke', group: 'Install on Google Cloud' },
   { slug: 'bring-your-own-gcp', group: 'Install on Google Cloud' },
+  { slug: 'install-aks', group: 'Install on Azure' },
   { slug: 'secrets', group: 'Configure' },
   { slug: 'okta-sso', group: 'Configure' },
   { slug: 'after-install', group: 'Configure' },
