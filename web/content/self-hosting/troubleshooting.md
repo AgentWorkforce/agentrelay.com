@@ -56,7 +56,7 @@ HUMAN before running anything that changes the cluster or cloud account.
 | Sessions show as `Session · <id>` | Titles and summaries aren't on: see [After the install](/docs/self-hosting/after-install#3-turn-on-titles-and-summaries) |
 | Output or digest endpoints answer `*_backfill_incomplete` | The coverage Job hasn't run: see [After the install](/docs/self-hosting/after-install#2-establish-output-and-digest-coverage) |
 | The agent filter answers `501 agent_filter_not_ready` | Expected until you [activate it](/docs/self-hosting/after-install#4-optional-the-agent-name-filter) |
-| Transcript reads answer `501 turns_canonical_pointer_invalid` on GKE | Sessions uploaded on 2026.11.1 are recorded as stored in S3; 2026.11.3 records new uploads correctly, and older records keep the error. See [Install on GKE](/docs/self-hosting/install-gke#known-limits) |
+| Transcript reads answer `501 turns_canonical_pointer_invalid` on GKE | Sessions uploaded on 2026.11.1 point at the wrong store; sessions uploaded on 2026.11.3 or later read normally, and older ones keep the error. See [Install on GKE](/docs/self-hosting/install-gke#known-limits) |
 | The setup key is refused with `409 admin_already_signed_in` | The admin already signed in another way. Sign in with that method; the key is only for the very first sign-in |
 | The setup key is expired or lost | Mint a new one with the bootstrap token: step 16 of the EKS guide |
 

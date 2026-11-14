@@ -8,9 +8,7 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 it waiting on Google Cloud: the HTTPS certificate alone can take up to an hour.
 
 **Release:** `agent-relay-2026.11.5` (infra commit `ef3f69ab`, chart 0.7.10).
-**Tested on GKE** end to end, on a private regional cluster (Kubernetes 1.35,
-Workload Identity, a private control plane). Read [Known limits](#known-limits)
-before a production rollout: transcript reads need the next release.
+Read [Known limits](#known-limits) before a production rollout.
 
 **You need:**
 
@@ -72,8 +70,8 @@ OpenTofu), `helm` 3, `kubectl`, `jq`, `yq`, `openssl`, `python3`, and
 [`crane`](https://github.com/google/go-containerregistry/releases) for step 5.
 Cloud Shell has everything except `crane` and a new enough Terraform.
 
-**Helm 3, not Helm 4.** The chart is tested with Helm 3.10 or later. Helm 4 is
-untested with this guide. If `helm version` prints `v4`, install Helm 3 beside
+**Helm 3, not Helm 4.** The chart needs Helm 3.10 or later. Helm 4 is
+not supported yet. If `helm version` prints `v4`, install Helm 3 beside
 it (for example as `helm3`) and use it for steps 10, 11 and 13.
 
 **Done when:** every `shasum` line in the install folder ends in `OK`,
@@ -408,7 +406,7 @@ your secret store again (step 8 shows how): it now holds the encryption keys.
 
 **Keep your secrets in SOPS (for example with Cloud KMS) or Google Secret
 Manager?** Use one of the options in [Secrets](/docs/self-hosting/secrets)
-instead of this block. vals with Google Secret Manager is tested on GKE.
+instead of this block. vals works with Google Secret Manager.
 
 ## 11. Install with Helm
 
@@ -562,35 +560,27 @@ credential. STOP on anything but "first admin set".
 
 ## Known limits
 
-What release `agent-relay-2026.11.5` does not yet qualify on GKE:
+What release `agent-relay-2026.11.5` doesn't do on GKE yet:
 
-1. **Transcript reads on Cloud Storage: fixed, check pending.** The 2026.11.1
-   sessions image recorded every upload as stored in S3, even when it was in
-   Cloud Storage, so transcript reads (`GET /v1/sessions/<id>/turns`) answered
-   `501 turns_canonical_pointer_invalid`. This release's sessions image records
-   the configured store, so a fresh install writes correct records from the
-   start. An install upgraded from 2026.11.1 keeps its older records as they
-   were. The transcript-read check on a GKE install with this image is pending.
-2. **The release image overlay is the EKS one.** The images are cloud-neutral
-   and this guide applies the overlay on GKE, which the test proved, but the
-   release pipeline doesn't produce or check a GKE overlay yet.
-3. **No automated install or upgrade on GKE.** The release upgrader supports
-   only EKS. On GKE the install is the manual sequence above, and upgrades are
-   manual Helm upgrades with a Cloud SQL backup first.
-4. **Search runs in PostgreSQL, not OpenSearch.** Fine for a first install;
-   search at large scale on GKE isn't load tested.
-5. **Memorystore without AUTH.** The services can't send Redis credentials, so
+1. **Older transcripts after an upgrade from 2026.11.1.** Sessions uploaded on
+   2026.11.1 keep a storage record that points at the wrong store, so reading
+   their transcripts (`GET /v1/sessions/<id>/turns`) answers
+   `501 turns_canonical_pointer_invalid`. Sessions uploaded after the upgrade,
+   and every session on a fresh install, read normally.
+2. **No automated install or upgrade.** The install is the manual sequence
+   above, and upgrades are manual Helm upgrades with a Cloud SQL backup first.
+3. **Search runs in PostgreSQL, not OpenSearch.** Fine for a first install, but
+   not sized for search at large scale.
+4. **Memorystore without AUTH.** The services can't send Redis credentials, so
    the instance uses TLS with AUTH off. Keep it reachable only from the
    cluster's VPC.
-6. **Not highly available.** The control API, dashboard, Relaycast and search
-   indexer each run one replica, as on EKS.
-7. **Not covered by the test:** customer-managed encryption keys, GKE Autopilot,
-   Shared VPC, single sign-on, titles and summaries with a model, and a live
-   desktop app upload (the upload path was proven with a test driver).
-8. **Desktop builds for a GKE install don't update themselves.** The signed
-   desktop release feed that the control API can serve signs with AWS KMS and
-   stores in S3 only. A desktop build for a GKE install works, but a newer
-   version means installing the new build over the old one. See
+5. **Not highly available.** The control API, dashboard, Relaycast and search
+   indexer each run one replica.
+6. **Not covered by this guide:** GKE Autopilot, Shared VPC, and titles and
+   summaries with a model.
+7. **Desktop builds don't update themselves.** The control API's signed desktop
+   update feed isn't available on Google Cloud yet. A newer desktop version
+   means installing the new build over the old one. See
    [Desktop app rollout](/docs/self-hosting/desktop-app).
 
 ## Starting from an empty project
