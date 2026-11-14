@@ -8,7 +8,7 @@ Install Agent Relay on Azure Kubernetes Service. It follows
 forces. Run the steps in order and check each **Done when** line before you
 move on.
 
-**Release:** `agent-relay-2026.11.2` (chart 0.7.7). **Community-contributed**:
+**Release:** `agent-relay-2026.11.3` (chart 0.7.8). **Community-contributed**:
 proven once on AKS, see [Known limits](#known-limits).
 
 **Status: community-contributed, proven once.** One fresh install on
@@ -19,9 +19,9 @@ operator device approval worked, two agents exchanged messages through
 Relaycast, and an uploaded session was indexed. See
 [Known limits](#known-limits) before a production rollout.
 
-This guide installs release **agent-relay-2026.11.2** (chart agent-relay 0.7.7,
-sessions-pipeline 0.8.32), the first release that carries
-`searchIndexer.locker.credentials`. Earlier releases do not render the
+This guide installs release **agent-relay-2026.11.3** (chart agent-relay 0.7.8,
+sessions-pipeline 0.8.32). `searchIndexer.locker.credentials` first shipped
+in agent-relay-2026.11.2. Earlier releases do not render the
 indexer's MinIO keys, so its uploads are never indexed.
 
 The files are in [`docs/azure-install`](https://github.com/AgentWorkforce/infra/tree/main/docs/azure-install)
@@ -63,15 +63,15 @@ command runs in `docs/azure-install`:
 
 ```sh
 git clone https://github.com/AgentWorkforce/infra.git && cd infra/docs/azure-install
-mkdir release && gh release download agent-relay-2026.11.2 -R AgentWorkforce/infra -D release
-(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.7.tgz) | tail -1
+mkdir release && gh release download agent-relay-2026.11.3 -R AgentWorkforce/infra -D release
+(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.8.tgz) | tail -1
 # Public GHCR images: no mirror root.
 sed 's#__IMAGE_MIRROR_ROOT__/##' release/release-images.values.yaml > release-images.values.yaml
-CHART=release/agent-relay-0.7.7.tgz
+CHART=release/agent-relay-0.7.8.tgz
 ```
 
 No `gh`? Download the same assets from the
-[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.2)
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.3)
 into `release/`.
 
 **Done when:** every checksum line ends in `OK` (the last is
@@ -300,7 +300,7 @@ codes and verification are in the
 ## Known limits
 
 - Any release other than agent-relay-2026.11.0 (patched); `values.yaml` renders
-  against agent-relay-2026.11.2 but was not installed from it.
+  against agent-relay-2026.11.3 but was not installed from it.
 - The output facts bootstrap (step 10).
 - Azure Database for PostgreSQL, Azure Blob Storage, Application Gateway.
 - NetworkPolicy enforcement beyond a default install, private clusters,
