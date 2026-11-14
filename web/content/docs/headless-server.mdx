@@ -1,19 +1,21 @@
 ---
-title: 'Headless Linux server'
-description: 'Run an Ubuntu server beside your Mac in an existing Cloud workspace, without a desktop window or copied workspace key.'
+title: 'Headless Mac or Linux server'
+description: 'Run an always-on Mac or Linux machine in an existing Cloud workspace without the Agent Relay desktop window.'
 ---
 
-Use the Linux Agent Relay package when an always-on server should appear beside
-an existing Mac in the same Cloud workspace and accept Claude Code or Codex
-spawns. It runs as `agent-relay.service`, a systemd user service over SSH; no
-desktop window, display server, local browser, or SSH port forwarding is required. The package includes
-the account-aware core, even when you never open its desktop UI.
+Agent Relay supports always-on Macs and Linux servers without the desktop app
+or a desktop window. The machine appears in an existing Cloud workspace and can
+accept Claude Code or Codex spawns. Linux runs the account-aware core as the
+`agent-relay.service` systemd user service. macOS runs the same core as a
+per-user LaunchAgent. Setup uses device approval in a browser on any computer;
+you do not copy a workspace key or forward a port over SSH.
 
 ## Choose the right setup path
 
 | Path | What it does |
 | --- | --- |
-| Linux Agent Relay package + `agent-relay-probe relay setup` | Signs this machine into an existing Cloud workspace by device approval and runs the account-aware service. Use this for a server beside your Mac. |
+| macOS headless installer + `agent-relay-probe setup` | Installs the production core for the current user, runs it as `com.agentrelay.desktop.core.headless`, and signs the Mac into an existing Cloud workspace by device approval. No desktop app or administrator access is required. |
+| Linux Agent Relay package + `agent-relay-probe relay setup` | Signs this machine into an existing Cloud workspace by device approval and runs the account-aware systemd service. |
 | npm CLI `agent-relay cloud login` + `cloud enroll` | Saves a separate CLI login and fleet enrollment record. A returned node ID does not start a service or prove a live spawn target. |
 | npm CLI `agent-relay init --hosted` | Can create a new hosted messaging workspace. It does not select your Desktop workspace just because both use the same account or the name “Default”. |
 | `agent-relay-node serve --headless` | Runs the standalone messaging core. It reads CLI workspace configuration and has no Cloud account sign-in plugin; it does not consume the Cloud fleet enrollment as an account login. |
@@ -24,7 +26,78 @@ is stale advice, corrected in newer CLI builds.
 Do not use it as the next step, repeat enrollment, or create another workspace
 to make the existing machine appear.
 
-## 1. Install the Linux service
+## 1. Install the background service
+
+### macOS without the app
+
+This supported path is for a Mac that runs agents without `Agent Relay.app`,
+such as a Mac mini in a rack. It supports Apple silicon and Intel Macs and
+installs the production Agent Relay build only. A private site's branded or
+Cloud-feed build is not supported by this installer yet.
+
+Run the release installer as the macOS user who owns the agents, not as `root`:
+
+```sh
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash
+```
+
+To review and run the source installer directly instead, use the public source
+checkout:
+
+```sh
+git clone --depth 1 https://github.com/AgentWorkforce/relay-app.git
+cd relay-app
+bash macos/install.sh
+```
+
+The installer downloads the latest production probe for the Mac's architecture,
+checks its published SHA-256 and Developer ID signature, and installs it under
+`~/.local/lib/agent-relay`. It writes
+`~/Library/LaunchAgents/com.agentrelay.desktop.core.headless.plist`, starts it in
+the user's `gui/<uid>` login session, and waits for the new core to answer. An
+update that fails its health check rolls back automatically. Settings, sign-in,
+and agent registrations are kept outside the install directory.
+
+The published installer also handles lifecycle operations:
+
+```sh
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --status
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --update
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --rollback
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --uninstall
+```
+
+Install, update, rollback, and uninstall take an installer lock so two lifecycle
+operations cannot change the same per-user install at once. `--uninstall` stops
+and removes the core and LaunchAgent but keeps settings, sign-in, and agents.
+The installer refuses to run beside the desktop app; uninstall the headless core
+before installing `Agent Relay.app`.
+
+The LaunchAgent needs a real macOS login session. SSH by itself does not create
+one, so the installer refuses if `gui/<uid>` is absent. For an unattended Mac,
+turn on automatic login under **System Settings → Users & Groups**. FileVault
+must be off because macOS blocks automatic login while FileVault is on. Without
+automatic login, the core does not start after a reboot until that user logs in
+at the Mac; SSH alone does not start the LaunchAgent. Keychain-backed sources
+also remain unavailable until login unlocks the user's Keychain.
+
+macOS privacy (TCC) and Keychain approval dialogs cannot be answered over SSH or
+by the headless installer. Grant required Files and Folders or Keychain access
+from the Mac's GUI before leaving it unattended. A source that still needs an
+approval remains unavailable until someone can answer at the Mac; other session
+sources continue to run.
+
+Finish setup with the command printed by the installer. If the installed
+LaunchAgent exists but the core is stopped, `--start-service` can load and start
+that existing service; it does not install or update it:
+
+```sh
+~/.local/lib/agent-relay/current/agent-relay-probe setup --start-service
+```
+
+Approve the displayed device code in a browser on any computer.
+
+### Linux
 
 Run as the non-root Linux user who will run Claude Code and Codex. You need
 `curl`, `ca-certificates`, and sudo access for the package installation and
@@ -74,11 +147,18 @@ and headless installer; the commands here use the Debian-managed package.
 
 ## 2. Sign into the exact existing workspace
 
-Use the Cloud workspace UUID for the workspace your Mac uses. Names such as
-“Default” are not enough to establish that two machines share a workspace.
+Use the Cloud workspace UUID for the existing workspace this machine should
+join. Names such as “Default” are not enough to establish that two machines
+share a workspace.
 An existing npm CLI login can list accessible IDs with
 `agent-relay cloud workspaces`; confirm the intended workspace with its owner.
-That command's login is separate from the Linux service's login.
+That command's login is separate from the headless service's login.
+
+On macOS, use the per-user helper installed above:
+
+```sh
+~/.local/lib/agent-relay/current/agent-relay-probe setup --workspace YOUR-CLOUD-WORKSPACE-UUID
+```
 
 Linux stable `2026.11.3` uses the `relay setup` terminal wizard to sign in
 without copying a key:
@@ -92,9 +172,9 @@ test -x /usr/lib/agent-relay/agent-relay-probe || {
 ```
 
 Replace the placeholder with the intended Cloud workspace UUID. Open the
-wizard's verification URL on your Mac or phone, approve its displayed device
-code using the account with access to that workspace, then return to the SSH
-terminal. Keep an existing sign-in only if it is for the intended workspace.
+wizard's verification URL on another computer or phone, approve its displayed
+device code using the account with access to that workspace, then return to the
+SSH terminal. Keep an existing sign-in only if it is for the intended workspace.
 Choose providers and session sharing in the wizard; omitted options preserve
 saved preferences. A fresh connection defaults to **Only sessions I choose**.
 Sharing a session uploads it so teammates can read it; choose broader sharing
@@ -111,9 +191,9 @@ app launcher as `/usr/bin/agent-relay-desktop`. Older packages used the CLI’s
 
 ## 3. Verify spawning separately from sign-in
 
-Install and authenticate Claude Code and Codex for the same Linux user running
-the service. The service must be able to find their executables; a working
-interactive shell alone does not prove the service has the same PATH.
+Install and authenticate Claude Code and Codex for the same OS user running the
+service. The service must be able to find their executables; a working
+interactive shell alone does not prove the background service has the same PATH.
 
 For Relay’s `2026.11.3` integration, Codex also needs its app-server daemon: a
 managed daemon package, its standalone install, or an existing control socket.
@@ -131,7 +211,16 @@ bridge call rather than requiring a desktop window. Workspace owners/admins
 spawning on a teammate's machine also require that machine's teammate-spawn
 opt-in (`spawn_allow_teammates`).
 
-Read the local settings and spawn status without starting a model:
+Read the local settings and spawn status without starting a model.
+
+On macOS:
+
+```sh
+~/.local/lib/agent-relay/current/agent-relay-probe relay call settings.get --json
+~/.local/lib/agent-relay/current/agent-relay-probe relay call status.get --json
+```
+
+On Linux stable `2026.11.3`:
 
 ```sh
 /usr/lib/agent-relay/agent-relay-probe relay call settings.get --json
@@ -152,12 +241,17 @@ Do not start paid model work just to diagnose connectivity without approval.
 
 ## If the server still does not appear
 
-- Confirm the Linux service and Mac use the same workspace UUID and account.
-- Check `systemctl --user is-active agent-relay.service` and `Linger=yes`.
+- Confirm the headless machine and other clients use the same workspace UUID
+  and account.
+- On macOS, run the published installer with `--status`, inspect
+  `launchctl print "gui/$(id -u)/com.agentrelay.desktop.core.headless"`, and
+  check `~/Library/Logs/Agent Relay`.
+- On Linux, check `systemctl --user is-active agent-relay.service` and
+  `Linger=yes`.
 - Check provider installation, authentication, and the service's executable PATH.
 - Inspect the spawn status for disabled spawning, connection errors, ownership,
   or device limits before trying another enrollment.
-- Report the CLI version, Linux package version, architecture, service state,
+- Report the platform, core or package version, architecture, service state,
   and redacted spawn status to support. Do not paste credentials or raw logs.
 
 ## Where is the workspace key for Default?
@@ -169,6 +263,6 @@ selected workspace. A workspace ID or enrolled node ID is not a workspace key.
 already holds that credential; it is not a way to retrieve Desktop's login.
 
 If you require a server running **only** the npm CLI and standalone node,
-without the Linux account-aware package, the v18 enrollment sequence above is
-not a complete key-free path to the existing Desktop workspace. Report that
-requirement to support rather than inventing a key-export step.
+without the account-aware package or headless core, the v18 enrollment sequence
+above is not a complete key-free path to an existing Desktop workspace. Report
+that requirement to support rather than inventing a key-export step.
