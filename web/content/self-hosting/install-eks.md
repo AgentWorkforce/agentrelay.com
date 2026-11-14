@@ -604,6 +604,119 @@ in their own terminal and to tell you only "signed in" when done.
   [backups](/docs/self-hosting/backup-and-restore).
 - **Problems:** [Troubleshooting](/docs/self-hosting/troubleshooting), then
   [Support](/docs/self-hosting/support).
+- **Removing it:** [Uninstall](#uninstall).
+
+## Uninstall
+
+This deletes the install and everything in it: every session, transcript and
+search index. It can't be undone. Step 4 keeps a final database snapshot until
+you delete it, so stop before step 4 if you might need the data again.
+
+<!-- agent
+Start this section only when the human has asked, in so many words, to
+uninstall Agent Relay from this cluster. ASK THE HUMAN before every numbered
+step and show the exact commands first. STOP if `terraform plan -destroy`
+lists anything that is not this install's (step 3), and never run step 4
+unless the human confirms they don't need the data.
+-->
+
+Run everything from the `agent-relay-install` folder after `source settings.sh`
+(step 6).
+
+**1. Remove the load balancer.** Delete the Ingress first, so the AWS Load
+Balancer Controller deletes the load balancer it created. Uninstalling the
+chart first can leave the load balancer behind.
+
+```sh
+kubectl delete -f ingress.yaml --wait
+aws elbv2 describe-load-balancers --region "$AWS_REGION" \
+  --query "LoadBalancers[?starts_with(LoadBalancerName,'k8s-agentrel')].LoadBalancerName" --output text
+```
+
+**Done when:** the second command prints nothing.
+
+**2. Remove the app and its disks.** The cluster keeps persistent volumes and
+their EBS disks after the namespace is gone, so list them first:
+
+```sh
+kubectl get pv -o json | jq -r '.items[] | select(.spec.claimRef.namespace=="agent-relay")
+  | "\(.metadata.name) \(.spec.csi.volumeHandle // .spec.awsElasticBlockStore.volumeID)"' > pv-list.txt
+cat pv-list.txt
+helm uninstall agent-relay --namespace agent-relay --wait
+kubectl delete namespace agent-relay --wait
+while read -r pv vol; do
+  kubectl delete pv "$pv"
+  aws ec2 wait volume-available --region "$AWS_REGION" --volume-ids "$vol"
+  aws ec2 delete-volume --region "$AWS_REGION" --volume-id "$vol"
+done < pv-list.txt
+```
+
+**Done when:** `kubectl get namespace agent-relay` says `NotFound`, and every
+volume in `pv-list.txt` is gone.
+
+**3. Destroy the AWS resources.** Three things stop `terraform destroy` on
+purpose, to protect real data: the sessions bucket must be empty (including
+old versions), the database has deletion protection, and the OpenSearch domain
+has a destroy guard. Clear all three for this install only:
+
+```sh
+while :; do
+  batch="$(aws s3api list-object-versions --bucket "$SESSIONS_BUCKET" --max-items 500 --output json \
+    | jq '{Objects: [((.Versions // []) + (.DeleteMarkers // []))[] | {Key, VersionId}], Quiet: true}')"
+  [ "$(jq '.Objects | length' <<<"$batch")" = 0 ] && break
+  aws s3api delete-objects --bucket "$SESSIONS_BUCKET" --delete "$batch" >/dev/null
+done
+echo "bucket empty"
+aws rds modify-db-instance --region "$AWS_REGION" --db-instance-identifier agent-relay-pg \
+  --no-deletion-protection --apply-immediately >/dev/null
+aws rds wait db-instance-available --region "$AWS_REGION" --db-instance-identifier agent-relay-pg
+sed -i.bak 's/prevent_destroy = true/prevent_destroy = false/' "$INFRA/terraform/modules/aws/search/main.tf"
+terraform -chdir="$TF" plan -destroy -out destroy.tfplan
+```
+
+Read the plan. Every line must destroy something of this install: the
+`agent-relay-pg` database, the `agent-relay-search` domain, your sessions
+bucket, the `agent-relay-*` IAM roles and their Pod Identity associations, and
+the certificate. Then:
+
+```sh
+terraform -chdir="$TF" apply destroy.tfplan
+```
+
+**Done when:** `Destroy complete!` prints. Expect about 15 minutes, most of it
+OpenSearch.
+
+**4. Delete the backups (only if you don't need the data).** The destroy keeps
+a final snapshot of the database, and RDS keeps its automated backups:
+
+```sh
+for s in $(aws rds describe-db-snapshots --region "$AWS_REGION" --db-instance-identifier agent-relay-pg \
+    --snapshot-type manual --query 'DBSnapshots[].DBSnapshotIdentifier' --output text); do
+  echo "deleting snapshot $s"
+  aws rds delete-db-snapshot --region "$AWS_REGION" --db-snapshot-identifier "$s" >/dev/null
+done
+for id in $(aws rds describe-db-instance-automated-backups --region "$AWS_REGION" \
+    --db-instance-identifier agent-relay-pg --query 'DBInstanceAutomatedBackups[].DbiResourceId' --output text); do
+  aws rds delete-db-instance-automated-backup --region "$AWS_REGION" --dbi-resource-id "$id" >/dev/null
+done
+```
+
+**5. The rest.**
+
+- Mirrored images: if you mirrored to ECR, delete those repositories:
+  ```sh
+  for r in $(aws ecr describe-repositories --region "$AWS_REGION" \
+      --query "repositories[?starts_with(repositoryName,'agent-relay/')].repositoryName" --output text); do
+    aws ecr delete-repository --region "$AWS_REGION" --repository-name "$r" --force >/dev/null && echo "deleted $r"
+  done
+  ```
+- DNS (DNS owner): delete the four host records from step 15 and the four
+  certificate validation records from step 5.
+- Secrets: delete `~/.agent-relay-install`, and the copy in your secret store
+  once you no longer need it. Then delete the `agent-relay-install` folder.
+- The cluster and the add-ons the install needs (the AWS Load Balancer
+  Controller, the Pod Identity Agent) stay: step 2 checked for them but
+  didn't install them.
 
 ## Images
 
