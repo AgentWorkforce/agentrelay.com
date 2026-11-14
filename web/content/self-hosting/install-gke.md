@@ -562,11 +562,11 @@ credential. STOP on anything but "first admin set".
 
 What release `agent-relay-2026.11.5` doesn't do on GKE yet:
 
-1. **Older transcripts after an upgrade from 2026.11.1.** Sessions uploaded on
-   2026.11.1 keep a storage record that points at the wrong store, so reading
-   their transcripts (`GET /v1/sessions/<id>/turns`) answers
-   `501 turns_canonical_pointer_invalid`. Sessions uploaded after the upgrade,
-   and every session on a fresh install, read normally.
+1. **Transcripts and session metadata don't open on Cloud Storage yet.**
+   Uploads, the session list, event timelines and search work. Opening a
+   session's transcript or metadata (`GET /v1/sessions/<id>/turns` and
+   `/metadata`) answers `501 turns_canonical_pointer_invalid`. A fix is in
+   progress; sessions already uploaded are covered by it.
 2. **No automated install or upgrade.** The install is the manual sequence
    above, and upgrades are manual Helm upgrades with a Cloud SQL backup first.
 3. **Search runs in PostgreSQL, not OpenSearch.** Fine for a first install, but
