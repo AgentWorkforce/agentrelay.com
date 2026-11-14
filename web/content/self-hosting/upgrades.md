@@ -37,7 +37,9 @@ does the safe sequence for you. Plan-only by default, it:
    every checksum and verifies the GitHub build attestations;
 2. renders the chart with your values and prints every image and resource that
    would change; the last line is `plan: changes=true` or `plan: changes=false`;
-3. mirrors exactly the release's image digests into your ECR.
+3. mirrors exactly the release's image digests into your ECR. From a laptop
+   that takes about 15 minutes; from CloudShell or an EC2 instance in the same
+   region it's much faster.
 
 With `--apply`, after you confirm, it takes an RDS snapshot and waits for it,
 refreshes the database admin credentials, runs `helm upgrade`, and waits for
@@ -60,6 +62,14 @@ git -C infra fetch --tags && git -C infra checkout "agent-relay-$AGENT_RELAY_VER
 ```
 
 **Done when:** `git -C infra describe --tags` prints `agent-relay-<target version>`.
+
+**`checkout` refuses because of local changes?** That's the single-node
+OpenSearch edit to `main.tf` from install step 4a. Keep it across the checkout,
+because a later `terraform apply` without it grows the domain to six nodes:
+
+```sh
+git -C infra stash && git -C infra checkout "agent-relay-$AGENT_RELAY_VERSION" && git -C infra stash pop
+```
 
 ### 2. Plan
 
@@ -94,7 +104,8 @@ kubectl -n agent-relay get pods
 Then run step 15's checks from [Install on EKS](/docs/self-hosting/install-eks)
 again, and the Output coverage step in
 [After the install](/docs/self-hosting/after-install#2-establish-output-and-digest-coverage)
-with a new `runId`, for example `upgrade-<version>`.
+with a new `runId`: lowercase letters, digits and dashes, at most 20
+characters, for example `upgrade-2026-11-5`.
 
 `--rds-setup` runs `rds-setup.sh refresh-admin`, which rewrites the two
 credential files derived from the database admin login and updates their
