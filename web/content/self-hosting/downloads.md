@@ -29,7 +29,7 @@ Used by [this guide](/docs/self-hosting/install-eks). Checksums: [`SHA256SUMS`](
 | [`opensearch-roles-via-cluster.sh`](https://agentrelay.com/self-hosting/files/eks/opensearch-roles-via-cluster.sh) | `b43755a02f2972ad9f8b405b8f2c3acd20cf1f6d999009f1cbe644f3f4fa90b8` |
 | [`rds-session-erase-search.sql`](https://agentrelay.com/self-hosting/files/eks/rds-session-erase-search.sql) | `148e8ca95cc74a398eb404b01d2e01c896252b516368f364d0886bccc1c19216` |
 | [`rds-setup.sh`](https://agentrelay.com/self-hosting/files/eks/rds-setup.sh) | `c29aea950c6112eb10d974cb28e79a3273ae2af7b2ba8484a07afed48a9e0a83` |
-| [`values.yaml`](https://agentrelay.com/self-hosting/files/eks/values.yaml) | `dfd25e8030abf23b427e3ea8f6e96816a50050a25b7513b5ea7cd3adce698b76` |
+| [`values.yaml`](https://agentrelay.com/self-hosting/files/eks/values.yaml) | `dd969cd09773147084836d46752a67ff86f426b8fd09b03e6f2ed3b4d714c85b` |
 
 ## Google Cloud (GKE)
 
