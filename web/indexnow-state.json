@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 100,
+  "count": 101,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -70,6 +70,7 @@
     "https://agentrelay.com/docs/self-hosting/durable-actors",
     "https://agentrelay.com/docs/self-hosting/existing-rds",
     "https://agentrelay.com/docs/self-hosting/iam-pod-identity",
+    "https://agentrelay.com/docs/self-hosting/install-aks",
     "https://agentrelay.com/docs/self-hosting/install-eks",
     "https://agentrelay.com/docs/self-hosting/install-gke",
     "https://agentrelay.com/docs/self-hosting/okta-sso",
