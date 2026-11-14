@@ -15,7 +15,7 @@ export const docsNav: NavGroup[] = [
     items: [
       { title: 'Getting started', slug: 'getting-started' },
       { title: 'Desktop app (upgrade)', slug: 'quickstart' },
-      { title: 'Headless Linux server', slug: 'headless-server' },
+      { title: 'Headless Mac or Linux', slug: 'headless-server' },
       { title: 'Claude connector', slug: 'claude-connector' },
     ],
   },
