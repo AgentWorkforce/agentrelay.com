@@ -434,6 +434,10 @@ lines (check them for secrets first) and do not delete Jobs without approval.
 ## 13. Switch on the service logins
 
 ```sh
+export RELEASE=agent-relay
+export MIGRATION_JOB="$(helm get manifest "$RELEASE" -n agent-relay |
+  yq -r 'select(.kind == "Job" and .metadata.labels."app.kubernetes.io/component" == "hoopdb-migrate") | .metadata.name')"
+echo "$MIGRATION_JOB"   # exactly one name, agent-relay-worker-migrate-<hash>
 bash rds-setup.sh post
 kubectl -n agent-relay rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n agent-relay get jobs -o name | grep search-indexer-bootstrap); do kubectl -n agent-relay delete "$j"; done

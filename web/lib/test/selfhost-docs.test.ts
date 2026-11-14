@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -234,6 +235,18 @@ describe('downloadable helper files', () => {
         expect(files, `${slug} runs ${script}`).toContain(script);
       }
       expect(files).toContain('values.yaml');
+    }
+  });
+
+  it('ships shell scripts that bash can parse', () => {
+    // A stray apostrophe inside "${VAR:?message}" once made rds-setup.sh
+    // unparseable, so every `bash <script>` step failed before it started.
+    for (const dir of readdirSync(FILES_DIR)) {
+      for (const name of readdirSync(path.join(FILES_DIR, dir)).filter((n) => n.endsWith('.sh'))) {
+        const file = path.join(FILES_DIR, dir, name);
+        const result = spawnSync('bash', ['-n', file], { encoding: 'utf8' });
+        expect(result.status, `${dir}/${name}: ${result.stderr}`).toBe(0);
+      }
     }
   });
 });
