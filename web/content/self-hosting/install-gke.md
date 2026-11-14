@@ -651,13 +651,11 @@ equal to the `proven` in the plan line you kept, and `exit 0`.
 
 What release `agent-relay-2026.11.6` doesn't do on GKE yet:
 
-1. **Session reads on Cloud Storage work from this release; upgrades re-stamp
-   once.** Releases 2026.11.1 to 2026.11.5 recorded sessions uploaded to Cloud
-   Storage as if they were in S3, so reads answered `501`. This release records
-   new uploads correctly. After upgrading from an earlier release, run
+1. **Upgrading from 2026.11.5 or earlier: re-stamp once.** Those releases
+   recorded sessions uploaded to Cloud Storage as if they were in S3, so their
+   reads answer `501`. After the upgrade, run
    [Re-stamp sessions uploaded before 2026.11.6](#re-stamp-sessions-uploaded-before-2026116-upgrades-only)
-   once; a fresh install doesn't need it. Checked on GKE with a desktop upload:
-   the dashboard's session view shows the whole conversation.
+   once. A fresh install doesn't need it.
 2. **Long sessions need the longer read deadline.** The read API reads a
    session's chunks one after another (about 30 ms each from Cloud Storage), so
    the default 3 s deadline fails sessions of more than about 100 chunks
