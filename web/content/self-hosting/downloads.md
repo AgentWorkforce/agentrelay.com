@@ -39,10 +39,11 @@ Used by [this guide](/docs/self-hosting/install-gke). Checksums: [`SHA256SUMS`](
 | [`add-user.sh`](https://agentrelay.com/self-hosting/files/gke/add-user.sh) | `64656f743f1c04b69044f5403bb70914d824179edfb3de596f84e559e7105303` |
 | [`cloud-sql-setup.sh`](https://agentrelay.com/self-hosting/files/gke/cloud-sql-setup.sh) | `044f4227a119438cf4bf42b5eb32a2bcac112dcc223dbd4a5bb99df290639a0b` |
 | [`create-workload-identity.sh`](https://agentrelay.com/self-hosting/files/gke/create-workload-identity.sh) | `b474bf2ddd9e01ca67c905a1d9652ccaf80b74eb47a56ddffb46071b2fafff7e` |
+| [`first-admin.sh`](https://agentrelay.com/self-hosting/files/gke/first-admin.sh) | `35a1d8eab7855d451c5dae2eb3072afd6411dea4ccde8f188936e08cbe38386f` |
 | [`helm-secrets-prepare.sh`](https://agentrelay.com/self-hosting/files/gke/helm-secrets-prepare.sh) | `2ae3074e1577fd32f3b10c2d104a239b144454068a37fb0cecdb62e31de3d124` |
 | [`managed-values-byo.sh`](https://agentrelay.com/self-hosting/files/gke/managed-values-byo.sh) | `9fa8e76b98949612855498795c36a77557717a905b18d7cfe34dca78aeac56ea` |
 | [`okta-setup.sh`](https://agentrelay.com/self-hosting/files/gke/okta-setup.sh) | `d4fba0aa0a9a61d2b15cb801b1f6eb5c84ac32a025fd622f684c3f221da82a06` |
-| [`values.yaml`](https://agentrelay.com/self-hosting/files/gke/values.yaml) | `6247af9f3d0520b6c89215ee4dccf3f1527700fb3d2571bab59654341a073eca` |
+| [`values.yaml`](https://agentrelay.com/self-hosting/files/gke/values.yaml) | `0ed4b410ec861500b00c5a5e6aff73efd25b16a8c5116eb735847abcd5aeeac9` |
 <!-- files:end -->
 
 The charts, Terraform and the remaining scripts (the load balancer generator,
