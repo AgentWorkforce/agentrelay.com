@@ -20,8 +20,8 @@
 # workload using it takes both from here. To move to a newer build or a new image
 # name, change only that line. See the Images table at agentrelay.com/docs/self-hosting/install-eks.
 x-pins:
-  services-image: &services_image { repository: __IMAGE_REPO_PREFIX__/sessions-pipeline, digest: "sha256:42ccfba3c085d525846045a646b4c82cf8a849367ec94751934b3749fa90a36f" }
-  webapp-image: &webapp_image { repository: __IMAGE_REPO_PREFIX__/relay-webapp, digest: "sha256:8cadf08921b16ac4a19d0c4daecad1813e521bdfc9b141fb284415fd6349d499" }
+  services-image: &services_image { repository: __IMAGE_REPO_PREFIX__/sessions-pipeline, digest: "sha256:ba02f1498d53a089da7ff8fdb7e47215f561c55d9f292e1995b7b5c97d9c37a1" }
+  webapp-image: &webapp_image { repository: __IMAGE_REPO_PREFIX__/relay-webapp, digest: "sha256:9414d55446bbd4db9c82e344c109a4e829d76f536a49bd5917e7ebcc86ed3f23" }
 
 components:
   relaycast: true
@@ -196,8 +196,8 @@ sessions-pipeline:
     outputFacts:
       enabled: true
 
-  # Reserved native-consumer cadence for the qualified cutover. The 2026.11.3
-  # pack runs searchIndexer and leaves nativeConsumer disabled; if the native
+  # Reserved native-consumer cadence for the qualified cutover. This file
+  # runs searchIndexer and leaves nativeConsumer disabled; if the native
   # consumer is enabled by a reviewed site overlay, reconcile every minute and
   # retain a lookback wider than that cadence.
   nativeConsumer:
@@ -279,7 +279,7 @@ sessions-pipeline:
 relay-control:
   image:
     repository: __IMAGE_REPO_PREFIX__/relay-control
-    digest: sha256:e0611386a080b4e8e0c0629fdb23f5cf48027e7ceed77322b8086337e54f5112
+    digest: sha256:46e2cb514ba2ab3ec753fb3f3c0e17caff562350cbb671dbfc9f49b9463e0d49
   # The chart allows one replica: login and device rate limits are per process.
   replicaCount: 1
   existingSecret: agent-relay-secrets
