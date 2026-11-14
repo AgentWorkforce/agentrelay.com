@@ -35,18 +35,20 @@ such as a Mac mini in a rack. It supports Apple silicon and Intel Macs and
 installs the production Agent Relay build only. A private site's branded or
 Cloud-feed build is not supported by this installer yet.
 
-Run these commands as the macOS user who owns the agents, not as `root`:
+Run the release installer as the macOS user who owns the agents, not as `root`:
+
+```sh
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash
+```
+
+To review and run the source installer directly instead, use the public source
+checkout:
 
 ```sh
 git clone --depth 1 https://github.com/AgentWorkforce/relay-app.git
 cd relay-app
 bash macos/install.sh
 ```
-
-The current stable release does not yet publish the `install-macos.sh` release
-asset, so its one-line release install is coming in a future release. Until the
-asset is actually published, use `macos/install.sh` from the source checkout as
-shown above.
 
 The installer downloads the latest production probe for the Mac's architecture,
 checks its published SHA-256 and Developer ID signature, and installs it under
@@ -56,13 +58,13 @@ the user's `gui/<uid>` login session, and waits for the new core to answer. An
 update that fails its health check rolls back automatically. Settings, sign-in,
 and agent registrations are kept outside the install directory.
 
-Use the same checked-out script for lifecycle operations:
+The published installer also handles lifecycle operations:
 
 ```sh
-bash macos/install.sh --status
-bash macos/install.sh --update
-bash macos/install.sh --rollback
-bash macos/install.sh --uninstall
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --status
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --update
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --rollback
+curl -fsSL https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/install-macos.sh | bash -s -- --uninstall
 ```
 
 Install, update, rollback, and uninstall take an installer lock so two lifecycle
@@ -73,9 +75,11 @@ before installing `Agent Relay.app`.
 
 The LaunchAgent needs a real macOS login session. SSH by itself does not create
 one, so the installer refuses if `gui/<uid>` is absent. For an unattended Mac,
-turn on automatic login under **System Settings → Users & Groups**; FileVault
-must be off. Automatic login is also needed after restart for sources that use
-the login Keychain.
+turn on automatic login under **System Settings → Users & Groups**. FileVault
+must be off because macOS blocks automatic login while FileVault is on. Without
+automatic login, the core does not start after a reboot until that user logs in
+at the Mac; SSH alone does not start the LaunchAgent. Keychain-backed sources
+also remain unavailable until login unlocks the user's Keychain.
 
 macOS privacy (TCC) and Keychain approval dialogs cannot be answered over SSH or
 by the headless installer. Grant required Files and Folders or Keychain access
@@ -239,7 +243,7 @@ Do not start paid model work just to diagnose connectivity without approval.
 
 - Confirm the headless machine and other clients use the same workspace UUID
   and account.
-- On macOS, run `bash macos/install.sh --status`, inspect
+- On macOS, run the published installer with `--status`, inspect
   `launchctl print "gui/$(id -u)/com.agentrelay.desktop.core.headless"`, and
   check `~/Library/Logs/Agent Relay`.
 - On Linux, check `systemctl --user is-active agent-relay.service` and
