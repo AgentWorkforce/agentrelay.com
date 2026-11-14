@@ -361,6 +361,12 @@ export function EventsShimTry() {
             <p className={s.ask}>
               Then ask your agent: <q>Watch for webhooks and tell me when one arrives.</q>
             </p>
+            {agent.id === 'codex' && (
+              <p className={s.note}>
+                Codex: the session has to be started. Open Codex and send it that message first. A Codex session can be
+                woken only once it has started; a new window with no message yet cannot be reached.
+              </p>
+            )}
             <ul className={s.bullets}>
               {agent.wakes ? (
                 <>
@@ -374,7 +380,10 @@ export function EventsShimTry() {
                       with the next post, which wakes the idle agent, and the agent starts it again. Nothing else to install.
                     </li>
                   ) : (
-                    <li>This client wakes only under Agent Relay. Without it, the agent reads posts when you ask.</li>
+                    <li>
+                      Without the Agent Relay app, setup runs Agent Relay&apos;s core for this client itself, so its newest
+                      open session is still woken by each post.
+                    </li>
                   )}
                 </>
               ) : (
