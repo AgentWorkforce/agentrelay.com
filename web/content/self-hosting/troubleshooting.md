@@ -44,6 +44,9 @@ HUMAN before running anything that changes the cluster or cloud account.
 | A pod shows `CreateContainerConfigError` | A Secret or key is missing. Recheck step 10, or [Secrets](/docs/self-hosting/secrets) |
 | The control API exits at startup naming a variable | A Secret value is too short, or a URL isn't a public https origin |
 | `ImagePullBackOff` | The nodes can't pull the image: check ECR or Artifact Registry pull access, and that the mirror copied the pinned digest |
+| `cloud-sql-setup.sh pre` waits about 10 minutes, then says its Job did not succeed | On a new Google Cloud project the node service account has no roles, so the Job's image pull fails with `403`. Grant it `roles/artifactregistry.reader` on the mirror repository ([step 5 of the GKE guide](/docs/self-hosting/install-gke)), then run `pre` again |
+| `billing account ... disabled` from Cloud Storage or Service Networking | Your Application Default Credentials use a quota project without billing: `gcloud auth application-default set-quota-project <project id>` |
+| `PERMISSION_DENIED ... resourcemanager.projects.create` | You can't create projects in the organization. Someone with that permission and `billing.user` on the billing account creates the project, then grants you Owner on it |
 | S3 or OpenSearch `AccessDenied` | A Pod Identity association is missing, or the namespace or release name differs from Terraform's. Create it, then `kubectl -n agent-relay rollout restart deploy` |
 | OpenSearch 403 | The role mapping in step 7 of the EKS guide is missing, or step 7 ran as the wrong role |
 | Self-signed or certificate errors to the database | The `rds-ca` ConfigMap or `__RDS_CA_SHA256__` is wrong: rerun `rds-setup.sh pre` before `post`, and compare the hash |

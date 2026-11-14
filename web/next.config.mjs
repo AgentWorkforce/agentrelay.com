@@ -204,6 +204,8 @@ const nextConfig = {
       },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
       { source: '/docs/introduction', destination: '/docs/getting-started', permanent: true },
+      { source: '/docs/self-host', destination: '/docs/self-hosting', permanent: true },
+      { source: '/docs/self-host/:path*', destination: '/docs/self-hosting/:path*', permanent: true },
       { source: '/primitives', destination: '/', permanent: true },
       { source: '/relayfile', destination: '/file', permanent: true },
       { source: '/relayfile/:path*', destination: '/file', permanent: true },

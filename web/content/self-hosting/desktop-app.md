@@ -79,6 +79,8 @@ to appear.
   where the Copilot harness is the default. Chats on the older "Local" harness
   aren't captured.
 - **Updates:** a self-hosted build doesn't update itself yet. A newer version
-  means installing the new build over the old one.
+  means installing the new build over the old one. On GKE this holds until
+  further notice: the signed release feed the control API can serve uses AWS
+  KMS and S3 only.
 - **Problems:** send a screenshot of the app's status screen to whoever runs
   your install.
