@@ -8,9 +8,10 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 waiting on AWS.
 
 **Release:** `agent-relay-2026.11.5` (infra commit `ef3f69ab`, chart 0.7.10).
-These steps were run end to end on EKS with `agent-relay-2026.11.0`; since then
-only the release and its image pins have changed. To run a newer release,
-install this one and then follow [Upgrades](/docs/self-hosting/upgrades).
+These steps were run end to end on an existing EKS cluster on 2026-11-14:
+installed with `agent-relay-2026.11.3`, then upgraded to this release with
+[Upgrades](/docs/self-hosting/upgrades). To run a newer release, install this
+one and then follow Upgrades.
 
 **You need:**
 
@@ -52,12 +53,19 @@ git -C infra checkout agent-relay-2026.11.5
 test "$(git -C infra rev-parse HEAD)" = ef3f69ab8e557fb9282eb292b6975c210501c61f && echo "release ok"
 ```
 
-Tools: `terraform` 1.11 or later, `helm` 3.10 or later, `kubectl`, `aws` (CLI
-v2), `jq`, `yq`, `openssl`, `python3` and `curl` 7.75 or later. On a Mac:
+Tools: `terraform` 1.11 or later, `helm` 3.10 or later (Helm 3, not Helm 4),
+`kubectl`, `aws` (CLI v2), `jq`, `yq`, `openssl`, `python3`, `curl` 7.75 or
+later, and [`crane`](https://github.com/google/go-containerregistry/releases),
+which every [upgrade](/docs/self-hosting/upgrades) needs. On a Mac:
 
 ```sh
-brew install hashicorp/tap/terraform helm kubectl awscli jq yq
+brew install hashicorp/tap/terraform helm@3 kubectl awscli jq yq crane
+export PATH="$(brew --prefix helm@3)/bin:$PATH"   # also add this line to your shell profile
+helm version --short
 ```
+
+`brew install helm` installs Helm 4, which this guide isn't tested with, so
+`helm version` must print `v3`. `helm@3` isn't on your `PATH` until you add it.
 
 `rds-setup.sh` uses `sha256sum`, which macOS has from version 14. On older
 macOS, also run `brew install coreutils`.
@@ -142,7 +150,22 @@ needs no role switch:
 aws iam get-role --role-name "$(aws sts get-caller-identity --query Arn --output text | cut -d/ -f2)" --query Role.Arn --output text
 ```
 
-**4c.** Write `terraform.tfvars`, replacing every `<...>`:
+**4c.** Find the cluster's security group and its private subnets:
+
+```sh
+aws eks describe-cluster --name <cluster name> --query cluster.resourcesVpcConfig.clusterSecurityGroupId --output text
+VPC="$(aws eks describe-cluster --name <cluster name> --query cluster.resourcesVpcConfig.vpcId --output text)"
+aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC Name=tag-key,Values=kubernetes.io/role/internal-elb \
+  --query 'Subnets[].[SubnetId,CidrBlock,AvailabilityZone]' --output table
+```
+
+The cluster security group works for search and the database: the nodes of
+EKS managed node groups are in it, and it allows all traffic from itself. If
+your nodes use another security group, use one that allows TCP 443 and 5432
+from them. If the subnet list is empty, your private subnets aren't tagged: use
+the cluster's own (`--query cluster.resourcesVpcConfig.subnetIds`).
+
+Then write `terraform.tfvars`, replacing every `<...>`:
 
 ```sh
 cat > terraform.tfvars <<'EOF'
@@ -256,6 +279,9 @@ aws ec2 describe-subnets --filters Name=vpc-id,Values=$VPC Name=tag-key,Values=k
   --query 'Subnets[].[SubnetId,CidrBlock,AvailabilityZone]' --output table
 ```
 
+Most VPCs have one per Availability Zone, so you may see three. Put two here
+and add the third in step 9: the load balancer uses every tagged subnet.
+
 **Reusing your own RDS?** In `settings.sh`, replace the two `RDS_` lines with
 `export RDS_HOST=<rds endpoint>` and `export RDS_ADMIN_SECRET_ARN=<secret ARN from the existing-RDS page>`.
 
@@ -278,9 +304,9 @@ aws acm describe-certificate --certificate-arn "$CERT_ARN" --query Certificate.S
 
 <!-- agent
 Fill DOMAIN, ORG_ID, ORG_NAME and ADMIN_EMAIL only with the human's answers.
-If more than two load balancer subnets are listed, ASK THE HUMAN which two (or
-more) the load balancer uses. A third subnet needs one more ipBlock in each
-networkPolicy block of values.yaml.
+If more than two load balancer subnets are listed, ASK THE HUMAN which ones the
+load balancer uses (by default, all of them). Put two in settings.sh and add a
+third with step 9's "third load balancer subnet" block.
 If the certificate is not ISSUED yet, wait and re-check; do not continue past
 step 13 without it.
 -->
@@ -344,6 +370,23 @@ grep -n '__[A-Z_]*__' values.yaml
 
 **Done when:** the only line printed is `__LLM_MODEL__`. You set that one later,
 when you [turn on titles and summaries](/docs/self-hosting/after-install).
+
+**A third load balancer subnet?** Add it to every network policy, or requests
+through that subnet answer 504:
+
+```sh
+export ALB_SUBNET_CIDR_C=<CIDR of load balancer subnet 3>
+python3 - <<'EOF'
+import os, re
+b, c = os.environ['ALB_SUBNET_CIDR_B'], os.environ['ALB_SUBNET_CIDR_C']
+v = open('values.yaml').read()
+v, n = re.subn(r'^( *)- ipBlock: \{ cidr: ' + re.escape(b) + r' \}\n',
+               lambda m: m.group(0) + m.group(1) + '- ipBlock: { cidr: ' + c + ' }\n', v, flags=re.M)
+open('values.yaml', 'w').write(v); print('third subnet:', n, 'blocks')
+EOF
+```
+
+**Done when:** it prints `third subnet: 4 blocks`.
 
 `values.yaml` holds no secret values, only the names of Secrets and keys, so it
 is safe to keep in version control.

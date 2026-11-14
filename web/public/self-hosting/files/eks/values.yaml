@@ -128,6 +128,8 @@ sessions-pipeline:
       publicFrom:
         - ipBlock: { cidr: __ALB_SUBNET_CIDR_A__ }
         - ipBlock: { cidr: __ALB_SUBNET_CIDR_B__ }
+    timing: { assumeNoTurns: true }
+    canonical: { pinLaggingPointer: true }
     serviceAccountName: agent-relay-session-read
     serviceAccountCreate: true
     extraEnv:
@@ -135,8 +137,6 @@ sessions-pipeline:
       - { name: LOCKER_REGION, value: __REGION__ }
       - { name: PIPELINE_ORG_FROM_PREFIX, value: "true" }
       - { name: PIPELINE_KEY_PREFIX, value: 96bulls }
-      - { name: READ_API_CANONICAL_PIN_LAGGING_POINTER, value: "true" }
-      - { name: READ_API_TIMING_ASSUME_NO_TURNS, value: "true" }
       - { name: READ_API_BRIEF_TITLES_WORKSPACES, value: "*" }
       - { name: READ_API_SESSION_QUERY, value: "true" }
       # How much of one session the read API loads. Raise it only together with

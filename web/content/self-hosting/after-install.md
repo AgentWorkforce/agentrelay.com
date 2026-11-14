@@ -35,14 +35,18 @@ still owe facts, waits for the indexer, then marks each workspace complete:
 
 ```sh
 cd "$INFRA"
-helm upgrade agent-relay charts/agent-relay --namespace agent-relay \
-  -f charts/agent-relay/values-eks.yaml -f charts/agent-relay/values-eks-native.yaml \
-  -f "$INSTALL_DIR/values.yaml" \
+helm upgrade agent-relay charts/agent-relay --namespace agent-relay --reuse-values \
   --set sessions-pipeline.searchIndexer.outputFacts.bootstrap.enabled=true \
   --set-string sessions-pipeline.searchIndexer.outputFacts.bootstrap.runId=initial \
   --wait --wait-for-jobs --timeout 25m
 cd "$INSTALL_DIR"
 ```
+
+`--reuse-values` keeps everything the install runs now, including the ECR
+images an [upgrade](/docs/self-hosting/upgrades) switched it to. Don't pass
+`values.yaml` here: it still pins the images of the release you first
+installed, and would put them back. `infra` must be checked out at the release
+that is running.
 
 **Done when:** the upgrade completes. Until that Job completes, the Output and
 daily digest endpoints deliberately answer `*_backfill_incomplete`.
