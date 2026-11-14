@@ -57,5 +57,6 @@ Ask the human which cloud they use, then which path (see the
 - Google Cloud GKE: [Install on GKE](/docs/self-hosting/agents/install-gke),
   plus [bring your own Google Cloud resources](/docs/self-hosting/agents/bring-your-own-gcp)
   when it applies.
+- Azure AKS: [Install on AKS](/docs/self-hosting/agents/install-aks).
 
 Every runbook is also plain Markdown: append `.md` to its URL.

@@ -140,7 +140,7 @@ describe('one source, two audiences', () => {
   });
 
   it('gives every install guide agent checkpoints that never print secrets', () => {
-    for (const slug of ['install-eks', 'install-gke']) {
+    for (const slug of ['install-eks', 'install-gke', 'install-aks']) {
       const agent = getSelfhostMarkdown(slug, 'agent')!;
       expect(agent).toContain('> **Agent:**');
       expect(agent).toMatch(/ASK THE HUMAN/);

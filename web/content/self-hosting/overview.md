@@ -56,6 +56,7 @@ Identity). There are no cloud access keys anywhere in the install.
 | An EKS cluster and an RDS PostgreSQL 17 instance you want to reuse | [Install on EKS](/docs/self-hosting/install-eks) with [Use an existing or shared RDS](/docs/self-hosting/existing-rds) |
 | An EKS cluster, and your team creates S3, OpenSearch, IAM and the certificate | [Install on EKS](/docs/self-hosting/install-eks) with [Bring your own AWS resources](/docs/self-hosting/bring-your-own-aws) and [IAM and Pod Identity](/docs/self-hosting/iam-pod-identity) |
 | A GKE cluster | [Install on GKE](/docs/self-hosting/install-gke), and [Bring your own Google Cloud resources](/docs/self-hosting/bring-your-own-gcp) if your team creates them |
+| An AKS cluster (community-contributed) | [Install on AKS](/docs/self-hosting/install-aks) |
 
 Then, after the install: [Secrets](/docs/self-hosting/secrets) if you keep
 secrets in SOPS, SSM or Secret Manager, [single sign-on with
