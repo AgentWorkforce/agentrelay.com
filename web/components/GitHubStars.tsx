@@ -38,7 +38,7 @@ async function getGitHubStars(repo: string = DEFAULT_REPO): Promise<string | nul
 }
 
 /** The repo's GitHub button with its live star count; `showRepo` puts the repo name beside the mark. */
-export async function GitHubStarsBadge({ showRepo = false }: { showRepo?: boolean } = {}) {
+export async function GitHubStarsBadge({ showRepo = false, className }: { showRepo?: boolean; className?: string } = {}) {
   const count = await getGitHubStars();
 
   return (
@@ -46,7 +46,7 @@ export async function GitHubStarsBadge({ showRepo = false }: { showRepo?: boolea
       href="https://github.com/agentworkforce/relay"
       target="_blank"
       rel="noopener noreferrer"
-      className={s.badge}
+      className={[s.badge, className].filter(Boolean).join(' ')}
       aria-label={count ? `View Agent Relay on GitHub (${count} stars)` : 'View Agent Relay on GitHub'}
     >
       <GithubIcon />

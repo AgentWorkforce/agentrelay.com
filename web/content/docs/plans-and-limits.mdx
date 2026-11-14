@@ -1,0 +1,82 @@
+---
+title: 'Plans and limits'
+description: 'Proposed Agent Relay pricing: organization base plans, active-agent overage in blocks of five, and no overage charges for humans or devices.'
+---
+
+This page describes the proposed pricing model being evaluated on the [pricing page](/pricing#pricing-model). These terms are starting assumptions, not usage-validated prices or a change to live billing.
+
+An organization has one base plan. Only extra active agents incur overage. Adding more humans or devices than the plan includes shows an upgrade prompt, with no added charge or hard block.
+
+The Free plan is $0 and includes 3 active agents, 1 device, 1 human, and 1 day of session history. Upgrade to a paid plan when you need more capacity; Free does not charge overage.
+
+| | Intro | Pro | Enterprise |
+|---|---|---|---|
+| Included active agents | 15 | 40 | Custom / unlimited |
+| Extra active agents | $3 per agent/month | $2 per agent/month | Custom |
+| Overage block | 5 agents for $15/month | 5 agents for $10/month | Custom |
+| Devices | 5 | 15 | Unlimited |
+| Humans | 2 | 10 | Unlimited |
+| Session history | 7 days | 14 days | 365 days |
+| Base list price | $99/month | $199/month | Custom |
+| Beta base price | $49/month | $99/month | Custom |
+| Annual beta base price | $490/year | $990/year | Custom |
+
+Annual base plans include two months free. Overage is measured and charged monthly at the full monthly block rate, including for annual subscribers.
+
+## Counting active agents
+
+Calculate both counts for the organization each month, then use the **greater** of:
+
+1. Sustained agents: agents that sent messages on at least 3 days during the month.
+2. Peak daily agents: the largest number of agents that sent messages on any one day during the month.
+
+These are alternative measurements, not two groups to add together. Both must use stable, deduplicated agent identities across the organization's workspaces. Rotating or ephemeral worker IDs must not create extra billable agents. Counting unique agent IDs over the month would overbill teams whose workers change IDs.
+
+The calculator accepts already-deduplicated counts; it does not resolve worker identities or collect activity. Identity resolution and the monthly measurement boundary must be defined in billing before this model can be enforced.
+
+## When overage starts
+
+Overage applies as soon as active agents exceed the plan's included allowance. Extra blocks are charged at the time they are needed, at the published monthly rate.
+
+Round excess agents up to whole blocks of 5:
+
+`billed blocks = ceil((active agents - included agents) / 5)`
+
+The result is zero when usage is within the allowance.
+
+## Examples after overage starts
+
+These are ongoing annualized costs: annual base price plus 12 months of the same monthly overage. Actual charges depend on usage throughout the year.
+
+| Plan | Active agents | Extra blocks | Monthly overage | Annualized beta total |
+|---|---|---|---|---|
+| Intro | 20 | 1 | $15 | $670 |
+| Intro | 25 | 2 | $30 | $850 |
+| Pro (automatic upgrade) | 26 | 0 | $0 | $990 |
+| Pro | 40 | 0 | $0 | $990 |
+| Pro | 60 | 4 | $40 | $1,470 |
+| Pro | 100 | 12 | $120 | $2,430 |
+
+The proposed policy automatically upgrades Intro to Pro when Pro is strictly cheaper. Equal prices keep the current plan; it does not automatically downgrade existing Pro subscriptions. The calculator starts each scenario on Intro and selects the resulting plan.
+
+With these assumptions, Pro becomes cheaper at 26 active agents on annual base pricing and 31 on monthly base pricing. Above 100 active agents, start an [Enterprise conversation](https://agentrelay.com/will); the calculator can still show illustrative costs beyond that point.
+
+Actual subscription transitions are not implemented here. Annual upgrade credits, proration, and effective dates must be defined in Cloud billing before enabling this policy. Annual estimates compare ongoing yearly costs, not the amount due at an upgrade.
+
+## Humans, devices, and session history
+
+- **Humans** are human members of the organization. Exceeding the plan allowance shows an “upgrade to add more” prompt, with no per-human charge or hard block.
+- **Devices** are connected nodes such as laptops, CI runners, or cloud VMs. Exceeding the plan allowance shows the same prompt, with no per-device charge or hard block.
+- **Session history** retains the published 7-day, 14-day, or 1-year window. It is not part of the overage calculation.
+
+## Subscribing and changing plans
+
+Monthly Intro and Pro links on the pricing page lead to Google sign-in and plan selection. Annual billing and Enterprise are arranged with our team through [Talk to us](https://agentrelay.com/will). The pricing model is a planning tool and does not create subscriptions or change charges.
+
+## Beta pricing
+
+A subscription that starts at the beta base price keeps that base price for as long as it stays active. Annual overage does not receive the base plan's two-month discount.
+
+## Existing customers
+
+Existing customers keep their current access. The proposed model does not change existing organizations' billing or access through this page.
