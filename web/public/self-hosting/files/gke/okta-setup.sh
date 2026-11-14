@@ -79,8 +79,9 @@ echo "group assigned: $OKTA_GROUP"
 # 5. Store the client secret with the other install secrets, and in the cluster.
 ( umask 077; jq -jr .credentials.oauthClient.client_secret <<<"$APP" > "$DIR/oidc-client-secret" )
 unset APP
+# Replace, never apply: apply would copy every value into a last-applied annotation.
 kubectl -n "$NS" create secret generic agent-relay-secrets --from-file="$DIR" \
-  --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+  --dry-run=client -o yaml | kubectl replace -f - >/dev/null
 echo "client secret stored in Secret agent-relay-secrets (key oidc-client-secret)"
 
 cat <<EOF

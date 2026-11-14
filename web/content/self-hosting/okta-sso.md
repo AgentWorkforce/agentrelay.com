@@ -63,7 +63,7 @@ and assign the group. Then store the secret:
 read -rs -p 'Okta client secret: ' X; echo
 printf '%s' "$X" > ~/.agent-relay-install/secret-files/agent-relay-secrets/oidc-client-secret; unset X
 kubectl -n agent-relay create secret generic agent-relay-secrets \
-  --from-file=$HOME/.agent-relay-install/secret-files/agent-relay-secrets --dry-run=client -o yaml | kubectl apply -f -
+  --from-file=$HOME/.agent-relay-install/secret-files/agent-relay-secrets --dry-run=client -o yaml | kubectl replace -f -
 ```
 
 <a id="issuer"></a>**Issuer.** Use your org's issuer, `https://<org>.okta.com`. It needs no
@@ -75,8 +75,10 @@ this app" (`no_matching_policy` in Okta's System Log). To have the script use a
 custom server, also set `OKTA_ISSUER=https://<org>.okta.com/oauth2/<id>`; it
 stops before creating anything if that server has no access policy.
 
-The `kubectl apply` rebuilds the whole `agent-relay-secrets` Secret from that
-folder, so run it only with the complete folder from the install.
+The `kubectl replace` rebuilds the whole `agent-relay-secrets` Secret from that
+folder, so run it only with the complete folder from the install. Don't use
+`kubectl apply` for Secrets: it copies every value into a
+`last-applied-configuration` annotation.
 
 **Using helm-secrets or vals** ([Secrets](/docs/self-hosting/secrets))? After
 this step, rerun your secrets commands. They pick up the new
@@ -153,6 +155,6 @@ too: an empty key removes the chart's defaults, and Helm refuses the upgrade.
 
 To remove the stored secret as well, delete
 `~/.agent-relay-install/secret-files/agent-relay-secrets/oidc-client-secret` and
-rerun the `kubectl apply` from step 1. Then deactivate and delete the Agent
+rerun the `kubectl replace` from step 1. Then deactivate and delete the Agent
 Relay app in Okta. People who joined through Okta stay members until an owner
 removes them in **Settings → Members**.

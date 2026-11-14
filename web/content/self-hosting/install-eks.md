@@ -363,10 +363,17 @@ done
 [ -s "$S/agent-relay-secrets/selfhost-encryption-key" ] || openssl rand -hex 32 | tr -d '\n' > "$S/agent-relay-secrets/selfhost-encryption-key"
 [ -s "$S/agent-relay-secrets/SUMMARY_MASTER_KEYS" ] || printf 'k1:%s' "$(openssl rand -hex 32)" > "$S/agent-relay-secrets/SUMMARY_MASTER_KEYS"
 cp "$S/agent-relay-secrets/relaycontrol-introspect-secret" "$S/agent-relay-ingest-edge-runtime/introspect-secret" )
+put_secret() { # create the Secret, or replace it in place; never kubectl apply, which copies
+               # every value into a last-applied annotation (replace also drops an old one)
+  if kubectl -n agent-relay get secret "$1" >/dev/null 2>&1; then
+    kubectl -n agent-relay create secret generic "$@" --dry-run=client -o yaml | kubectl replace -f -
+  else
+    kubectl -n agent-relay create secret generic "$@"
+  fi
+}
 for name in agent-relay-secrets agent-relay-read-api agent-relay-ingest-edge-runtime \
             search-indexer-runtime search-indexer-owner; do
-  kubectl -n agent-relay create secret generic "$name" --from-file="$S/$name" \
-    --dry-run=client -o yaml | kubectl apply -f -
+  put_secret "$name" --from-file="$S/$name"
 done
 ```
 

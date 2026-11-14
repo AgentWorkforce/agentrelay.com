@@ -22,7 +22,7 @@ under **Agent:**. Follow them in order.
    terminal and report only the outcome.
 3. **Ask the human before every change** to their cloud account or cluster:
    `terraform apply` and `destroy`, IAM and Pod Identity or Workload Identity
-   changes, `kubectl apply`, `create`, `delete`, `patch` and `scale`,
+   changes, `kubectl apply`, `create`, `replace`, `delete`, `patch` and `scale`,
    `helm install`, `upgrade` and `uninstall`, storing values in SSM or Secret
    Manager, and anything that deletes data. Show the exact command first.
    Read-only commands (`get`, `describe`, `list`, `plan`, `curl` health checks)

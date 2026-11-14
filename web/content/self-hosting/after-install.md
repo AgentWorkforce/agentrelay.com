@@ -62,8 +62,10 @@ workspace ID, a model ID and an API key for an OpenAI-compatible endpoint.
 
 ```sh
 kubectl -n agent-relay logs deploy/relay-control | grep 'default workspace created'
-read -rs -p 'API key: ' k; kubectl -n agent-relay create secret generic agent-relay-llm \
-  --from-literal=OPENAI_API_KEY="$k" --dry-run=client -o yaml | kubectl apply -f - ; unset k; echo
+read -rs -p 'API key: ' k; echo
+# Create or replace; never kubectl apply, which copies the key into an annotation.
+kubectl -n agent-relay delete secret agent-relay-llm --ignore-not-found
+kubectl -n agent-relay create secret generic agent-relay-llm --from-literal=OPENAI_API_KEY="$k"; unset k
 ```
 
 In `values.yaml`, replace `__LLM_MODEL__` with your model ID, and under
