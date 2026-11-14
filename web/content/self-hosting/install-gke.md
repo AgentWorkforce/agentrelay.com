@@ -7,7 +7,7 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 **Done when** line before you move on. Expect about an hour and a half, most of
 it waiting on Google Cloud: the HTTPS certificate alone can take up to an hour.
 
-**Release:** `agent-relay-2026.11.3` (infra commit `a9b29222`, chart 0.7.8).
+**Release:** `agent-relay-2026.11.5` (infra commit `ef3f69ab`, chart 0.7.10).
 **Tested on GKE** end to end, on a private regional cluster (Kubernetes 1.35,
 Workload Identity, a private control plane). Read [Known limits](#known-limits)
 before a production rollout: transcript reads need the next release.
@@ -57,14 +57,14 @@ curl -fsSLO "$base/SHA256SUMS"
 for f in $(awk '{print $2}' SHA256SUMS); do curl -fsSLO "$base/$f"; done
 shasum -a 256 -c SHA256SUMS
 git clone https://github.com/AgentWorkforce/infra.git
-git -C infra checkout agent-relay-2026.11.3
-test "$(git -C infra rev-parse HEAD)" = a9b29222aee2a8347f6fa0c5a191d8f0a9a0fb8b && echo "release ok"
-mkdir release && gh release download agent-relay-2026.11.3 -R AgentWorkforce/infra -D release
-(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.8.tgz) | tail -1
+git -C infra checkout agent-relay-2026.11.5
+test "$(git -C infra rev-parse HEAD)" = ef3f69ab8e557fb9282eb292b6975c210501c61f && echo "release ok"
+mkdir release && gh release download agent-relay-2026.11.5 -R AgentWorkforce/infra -D release
+(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.10.tgz) | tail -1
 ```
 
 No `gh`? Download the same assets from the
-[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.3)
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.5)
 into `release/`.
 
 Tools: `gcloud` (with `gke-gcloud-auth-plugin`), `terraform` 1.11 or later (or
@@ -277,7 +277,7 @@ export MIRROR_ROOT=<region>-docker.pkg.dev/<project id>/agent-relay-mirror
 export NAMESPACE=agent-relay
 export HELM_RELEASE=agent-relay
 export STATIC_IP_NAME=agent-relay-ingress
-export SERVICES_IMAGE=$MIRROR_ROOT/ghcr.io/agentworkforce/sessions-pipeline@sha256:42ccfba3c085d525846045a646b4c82cf8a849367ec94751934b3749fa90a36f
+export SERVICES_IMAGE=$MIRROR_ROOT/ghcr.io/agentworkforce/sessions-pipeline@sha256:ba02f1498d53a089da7ff8fdb7e47215f561c55d9f292e1995b7b5c97d9c37a1
 export PSQL_IMAGE=$MIRROR_ROOT/ghcr.io/cloudnative-pg/postgresql@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
 export CHART="$INSTALL_DIR/release/agent-relay"
@@ -413,7 +413,7 @@ instead of this block. vals with Google Secret Manager is tested on GKE.
 ## 11. Install with Helm
 
 ```sh
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.8.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.10.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -449,7 +449,7 @@ done
 bash cloud-sql-setup.sh post
 kubectl -n $NAMESPACE rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n $NAMESPACE get jobs -o name | grep search-indexer-bootstrap); do kubectl -n $NAMESPACE delete "$j"; done
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.8.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.10.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -562,7 +562,7 @@ credential. STOP on anything but "first admin set".
 
 ## Known limits
 
-What release `agent-relay-2026.11.3` does not yet qualify on GKE:
+What release `agent-relay-2026.11.5` does not yet qualify on GKE:
 
 1. **Transcript reads on Cloud Storage: fixed, check pending.** The 2026.11.1
    sessions image recorded every upload as stored in S3, even when it was in

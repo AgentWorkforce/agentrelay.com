@@ -99,6 +99,7 @@ yourself.
 | `agent-relay-2026.11.0` (infra commit `3bb127d1`) | 0.6.46 | EKS, end to end, including an existing shared RDS |
 | `agent-relay-2026.11.1` (infra commit `c6087c2f`) | 0.6.53 | GKE, end to end (see the [known limits](/docs/self-hosting/install-gke#known-limits)) |
 | `agent-relay-2026.11.3` (infra commit `a9b29222`) | 0.7.8 | GKE install guide release; the GKE transcript-read check is in progress (see the [known limits](/docs/self-hosting/install-gke#known-limits)) |
+| `agent-relay-2026.11.5` (infra commit `ef3f69ab`) | 0.7.10 | GKE install guide release: upgrades from 2026.11.1 proven on GKE; the transcript-read check is in progress (see the [known limits](/docs/self-hosting/install-gke#known-limits)) |
 
 Charts, Terraform and helper scripts come from the public
 [AgentWorkforce/infra](https://github.com/AgentWorkforce/infra) repository at a
