@@ -23,7 +23,7 @@ messages: a message wakes the thread's agent, it answers, and it goes idle.
 | --- | --- |
 | Router | Holds the Slack connection over Socket Mode (an outbound WebSocket; no public URL). Records every message in a **ledger**: which agent owns each thread, who has spoken in it, and an append-only audit log. It is the only component with Slack credentials. |
 | Agent host | Runs one agent per Slack thread as headless Claude Code, with its own resumable session on a volume. It has no Slack credentials. |
-| [relaygate](/docs/self-hosting/relaygate) (optional) | Checks every Slack post and knowledge-base write against your policy, and withholds answers its classifier refuses. It does not yet proxy agents' Relaycast traffic; restrict that with network policy. |
+| [relaygate](/docs/self-hosting/relaygate) (optional) | Carries all of the agents' Relaycast traffic, checks every Slack post and knowledge-base write against your policy, and withholds answers its classifier refuses. |
 
 One message, end to end:
 
@@ -61,6 +61,7 @@ secret store; never paste the values into a values file.
 | `slack-relay-slack` | `bot-token`, `app-token` | The `xoxb-` and `xapp-` tokens from above |
 | `slack-relay-anthropic` | `api-key` | An Anthropic API key. Use a zero-data-retention key if threads may contain regulated data; the chart can't check this. |
 | `slack-relay-relaycast` | `workspace-key` | A Relaycast workspace key for the agents' workspace (not needed with relaygate) |
+| `slack-relay-relaygate` | `enrollment-key`, `identity-secret` | Only with relaygate: the bridge enrollment key, and a stable random secret agents recover their identity with after a restart |
 
 ## Install
 
@@ -94,12 +95,43 @@ Or, if you install the umbrella from the same checkout, set
 `registered relay agent slack-agent-host`, and an @mention in the allowed
 channel gets an answer in its thread.
 
+## Governance with relaygate
+
+Optional. Install [relaygate](/docs/self-hosting/relaygate) with its Relaycast
+proxy on and Relaycast narrowed to the gate, then add to the Slack app's values:
+
+```yaml
+relaygate:
+  url: http://agent-relay-relaygate:8080   # <release>-relaygate; this is the umbrella's
+secrets:
+  relaygateEnrollmentKey: { name: slack-relay-relaygate, key: enrollment-key }
+  agentIdentitySecret: { name: slack-relay-relaygate, key: identity-secret }
+```
+
+With `relaygate.url` set, `relaycast.baseUrl` and the workspace key are
+unused: every agent (router, host, one per thread) registers through the gate,
+and all Relaycast traffic goes through it with the agent's own `rg_` token. No
+pod holds a Relaycast credential. Every Slack post and knowledge-base write is
+checked first; a denied answer is withheld and the thread is told, and a DM
+reply the gate denies is dropped.
+
+Two things must match the gate's policy:
+
+- **The routing channel belongs to the pit.** The chart's default policy owns
+  `relaycast:channel/slack`, matching the default `relaycast.channel` (`slack`).
+  If your policy only grants a prefix such as `relaycast:channel/slack-` (the
+  double-pit example), set `relaycast.channel` to match, e.g. `slack-pit`;
+  otherwise the router can't create its channel.
+- **The bridge key's `namePrefix` is `slack-`.** Agent names start with
+  `slack-`, so a key with any other prefix can't register them.
+
 ## What leaves your cluster
 
 - Slack API calls, from the router only.
 - Anthropic API calls, from the agents (and the optional orchestrator).
 - With relaygate on, every Slack post is checked first and withheld if your
-  policy refuses it; the thread is told.
+  policy refuses it; the thread is told. Agents reach Relaycast only through
+  the gate.
 
 Agents can read only their own working folder by default (no shell, no web).
 The ledger records every inbound message, routing decision and outbound post,
