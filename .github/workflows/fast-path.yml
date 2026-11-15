@@ -9,8 +9,9 @@
 #   main are left to the normal deploy.
 # - `deploy_router` mirrors deploy-router.yml and runs after the web deploy of
 #   the same commit, so the router never ships ahead of its pages.
-# Each deploy has its own concurrency group so it never cancels a pending
-# normal deploy. Nothing is published and no channel tags move.
+# Each deploy joins the normal workflow's concurrency group and the web deploy
+# ships only the current tip of main, so a fast deploy never races or rolls
+# back a normal one. Nothing is published and no channel tags move.
 name: fast-path
 run-name: fast-path ${{ inputs.ref }} (${{ inputs.reason }})
 on:
@@ -94,7 +95,7 @@ jobs:
     if: ${{ inputs.deploy }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     concurrency:
-      group: fast-path-deploy-web-production
+      group: deploy-web-production
       cancel-in-progress: false
     env:
       SHA: ${{ needs.check.outputs.sha }}
@@ -111,6 +112,13 @@ jobs:
           git fetch --no-tags origin main
           if ! git merge-base --is-ancestor "$SHA" origin/main; then
             echo "::error::$SHA is not on main; the fast path only deploys commits already merged to main."
+            exit 1
+          fi
+          # Deploy only the current tip of main: an older commit would roll back
+          # whatever the normal deploy has already shipped.
+          tip="$(git rev-parse origin/main)"
+          if [ "$tip" != "$SHA" ]; then
+            echo "::error::$SHA is no longer the tip of main ($tip); deploying it would roll production back. Re-run with the current main."
             exit 1
           fi
       - name: Setup Node.js
@@ -155,7 +163,7 @@ jobs:
     if: ${{ inputs.deploy && inputs.deploy_router }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     concurrency:
-      group: fast-path-deploy-router-production
+      group: deploy-router-production
       cancel-in-progress: false
     env:
       SHA: ${{ needs.check.outputs.sha }}
