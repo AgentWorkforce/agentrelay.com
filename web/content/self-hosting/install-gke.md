@@ -579,29 +579,44 @@ installing the new build over the old one. Agent Relay builds and publishes
 your desktop app, and gives you its profile ID and the SHA-256 hash of the
 token it publishes with. The token itself stays with Agent Relay.
 
-1. **Bucket:** set `desktop_feed_bucket_name` in step 4 and apply.
+1. **Bucket:** set `desktop_feed_bucket_name` in step 4's `terraform.tfvars`,
+   then run step 4's `terraform plan`, `terraform apply` and
+   `terraform output -json chart_values` lines again, so `managed-values.json`
+   carries the feed's settings.
 2. **Signing key:** create an Ed25519 key for the profile and store it in the
    cluster. The private key never leaves your cluster and Secret Manager:
 
    ```sh
-   PROFILE=<profile id from Agent Relay>; umask 077
+   PROFILE=<profile id from Agent Relay>; BACKUP=agent-relay-desktop-feed-key-$PROFILE; umask 077
    if ! kubectl -n $NAMESPACE get secret desktop-feed-keys >/dev/null 2>&1; then
-     openssl genpkey -algorithm ed25519 -out "$PROFILE.pem"
+     if gcloud secrets describe $BACKUP >/dev/null 2>&1; then
+       gcloud secrets versions access latest --secret $BACKUP > "$PROFILE.pem"   # restore the saved key
+     else
+       openssl genpkey -algorithm ed25519 -out "$PROFILE.pem"
+     fi
      kubectl -n $NAMESPACE create secret generic desktop-feed-keys --from-file="$PROFILE.pem"
      rm "$PROFILE.pem"
    fi
    kubectl -n $NAMESPACE get secret desktop-feed-keys -o jsonpath="{.data.$PROFILE\.pem}" | base64 -d > "$PROFILE.pem"
-   gcloud secrets describe agent-relay-desktop-feed-key-$PROFILE >/dev/null 2>&1 \
-     || gcloud secrets create agent-relay-desktop-feed-key-$PROFILE --data-file="$PROFILE.pem"
-   openssl pkey -in "$PROFILE.pem" -pubout -outform DER | tail -c 32 | base64
+   if ! gcloud secrets describe $BACKUP >/dev/null 2>&1; then
+     gcloud secrets create $BACKUP --data-file="$PROFILE.pem"
+   fi
+   if gcloud secrets versions access latest --secret $BACKUP | cmp -s - "$PROFILE.pem"; then
+     openssl pkey -in "$PROFILE.pem" -pubout -outform DER | tail -c 32 | base64
+   else
+     echo "STOP: the cluster key and its backup differ"
+   fi
    rm "$PROFILE.pem"
    ```
 
    This needs OpenSSL 1.1.1 or later, as in Cloud Shell. The `openssl` that
    ships with macOS (LibreSSL) has no Ed25519; use Homebrew's `openssl@3`. The
    last line prints the public key. Send it to Agent Relay, which builds it into
-   the app. The key is created once: running the block again reuses the key in
-   the cluster, so the backup and the public key always match it.
+   the app. The key is created once. Running the block again reuses the key in
+   the cluster, or restores it from the Secret Manager backup if the cluster
+   lost it, so desktop builds keep trusting it. If it prints `STOP`, the two
+   copies differ: keep the one whose public key Agent Relay has, and ask
+   Agent Relay before changing either.
 3. **Values:** add this to `values.yaml`, with the hash from Agent Relay, then
    run step 11's `helm upgrade` command again:
 
