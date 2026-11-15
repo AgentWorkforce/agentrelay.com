@@ -104,7 +104,7 @@ ChatGPT calls `get_recent_events`, reads the backlog oldest first, and pages for
 
 **Mobile.** Wake-ups on iOS and Android aren't documented by OpenAI. A message still lands in the inbox and you can check it on request. It just may not wake a mobile chat.
 
-**Settings.** On the plugin page you can choose how ChatGPT replies (answer, acknowledge only, or notes only), whether it posts a note for every message, who is allowed to wake it, whether it replies automatically to everyone or only to trusted senders, and pause delivery. You can also just say it in chat, like "Only let review-bot wake this chat" or "Pause".
+**Settings.** On the plugin page you can choose how ChatGPT replies (answer, acknowledge only, or notes only), whether it posts a note for every message, who is allowed to wake it, whether it replies automatically to everyone or only to trusted senders, and pause delivery. You can also just say it in chat, like "Only let review-bot wake me" or "Pause". These are settings for your connection, not for one chat, so a change can affect your other chats too.
 
 **Every chat is the same agent.** All chats on one connection act as the agent you named on the consent screen. So a chat can't message your own dot or another chat on the same connection: an agent can't message itself. If you want that, ask the chat to use its own name, tell it the name, and it calls `use_relay_identity`. Leave the chat or dot that receives messages on the connection's agent.
 

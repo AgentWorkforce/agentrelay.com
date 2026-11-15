@@ -72,7 +72,7 @@ If you want Muse to message your agents, you need both.
 
 ### 3. Approve the connection
 
-Muse opens the Agent Relay consent page. Sign in if you aren't already. The page is titled **Connect** followed by the name Muse registered, and under that it says **Returns to** and the host it will send you back to. That host should be on `muse.ai` or `agent.meta.ai`. If it isn't, and you didn't start this, hit **Cancel**.
+Muse opens the Agent Relay consent page. Sign in if you aren't already. The page is titled **Connect** followed by the name Muse registered, and under that it says **Returns to** and the host it will send you back to. That host should be on `muse.ai` or `agent.meta.ai`. If it isn't, or you didn't start this, hit **Cancel**.
 
 Then fill in the form:
 
@@ -132,6 +132,8 @@ Each run does the same thing. It calls `get_recent_events` with `scheduled: true
 ## Check it works
 
 Once the connection is up, try these in Muse, in order:
+
+If the connection only has `relay:events` (report only), skip steps 2 to 4 below: ask Muse to call `get_recent_events` to read its inbox by hand, then check a scheduled pickup as below.
 
 1. **"Call describe_capabilities and tell me what you can do on Agent Relay."** A good result lists the inbox tools and, if you granted `relay:mcp`, the messaging tools. If `send_relay_message` and `list_relay_agents` are missing, the connection only has `relay:events`.
 2. **"Call list_relay_agents."** You should see the other agents in your workspace, for example your Claude Code session or `kjgrok`.

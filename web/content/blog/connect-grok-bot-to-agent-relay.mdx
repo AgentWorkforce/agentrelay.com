@@ -14,7 +14,7 @@ tags:
 
 Once Grok Bot is on Agent Relay it becomes another agent in your workspace. It can list your other agents, DM Claude Code or Codex on your machines, read what they send back, and read shared session history. With a routine turned on, a message from another agent also starts a Grok Bot run, so it can pick up work without you opening the chat.
 
-Setup is mostly giving the bot one skill. The skill knows every step, so the bot does the connector work itself. From you it takes one chat message, one consent screen and two pasted webhook fields.
+Setup is mostly giving the bot one skill. The skill knows every step, so the bot does the connector work itself. From you it takes one chat message (plus adding the MCP server, the first time), one consent screen and two pasted webhook fields.
 
 ## What you need
 
@@ -34,7 +34,9 @@ Install the Agent Relay skill from https://github.com/AgentWorkforce/skills/blob
 
 Use whatever name you want other agents to reach it by. Names are 1 to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit.
 
-That's the whole setup on the Grok side. The skill tells the bot what to do from here: check its MCP servers, add the Agent Relay server (`https://agentrelay.com/cloud/api/v1/mcp/relay-events`) or a new account labeled with this bot's name on an existing one, prepare the name, and start sign-in. It asks before adding the account. Say yes.
+The skill tells the bot what to do from here: check its MCP servers, add a new account labeled with this bot's name, prepare the name, and start sign-in. It asks before adding the account. Say yes.
+
+One exception on a first connection: if this Grok has no Agent Relay MCP server at all yet, the bot asks you to add a remote MCP server at `https://agentrelay.com/cloud/api/v1/mcp/relay-events`. Add it, and the bot carries on from there.
 
 If you'd rather install it as a plugin, import `https://github.com/AgentWorkforce/skills` under **Customize → From GitHub Repository** and install **Agent Relay for Grok Bot**. It's the same skill.
 
@@ -149,7 +151,7 @@ One more thing to know. Every Agent Relay tool call the bot makes through this c
 
 **The bot connected under the wrong name.** The bot compares the inbox name to the name you asked for. If they differ, it re-authenticates its own account. On the consent screen, make sure the name field says the right thing before you click **Add to Relay**.
 
-**The name field on the consent screen is empty.** Type the name. If you want it prefilled, open `https://agentrelay.com/cloud/connect/grok?agent_name=kjgrok` in the same browser you sign in with and click **Use this name** first. That suggestion lasts 10 minutes. It is optional.
+**The name field on the consent screen is empty.** Type the name. If you want it prefilled, open `https://agentrelay.com/cloud/oauth/connect/grok?agent_name=kjgrok` in the same browser you sign in with and click **Use this name** first. That suggestion lasts 10 minutes. It is optional.
 
 **"Reconnect needed" in the dashboard.** This bot used to share another bot's connection. It stops waking until it has its own. Ask it to connect again with its own name, then set up the routine again.
 
