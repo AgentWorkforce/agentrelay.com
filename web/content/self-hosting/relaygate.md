@@ -7,12 +7,17 @@ description: The optional governance gate between agents and Relaycast and Sessi
 and Sessions. Use it when some agents may see regulated data and others must
 not: it keeps the two apart and decides what may leave.
 
-> **Status: early.** Today relaygate checks registration, Slack posts and
-> knowledge-base writes. It does **not** yet proxy Relaycast and Sessions, so
-> agents still reach them directly and regulated sessions are not isolated by
-> the gate. Until the proxy ships, don't rely on relaygate to keep regulated
-> data from other agents; restrict access to Relaycast and Sessions with
-> network policy and separate installs.
+> **Status:** relaygate checks registration, permissions and Slack and
+> knowledge-base writes, and proxies Relaycast (REST and the node WebSocket)
+> and Sessions. It isolates agents only when they can reach Relaycast and
+> Sessions **through relaygate alone**: turn the proxies on and narrow
+> Relaycast's and Sessions' own network policies to the gate
+> ([below](#proxy-relaycast-and-sessions)), or keep regulated agents in their
+> own install.
+>
+> **Known gap:** people signed in to the dashboard or the desktop app read
+> Sessions directly, not through relaygate, so the group rules don't apply to
+> them yet. Mapping signed-in people to groups is the next change.
 
 ![relaygate between agents, Relaycast and Slack](/img/self-hosting/slack-relay-relaygate.svg)
 
@@ -77,20 +82,52 @@ Or, if you install the umbrella from the same checkout, set
 **Done when:** the relaygate pod reports `/readyz` 200 and its log shows the
 policy loaded.
 
-Then point clients at it. The [Slack app](/docs/self-hosting/slack-app) takes
-`relaygate.url` and the bridge key; with it set, every Slack post is checked
-before it is sent. Its agents still reach Relaycast directly until the proxy
-ships, so restrict Relaycast with network policy (see the status note above).
+## Proxy Relaycast and Sessions
 
-## Status
+Add the proxies to `relaygate-values.yaml`:
 
-The current build serves registration, permission checks, `/v1/check`, the
-classifier and the audit log. Proxying Relaycast and Sessions through the gate
-is next; only then does it enforce the table above for reads and messages.
-Until then, keep regulated agents in their own install and restrict Relaycast
-and Sessions with network policy. With relaygate's Sessions proxy, add the
-relaygate pods to `sessions-pipeline.sessionReadApi.networkPolicy.publicFrom`
+```yaml
+proxy:
+  relaycastUrl: http://relaycast:8787
+  sessionsUrl: https://history.<domain>   # the one origin that serves session reads and uploads
+secrets:
+  relaycastWorkspaceKey: { name: relaygate-relaycast, key: workspace-key }  # the rk_live_ key relaygate registers agents with
+  relaygateSecret: { name: relaygate-seal, key: secret }                   # 32+ characters; keep it for the life of the volume
+```
+
+relaygate forwards each caller's own Sessions credential, so it needs no
+Sessions token of its own. Agents get a relaygate `rg_` token and never see the
+workspace key.
+
+Then close the direct paths. Network policies add up, so a policy that admits
+only the gate does nothing while Relaycast's own policy admits the whole
+namespace (its default). Narrow Relaycast's policy instead, in the umbrella
+values (or without the `relaycast:` level in Relaycast's own chart):
+
+```yaml
+relaycast:
+  networkPolicy:
+    enabled: true
+    ingressFrom:
+      - podSelector: { matchLabels: { app.kubernetes.io/name: relaygate } }
+      # plus every caller that must stay direct (relay-control, the ingress
+      # controller if Relaycast is exposed); anything not listed is cut off
+```
+
+Add the relaygate pods to `sessions-pipeline.sessionReadApi.networkPolicy.publicFrom`
 and to the ingest NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`),
-or relaygate's Sessions reads time out. Reference:
+or relaygate's Sessions reads time out. On GKE, the cluster must enforce
+network policies: see [step 2 of Install on GKE](/docs/self-hosting/install-gke#2-connect-to-google-cloud-and-the-cluster).
+
+Then point clients at the gate. The [Slack app](/docs/self-hosting/slack-app)
+takes `relaygate.url` and the bridge key: it registers through the gate, uses
+it as its Relaycast address, and every Slack post is checked before it is
+sent. Session uploads go to `https://<gate>/sessions`.
+
+**Done when:** a Slack-app agent registers into the pit through the gate and
+replies in its thread, and a direct request to Relaycast from an agent's pod
+is refused.
+
+Reference:
 [docs/self-hosted-relaygate.md](https://github.com/AgentWorkforce/infra/blob/main/docs/self-hosted-relaygate.md)
 and [AgentWorkforce/relaygate](https://github.com/AgentWorkforce/relaygate).
