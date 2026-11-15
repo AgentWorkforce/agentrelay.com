@@ -15,14 +15,15 @@ describe('docs markdown export for MDX components', () => {
       getLlmsFullText(),
     ]) {
       for (const command of [
-        'npx -y agent-relay@next init',
-        'npx -y agent-relay@next init --hosted',
-        "npx -y agent-relay@next init --key 'WORKSPACE_KEY'",
+        'npx -y agent-relay init',
+        'npx -y agent-relay init --hosted',
+        "npx -y agent-relay init --key 'WORKSPACE_KEY'",
       ]) {
         expect(markdown).toContain(`\`\`\`bash\n${command}\n\`\`\``);
       }
-      expect(markdown).not.toContain('agent-relay@next init --yes');
-      expect(markdown).not.toMatch(/npx -y agent-relay@next init[^\n]*--url/);
+      expect(markdown).not.toContain('agent-relay@next');
+      expect(markdown).not.toContain('agent-relay init --yes');
+      expect(markdown).not.toMatch(/npx -y agent-relay init[^\n]*--url/);
     }
     expect(getDocMarkdown('introduction')!.markdown).toContain('`relay init -i` brings back the interactive questions.');
     expect(getLlmsFullText()).toContain('`relay init -i` brings back the interactive questions.');
@@ -63,7 +64,7 @@ describe('docs markdown export for MDX components', () => {
     const doc = getDocMarkdown('getting-started');
 
     expect(doc?.title).toBe('Getting started');
-    expect(doc?.markdown).toContain('```bash\nnpx -y agent-relay@next init\n```');
+    expect(doc?.markdown).toContain('```bash\nnpx -y agent-relay init\n```');
     expect(getDoc('getting-started')?.toc.map(({ text }) => text)).toEqual(['Solo', 'Team', 'Talk']);
     expect(doc?.markdown).toContain('CLI-only transcripts stay local');
     expect(doc?.markdown).toContain('Start free with the open-source CLI.');
@@ -105,9 +106,9 @@ describe('docs markdown export for MDX components', () => {
       'Agent Relay in ChatGPT',
       '~/.mcp.json',
       '--tools claude,codex',
-      'npx -y agent-relay@next init --uninstall',
-      'npx -y agent-relay@next init --stop',
-      'npx -y agent-relay@next agent register alice --strict > /dev/null',
+      'npx -y agent-relay init --uninstall',
+      'npx -y agent-relay init --stop',
+      'npx -y agent-relay agent register alice --strict > /dev/null',
       'Linux and Windows binaries exist, but those paths were not tested',
     ]) {
       expect(introduction).toContain(detail);
