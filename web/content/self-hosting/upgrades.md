@@ -69,9 +69,10 @@ never authorize resending a message or changing Desktop launch settings.
 
 ### Coordinated receipt patch before a suite release
 
-A paired image patch has been tested on an existing GKE install with its
-original chart. **It has not been proven on AKS.** A full chart upgrade is a
-separate qualification. For an Azure install, have your Agent Relay contact
+A paired image patch has been tested on a **PostgreSQL-backend GKE install**
+with its original chart (agent-relay 0.7.8, suite 2026.11.3). **It has not been
+exercised with SQLite or proven on AKS.** A full chart upgrade is a separate
+qualification. For an Azure install, have your Agent Relay contact
 review the existing release, database backend and backup plan before applying
 this patch. The EKS upgrader does not support Azure.
 
@@ -87,16 +88,22 @@ change backends or enable new features with this patch.
    into chat. If the original chart or values are missing, stop for support.
 2. Back up **both** services' data and wait for a successful backup before
    continuing. PostgreSQL requires a database backup, including Control's
-   database. For SQLite, quiesce writes and take a consistent copy or volume
+   database. Control uses PostgreSQL on every Relaycast backend; back it up
+   even when Relaycast uses SQLite. For SQLite, quiesce writes and take a consistent copy or volume
    snapshot with Relaycast stopped; an Azure SQLite PVC has no automatic
    chart backup by default. Record the recovery procedure and backup IDs.
    See [Backup and restore](/docs/self-hosting/backup-and-restore) and the
    [infra backup runbook](https://github.com/AgentWorkforce/infra/blob/main/docs/selfhost-backup-restore.md).
-3. Verify the published image attestations with `gh attestation verify` for
-   both image references below. If your install uses a private image mirror,
+3. Verify both published image attestations using the commands below. Stop
+   if verification fails. If your install uses a private image mirror,
    copy both images there and verify their digests before applying; preserve
    the existing repository settings. Do not switch the install to public
    registries as a shortcut.
+
+```sh
+gh attestation verify oci://ghcr.io/agentworkforce/relaycast-self-host@sha256:ec062ef901af15cf575b53a71d7eb09f2e6ab6e7c0d5be2da35339a275a5c6cc --owner AgentWorkforce
+gh attestation verify oci://ghcr.io/agentworkforce/relay-control@sha256:d1b6ca95fab240a9d41208d83de3b1f4245408b0765038762f1c419ee60f43bc --owner AgentWorkforce
+```
 
 Create `receipt-images.values.yaml` in your private install directory:
 
@@ -120,7 +127,9 @@ Render with the original chart and original ordered `-f` arguments, then add
 `-f receipt-images.values.yaml` **last**. Compare the rendered manifests with
 the deployed manifests privately. Expected changes are the two server images
 and their migration Job identities. Stop if anything else changes. Have the
-operator approve this diff and the backup plan.
+operator approve this diff, the backup plan and an outage window: Relaycast
+uses a Recreate deployment and is unavailable while its pod restarts and
+migrations/readiness finish. PostgreSQL pods wait for their migration Job.
 
 For example, an existing Azure-guide install uses the following order. Replace
 the release, namespace and paths with those already used by that install; do
@@ -142,8 +151,21 @@ Wait for Control's migration Job to complete. PostgreSQL Relaycast also has a
 migration Job; SQLite migrates when its server starts, so check startup logs
 and readiness instead. Wait for both Deployments to become ready, check the
 API and Relaycast health endpoints and ingress, then perform the MCP receipt
-check above. Store the overlay with the install's other values so the next
-upgrade preserves it.
+check above. Find the actual Job names from the release; do not invent a hash:
+
+```sh
+kubectl -n <namespace> get jobs -l app.kubernetes.io/instance=<existing-release>
+kubectl -n <namespace> wait --for=condition=complete job/<existing-release>-relay-control-migrate-<identity> --timeout=15m
+# PostgreSQL Relaycast only:
+kubectl -n <namespace> wait --for=condition=complete job/<existing-release>-relaycast-migrate-<hash> --timeout=15m
+kubectl -n <namespace> rollout status deploy/<existing-release>-relay-control --timeout=15m
+kubectl -n <namespace> rollout status deploy/<existing-release>-relaycast --timeout=15m
+```
+
+Keep the overlay as the record of this revision. When upgrading to a qualified
+whole release, review its manifest and **remove this patch overlay from the
+values-file list** so it cannot override the new release's images. Do not
+silently carry these fixed digests forward as the last overlay.
 
 **Done when:** backups are recorded, the reviewed pair of digests is running,
 all required migrations completed, both services are healthy, and the bot can
