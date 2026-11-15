@@ -12,6 +12,8 @@
 # Each deploy joins the normal workflow's concurrency group and the web deploy
 # ships only the current tip of main, so a fast deploy never races or rolls
 # back a normal one. Nothing is published and no channel tags move.
+# It never saves to a cache that normal CI or release workflows restore: no
+# setup-node `cache:` is used.
 name: fast-path
 run-name: fast-path ${{ inputs.ref }} (${{ inputs.reason }})
 on:
@@ -34,8 +36,10 @@ on:
         default: false
 permissions:
   contents: read
+# Keyed by run as well as ref: a run waiting for approval would otherwise hold
+# the group, and a third dispatch would silently cancel the pending second.
 concurrency:
-  group: fast-path-${{ inputs.ref }}
+  group: fast-path-${{ inputs.ref }}-${{ github.run_id }}
   cancel-in-progress: false
 jobs:
   check:
@@ -57,7 +61,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
       - name: Install dependencies
         run: npm ci
       - name: Verify recommended-flow release pins
@@ -125,7 +128,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
       - name: Install dependencies
         run: npm ci
       - name: Verify recommended-flow release pins
@@ -177,7 +179,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
       - name: Install dependencies
         run: npm ci
       - name: Prepare optional Worker secrets
