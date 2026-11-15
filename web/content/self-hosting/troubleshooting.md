@@ -56,7 +56,7 @@ HUMAN before running anything that changes the cluster or cloud account.
 | Sessions show as `Session · <id>` | Titles and summaries aren't on: see [After the install](/docs/self-hosting/after-install#3-turn-on-titles-and-summaries) |
 | Output or digest endpoints answer `*_backfill_incomplete` | The coverage Job hasn't run: see [After the install](/docs/self-hosting/after-install#2-establish-output-and-digest-coverage) |
 | The agent filter answers `501 agent_filter_not_ready` | Expected until you [activate it](/docs/self-hosting/after-install#4-optional-the-agent-name-filter) |
-| Transcript reads answer `501 turns_canonical_pointer_invalid` on GKE | A known limit on Cloud Storage: transcripts and metadata don't open yet, while uploads, the session list, events and search work. A fix is in progress. See [Install on GKE](/docs/self-hosting/install-gke#known-limits) |
+| Transcript reads answer `501` on GKE for sessions uploaded before an upgrade | Releases 2026.11.1 to 2026.11.5 recorded Cloud Storage sessions as if they were in S3. After upgrading, run [Re-stamp sessions uploaded before 2026.11.6](/docs/self-hosting/install-gke#re-stamp-sessions-uploaded-before-2026116-upgrades-only) once. A `501 turns_canonical_deadline` on a long session means the read deadline is too short: keep `READ_API_CANONICAL_DEADLINE_MS=15000` from the downloadable `values.yaml` |
 | The setup key is refused with `409 admin_already_signed_in` | The admin already signed in another way. Sign in with that method; the key is only for the very first sign-in |
 | The setup key is expired or lost | Mint a new one with the bootstrap token: step 16 of the EKS guide |
 
