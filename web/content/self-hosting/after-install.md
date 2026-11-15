@@ -61,7 +61,20 @@ ASK THE HUMAN for approval before this helm upgrade.
 
 ## 3. Turn on titles and summaries
 
-Without this, sessions appear as `Session · <id>`. You need the default
+The Sessions workers produce two kinds of text about each session:
+
+- **Summaries.** A short and a long summary per session. The summary worker
+  writes them from the first upload, with no model: until you set one, they're
+  extractive, taken from the session's own text. With a model, the model writes
+  them.
+- **Titles and briefs.** The title on the Sessions list and the brief on the
+  session page. These need a model. Without one, sessions appear as
+  `Session · <id>` and have no brief.
+
+All of them are encrypted with `SUMMARY_MASTER_KEYS` from the install's secrets
+step, so keep that key backed up (see [Secrets](/docs/self-hosting/secrets)).
+
+To turn on model-written summaries, titles and briefs, you need the default
 workspace ID, a model ID and an API key for an OpenAI-compatible endpoint.
 
 ```sh
@@ -94,9 +107,18 @@ In `values.yaml`, replace `__LLM_MODEL__` with your model ID, and under
 
 Keep the `image` and `sweepSeconds` lines already in `nativeBrief`. Then run the
 `helm upgrade` from step 11 and repeat step 12's migration check. New
-workspaces need their ID added to `workspaceIds`.
+workspaces need their ID added to `workspaceIds`. List real workspace IDs; `*`
+isn't accepted.
 
 **Done when:** a new session gets a generated title on the dashboard.
+
+### Where summaries show up
+
+- **Dashboard:** the session page shows the brief under **Summary**.
+- **Agents, over your install's MCP:** `get_session_summary` returns one
+  session's summary. `list_session_summaries` lists sessions but doesn't
+  include their short summaries yet: its rows report
+  `short_summary_status: unsupported` on this release.
 
 <!-- agent
 The API key is entered by the human: ASK THE HUMAN to run the "read -rs" line
@@ -118,8 +140,8 @@ Run an OpenAI-compatible gateway, then add to the settings above:
 Set `OPENAI_BASE_URL` for `bob-costas` to the same address, and
 `BOB_COSTAS_MODEL` to the gateway's model ID.
 
-- The gateway must serve both the Responses API (`<baseUrl>/responses`, for
-  titles and briefs) and chat completions (for summaries).
+- The gateway must serve the Responses API (`<baseUrl>/responses`). Titles,
+  briefs and summaries all use it.
 - Give the gateway its own cloud identity for the model provider. Don't reuse
   the Agent Relay roles.
 - `agent-relay-llm` holds the gateway's key, under `OPENAI_API_KEY`.
