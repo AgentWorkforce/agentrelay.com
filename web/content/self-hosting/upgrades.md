@@ -151,15 +151,19 @@ Wait for Control's migration Job to complete. PostgreSQL Relaycast also has a
 migration Job; SQLite migrates when its server starts, so check startup logs
 and readiness instead. Wait for both Deployments to become ready, check the
 API and Relaycast health endpoints and ingress, then perform the MCP receipt
-check above. Find the actual Job names from the release; do not invent a hash:
+check above. Find the actual resource names from the release; do not invent a
+hash or assume a Helm release prefix. The Azure and GKE profile values use
+`fullnameOverride`, so their Deployments are normally `relay-control` and
+`relaycast`, with Jobs named `relay-control-migrate-<identity>` and
+`relaycast-migrate-<hash>` respectively:
 
 ```sh
-kubectl -n <namespace> get jobs -l app.kubernetes.io/instance=<existing-release>
-kubectl -n <namespace> wait --for=condition=complete job/<existing-release>-relay-control-migrate-<identity> --timeout=15m
+kubectl -n <namespace> get jobs,deployments -l app.kubernetes.io/instance=<existing-release>
+kubectl -n <namespace> wait --for=condition=complete job/<actual-control-migration-job> --timeout=15m
 # PostgreSQL Relaycast only:
-kubectl -n <namespace> wait --for=condition=complete job/<existing-release>-relaycast-migrate-<hash> --timeout=15m
-kubectl -n <namespace> rollout status deploy/<existing-release>-relay-control --timeout=15m
-kubectl -n <namespace> rollout status deploy/<existing-release>-relaycast --timeout=15m
+kubectl -n <namespace> wait --for=condition=complete job/<actual-relaycast-migration-job> --timeout=15m
+kubectl -n <namespace> rollout status deploy/<actual-control-deployment> --timeout=15m
+kubectl -n <namespace> rollout status deploy/<actual-relaycast-deployment> --timeout=15m
 ```
 
 Keep the overlay as the record of this revision. When upgrading to a qualified
