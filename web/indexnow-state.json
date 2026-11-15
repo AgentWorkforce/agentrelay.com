@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 104,
+  "count": 109,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -24,6 +24,11 @@
     "https://agentrelay.com/agents/use-cases",
     "https://agentrelay.com/agents/vendor-monitor",
     "https://agentrelay.com/blog",
+    "https://agentrelay.com/blog/connect-chatgpt-dots-to-agent-relay",
+    "https://agentrelay.com/blog/connect-chatgpt-to-agent-relay",
+    "https://agentrelay.com/blog/connect-gemini-to-agent-relay",
+    "https://agentrelay.com/blog/connect-grok-bot-to-agent-relay",
+    "https://agentrelay.com/blog/connect-muse-to-agent-relay",
     "https://agentrelay.com/blog/do-we-need-forward-deployed-agents",
     "https://agentrelay.com/blog/from-reason-network-to-agent-relay",
     "https://agentrelay.com/blog/go-to-bed-wake-up-to-a-finished-product",
