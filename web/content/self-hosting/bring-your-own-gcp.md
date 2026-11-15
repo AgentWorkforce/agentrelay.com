@@ -173,8 +173,10 @@ the project:
 
 - to create the resources: Cloud SQL Admin, Storage Admin, Pub/Sub Admin, Cloud
   Memorystore Redis Admin, DNS Administrator (for the private Cloud SQL zone),
-  Secret Manager Admin, Compute Network Viewer, and permission to set IAM
-  policy on the resources above; or project Owner or Editor;
+  Secret Manager Admin, Compute Network Viewer, Service Account Admin (only
+  with `desktop_feed_bucket_name`: it creates relay-control's Google service
+  account and its bindings), and permission to set IAM policy on the resources
+  above; or project Owner;
 - `roles/container.developer` (or admin) on the cluster, plus Kubernetes RBAC to
   create a namespace and cluster-scoped objects;
 - `roles/secretmanager.secretAccessor` on the Cloud SQL admin password secret.

@@ -7,7 +7,7 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 **Done when** line before you move on. Expect about an hour and a half, most of
 it waiting on Google Cloud: the HTTPS certificate alone can take up to an hour.
 
-**Release:** `agent-relay-2026.11.6` (infra commit `6b98a4ab`, chart 0.7.11).
+**Release:** `agent-relay-2026.11.9` (infra commit `5370050a`, chart 0.7.21).
 Read [Known limits](#known-limits) before a production rollout.
 
 **You need:**
@@ -55,14 +55,14 @@ curl -fsSLO "$base/SHA256SUMS"
 for f in $(awk '{print $2}' SHA256SUMS); do curl -fsSLO "$base/$f"; done
 shasum -a 256 -c SHA256SUMS
 git clone https://github.com/AgentWorkforce/infra.git
-git -C infra checkout agent-relay-2026.11.6
-test "$(git -C infra rev-parse HEAD)" = 6b98a4abb7d9ac280d8512ef557c16aef53fd93d && echo "release ok"
-mkdir release && gh release download agent-relay-2026.11.6 -R AgentWorkforce/infra -D release
-(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.11.tgz) | tail -1
+git -C infra checkout agent-relay-2026.11.9
+test "$(git -C infra rev-parse HEAD)" = 5370050a974f330b120831ef376903ff2f7447b7 && echo "release ok"
+mkdir release && gh release download agent-relay-2026.11.9 -R AgentWorkforce/infra -D release
+(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.21.tgz) | tail -1
 ```
 
 No `gh`? Download the same assets from the
-[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.6)
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.9)
 into `release/`.
 
 Tools: `gcloud` (with `gke-gcloud-auth-plugin`), `terraform` 1.11 or later (or
@@ -88,7 +88,7 @@ gcloud auth login && gcloud auth application-default login
 gcloud config set project <project id>
 gcloud services enable container.googleapis.com sqladmin.googleapis.com servicenetworking.googleapis.com \
   redis.googleapis.com pubsub.googleapis.com secretmanager.googleapis.com dns.googleapis.com \
-  artifactregistry.googleapis.com compute.googleapis.com
+  artifactregistry.googleapis.com compute.googleapis.com iamcredentials.googleapis.com
 gcloud container clusters get-credentials <cluster> --location <region>   # add --internal-ip for a private endpoint
 kubectl auth can-i '*' '*' --all-namespaces
 gcloud container clusters describe <cluster> --location <region> \
@@ -152,6 +152,7 @@ network_self_link    = "projects/<project id>/global/networks/<cluster VPC>"
 sessions_bucket_name = "<globally unique bucket name, e.g. acme-agent-relay-sessions>"
 deletion_protection  = true
 image_mirror_repository = "agent-relay-mirror"   # step 5's registry, readable by the GKE nodes
+# desktop_feed_bucket_name = "<globally unique, e.g. acme-agent-relay-desktop-feed>"   # optional: the desktop app's update feed
 # gke_node_service_account = "<email>"   # only if the node pool has its own service account
 # kms_key_name = "projects/<p>/locations/<region>/keyRings/<ring>/cryptoKeys/<key>"   # optional CMEK
 labels = { app = "agent-relay" }
@@ -165,7 +166,19 @@ cd -
 ```
 
 **Done when:** the `grep` prints nothing, the plan shows `29 to add, 0 to
-change, 0 to destroy` (27 without `image_mirror_repository`), the apply completes, and `managed-values.json` exists.
+change, 0 to destroy` (5 more with `desktop_feed_bucket_name`, 2 fewer without
+`image_mirror_repository`), the apply completes, and `managed-values.json`
+exists.
+
+**`desktop_feed_bucket_name` (optional)** gives your branded desktop app a
+signed update feed in your project: a private bucket, and a Google service
+account that relay-control uses through Workload Identity to write releases
+there and sign download links. Creating that service account needs Service
+Account Admin. `managed-values.json` carries the feed's settings into step 11.
+If your `values.yaml` sets `relay-control.extraEnv`, copy the `env` entries
+from `terraform output desktop_feed` into it: Helm replaces a list instead of
+merging it. The feed also needs a signing key: see
+[Signed desktop update feed](#signed-desktop-update-feed-optional).
 
 **Where the Terraform state lives.** The example has no `backend` block, so
 `terraform init` keeps the state in a local file. To keep it in Cloud Storage
@@ -411,7 +424,7 @@ instead of this block. vals works with Google Secret Manager.
 ## 11. Install with Helm
 
 ```sh
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.11.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.21.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -447,7 +460,7 @@ done
 bash cloud-sql-setup.sh post
 kubectl -n $NAMESPACE rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n $NAMESPACE get jobs -o name | grep search-indexer-bootstrap); do kubectl -n $NAMESPACE delete "$j"; done
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.11.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.21.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -558,12 +571,72 @@ credential. STOP on anything but "first admin set".
 - **Problems:** [Troubleshooting](/docs/self-hosting/troubleshooting), then
   [Support](/docs/self-hosting/support).
 
+## Signed desktop update feed (optional)
+
+With a feed, your branded desktop app offers each new version to its users and
+installs it when they choose to update. Without one, a new version means
+installing the new build over the old one. Agent Relay builds and publishes
+your desktop app, and gives you its profile ID and the SHA-256 hash of the
+token it publishes with. The token itself stays with Agent Relay.
+
+1. **Bucket:** set `desktop_feed_bucket_name` in step 4 and apply.
+2. **Signing key:** create an Ed25519 key for the profile and store it in the
+   cluster. The private key never leaves your cluster and Secret Manager:
+
+   ```sh
+   PROFILE=<profile id from Agent Relay>; umask 077
+   if ! kubectl -n $NAMESPACE get secret desktop-feed-keys >/dev/null 2>&1; then
+     openssl genpkey -algorithm ed25519 -out "$PROFILE.pem"
+     kubectl -n $NAMESPACE create secret generic desktop-feed-keys --from-file="$PROFILE.pem"
+     rm "$PROFILE.pem"
+   fi
+   kubectl -n $NAMESPACE get secret desktop-feed-keys -o jsonpath="{.data.$PROFILE\.pem}" | base64 -d > "$PROFILE.pem"
+   gcloud secrets describe agent-relay-desktop-feed-key-$PROFILE >/dev/null 2>&1 \
+     || gcloud secrets create agent-relay-desktop-feed-key-$PROFILE --data-file="$PROFILE.pem"
+   openssl pkey -in "$PROFILE.pem" -pubout -outform DER | tail -c 32 | base64
+   rm "$PROFILE.pem"
+   ```
+
+   This needs OpenSSL 1.1.1 or later, as in Cloud Shell. The `openssl` that
+   ships with macOS (LibreSSL) has no Ed25519; use Homebrew's `openssl@3`. The
+   last line prints the public key. Send it to Agent Relay, which builds it into
+   the app. The key is created once: running the block again reuses the key in
+   the cluster, so the backup and the public key always match it.
+3. **Values:** add this to `values.yaml`, with the hash from Agent Relay, then
+   run step 11's `helm upgrade` command again:
+
+   ```yaml
+   relay-control:
+     desktopFeed:
+       signingKeys:
+         existingSecret: desktop-feed-keys
+         profiles: [<profile id>]
+     extraEnv:
+       - { name: SELFHOST_DESKTOP_FEED_KEY_LABEL, value: f1 }
+       - { name: SELFHOST_DESKTOP_FEED_PUBLISHER_TOKEN_HASHES, value: '{"<profile id>":["<sha256 hex>"]}' }
+   ```
+
+   Keep the feed entries from `terraform output desktop_feed` in the same
+   `extraEnv` list: this list replaces the one in `managed-values.json`.
+4. **Register the profile:** an organization admin registers the profile and
+   binds the workspaces whose users get the app, with Agent Relay. The public
+   key the control API returns must match the one from step 2.
+
+**Done when:** `kubectl -n $NAMESPACE get pods` shows relay-control ready after
+the upgrade, and after Agent Relay publishes the first version to your feed,
+the dashboard's **Downloads** card lists it.
+
+<!-- agent
+Never print, copy or send the private key. Send only the public key line.
+ASK THE HUMAN before creating the Secret Manager secret.
+-->
+
 ## Re-stamp sessions uploaded before 2026.11.6 (upgrades only)
 
 Releases 2026.11.1 to 2026.11.5 recorded sessions uploaded to GCS as if they
 were in S3, so the read API refuses them (`501`). 2026.11.6 records new uploads
-correctly; this one-off tool fixes the rows written before. A fresh 2026.11.6
-install doesn't need it. It changes only rows whose objects it finds in your
+correctly; this one-off tool fixes the rows written before. A fresh install of
+2026.11.6 or later doesn't need it. It changes only rows whose objects it finds in your
 bucket, writes nothing in plan mode, and is safe to rerun.
 
 Run it in a terminal where you ran `cd agent-relay-install && source settings.sh`
@@ -649,7 +722,7 @@ equal to the `proven` in the plan line you kept, and `exit 0`.
 
 ## Known limits
 
-What release `agent-relay-2026.11.6` doesn't do on GKE yet:
+What release `agent-relay-2026.11.9` doesn't do on GKE yet:
 
 1. **Upgrading from 2026.11.5 or earlier: re-stamp once.** Those releases
    recorded sessions uploaded to Cloud Storage as if they were in S3, so their
@@ -677,10 +750,6 @@ What release `agent-relay-2026.11.6` doesn't do on GKE yet:
    indexer each run one replica.
 8. **Not covered by this guide:** GKE Autopilot, Shared VPC, and titles and
    summaries with a model.
-9. **Desktop builds don't update themselves.** The control API's signed desktop
-   update feed isn't available on Google Cloud yet. A newer desktop version
-   means installing the new build over the old one. See
-   [Desktop app rollout](/docs/self-hosting/desktop-app).
 
 ## Starting from an empty project
 

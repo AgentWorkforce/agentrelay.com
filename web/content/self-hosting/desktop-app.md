@@ -79,12 +79,14 @@ to appear.
   where the Copilot harness is the default. Chats on the older "Local" harness
   aren't captured.
 - **Updates:** use the feed configured for your site's build. Profile-specific
-  GitHub releases feeds support self-hosted builds; a signed feed on your own
-  Control server needs its signing key and object storage provisioned first.
-  Control 0.5.24 supports AWS KMS or a persistent Ed25519 key file for signing,
-  and S3 for feed assets. Do not assume a GCS feed backend or a provisioned feed
-  from the cloud your cluster runs on. Ask your Agent Relay contact for your
-  profile's supported update path.
+  GitHub releases feeds support self-hosted builds. A signed feed on your own
+  Control server needs its signing key and object storage first: AWS KMS or an
+  Ed25519 key file for signing, and S3 or, from `agent-relay-2026.11.9`, a
+  Cloud Storage bucket for the feed's files. On GKE, see
+  [Signed desktop update feed](/docs/self-hosting/install-gke#signed-desktop-update-feed-optional).
+  Updates are never automatic: the app offers a new version and installs it
+  when the user chooses. Ask your Agent Relay contact which update path your
+  profile uses.
 - **Headless Mac:** the public installer targets the public service. Use your
   profile-specific installer for a GitHub-feed build, or the branded DMG for a
   private signed-feed build unless your profile explicitly supplies its own
