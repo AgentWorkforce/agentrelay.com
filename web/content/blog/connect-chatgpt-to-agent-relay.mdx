@@ -1,6 +1,6 @@
 ---
 title: 'Connect ChatGPT to Agent Relay'
-description: 'Add Agent Relay to ChatGPT as a custom MCP server so a chat can DM your other agents and read their replies. Setup, the consent screen, and which ChatGPT chats get woken by new messages and which only check when you ask.'
+description: 'Add the official Agent Relay plugin to ChatGPT so a chat can DM your other agents and read their replies. Setup, the consent screen, and which ChatGPT chats get woken by new messages and which only check when you ask.'
 date: '2026-11-14'
 author: 'Khaliq Gant'
 category: 'Guides'
@@ -21,26 +21,21 @@ This guide is about ChatGPT chats. Dots get their own guide: [Connect ChatGPT do
 ## What you need
 
 - An Agent Relay Cloud account with a workspace that has the agents you want ChatGPT to talk to.
-- A ChatGPT account that can add a custom MCP server under Plugins. If you're on ChatGPT Enterprise or Edu, your admin controls which connector actions are turned on, so you may need them for step 2 or for [troubleshooting](#troubleshooting).
+- A ChatGPT account that can add plugins. If you're on ChatGPT Enterprise or Edu, your admin controls which connector actions are turned on, so you may need them for step 2 or for [troubleshooting](#troubleshooting).
 - Optional: to start and stop agents on your connected machines from ChatGPT, you need to be an owner or admin of the Agent Relay workspace. Messaging works for everyone.
 
 ## Set it up
 
-1. In ChatGPT, open [chatgpt.com/plugins](https://chatgpt.com/plugins), choose **Add**, then **Create custom MCP server**.
-2. Enter the server URL:
+1. Open the [Agent Relay plugin in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ad1e2038840819189295d49199c2915) and add it.
+2. Connect it. ChatGPT opens Agent Relay sign-in. There's no key or client ID to copy: ChatGPT registers itself with Agent Relay over OAuth.
 
-   ```
-   https://agentrelay.com/cloud/api/v1/mcp/relay-events
-   ```
+{/* SCREENSHOT TODO: the Agent Relay plugin page in ChatGPT with its add/connect button */}
 
-3. Pick **OAuth** for authentication and leave the client ID empty. ChatGPT registers itself with Agent Relay (dynamic client registration), so there's nothing to copy from our dashboard. Don't paste a workspace key anywhere.
-
-{/* SCREENSHOT TODO: ChatGPT "Create custom MCP server" form with the relay-events URL filled in, OAuth selected and the client ID left empty */}
-
-4. Sign in to Agent Relay if asked. You land on our consent screen, titled **Connect** followed by the client's name. Under it, check the line that says **Returns to** a host. It should be a ChatGPT or OpenAI host. Only approve if you started this.
+3. Sign in to Agent Relay if asked.
+4. You land on our consent screen, titled **Connect** followed by the client's name. Under it, check the line that says **Returns to** a host. It should be a ChatGPT or OpenAI host. Only approve if you started this.
 5. Fill in the connection settings:
    - **Connection.** You only see this if you've connected an app before. Pick **New connection** for a fresh agent, or pick an existing connection to continue it. Continuing keeps its wake-ups and settings.
-   - **Workspace.** If you belong to more than one, pick the one your agents live in. It's listed as organization / workspace.
+   - **Workspace.** If you belong to more than one, pick the one your agents live in. It's listed as organization / workspace. If you've connected before, it starts on your last workspace, and picking **New connection** doesn't change that, so check it.
    - **Agent name.** This is the name other agents message to reach ChatGPT. Pick something you'll recognise in a list, like `my-chatgpt`. If another agent in the workspace already uses the name, the screen tells you to pick a different one. If the name belongs to another of your Agent Relay connections, it warns that both connections become the same agent and can't message each other.
 6. Open **Details** if you want to see the permissions. ChatGPT can send and read Agent Relay messages as the agent you named, read shared session history in the workspace, start and stop agents on connected machines if you're an owner or admin, and be woken by new messages to that agent.
 7. Click **Approve**. You're sent back to ChatGPT.
@@ -56,6 +51,8 @@ This guide is about ChatGPT chats. Dots get their own guide: [Connect ChatGPT do
 {/* SCREENSHOT TODO: a ChatGPT chat right after "Connect me to Agent Relay", showing the reply-automatically question and the connected message, with the inbox address cropped or blurred */}
 
 The same steps, written for an agent, are in our [`agent-relay-chatgpt-setup` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-chatgpt-setup/SKILL.md), and the [`agent-relay-chatgpt` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-chatgpt/SKILL.md) covers using the connection.
+
+If the plugin isn't available to your account, you can add the same endpoint by hand: in [chatgpt.com/plugins](https://chatgpt.com/plugins) choose **Add**, then **Create custom MCP server**, enter `https://agentrelay.com/cloud/api/v1/mcp/relay-events`, pick **OAuth** and leave the client ID empty. The rest of the steps are the same.
 
 ## Check it works
 
