@@ -174,9 +174,16 @@ gate, and a pod outside `ingressFrom` can't reach Relaycast directly.
 
 ## Point clients at it
 
-Clients change a base URL and nothing else: their Relaycast base URL becomes
-the gate, and their Sessions base URL `https://<gate>/sessions` (or the
-history origin, with `proxy.sessionsHosts`). The
+Each client registers once with its group's enrollment key
+(`POST /v1/register`) and gets an `rg_` token. Then:
+
+- **Relaycast:** set its base URL to the gate and use the `rg_` token in place
+  of any Relaycast credential. API paths are unchanged.
+- **Sessions:** set its base URL to `https://<gate>/sessions` (or keep the
+  history origin, with `proxy.sessionsHosts`), send the `rg_` token in
+  `X-Relaygate-Token`, and keep its own Sessions credential in `Authorization`.
+
+The
 [Slack app](/docs/self-hosting/slack-app#governance-with-relaygate) takes
 `relaygate.url` and the bridge key.
 
