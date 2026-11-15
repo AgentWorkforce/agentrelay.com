@@ -203,27 +203,36 @@ enrollment key in Agent Relay. Setup exchanges it for a sign-in with no browser
 and no device approval. This applies to the macOS headless installer and the
 Linux package, from the next release after `2026.11.9`.
 
-Put only the key in a file and pass its path, or pass `-` to read the key from
-standard input. On macOS:
+Put only the key in a file and pass its path. Prefer this form for an unattended
+installer. Pass `-` to read from standard input only when an existing secret
+source needs to supply the key without putting it in a command argument. On
+macOS:
 
 ```sh
 ~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --enrollment-key-file /path/to/key --providers detected --sharing selected
-printf '%s' "$KEY" | ~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --enrollment-key-file - --sharing selected
+~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --enrollment-key-file - --providers detected --sharing selected < /path/to/key
 ```
 
 On Linux:
 
 ```sh
 /usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --enrollment-key-file /path/to/key --providers detected --sharing selected
-printf '%s' "$KEY" | /usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --enrollment-key-file - --sharing selected
+/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --enrollment-key-file - --providers detected --sharing selected < /path/to/key
 ```
 
 The file holds only the key. It must be owned by you with mode 0600
 (`chmod 600`) and must not be a symbolic link. The key never goes on a command
 line, in output, or in logs. The core reads the file itself and deletes it once
-Agent Relay accepts the key, because a key signs in only once. With `-`, setup
-copies standard input to a private temporary file (mode 0600) and removes it
-when it exits.
+Agent Relay accepts the key, because a key signs in only once. If Agent Relay
+does not accept the key, the file is kept. A file replaced after the core reads
+it is also left alone.
+
+With `-`, setup copies standard input to a private temporary file (mode 0600)
+and removes that copy when setup returns normally; it does not remove the
+original input source. If setup is interrupted or killed while it waits, an
+owner-only `agent-relay-enrollment-*` temporary file can remain and can still
+hold an unspent key. Before retrying, securely inspect and remove such a file
+after confirming that no setup process is using it.
 
 Setup waits, within `--timeout` and with or without `--wait`, until the key has
 signed in and the workspace is connected, or the sign-in fails. A failed
@@ -234,7 +243,7 @@ sign-in reports one of these phases:
 | `enrollment_key_rejected` | Agent Relay did not accept the key. The message is the same whether the key was wrong, expired, revoked, or already used; ask the administrator for a new one. |
 | `enrollment_key_busy` | Agent Relay stayed busy after a few retries. Rerun setup with the same key. |
 | `enrollment_key_unsupported` | The site does not offer enrollment keys. Setup falls back to the device code: it prints the device instructions and exits with status 2 without waiting, even with `--wait`. Rerun setup with `--wait` to wait for the approval. |
-| `enrollment_key_unused` | The computer is already signed in; the key is ignored. |
+| `enrollment_key_unused` | The computer is already signed in or another sign-in is under way; the key is ignored. |
 
 Device approval stays the default. A computer whose session expired or was
 revoked renews it by device approval, and a site that does not offer
