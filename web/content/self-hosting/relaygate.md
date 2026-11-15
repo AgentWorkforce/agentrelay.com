@@ -167,7 +167,11 @@ networkPolicy:
 ```
 
 Restrict Sessions to the gate the same way. Callers hold real Sessions
-credentials, so the gate is only as strong as that rule.
+credentials, so the gate is only as strong as that rule. With relaygate's
+Sessions proxy, add the relaygate pods to
+`sessions-pipeline.sessionReadApi.networkPolicy.publicFrom` and to the ingest
+NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`), or
+relaygate's Sessions reads time out.
 
 **Done when:** an agent with an `rg_` token reaches Relaycast through the
 gate, and a pod outside `ingressFrom` can't reach Relaycast directly.
