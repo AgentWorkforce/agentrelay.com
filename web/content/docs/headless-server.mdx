@@ -200,8 +200,9 @@ app launcher as `/usr/bin/agent-relay-desktop`. Older packages used the CLI’s
 
 For an unattended install, an administrator mints a single-use, per-employee
 enrollment key in Agent Relay. Setup exchanges it for a sign-in with no browser
-and no device approval. This applies to the macOS headless installer and the
-Linux package, from the next release after `2026.11.9`.
+and no device approval. Use a build whose `setup --help` output lists
+`--enrollment-key-file`. The feature landed after `2026.11.10-beta.1`; that beta
+and stable `2026.11.9` do not include it. Use device approval on older builds.
 
 Put only the key in a file and pass its path. Prefer this form for an unattended
 installer. Pass `-` to read from standard input only when an existing secret
@@ -209,15 +210,15 @@ source needs to supply the key without putting it in a command argument. On
 macOS:
 
 ```sh
-~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --enrollment-key-file /path/to/key --providers detected --sharing selected
-~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --enrollment-key-file - --providers detected --sharing selected < /path/to/key
+~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file /path/to/key --providers detected --sharing selected
+~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file - --providers detected --sharing selected < /path/to/key
 ```
 
 On Linux:
 
 ```sh
-/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --enrollment-key-file /path/to/key --providers detected --sharing selected
-/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --enrollment-key-file - --providers detected --sharing selected < /path/to/key
+/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file /path/to/key --providers detected --sharing selected
+/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file - --providers detected --sharing selected < /path/to/key
 ```
 
 The file holds only the key. It must be owned by you with mode 0600
@@ -235,10 +236,10 @@ hold an unspent key. Before retrying, securely inspect and remove such a file
 after confirming that no setup process is using it.
 
 Setup waits, within `--timeout` and with or without `--wait`, until the key has
-signed in and the workspace is connected, or the sign-in fails. A failed
-sign-in reports one of these phases:
+signed in and the workspace is connected, or the sign-in fails. Setup reports
+one of these enrollment-key outcomes:
 
-| Phase | Meaning |
+| Outcome | Meaning |
 | --- | --- |
 | `enrollment_key_rejected` | Agent Relay did not accept the key. The message is the same whether the key was wrong, expired, revoked, or already used; ask the administrator for a new one. |
 | `enrollment_key_busy` | Agent Relay stayed busy after a few retries. Rerun setup with the same key. |
