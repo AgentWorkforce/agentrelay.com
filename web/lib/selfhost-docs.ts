@@ -41,6 +41,8 @@ export const SELFHOST_GUIDES: readonly SelfhostGuideEntry[] = [
   { slug: 'okta-sso', group: 'Configure' },
   { slug: 'after-install', group: 'Configure' },
   { slug: 'desktop-app', group: 'Configure' },
+  { slug: 'slack-app', group: 'Optional components' },
+  { slug: 'relaygate', group: 'Optional components' },
   { slug: 'upgrades', group: 'Operate' },
   { slug: 'backup-and-restore', group: 'Operate' },
   { slug: 'telemetry', group: 'Operate' },

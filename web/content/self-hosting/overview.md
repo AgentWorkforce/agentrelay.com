@@ -64,6 +64,11 @@ Okta](/docs/self-hosting/okta-sso), [after the
 install](/docs/self-hosting/after-install) (titles and summaries) and the
 [desktop app rollout](/docs/self-hosting/desktop-app).
 
+Optional components, after the install: the [Slack app](/docs/self-hosting/slack-app)
+(people talk to agents in Slack, one agent per thread) and
+[relaygate](/docs/self-hosting/relaygate) (groups, permissions and a classifier
+between agents and Relaycast).
+
 ## Licensing
 
 - **Free to self-host.** Any organization can run the self-hosted stack in its

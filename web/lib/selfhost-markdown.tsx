@@ -102,11 +102,28 @@ function SafeLink({ href, children }: React.AnchorHTMLAttributes<HTMLAnchorEleme
   );
 }
 
+/**
+ * Only the site's own self-hosting diagrams render; any other image (remote,
+ * data:, another path) is dropped, so a guide can never load something remote.
+ */
+export function localDiagramSrc(src: unknown): string | null {
+  return typeof src === 'string' && /^\/img\/self-hosting\/[a-z0-9-]+\.(svg|png)$/.test(src) ? src : null;
+}
+
+function LocalDiagram({ src, alt }: { src?: string; alt?: string }) {
+  const local = localDiagramSrc(src);
+  if (!local) return null;
+  return (
+    <a href={local}>
+      <img src={local} alt={alt ?? ''} loading="lazy" style={{ maxWidth: '100%', height: 'auto' }} />
+    </a>
+  );
+}
+
 const components = {
   pre: CodeBlock,
   a: SafeLink,
-  // The guides carry no images; never let markdown load a remote one.
-  img: () => null,
+  img: LocalDiagram,
 };
 
 export function renderSelfhostMarkdown(markdown: string): { content: React.ReactNode; toc: TocItem[] } {

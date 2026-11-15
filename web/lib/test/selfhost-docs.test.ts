@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -250,3 +250,24 @@ describe('downloadable helper files', () => {
     }
   });
 });
+
+describe('self-hosting diagrams', () => {
+  it('renders only the site\'s own diagrams', async () => {
+    const { localDiagramSrc } = await import('../selfhost-markdown');
+    expect(localDiagramSrc('/img/self-hosting/slack-relay-relaygate.svg')).toBe('/img/self-hosting/slack-relay-relaygate.svg');
+    expect(localDiagramSrc('https://evil.example/x.svg')).toBeNull();
+    expect(localDiagramSrc('//evil.example/img/self-hosting/x.svg')).toBeNull();
+    expect(localDiagramSrc('/img/self-hosting/../../secret.svg')).toBeNull();
+    expect(localDiagramSrc('data:image/svg+xml;base64,AAAA')).toBeNull();
+    expect(localDiagramSrc('/img/other/x.svg')).toBeNull();
+  });
+
+  it('every diagram a guide references exists', () => {
+    for (const guide of getSelfhostGuides()) {
+      for (const [, src] of guide.source.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)) {
+        expect(existsSync(path.join(process.cwd(), 'public', src)), `${guide.slug}: ${src}`).toBe(true);
+      }
+    }
+  });
+});
+
