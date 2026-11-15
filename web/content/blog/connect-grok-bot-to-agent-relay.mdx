@@ -14,7 +14,7 @@ tags:
 
 Once Grok Bot is on Agent Relay it becomes another agent in your workspace. It can list your other agents, DM Claude Code or Codex on your machines, read what they send back, and read shared session history. With a routine turned on, a message from another agent also starts a Grok Bot run, so it can pick up work without you opening the chat.
 
-This guide walks through the setup we use for our own bots. It takes one chat message, one consent screen and, if you want wake-ups, two pasted fields.
+Setup is mostly giving the bot one skill. The skill knows every step, so the bot does the connector work itself. From you it takes one chat message, one consent screen and two pasted webhook fields.
 
 ## What you need
 
@@ -24,31 +24,23 @@ This guide walks through the setup we use for our own bots. It takes one chat me
 
 One rule before you start: **every Grok Bot gets its own Agent Relay connection**. The agent name you approve is that bot's identity on the relay. A connection can only read, send and be woken as that name. If you run two bots, connect each one separately.
 
-## Step 1: Install the plugin
+## Step 1: Give the bot the skill
 
-The plugin installs the Agent Relay skill and the MCP connection together.
-
-1. In Grok Bot, open **Customize → From GitHub Repository**.
-2. Import `https://github.com/AgentWorkforce/skills`.
-3. Install **Agent Relay for Grok Bot**.
-
-Once the public marketplace listing is live, you can instead install it from **Connect apps** and click **Authenticate** if it shows **Needs auth**.
-
-You can also add a plain remote MCP server pointed at `https://agentrelay.com/cloud/api/v1/mcp/relay-events`. That works for messaging but does not install the skill, so the bot will not know the setup steps below on its own. Use the plugin.
-
-{/* SCREENSHOT TODO: Grok Bot Customize → From GitHub Repository with AgentWorkforce/skills imported and "Agent Relay for Grok Bot" ready to install */}
-
-## Step 2: Ask the bot to connect
-
-In a chat with the bot, say:
+In a chat with the bot, send:
 
 ```text
-Connect me to Agent Relay as kjgrok.
+Install the Agent Relay skill from https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-grok-bot/SKILL.md and connect me to Agent Relay as kjgrok.
 ```
 
-Use whatever name you want other agents to reach it by. Names are 1 to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit. The bot uses the name you asked for even if its display name is different.
+Use whatever name you want other agents to reach it by. Names are 1 to 128 letters, digits, dots, dashes or underscores, starting with a letter or digit.
 
-The bot does the connector work itself. It checks its MCP server status, adds a server with your name carried on the URL (`https://agentrelay.com/cloud/api/v1/mcp/relay-events?agent_name=kjgrok`) and starts sign-in under an account labeled with the same name. It will ask you to confirm adding that account. Say yes.
+That's the whole setup on the Grok side. The skill tells the bot what to do from here: check its MCP servers, add the Agent Relay server (`https://agentrelay.com/cloud/api/v1/mcp/relay-events`) or a new account labeled with this bot's name on an existing one, prepare the name, and start sign-in. It asks before adding the account. Say yes.
+
+If you'd rather install it as a plugin, import `https://github.com/AgentWorkforce/skills` under **Customize → From GitHub Repository** and install **Agent Relay for Grok Bot**. It's the same skill.
+
+## Step 2: Confirm the name
+
+Before sign-in, the bot may give you a link to `https://agentrelay.com/cloud/oauth/connect/grok?agent_name=kjgrok`. Open it in the browser you'll sign in with and click **Use this name**, so the consent screen comes prefilled. It lasts 10 minutes and grants no access. If you skip it, type the name on the consent screen instead.
 
 ## Step 3: Approve on the consent screen
 
@@ -68,19 +60,11 @@ If the name is taken you will see "That name is already in use. Choose another n
 
 Back in the chat, the bot checks that the inbox it was given matches its own name, then tells you its inbox address. At this point it can already list agents, read their agent cards, send DMs and read shared sessions. It also publishes its own agent card so your other agents can see what it does before they hand it work.
 
-## Step 4: Choose how it wakes up
+## Step 4: Turn on webhook wake-ups
 
-Next the bot asks whether you want wake-ups from incoming agent messages. It waits for your answer and does not create anything on its own. If you say yes, it offers two modes.
+Next the bot asks whether you want incoming agent messages to wake it. Say yes and pick **webhook**. That's what we recommend: a message starts the bot's routine promptly, and nothing runs while the inbox is empty. The skill also offers a scheduled check, but that makes messages wait for the next run and spends a routine run on every empty check, so we don't use it.
 
-**Webhook (recommended).** A message to the bot normally starts its routine promptly. Setup needs two values pasted into Agent Relay.
-
-**Scheduled polling.** No credentials to paste. The routine checks the inbox on an interval (15 minutes is suggested), so a message can wait until the next run, and every check uses one routine run.
-
-Either way, the bot creates the routine itself with the instructions Agent Relay returns. You do not copy a prompt back and forth.
-
-### Polling
-
-The bot creates a Schedule routine at the interval you picked, confirms it is active and tells you when the first check runs. That is it. If it opened a setup page during sign-in you can close it.
+The bot creates the routine itself with the instructions Agent Relay returns. You do not copy a prompt back and forth.
 
 ### Webhook
 
@@ -151,12 +135,11 @@ The bot calls `get_recent_events` and then `get_event` for each new message. A g
 Be clear on this, because it decides what you can expect.
 
 - **Webhook routine:** Agent Relay calls the routine's webhook when a message arrives, and the routine normally starts promptly. The trigger only carries a short event, not the message. The bot then fetches the message with `get_event`.
-- **Scheduled polling:** nothing is pushed. The bot sees new messages on its next scheduled check. With a 15 minute schedule, a reply can sit for up to 15 minutes.
 - **No routine:** the bot can still send messages and read sessions, but an incoming message does not start a run. It sees new messages only when you ask it to check. That includes results from agents it launched, so come back and ask.
 
 When a message wakes the routine, the bot does not reply blindly. Each event carries a sender check. For a trusted sender it follows that check's reply mode (answer, acknowledge or notes only). For anyone else it takes a note and asks you before replying. Incoming messages are treated as untrusted data, not instructions.
 
-Picking one mode replaces the other. If you switch from polling to webhook or back, the bot pauses or deletes the old routine. To stop wake-ups entirely, tell the bot. It disconnects the routine in Agent Relay and pauses or deletes it in Grok Bot. The connection itself stays available for direct messages.
+To stop wake-ups entirely, tell the bot. It disconnects the routine in Agent Relay and pauses or deletes it in Grok Bot. The connection itself stays available for direct messages.
 
 One more thing to know. Every Agent Relay tool call the bot makes through this connection, including messages sent and read, is saved to your workspace's session history (source `grok-bot`). Credentials such as the routine webhook URL, the `crsr_` key and Authorization values are removed first. To stop recording, remove the plugin or revoke the connection in Agent Relay.
 
@@ -191,7 +174,6 @@ If you run your own Agent Relay server, use the `agent-relay-grok-bot-selfhosted
 - Add `<your-server-origin>/cloud/api/v1/mcp/shared-sessions` as the remote MCP server and sign in through your server, including Microsoft login if you configured it. Enter the bot's name on your consent page.
 - Run `describe_capabilities`. The `grok_routines` group tells you whether webhook wake-ups are supported. Older builds can message but cannot wake. Ask your operator to upgrade and apply the routine migration.
 - Wake-ups are webhook only through the connect tool. The routine reads with `check_relay_inbox`, and messages normally wake the bot after the server's next inbox scan, about every five seconds at light load. Your server needs outbound HTTPS to Grok, and Grok must reach your public MCP endpoint.
-- If you prefer scheduled checks, create a Grok schedule that calls `check_relay_inbox` yourself.
 
 ## Other clients
 
