@@ -93,11 +93,14 @@ proxy:
 secrets:
   relaycastWorkspaceKey: { name: relaygate-relaycast, key: workspace-key }  # the rk_live_ key relaygate registers agents with
   relaygateSecret: { name: relaygate-seal, key: secret }                   # 32+ characters; keep it for the life of the volume
+  sessionsToken: { name: relaygate-sessions, key: token }                  # an rth_st_ service token with rth:sync and rth:read
 ```
 
-relaygate forwards each caller's own Sessions credential, so it needs no
-Sessions token of its own. Agents get a relaygate `rg_` token and never see the
-workspace key.
+relaygate forwards a caller's own Sessions credential when it sends one, and
+uses `sessionsToken` for callers that send none. Give agents only their
+relaygate `rg_` token: no Relaycast workspace key and no Sessions credential.
+That is what keeps them off Sessions directly, because Sessions is also served
+on your public history origin for the dashboard and the desktop app.
 
 Then close the direct paths. Network policies add up, so a policy that admits
 only the gate does nothing while Relaycast's own policy admits the whole
@@ -116,7 +119,10 @@ relaycast:
 
 Add the relaygate pods to `sessions-pipeline.sessionReadApi.networkPolicy.publicFrom`
 and to the ingest NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`),
-or relaygate's Sessions reads time out. On GKE, the cluster must enforce
+or relaygate's Sessions reads time out. The downloadable GKE `values.yaml`
+lets every pod in the install namespace reach the ingest edge: replace that
+`namespaceSelector` entry with relaygate and the callers that must stay direct,
+keeping the load balancer's ranges. On GKE, the cluster must enforce
 network policies: see [step 2 of Install on GKE](/docs/self-hosting/install-gke#2-connect-to-google-cloud-and-the-cluster).
 
 Then point clients at the gate. The [Slack app](/docs/self-hosting/slack-app)
@@ -125,8 +131,8 @@ it as its Relaycast address, and every Slack post is checked before it is
 sent. Session uploads go to `https://<gate>/sessions`.
 
 **Done when:** a Slack-app agent registers into the pit through the gate and
-replies in its thread, and a direct request to Relaycast from an agent's pod
-is refused.
+replies in its thread, and from an agent's pod both a direct request to
+Relaycast and a direct upload to the ingest edge are refused.
 
 Reference:
 [docs/self-hosted-relaygate.md](https://github.com/AgentWorkforce/infra/blob/main/docs/self-hosted-relaygate.md)
