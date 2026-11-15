@@ -6,8 +6,8 @@ description: Move a running install to a newer Agent Relay release safely - the 
 Agent Relay releases are tags of the public
 [AgentWorkforce/infra](https://github.com/AgentWorkforce/infra) repository,
 named `agent-relay-<version>`, each with a signed chart, an image manifest and
-checksums. Upgrade by moving to a whole release: never change one image digest
-on its own.
+checksums. Normally upgrade by moving to a whole release. Do not change one image digest
+on its own; a coordinated patch requires the reviewed plan described below.
 
 ## Rules for every upgrade
 
@@ -26,6 +26,167 @@ Every upgrade changes the human's production install. ASK THE HUMAN for
 approval after showing the plan, and again before any --apply. STOP and report
 if the plan shows image changes outside the target release, or if a backup has
 not been taken in the last 24 hours.
+-->
+
+## Message receipts and Grok Bot
+
+Message receipt lookup over MCP is available in **Control 0.5.24** and
+**Relaycast 12.10.0**, published in component charts **relay-control 0.4.17**
+and **relaycast 0.3.14**. Both services and their migrations are required.
+Updating a Desktop app or refreshing the Helm repository index alone does not
+upgrade those servers.
+
+For an existing **agent-relay umbrella install**, choose a published whole
+release whose image manifest contains both versions or a compatible newer
+pair. A component chart release or an open suite candidate is not that release.
+If no published suite contains the pair yet, [contact us](/docs/self-hosting/support)
+for a reviewed coordinated patch plan for your existing chart and values.
+Do not run two new component installs over workloads owned by the umbrella,
+or change just one server image.
+
+Keep the existing install's values, Secret references, database mode and image
+mirror configuration. Review the backup and migration plan before applying any
+upgrade. The cloud-specific steps below describe the normal whole-release
+path; they do not authorize installing an unreleased candidate.
+
+After all required migrations complete and both servers are healthy, reconnect the
+bot's MCP connection and check that `get_relay_message_status` appears. Send
+one authorized test message, retain its `message_id`, then check that ID using
+the same sending identity. See [Messaging and Grok Bot](/docs/self-hosting/messaging)
+for the receipt states, webhook wake-up setup and unconfirmed-message handling.
+
+**Done when:** the intended image digests are running, both services'
+migrations completed, the new MCP tool is listed, and you have either a
+confirmed acknowledgment/reply or an explicitly reported unconfirmed message.
+
+<!-- agent
+Do not infer that a customer's server has upgraded because a chart or image
+was published. Identify the existing Helm release and values-file order first.
+Never print helm get values -a output or Secret data. Show a backup, migration
+and image plan to the human before any cluster change. Missing receipts alone
+never authorize resending a message or changing Desktop launch settings.
+-->
+
+### Coordinated receipt patch before a suite release
+
+A paired image patch has been tested on a **PostgreSQL-backend GKE install**
+with its original chart (agent-relay 0.7.8, suite 2026.11.3). **It has not been
+exercised with SQLite or proven on AKS.** A full chart upgrade is a separate
+qualification. For an Azure install, have your Agent Relay contact
+review the existing release, database backend and backup plan before applying
+this patch. The EKS upgrader does not support Azure.
+
+This procedure keeps the deployed chart and every existing values file, in the
+same order, and adds one final overlay. It changes only Relaycast and Control.
+Use this patch only for SQLite or PostgreSQL Relaycast backends. If the install
+uses the actors backend, stop for its separate compatibility plan. Do not
+change backends or enable new features with this patch.
+
+1. Record the deployed release, namespace, Helm revision, original chart archive
+   and exact ordered values-file list. Keep these files private; they can
+   contain credentials. Do not paste `helm get values --all` or Secret data
+   into chat. If the original chart or values are missing, stop for support.
+2. Back up **both** services' data and wait for a successful backup before
+   continuing. PostgreSQL requires a database backup, including Control's
+   database. Control uses PostgreSQL on every Relaycast backend; back it up
+   even when Relaycast uses SQLite. For SQLite, quiesce writes and take a consistent copy or volume
+   snapshot with Relaycast stopped; an Azure SQLite PVC has no automatic
+   chart backup by default. Record the recovery procedure and backup IDs.
+   See [Backup and restore](/docs/self-hosting/backup-and-restore) and the
+   [infra backup runbook](https://github.com/AgentWorkforce/infra/blob/main/docs/selfhost-backup-restore.md).
+3. Verify both published image attestations using the commands below. Stop
+   if verification fails. If your install uses a private image mirror,
+   copy both images there and verify their digests before applying; preserve
+   the existing repository settings. Do not switch the install to public
+   registries as a shortcut.
+
+```sh
+gh attestation verify oci://ghcr.io/agentworkforce/relaycast-self-host@sha256:ec062ef901af15cf575b53a71d7eb09f2e6ab6e7c0d5be2da35339a275a5c6cc --owner AgentWorkforce
+gh attestation verify oci://ghcr.io/agentworkforce/relay-control@sha256:d1b6ca95fab240a9d41208d83de3b1f4245408b0765038762f1c419ee60f43bc --owner AgentWorkforce
+```
+
+Create `receipt-images.values.yaml` in your private install directory:
+
+```yaml
+relaycast:
+  image:
+    digest: sha256:ec062ef901af15cf575b53a71d7eb09f2e6ab6e7c0d5be2da35339a275a5c6cc
+relay-control:
+  image:
+    digest: sha256:d1b6ca95fab240a9d41208d83de3b1f4245408b0765038762f1c419ee60f43bc
+```
+
+These are `ghcr.io/agentworkforce/relaycast-self-host:12.10.0` and
+`ghcr.io/agentworkforce/relay-control:0.5.24`. **For a PostgreSQL Relaycast
+backend**, also set `relaycast.runtime.postgres.image.digest` to the same
+Relaycast digest in this overlay; that backend selects its image from this
+separate key. Omit that addition for SQLite. Leave the database mode and all
+other components unchanged.
+
+Render with the original chart and original ordered `-f` arguments, then add
+`-f receipt-images.values.yaml` **last**. Compare the rendered manifests with
+the deployed manifests privately. Expected changes are the two server images
+and their migration Job identities. Stop if anything else changes. Have the
+operator approve this diff, the backup plan and an outage window: Relaycast
+uses a Recreate deployment and is unavailable while its pod restarts and
+migrations/readiness finish. PostgreSQL pods wait for their migration Job.
+
+For example, an existing Azure-guide install uses the following order. Replace
+the release, namespace and paths with those already used by that install; do
+not run this example on a different install or substitute a new chart:
+
+```sh
+helm template <existing-release> <original-chart.tgz> -n <namespace> \
+  -f <original-values-eks.yaml> -f <site-values.yaml> \
+  -f <original-release-images.values.yaml> -f receipt-images.values.yaml
+
+# Only after reviewing the render and completing the backups:
+helm upgrade <existing-release> <original-chart.tgz> -n <namespace> \
+  -f <original-values-eks.yaml> -f <site-values.yaml> \
+  -f <original-release-images.values.yaml> -f receipt-images.values.yaml \
+  --timeout 25m
+```
+
+Wait for Control's migration Job to complete. PostgreSQL Relaycast also has a
+migration Job; SQLite migrates when its server starts, so check startup logs
+and readiness instead. Wait for both Deployments to become ready, check the
+API and Relaycast health endpoints and ingress, then perform the MCP receipt
+check above. Find the actual resource names from the release; do not invent a
+hash or assume a Helm release prefix. The Azure and GKE profile values use
+`fullnameOverride`, so their Deployments are normally `relay-control` and
+`relaycast`, with Jobs named `relay-control-migrate-<identity>` and
+`relaycast-migrate-<hash>` respectively:
+
+```sh
+kubectl -n <namespace> get jobs,deployments -l app.kubernetes.io/instance=<existing-release>
+kubectl -n <namespace> wait --for=condition=complete job/<actual-control-migration-job> --timeout=15m
+# PostgreSQL Relaycast only:
+kubectl -n <namespace> wait --for=condition=complete job/<actual-relaycast-migration-job> --timeout=15m
+kubectl -n <namespace> rollout status deploy/<actual-control-deployment> --timeout=15m
+kubectl -n <namespace> rollout status deploy/<actual-relaycast-deployment> --timeout=15m
+```
+
+Keep the overlay as the record of this revision. When upgrading to a qualified
+whole release, review its manifest and **remove this patch overlay from the
+values-file list** so it cannot override the new release's images. Do not
+silently carry these fixed digests forward as the last overlay.
+
+**Done when:** backups are recorded, the reviewed pair of digests is running,
+all required migrations completed, both services are healthy, and the bot can
+look up its own sent message. Publishing this procedure does not establish
+that an Azure rollout has been tested or that a customer's install is upgraded.
+
+If a migration or rollout fails, collect its status and logs and stop for
+support. A Helm rollback does not restore the database. A downgrade needs a
+reviewed backup-restore plan; do not assume the older images can use a migrated
+schema.
+
+<!-- agent
+Do not turn this patch into an automatic customer upgrade. Confirm the actual
+backend and original chart/values first. Keep rendered manifests and values
+private. For Azure, say that this path has not been proven on AKS and obtain a
+reviewed site-specific plan. Never run cluster commands from this guide without
+the human's approval of the exact commands and completed backup evidence.
 -->
 
 ## EKS

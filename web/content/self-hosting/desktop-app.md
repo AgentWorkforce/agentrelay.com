@@ -78,9 +78,19 @@ to appear.
 - **Copilot in VS Code:** captured for new chats on **VS Code 1.143 or later**,
   where the Copilot harness is the default. Chats on the older "Local" harness
   aren't captured.
-- **Updates:** a self-hosted build doesn't update itself yet. A newer version
-  means installing the new build over the old one. On GKE this holds until
-  further notice: the signed release feed the control API can serve uses AWS
-  KMS and S3 only.
+- **Updates:** use the feed configured for your site's build. Profile-specific
+  GitHub releases feeds support self-hosted builds; a signed feed on your own
+  Control server needs its signing key and object storage provisioned first.
+  Control 0.5.24 supports AWS KMS or a persistent Ed25519 key file for signing,
+  and S3 for feed assets. Do not assume a GCS feed backend or a provisioned feed
+  from the cloud your cluster runs on. Ask your Agent Relay contact for your
+  profile's supported update path.
+- **Headless Mac:** the public installer targets the public service. Use your
+  profile-specific installer for a GitHub-feed build, or the branded DMG for a
+  private signed-feed build unless your profile explicitly supplies its own
+  supported Mac installer. Changing a server URL does not retarget a public binary.
+- **Remote bots and receipts:** a Grok Bot's self-hosted webhook wake-ups and
+  MCP receipt lookup run on the server; they do not require a headless Mac
+  installer. See [Messaging and Grok Bot](/docs/self-hosting/messaging).
 - **Problems:** send a screenshot of the app's status screen to whoever runs
   your install.
