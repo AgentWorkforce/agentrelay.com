@@ -116,9 +116,10 @@ isn't accepted.
 
 - **Dashboard:** the session page shows the brief under **Summary**.
 - **Agents, over your install's MCP:** `get_session_summary` returns one
-  session's summary. `list_session_summaries` lists sessions but doesn't
-  include their short summaries yet: its rows report
-  `short_summary_status: unsupported` on this release.
+  session's summary. `list_session_summaries` also returns each row's short
+  summary when the chart sets `sessionReadApi.summaries.listShortSummary`, as
+  the GKE `values.yaml` does from `agent-relay-2026.11.8` (chart 0.7.15).
+  Without it, its rows report `short_summary_status: unsupported`.
 
 <!-- agent
 The API key is entered by the human: ASK THE HUMAN to run the "read -rs" line

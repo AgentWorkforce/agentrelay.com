@@ -584,10 +584,15 @@ token it publishes with. The token itself stays with Agent Relay.
    cluster. The private key never leaves your cluster and Secret Manager:
 
    ```sh
-   PROFILE=<profile id from Agent Relay>
-   openssl genpkey -algorithm ed25519 -out "$PROFILE.pem"
-   kubectl -n $NAMESPACE create secret generic desktop-feed-keys --from-file="$PROFILE.pem"
-   gcloud secrets create agent-relay-desktop-feed-key-$PROFILE --data-file="$PROFILE.pem"
+   PROFILE=<profile id from Agent Relay>; umask 077
+   if ! kubectl -n $NAMESPACE get secret desktop-feed-keys >/dev/null 2>&1; then
+     openssl genpkey -algorithm ed25519 -out "$PROFILE.pem"
+     kubectl -n $NAMESPACE create secret generic desktop-feed-keys --from-file="$PROFILE.pem"
+     rm "$PROFILE.pem"
+   fi
+   kubectl -n $NAMESPACE get secret desktop-feed-keys -o jsonpath="{.data.$PROFILE\.pem}" | base64 -d > "$PROFILE.pem"
+   gcloud secrets describe agent-relay-desktop-feed-key-$PROFILE >/dev/null 2>&1 \
+     || gcloud secrets create agent-relay-desktop-feed-key-$PROFILE --data-file="$PROFILE.pem"
    openssl pkey -in "$PROFILE.pem" -pubout -outform DER | tail -c 32 | base64
    rm "$PROFILE.pem"
    ```
@@ -595,7 +600,8 @@ token it publishes with. The token itself stays with Agent Relay.
    This needs OpenSSL 1.1.1 or later, as in Cloud Shell. The `openssl` that
    ships with macOS (LibreSSL) has no Ed25519; use Homebrew's `openssl@3`. The
    last line prints the public key. Send it to Agent Relay, which builds it into
-   the app.
+   the app. The key is created once: running the block again reuses the key in
+   the cluster, so the backup and the public key always match it.
 3. **Values:** add this to `values.yaml`, with the hash from Agent Relay, then
    run step 11's `helm upgrade` command again:
 
