@@ -580,9 +580,13 @@ your desktop app, and gives you its profile ID and the SHA-256 hash of the
 token it publishes with. The token itself stays with Agent Relay.
 
 1. **Bucket:** set `desktop_feed_bucket_name` in step 4's `terraform.tfvars`,
-   then run step 4's `terraform plan`, `terraform apply` and
-   `terraform output -json chart_values` lines again, so `managed-values.json`
-   carries the feed's settings.
+   then, from the install folder, apply it and refresh `managed-values.json` so
+   it carries the feed's settings:
+
+   ```sh
+   (cd infra/terraform/examples/gcp && terraform plan -out tfplan && terraform apply tfplan \
+     && terraform output -json chart_values > ../../../../managed-values.json)
+   ```
 2. **Signing key:** create an Ed25519 key for the profile and store it in the
    cluster. The private key never leaves your cluster and Secret Manager:
 
@@ -594,19 +598,22 @@ token it publishes with. The token itself stays with Agent Relay.
      else
        openssl genpkey -algorithm ed25519 -out "$PROFILE.pem"
      fi
-     kubectl -n $NAMESPACE create secret generic desktop-feed-keys --from-file="$PROFILE.pem"
-     rm "$PROFILE.pem"
+     if openssl pkey -in "$PROFILE.pem" -noout 2>/dev/null; then
+       kubectl -n $NAMESPACE create secret generic desktop-feed-keys --from-file="$PROFILE.pem"
+     fi
+     rm -f "$PROFILE.pem"
    fi
    kubectl -n $NAMESPACE get secret desktop-feed-keys -o jsonpath="{.data.$PROFILE\.pem}" | base64 -d > "$PROFILE.pem"
-   if ! gcloud secrets describe $BACKUP >/dev/null 2>&1; then
+   if openssl pkey -in "$PROFILE.pem" -noout 2>/dev/null && ! gcloud secrets describe $BACKUP >/dev/null 2>&1; then
      gcloud secrets create $BACKUP --data-file="$PROFILE.pem"
    fi
-   if gcloud secrets versions access latest --secret $BACKUP | cmp -s - "$PROFILE.pem"; then
+   if openssl pkey -in "$PROFILE.pem" -noout 2>/dev/null \
+     && gcloud secrets versions access latest --secret $BACKUP | cmp -s - "$PROFILE.pem"; then
      openssl pkey -in "$PROFILE.pem" -pubout -outform DER | tail -c 32 | base64
    else
-     echo "STOP: the cluster key and its backup differ"
+     echo "STOP: the cluster key is missing, unreadable or differs from its backup"
    fi
-   rm "$PROFILE.pem"
+   rm -f "$PROFILE.pem"
    ```
 
    This needs OpenSSL 1.1.1 or later, as in Cloud Shell. The `openssl` that
@@ -614,9 +621,11 @@ token it publishes with. The token itself stays with Agent Relay.
    last line prints the public key. Send it to Agent Relay, which builds it into
    the app. The key is created once. Running the block again reuses the key in
    the cluster, or restores it from the Secret Manager backup if the cluster
-   lost it, so desktop builds keep trusting it. If it prints `STOP`, the two
-   copies differ: keep the one whose public key Agent Relay has, and ask
-   Agent Relay before changing either.
+   lost it, so desktop builds keep trusting it. It stores a key only after
+   checking it is a valid key. If it prints `STOP`, check that you can read the
+   backup (`gcloud secrets versions access latest --secret $BACKUP`); if both
+   copies exist and differ, keep the one whose public key Agent Relay has, and
+   ask Agent Relay before changing either.
 3. **Values:** add this to `values.yaml`, with the hash from Agent Relay, then
    run step 11's `helm upgrade` command again:
 
