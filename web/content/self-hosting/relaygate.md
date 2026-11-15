@@ -7,11 +7,11 @@ description: The optional governance gate between agents and Relaycast and Sessi
 and Sessions. Use it when some agents may see regulated data and others must
 not: it keeps the two apart and decides what may leave.
 
-> **Status:** relaygate checks registration, permissions and Slack and
-> knowledge-base writes, and proxies Relaycast (REST and the node WebSocket)
-> and Sessions. It isolates agents only when they can reach Relaycast and
-> Sessions **through relaygate alone**: turn the proxies on and narrow
-> Relaycast's and Sessions' own network policies to the gate
+> **Status: build 2.** relaygate checks registration, permissions, Slack
+> posts and knowledge-base writes, and proxies Relaycast (REST and the node
+> WebSocket) and Sessions. It isolates agents only when they can reach
+> Relaycast and Sessions **through the gate alone**: turn the proxies on and
+> narrow Relaycast's and Sessions' own network policies to the gate
 > ([below](#proxy-relaycast-and-sessions)), or keep regulated agents in their
 > own install.
 >
@@ -24,18 +24,21 @@ not: it keeps the two apart and decides what may leave.
 ## How it works
 
 1. **Groups.** An agent registers once, with an **enrollment key**. The key
-   decides its group; the agent can't pick its own. A key can be limited to a
-   name prefix, so a leaked key can't create arbitrary agents.
+   decides its group; the agent can't pick its own. Limit each key to a name
+   prefix, so a leaked key can't create arbitrary agents or take another
+   group's names.
 2. **Permissions.** Every channel, inbox, session and external stream (a Slack
    thread, a knowledge-base page) has an owner, a group and a mode, like a
-   file: owner/group/other × read/write. A request the mode doesn't allow never
-   reaches Relaycast or Sessions.
+   file: three digits for owner/group/other, each `4` (read) plus `2` (write).
+   An **access list** adds access for named groups. A request the policy
+   doesn't allow never reaches Relaycast or Sessions.
 3. **Classifier.** Writes that cross a group boundary, and anything leaving
    through Slack or a knowledge base, are classified first: rules (for
    example, US social security numbers, prompt injection) plus an optional
    Claude model with your guidance. A refusal is final; if the classifier
    can't decide, nothing is sent.
-4. **Audit.** Every decision, and which stage made it, is logged.
+4. **Audit.** Every decision, which stage made it and the policy version in
+   force are logged. Message content is never logged.
 
 The default policy has two groups:
 
@@ -43,6 +46,43 @@ The default policy has two groups:
 | --- | --- | --- | --- |
 | Agents inside the boundary (Slack thread agents, server agents) | 22, pit | read and write their streams and Slack threads; read outside sessions | write into outside inboxes or sessions |
 | Agents outside it (laptops, editors) | 11, local | write into pit inboxes; read and write their own streams | read anything in the pit; post to Slack |
+
+## The policy
+
+The policy is one JSON document, rendered from the chart's `policy` values;
+relaygate reloads it when it changes and keeps the last good one if an edit is
+invalid. The chart's defaults follow relaygate's
+[`examples/policy.pit.json`](https://github.com/AgentWorkforce/relaygate/blob/main/examples/policy.pit.json).
+
+| Key | What it sets |
+| --- | --- |
+| `groups` | Each `gid` and its name. relaygate has no built-in groups. |
+| `enrollmentKeys` | Per key: its `id`, `gid`, `sha256` (never the key itself) and `namePrefix`. |
+| `streamDefaults`, `streamOverrides` | `gid`, `mode`, `acl` and `classify` per stream prefix (longest match wins), then for one stream. A stream no entry matches is refused. |
+| `sessionDefaults`, `sessionOverrides` | Mode and `acl` for sessions by the first uploader's group, then for one session id (an override never changes the owning group). |
+| `ceilings` | Per group, the groups it may never touch, whatever an ACL says. |
+| `classifier` | `rules` (regular expressions) and an optional `model` with `guidance`. |
+
+The chart's default streams are all `660` (owner and group) plus an explicit
+ACL for each cross-group grant:
+
+| Streams | Owner group | ACL |
+| --- | --- | --- |
+| `relaycast:channel/`, `relaycast:inbox/local-` | 11 | pit (22) may read |
+| `relaycast:channel/pit-`, `relaycast:inbox/pit-`, `relaycast:inbox/slack-` | 22 | local (11) may write |
+| `relaycast:channel/slack` (the Slack app's routing channel) | 22 | none |
+| `slack:`, `kb:` | 22 | none; classified |
+
+**Guests** (another company's agents) get their own group, a key with
+`guest: true` and an `expiresAt`, and a ceiling such as
+`{ gid: 44, never: [22] }`. Revoking or expiring a guest key ends every token
+issued from it. A deployment where laptops stay outside the regulated boundary
+and cloud agents work inside it is
+[`examples/policy.double-pit.json`](https://github.com/AgentWorkforce/relaygate/blob/main/examples/policy.double-pit.json).
+
+Test a draft before you apply it: `relaygate-explain --policy draft.json --cases cases.json`
+(`npm run explain --` in a relaygate checkout) answers "may X do this, and
+why" without a running gate and exits `1` if any case fails.
 
 ## Install
 
@@ -59,14 +99,18 @@ image:
   digest: sha256:<published digest>
 policy:
   enrollmentKeys:
-    - { id: local, gid: 11, sha256: "<sha256 of local.key>" }
-    - { id: pit, gid: 22, sha256: "<sha256 of pit.key>" }
-    - { id: slack-bridge, gid: 22, sha256: "<sha256 of the bridge key>", namePrefix: "slack-" }
+    - { id: local, gid: 11, sha256: "<sha256 of local.key>", namePrefix: "local-" }
+    - { id: pit, gid: 22, sha256: "<sha256 of pit.key>", namePrefix: "pit-" }
+    - { id: slack-bridge, gid: 22, sha256: "<sha256 of bridge.key>", namePrefix: "slack-" }
   classifier:
     model: { enabled: true, model: claude-opus-5-5, effort: low, timeoutMs: 8000 }
 secrets:
   anthropicApiKey: { name: relaygate-anthropic, key: api-key }   # only with the model classifier
 ```
+
+The model classifier is off by default (rules only). Where regulated data may
+be classified, use a zero-data-retention Anthropic key. The chart refuses a
+`sha256` that isn't 64 hex characters, so a raw key can't land in the policy.
 
 The chart isn't in a published release yet, so install it from a checkout of
 the infra repository:
@@ -77,63 +121,100 @@ helm upgrade --install relaygate ./infra/charts/relaygate -n agent-relay -f rela
 ```
 
 Or, if you install the umbrella from the same checkout, set
-`components.relaygate: true` and put the same values under `relaygate:`.
+`components.relaygate: true` and put the same values under `relaygate:`. Its
+Service is then `agent-relay-relaygate` (`<release>-relaygate` in general;
+`relaygate` for a standalone release of that name). One replica: registrations
+and the audit log are SQLite on the gate's volume.
 
-**Done when:** the relaygate pod reports `/readyz` 200 and its log shows the
-policy loaded.
+**Done when:** the relaygate pod's `/readyz` returns 200 with the
+`policy_version` you expect.
 
 ## Proxy Relaycast and Sessions
 
-Add the proxies to `relaygate-values.yaml`:
-
 ```yaml
+# relaygate-values.yaml, in addition to the above
 proxy:
   relaycastUrl: http://relaycast:8787
-  sessionsUrl: https://history.<domain>   # the one origin that serves session reads and uploads
+  sessionsUrl: https://history.example.com   # one origin for session reads and uploads
 secrets:
-  relaycastWorkspaceKey: { name: relaygate-relaycast, key: workspace-key }  # the rk_live_ key relaygate registers agents with
+  relaycastWorkspaceKey: { name: relaygate-relaycast, key: workspace-key }  # rk_live_ key the gate registers agents with
   relaygateSecret: { name: relaygate-seal, key: secret }                   # 32+ characters; keep it for the life of the volume
-  sessionsToken: { name: relaygate-sessions, key: token }                  # an rth_st_ service token with rth:sync and rth:read
+  adminToken: { name: relaygate-admin, key: token }                        # optional, see Operate
 ```
 
-relaygate forwards a caller's own Sessions credential when it sends one, and
-uses `sessionsToken` for callers that send none. Give agents only their
-relaygate `rg_` token: no Relaycast workspace key and no Sessions credential.
-That is what keeps them off Sessions directly, because Sessions is also served
-on your public history origin for the dashboard and the desktop app.
+- **Relaycast.** The gate forwards an allowlist of REST routes and the
+  realtime path (`/v1/agent/node-token`, then the `/v1/node/ws` WebSocket),
+  filtering reads, lists, search and live deliveries to what the caller may
+  read. Agents hold an `rg_` token and never the workspace key.
+- **Sessions** are served at `/sessions`. The gate holds no Sessions token: a
+  caller sends its `rg_` token in `X-Relaygate-Token` and its own Sessions
+  credential in `Authorization`, which the gate checks against the policy and
+  forwards unchanged. `secrets.sessionsToken` (an `rth_st_` service token with
+  `rth:sync` and `rth:read`) is optional, only for callers that send no
+  Sessions credential.
+- `proxy.sessionsUploadUrl` and `proxy.sessionsReadUrl` send uploads and reads
+  to separate upstreams (each defaults to `sessionsUrl`). `proxy.sessionsHosts`
+  serves listed hosts at the root, so you can point the history origin itself
+  at the gate; then both split upstreams are required, and the chart refuses a
+  listed host as an upstream so requests can't loop back to the gate.
 
-Then close the direct paths. Network policies add up, so a policy that admits
-only the gate does nothing while Relaycast's own policy admits the whole
-namespace (its default). Narrow Relaycast's policy instead, in the umbrella
-values (or without the `relaycast:` level in Relaycast's own chart):
+Then close the direct path. NetworkPolicies are additive: a separate policy
+that admits only the gate does nothing while Relaycast's own policy admits the
+whole namespace (its default). Narrow Relaycast's policy instead, in the
+relaycast values (`relaycast:` in the umbrella):
 
 ```yaml
-relaycast:
-  networkPolicy:
-    enabled: true
-    ingressFrom:
-      - podSelector: { matchLabels: { app.kubernetes.io/name: relaygate } }
-      # plus every caller that must stay direct (relay-control, the ingress
-      # controller if Relaycast is exposed); anything not listed is cut off
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - podSelector: { matchLabels: { app.kubernetes.io/name: relaygate } }
+    # plus every caller that must stay direct (relay-control, the ingress
+    # controller if Relaycast is exposed, ...); anything not listed is cut off
 ```
 
-Add the relaygate pods to `sessions-pipeline.sessionReadApi.networkPolicy.publicFrom`
-and to the ingest NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`),
-or relaygate's Sessions reads time out. The downloadable GKE `values.yaml`
-lets every pod in the install namespace reach the ingest edge: replace that
-`namespaceSelector` entry with relaygate and the callers that must stay direct,
-keeping the load balancer's ranges. On GKE, the cluster must enforce
-network policies: see [step 2 of Install on GKE](/docs/self-hosting/install-gke#2-connect-to-google-cloud-and-the-cluster).
+Restrict Sessions to the gate the same way. Callers hold real Sessions
+credentials, so the gate is only as strong as that rule. With relaygate's
+Sessions proxy, add the relaygate pods to
+`sessions-pipeline.sessionReadApi.networkPolicy.publicFrom` and to the ingest
+NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`), or
+relaygate's Sessions reads time out. The downloadable GKE `values.yaml` lets
+every pod in the install namespace reach the ingest edge: replace that
+`namespaceSelector` entry with relaygate and the callers that must stay
+direct, keeping the load balancer's ranges. On GKE, the cluster must enforce
+network policies: see
+[step 2 of Install on GKE](/docs/self-hosting/install-gke#2-connect-to-google-cloud-and-the-cluster).
 
-Then point clients at the gate. The [Slack app](/docs/self-hosting/slack-app)
-takes `relaygate.url` and the bridge key: it registers through the gate, uses
-it as its Relaycast address, and every Slack post is checked before it is
-sent. Session uploads go to `https://<gate>/sessions`.
+**Done when:** an agent with an `rg_` token reaches Relaycast through the
+gate, a Slack-app agent registers into the pit through the gate and replies in
+its thread, and from an agent's pod both a direct request to Relaycast and a
+direct upload to the ingest edge are refused.
 
-**Done when:** a Slack-app agent registers into the pit through the gate and
-replies in its thread, and from an agent's pod both a direct request to
-Relaycast and a direct upload to the ingest edge are refused.
+## Point clients at it
+
+Each client registers once with its group's enrollment key
+(`POST /v1/register`) and gets an `rg_` token. Then:
+
+- **Relaycast:** set its base URL to the gate and use the `rg_` token in place
+  of any Relaycast credential. API paths are unchanged.
+- **Sessions:** set its base URL to `https://<gate>/sessions` (or keep the
+  history origin, with `proxy.sessionsHosts`), send the `rg_` token in
+  `X-Relaygate-Token`, and keep its own Sessions credential in `Authorization`.
+
+The
+[Slack app](/docs/self-hosting/slack-app#governance-with-relaygate) takes
+`relaygate.url` and the bridge key: it registers through the gate, uses it as
+its Relaycast address, and every Slack post is checked before it is sent.
+
+## Operate
+
+With `secrets.adminToken` set, the gate also serves:
+
+- `POST /admin/v1/explain`: "may X do this operation on this stream or
+  session, and why", against the live policy or a draft. It never calls the
+  classifier or changes anything.
+- `GET /admin/v1/audit?after=<seq>&agent=<name>&limit=<n>`: decision rows,
+  oldest first, each with its `policy_version`.
 
 Reference:
 [docs/self-hosted-relaygate.md](https://github.com/AgentWorkforce/infra/blob/main/docs/self-hosted-relaygate.md)
-and [AgentWorkforce/relaygate](https://github.com/AgentWorkforce/relaygate).
+and the [relaygate contract](https://github.com/AgentWorkforce/relaygate/blob/main/docs/contract.md).
