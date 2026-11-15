@@ -88,6 +88,9 @@ The current build serves registration, permission checks, `/v1/check`, the
 classifier and the audit log. Proxying Relaycast and Sessions through the gate
 is next; only then does it enforce the table above for reads and messages.
 Until then, keep regulated agents in their own install and restrict Relaycast
-and Sessions with network policy. Reference:
+and Sessions with network policy. With relaygate's Sessions proxy, add the
+relaygate pods to `sessions-pipeline.sessionReadApi.networkPolicy.publicFrom`
+and to the ingest NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`),
+or relaygate's Sessions reads time out. Reference:
 [docs/self-hosted-relaygate.md](https://github.com/AgentWorkforce/infra/blob/main/docs/self-hosted-relaygate.md)
 and [AgentWorkforce/relaygate](https://github.com/AgentWorkforce/relaygate).
