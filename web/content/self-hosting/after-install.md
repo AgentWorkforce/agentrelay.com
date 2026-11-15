@@ -140,8 +140,8 @@ Run an OpenAI-compatible gateway, then add to the settings above:
 Set `OPENAI_BASE_URL` for `bob-costas` to the same address, and
 `BOB_COSTAS_MODEL` to the gateway's model ID.
 
-- The gateway must serve both the Responses API (`<baseUrl>/responses`, for
-  titles and briefs) and chat completions (for summaries).
+- The gateway must serve the Responses API (`<baseUrl>/responses`). Titles,
+  briefs and summaries all use it.
 - Give the gateway its own cloud identity for the model provider. Don't reuse
   the Agent Relay roles.
 - `agent-relay-llm` holds the gateway's key, under `OPENAI_API_KEY`.
