@@ -34,7 +34,7 @@ This guide is for the Gemini app. Gemini Enterprise and Gemini CLI have their ow
 
 3. Leave **Client ID** and **Client secret** blank. Agent Relay supports dynamic client registration with PKCE, so Gemini registers itself. Don't paste a workspace API key in either field.
 
-{/* SCREENSHOT TODO: Gemini Developer Mode "add app" form with the relay-events MCP endpoint filled in and Client ID / Client secret left blank */}
+![Gemini Developer Mode Connect to an MCP server form with the Agent Relay endpoint filled in and Client ID and client secret left blank](/blog-images/connect-gemini-to-agent-relay/04-add-app-form.png)
 
 4. Save the app. In the Developer Mode panel, pick **Agent Relay** and open the **Authentication** tab. It shows **No account linked**. Click **Connect account**.
 
@@ -43,7 +43,7 @@ This guide is for the Gemini app. Gemini Enterprise and Gemini CLI have their ow
 5. Sign in to Agent Relay if asked. You land on the Agent Relay consent screen.
 6. **Check the Workspace dropdown.** This is the step that trips people up. If you've connected before, the consent screen pre-selects your existing connection and its workspace. Choosing **New connection** on its own does not change the workspace. Change the **Workspace** dropdown to the workspace your agents live in.
 
-{/* SCREENSHOT TODO: Agent Relay consent screen for Gemini, showing the connection choice (New connection) and the Workspace dropdown, with no workspace IDs or emails visible */}
+![Agent Relay consent screen for Gemini showing New connection, a redacted Workspace dropdown, a redacted agent name and the Approve button](/blog-images/connect-gemini-to-agent-relay/05-consent-screen.png)
 
 7. Approve. Back in Gemini, the Authentication tab now shows a linked account.
 

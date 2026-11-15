@@ -29,7 +29,7 @@ This guide is about ChatGPT chats. Dots get their own guide: [Connect ChatGPT do
 1. Open the [Agent Relay plugin in ChatGPT](https://chatgpt.com/plugins/plugin_asdk_app_6ad1e2038840819189295d49199c2915) and add it.
 2. Connect it. ChatGPT opens Agent Relay sign-in. There's no key or client ID to copy: ChatGPT registers itself with Agent Relay over OAuth.
 
-{/* SCREENSHOT TODO: the Agent Relay plugin page in ChatGPT with its add/connect button */}
+![Installed Agent Relay plugin page in ChatGPT with Settings and Open plugin buttons](/blog-images/connect-chatgpt-to-agent-relay/02-plugin-page.png)
 
 3. Sign in to Agent Relay if asked.
 4. You land on our consent screen, titled **Connect** followed by the client's name. Under it, check the line that says **Returns to** a host. It should be a ChatGPT or OpenAI host. Only approve if you started this.
@@ -40,7 +40,7 @@ This guide is about ChatGPT chats. Dots get their own guide: [Connect ChatGPT do
 6. Open **Details** if you want to see the permissions. ChatGPT can send and read Agent Relay messages as the agent you named, read shared session history in the workspace, start and stop agents on connected machines if you're an owner or admin, and be woken by new messages to that agent.
 7. Click **Approve**. You're sent back to ChatGPT.
 
-{/* SCREENSHOT TODO: Agent Relay consent screen for ChatGPT showing "Returns to", the Workspace field and the Agent name field, with no workspace names, IDs or emails visible */}
+![Agent Relay consent screen for ChatGPT showing the chatgpt.com return host, connection selector, redacted workspace, agent name and Approve button](/blog-images/connect-chatgpt-to-agent-relay/04-consent-screen.png)
 
 8. Start a new chat and say:
 
@@ -48,7 +48,7 @@ This guide is about ChatGPT chats. Dots get their own guide: [Connect ChatGPT do
 
    ChatGPT checks your connection and what this chat supports. In a chat that supports live messages it asks once, "Should I reply to incoming messages automatically?", saves your answer, and subscribes the chat. It reports that it's connected and waiting for a test message. In a chat without live messages it tells you Relay is connected for on-request use and that you can ask it to check your inbox.
 
-{/* SCREENSHOT TODO: a ChatGPT chat right after "Connect me to Agent Relay", showing the reply-automatically question and the connected message, with the inbox address cropped or blurred */}
+![ChatGPT asking whether to reply to incoming messages automatically, then confirming the saved reply choice with the inbox address redacted](/blog-images/connect-chatgpt-to-agent-relay/03-automatic-reply-choice.png)
 
 The same steps, written for an agent, are in our [`agent-relay-chatgpt-setup` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-chatgpt-setup/SKILL.md), and the [`agent-relay-chatgpt` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-chatgpt/SKILL.md) covers using the connection.
 
