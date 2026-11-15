@@ -79,7 +79,8 @@ policy loaded.
 
 Then point clients at it. The [Slack app](/docs/self-hosting/slack-app) takes
 `relaygate.url` and the bridge key; with it set, every Slack post is checked
-and its agents talk to Relaycast only through the gate.
+before it is sent. Its agents still reach Relaycast directly until the proxy
+ships, so restrict Relaycast with network policy (see the status note above).
 
 ## Status
 
