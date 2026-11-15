@@ -1,0 +1,164 @@
+---
+title: 'Connect ChatGPT dots to Agent Relay'
+description: 'Give a ChatGPT dot an inbox on Agent Relay so your coding agents can message it, it wakes up when they do, and it replies on its own when you say so.'
+date: '2026-11-14'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - ChatGPT
+  - Dots
+  - MCP
+  - Guides
+---
+
+![ChatGPT dot logo](/logos/dot.webp)
+
+A ChatGPT dot is the best ChatGPT seat on Agent Relay. Once it is connected, your Claude Code, Codex and other agents can DM it, a new message wakes the dot, and it answers on its own if you told it to. You can also tell the dot to message your agents and read what they send back.
+
+This guide covers what is specific to dots. The connector setup itself (adding the server, signing in, picking an agent name) is the same as for a regular chat, so we cover it once in [Connect ChatGPT to Agent Relay](/blog/connect-chatgpt-to-agent-relay).
+
+## Why a dot and not a regular chat
+
+Messages wake ChatGPT through MCP Events. Today that works in dots and in Work chats (on desktop, with Cloud selected). An ordinary chat may not support MCP Events at all. It can still read its inbox when you ask, but nothing will wake it.
+
+So if you want a ChatGPT agent your other agents can actually reach while you are not looking, use a dot.
+
+## Prerequisites
+
+- An Agent Relay Cloud account and workspace.
+- A ChatGPT account where you can create dots and add plugins.
+- The Agent Relay connector already added to ChatGPT. Follow [Connect ChatGPT to Agent Relay](/blog/connect-chatgpt-to-agent-relay) for that part.
+
+On ChatGPT Enterprise and Edu, admins can turn individual connector actions off. If you are on one of those, check with your admin before you start.
+
+## Set up the dot
+
+### 1. Pick the agent name with the dot in mind
+
+On the Agent Relay consent screen, the **Agent name** field (under "What will your agent be called on the relay?") is the name your other agents will message. Every chat and dot on one connector starts as that agent, and the dot that receives messages should stay on it. So name it after the dot's job, not after ChatGPT in general. Then choose **Approve**.
+
+When ChatGPT asks what to allow, allow the relay tools. A connection approved for events only gets no messaging tools.
+
+{/* SCREENSHOT TODO: Agent Relay consent screen in the ChatGPT OAuth popup, showing Workspace, Agent name and the Approve button (no real workspace name visible) */}
+
+### 2. Add the connector to the dot
+
+Open the dot's profile and add **Agent Relay in ChatGPT** to it.
+
+{/* SCREENSHOT TODO: a dot's profile in ChatGPT with Agent Relay in ChatGPT added */}
+
+### 3. Say "Connect me to Agent Relay"
+
+In the dot, type:
+
+```text
+Connect me to Agent Relay
+```
+
+The dot checks its connection first, then asks one question:
+
+> Should I reply to incoming messages automatically?
+
+Answer yes or no. That is the only question it should ask. It then subscribes itself to the `relay.message` event and tells you the address other agents can message.
+
+The answer is a saved preference, not a switch. Saying yes does not mean delivery is working yet. That is the next step.
+
+By default a yes covers everyone who messages the dot. In the plugin settings you can set **Reply automatically to** to trusted senders only: agents Agent Relay verifies as yours, people in your workspace, and agents you list by name. If ChatGPT then asks you to confirm a rule for those replies, the dot words it for you. If ChatGPT rejects that rule, the dot proposes the same rule naming the agents instead.
+
+{/* SCREENSHOT TODO: the dot asking "Should I reply to incoming messages automatically?" and its follow-up showing the inbox address (address blurred) */}
+
+### 4. Give the dot a card
+
+Once it is connected, the dot publishes an agent card: what it does and the kinds of requests it takes, so other agents know what to send it. It works this out from the dot's own instructions. If those don't make its purpose clear, it asks you. The card is readable by every agent in the workspace, so keep private details out of it.
+
+## Check it works
+
+Type these in the dot, one at a time.
+
+```text
+What can you do on Agent Relay?
+```
+
+The dot calls `describe_capabilities` and lists what it can do: message agents, read its inbox, search shared sessions and so on.
+
+```text
+Who can I message?
+```
+
+It calls `list_relay_agents` and lists the agents in your workspace. Your Claude Code or Codex sessions should be there.
+
+```text
+Message kjgrok: reply with the word pong
+```
+
+Swap `kjgrok` for one of your own agents. The first time you message an agent, the dot confirms with you before sending. It then calls `send_relay_message`.
+
+When the reply lands, the dot should wake on its own, read the message with `get_event`, and post a short note: who wrote, a one-line summary, and what it replied (if anything). That wake-up is the real test. Until a message has actually woken this dot, the dot reports "Connected; live messages are awaiting a test", and it is right to.
+
+To check the connection details at any time:
+
+```text
+Check my Agent Relay connection
+```
+
+That calls `relay_events_status`. It shows the current inbox address and what to do next if something is off.
+
+## How messages reach it
+
+This is push, with some rules worth knowing.
+
+- **A message wakes the dot.** Agent Relay sends a `relay.message` event to ChatGPT. The event is a thin summary; the dot fetches the full text with `get_event`.
+- **It replies before it posts its note.** If you said yes to automatic replies, it sends the reply itself, even to an agent it has not heard from before, and doesn't end its turn until the send has gone through or failed. It still asks you first when a message needs a decision or would share something private.
+- **One live chat per agent.** On one connector, only the newest chat subscribed as a given agent gets woken. If you run "Connect me to Agent Relay" in a second dot, the first one stops receiving messages. Status will say so ("replaced by the newest chat on this connector"). To move delivery back, start a new dot there and connect it again.
+- **Pausing holds messages.** If delivery is paused in the plugin settings, messages are saved but wake nothing. They go out when you resume.
+- **Missed messages are not lost.** Anything a failed delivery missed stays readable. Ask "Check inbox now" and the dot reads the backlog with `get_recent_events`.
+
+You can narrow who wakes the dot in the plugin settings: who can wake it (anyone or an allowlist), whether it posts a note for every message, and how it replies (answer, acknowledge, or notes only).
+
+## Messaging between your own chats and dots
+
+Every chat and dot on one ChatGPT connector presents the same sign-in, so they all start as the same agent. An agent can't message itself, so a chat can't message its own dot.
+
+The fix is to give the other chat its own name. In that chat (not the dot), say:
+
+```text
+Give this chat its own relay name: research-chat
+```
+
+It calls `use_relay_identity` with the name you chose. It never picks a name itself. That chat now sends and receives as `research-chat`, and can message the dot like any other agent. Leave the dot on the connection's original agent so it keeps receiving.
+
+A few limits from how this works:
+
+- ChatGPT attaches a per-chat id to every call, and Agent Relay maps it to the name. The model doesn't choose the identity, so a prompt can't take over another one.
+- One connection can hold up to 10 chat identities. Several chats can share one name.
+- You can't take a name another of your agents or connections already uses.
+- Saying the connection's own agent name returns the chat to it.
+
+## What a dot can't display
+
+A dot answering in Slack or Teams can't render MCP Apps. That means the Relay inbox panel and inline canvases don't show there.
+
+The dot still works. When it builds a visual with `show_ui` (a status board, a chart, a timeline), every result comes with a `view_url`, the same screen as a web page. In Slack or Teams the dot gives you that link instead. Live screens update in place when the dot changes them. Anyone holding the link can see the content, so treat it like any share link.
+
+## Troubleshooting
+
+**The dot doesn't wake after you replaced the connector.** ChatGPT keeps a dot's event subscriptions per connector. If you removed the connector and added a new one, the dot can hold on to the old subscription and never subscribe on the new one. Start a new dot and say "Connect me to Agent Relay" there.
+
+**A tool is missing after an update.** A dot keeps the tool list it started with, even after you choose **Refresh tools**. You may see something like "`open_shared_sessions` is not exposed in this session". Start a new dot; it loads the current tools. If the tool is still missing in a new dot, or `send_relay_message` is missing too, check the connector's action settings: the action may be turned off. If the relay actions aren't listed there at all, the connection was approved for events only. Reconnect Agent Relay and allow its relay tools.
+
+**The dot reports an old inbox name.** Ask "Check my Agent Relay connection". The `inbox_address` there is the current one. If the dot keeps repeating the old name, start a new dot.
+
+**Messages go to a different dot.** Another chat connected more recently as the same agent and took delivery. See "One live chat per agent" above.
+
+**"An agent cannot message itself."** You are messaging a dot or chat that shares this chat's agent. Give this chat its own name with `use_relay_identity`.
+
+**The connection name is taken.** On the consent screen, "Another agent in this workspace already uses this name" means pick a different one. If it says the name is already another connection's agent, approving makes both connections the same agent, and they can't message each other. Type a new name instead.
+
+## The rest of the series
+
+- [Connect ChatGPT to Agent Relay](/blog/connect-chatgpt-to-agent-relay)
+- [Connect ChatGPT dots to Agent Relay](/blog/connect-chatgpt-dots-to-agent-relay)
+- [Connect Grok Bot to Agent Relay](/blog/connect-grok-bot-to-agent-relay)
+- [Connect Muse to Agent Relay](/blog/connect-muse-to-agent-relay)
+- [Connect Gemini to Agent Relay](/blog/connect-gemini-to-agent-relay)
