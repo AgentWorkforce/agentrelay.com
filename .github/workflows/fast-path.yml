@@ -1,0 +1,214 @@
+# Fast path: run the PR checks (recommended-flow pins, setup-skill drift,
+# tests, typecheck, lint, build) on Blacksmith runners, outside the shared
+# GitHub-hosted queue, and optionally deploy. Anyone with write access (people
+# or agents) may start it; nothing runs until Khaliq approves the fast-path
+# environment.
+# Deploys run only for a commit already on main:
+# - `deploy` mirrors deploy.yml's web deploy (OpenNext build, populateCache,
+#   wrangler deploy). The best-effort IndexNow ping and its snapshot commit to
+#   main are left to the normal deploy.
+# - `deploy_router` mirrors deploy-router.yml and runs after the web deploy of
+#   the same commit, so the router never ships ahead of its pages.
+# Each deploy has its own concurrency group so it never cancels a pending
+# normal deploy. Nothing is published and no channel tags move.
+name: fast-path
+run-name: fast-path ${{ inputs.ref }} (${{ inputs.reason }})
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit to check (a PR branch is fine)
+        required: true
+        default: main
+      reason:
+        description: Why this needs the fast path
+        required: true
+      deploy:
+        description: Deploy the web app after checks (commit must be on main)
+        type: boolean
+        default: false
+      deploy_router:
+        description: Also deploy the router after the web deploy (needs deploy)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: fast-path-${{ inputs.ref }}
+  cancel-in-progress: false
+jobs:
+  check:
+    name: Checks
+    environment: fast-path
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - id: sha
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify recommended-flow release pins
+        run: npm run verify:recommended-flows
+      - name: Verify setup skills are current
+        run: |
+          npx --yes prpm@2.1.40 install --frozen-lockfile -y
+          git diff --exit-code -- .claude/skills
+          git diff --exit-code -I '"generated"' -- prpm.lock
+          npm run verify:setup-skills
+      - name: Test
+        run: npm test
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Summary
+        env:
+          REF: ${{ inputs.ref }}
+          SHA: ${{ steps.sha.outputs.sha }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          {
+            echo "### agentrelay.com fast path"
+            echo "- ref: \`$REF\` at \`$SHA\`"
+            echo "- reason: $REASON"
+            echo "- checks: flow pins, setup skills, tests, typecheck, lint, build passed"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-web:
+    name: Deploy web production
+    needs: check
+    if: ${{ inputs.deploy }}
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    concurrency:
+      group: fast-path-deploy-web-production
+      cancel-in-progress: false
+    env:
+      SHA: ${{ needs.check.outputs.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require the commit to be on main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::$SHA is not on main; the fast path only deploys commits already merged to main."
+            exit 1
+          fi
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify recommended-flow release pins
+        run: npm run verify:recommended-flows
+      - name: Build OpenNext (Cloudflare)
+        working-directory: web
+        env:
+          NEXT_PUBLIC_POSTHOG_HOST: ${{ vars.NEXT_PUBLIC_POSTHOG_HOST || 'https://i.agentrelay.com' }}
+          NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
+        run: npm run cf:build
+      - name: Populate static-assets cache
+        working-directory: web
+        run: npx opennextjs-cloudflare populateCache remote
+      - name: Deploy to Cloudflare
+        working-directory: web
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler deploy
+      - name: Summary
+        env:
+          REF: ${{ inputs.ref }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          {
+            echo "### agentrelay.com fast-path web deploy"
+            echo "- ref: \`$REF\` at \`$SHA\`"
+            echo "- reason: $REASON"
+            echo "- deployed: https://agentrelay.com"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy-router:
+    name: Deploy router
+    needs: [check, deploy-web]
+    if: ${{ inputs.deploy && inputs.deploy_router }}
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    concurrency:
+      group: fast-path-deploy-router-production
+      cancel-in-progress: false
+    env:
+      SHA: ${{ needs.check.outputs.sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.check.outputs.sha }}
+          persist-credentials: false
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm ci
+      - name: Prepare optional Worker secrets
+        shell: bash
+        env:
+          ANALYTICS_VISITOR_HASH_SECRET: ${{ secrets.ANALYTICS_VISITOR_HASH_SECRET }}
+          OPENAI_APPS_CHALLENGE_TOKEN: ${{ secrets.OPENAI_APPS_CHALLENGE_TOKEN }}
+        run: |
+          set -euo pipefail
+          umask 077
+          export ROUTER_SECRETS_FILE="$RUNNER_TEMP/router-secrets.json"
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from "node:fs";
+
+          const names = ["ANALYTICS_VISITOR_HASH_SECRET", "OPENAI_APPS_CHALLENGE_TOKEN"];
+          const secrets = Object.fromEntries(names.flatMap((name) => {
+            const value = process.env[name];
+            return value ? [[name, value]] : [];
+          }));
+          writeFileSync(process.env.ROUTER_SECRETS_FILE, JSON.stringify(secrets), { mode: 0o600 });
+          NODE
+      - name: Deploy router to Cloudflare
+        working-directory: router
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: ../node_modules/.bin/wrangler deploy --secrets-file "$RUNNER_TEMP/router-secrets.json"
+      - name: Remove temporary Worker secrets file
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/router-secrets.json"
+      - name: Summary
+        env:
+          REF: ${{ inputs.ref }}
+          REASON: ${{ inputs.reason }}
+        run: |
+          {
+            echo "### agentrelay.com fast-path router deploy"
+            echo "- ref: \`$REF\` at \`$SHA\`"
+            echo "- reason: $REASON"
+            echo "- deployed: router worker at \`$SHA\`"
+          } >> "$GITHUB_STEP_SUMMARY"
