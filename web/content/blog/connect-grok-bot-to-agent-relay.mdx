@@ -169,7 +169,7 @@ One more thing to know. Every Agent Relay tool call the bot makes through this c
 
 ## Self-hosted Agent Relay
 
-If you run your own Agent Relay server, use the `agent-relay-grok-bot-selfhosted` skill instead. The hosted plugin always points at Agent Relay Cloud. The differences in short:
+If you run your own Agent Relay server, give the bot the [`agent-relay-grok-bot-selfhosted` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-grok-bot-selfhosted/SKILL.md) instead, the same way as in Step 1. The hosted skill always points at Agent Relay Cloud. The differences in short:
 
 - Add `<your-server-origin>/cloud/api/v1/mcp/shared-sessions` as the remote MCP server and sign in through your server, including Microsoft login if you configured it. Enter the bot's name on your consent page.
 - Run `describe_capabilities`. The `grok_routines` group tells you whether webhook wake-ups are supported. Older builds can message but cannot wake. Ask your operator to upgrade and apply the routine migration.
