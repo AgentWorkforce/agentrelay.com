@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 103,
+  "count": 104,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -73,6 +73,7 @@
     "https://agentrelay.com/docs/self-hosting/install-aks",
     "https://agentrelay.com/docs/self-hosting/install-eks",
     "https://agentrelay.com/docs/self-hosting/install-gke",
+    "https://agentrelay.com/docs/self-hosting/messaging",
     "https://agentrelay.com/docs/self-hosting/okta-sso",
     "https://agentrelay.com/docs/self-hosting/relaygate",
     "https://agentrelay.com/docs/self-hosting/secrets",
