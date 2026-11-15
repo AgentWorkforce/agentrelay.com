@@ -7,12 +7,17 @@ description: The optional governance gate between agents and Relaycast and Sessi
 and Sessions. Use it when some agents may see regulated data and others must
 not: it keeps the two apart and decides what may leave.
 
-> **Status: build 2.** relaygate checks registration, Slack posts and
-> knowledge-base writes, and proxies Relaycast and Sessions. It isolates
-> agents only when they can reach Relaycast and Sessions **through the gate
-> alone**: turn the proxies on and narrow Relaycast's and Sessions' own network
-> policies to the gate ([below](#proxy-relaycast-and-sessions)), or keep
-> regulated agents in their own install.
+> **Status: build 2.** relaygate checks registration, permissions, Slack
+> posts and knowledge-base writes, and proxies Relaycast (REST and the node
+> WebSocket) and Sessions. It isolates agents only when they can reach
+> Relaycast and Sessions **through the gate alone**: turn the proxies on and
+> narrow Relaycast's and Sessions' own network policies to the gate
+> ([below](#proxy-relaycast-and-sessions)), or keep regulated agents in their
+> own install.
+>
+> **Known gap:** people signed in to the dashboard or the desktop app read
+> Sessions directly, not through relaygate, so the group rules don't apply to
+> them yet. Mapping signed-in people to groups is the next change.
 
 ![relaygate between agents, Relaycast and Slack](/img/self-hosting/slack-relay-relaygate.svg)
 
@@ -144,8 +149,9 @@ secrets:
 - **Sessions** are served at `/sessions`. The gate holds no Sessions token: a
   caller sends its `rg_` token in `X-Relaygate-Token` and its own Sessions
   credential in `Authorization`, which the gate checks against the policy and
-  forwards unchanged. `secrets.sessionsToken` is optional, only for callers
-  that send no Sessions credential.
+  forwards unchanged. `secrets.sessionsToken` (an `rth_st_` service token with
+  `rth:sync` and `rth:read`) is optional, only for callers that send no
+  Sessions credential.
 - `proxy.sessionsUploadUrl` and `proxy.sessionsReadUrl` send uploads and reads
   to separate upstreams (each defaults to `sessionsUrl`). `proxy.sessionsHosts`
   serves listed hosts at the root, so you can point the history origin itself
@@ -171,10 +177,17 @@ credentials, so the gate is only as strong as that rule. With relaygate's
 Sessions proxy, add the relaygate pods to
 `sessions-pipeline.sessionReadApi.networkPolicy.publicFrom` and to the ingest
 NetworkPolicy (`sessions-pipeline.ingestEdge.networkPolicy.ingressFrom`), or
-relaygate's Sessions reads time out.
+relaygate's Sessions reads time out. The downloadable GKE `values.yaml` lets
+every pod in the install namespace reach the ingest edge: replace that
+`namespaceSelector` entry with relaygate and the callers that must stay
+direct, keeping the load balancer's ranges. On GKE, the cluster must enforce
+network policies: see
+[step 2 of Install on GKE](/docs/self-hosting/install-gke#2-connect-to-google-cloud-and-the-cluster).
 
 **Done when:** an agent with an `rg_` token reaches Relaycast through the
-gate, and a pod outside `ingressFrom` can't reach Relaycast directly.
+gate, a Slack-app agent registers into the pit through the gate and replies in
+its thread, and from an agent's pod both a direct request to Relaycast and a
+direct upload to the ingest edge are refused.
 
 ## Point clients at it
 
@@ -189,7 +202,8 @@ Each client registers once with its group's enrollment key
 
 The
 [Slack app](/docs/self-hosting/slack-app#governance-with-relaygate) takes
-`relaygate.url` and the bridge key.
+`relaygate.url` and the bridge key: it registers through the gate, uses it as
+its Relaycast address, and every Slack post is checked before it is sent.
 
 ## Operate
 

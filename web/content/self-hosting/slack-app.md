@@ -23,7 +23,7 @@ messages: a message wakes the thread's agent, it answers, and it goes idle.
 | --- | --- |
 | Router | Holds the Slack connection over Socket Mode (an outbound WebSocket; no public URL). Records every message in a **ledger**: which agent owns each thread, who has spoken in it, and an append-only audit log. It is the only component with Slack credentials. |
 | Agent host | Runs one agent per Slack thread as headless Claude Code, with its own resumable session on a volume. It has no Slack credentials. |
-| [relaygate](/docs/self-hosting/relaygate) (optional) | Carries all of the agents' Relaycast traffic, checks every Slack post and knowledge-base write against your policy, and withholds answers its classifier refuses. |
+| [relaygate](/docs/self-hosting/relaygate) (optional) | Carries all of the agents' Relaycast traffic, checks every Slack post and knowledge-base write against your policy, and withholds answers its classifier refuses. With its proxy on, the agents need no workspace key; narrow Relaycast's network policy to the gate so they can't go around it ([Proxy Relaycast and Sessions](/docs/self-hosting/relaygate#proxy-relaycast-and-sessions)). |
 
 One message, end to end:
 
