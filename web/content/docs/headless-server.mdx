@@ -7,15 +7,17 @@ Agent Relay supports always-on Macs and Linux servers without the desktop app
 or a desktop window. The machine appears in an existing Cloud workspace and can
 accept Claude Code or Codex spawns. Linux runs the account-aware core as the
 `agent-relay.service` systemd user service. macOS runs the same core as a
-per-user LaunchAgent. Setup uses device approval in a browser on any computer;
-you do not copy a workspace key or forward a port over SSH.
+per-user LaunchAgent. Setup signs in by device approval in a browser on any
+computer, or, for an unattended install, with an enrollment key an
+administrator minted; you do not copy a workspace key or forward a port over
+SSH.
 
 ## Choose the right setup path
 
 | Path | What it does |
 | --- | --- |
-| macOS headless installer + `agent-relay-probe setup` | Installs the production core for the current user, runs it as `com.agentrelay.desktop.core.headless`, and signs the Mac into an existing Cloud workspace by device approval. No desktop app or administrator access is required. |
-| Linux Agent Relay package + `agent-relay-probe relay setup` | Signs this machine into an existing Cloud workspace by device approval and runs the account-aware systemd service. |
+| macOS headless installer + `agent-relay-probe setup` | Installs the production core for the current user, runs it as `com.agentrelay.desktop.core.headless`, and signs the Mac into an existing Cloud workspace by device approval or an enrollment key. No desktop app or administrator access is required. |
+| Linux Agent Relay package + `agent-relay-probe relay setup` | Signs this machine into an existing Cloud workspace by device approval or an enrollment key and runs the account-aware systemd service. |
 | npm CLI `agent-relay cloud login` + `cloud enroll` | Saves a separate CLI login and fleet enrollment record. A returned node ID does not start a service or prove a live spawn target. |
 | npm CLI `agent-relay init --hosted` | Can create a new hosted messaging workspace. It does not select your Desktop workspace just because both use the same account or the name “Default”. |
 | `agent-relay-node serve --headless` | Runs the standalone messaging core. It reads CLI workspace configuration and has no Cloud account sign-in plugin; it does not consume the Cloud fleet enrollment as an account login. |
@@ -95,7 +97,8 @@ that existing service; it does not install or update it:
 ~/.local/lib/agent-relay/current/agent-relay-probe setup --start-service
 ```
 
-Approve the displayed device code in a browser on any computer.
+Approve the displayed device code in a browser on any computer, or sign in
+unattended with an [enrollment key](#sign-in-with-an-enrollment-key) instead.
 
 ### Linux
 
@@ -154,6 +157,10 @@ An existing npm CLI login can list accessible IDs with
 `agent-relay cloud workspaces`; confirm the intended workspace with its owner.
 That command's login is separate from the headless service's login.
 
+Sign in by device approval, as below, or, for an unattended install, with an
+[enrollment key](#sign-in-with-an-enrollment-key). Device approval is the
+default.
+
 On macOS, use the per-user helper installed above:
 
 ```sh
@@ -188,6 +195,66 @@ form is available, update the Linux package from the download page.
 The stable `2026.11.3` `.deb` installs the helper at the path above and the
 app launcher as `/usr/bin/agent-relay-desktop`. Older packages used the CLI’s
 `agent-relay` name for that launcher; use the full probe path to avoid confusion.
+
+### Sign in with an enrollment key
+
+For an unattended install, an administrator mints a single-use, per-employee
+enrollment key in Agent Relay. Setup exchanges it for a sign-in with no browser
+and no device approval. Use a build whose `setup --help` output lists
+`--enrollment-key-file`. The feature landed after `2026.11.10-beta.1`; that beta
+and stable `2026.11.9` do not include it. Use device approval on older builds.
+
+Put only the key in a file and pass its path. Prefer this form for an unattended
+installer. Pass `-` to read from standard input only when an existing secret
+source needs to supply the key without putting it in a command argument. On
+macOS:
+
+```sh
+~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file /path/to/key --providers detected --sharing selected
+~/.local/lib/agent-relay/current/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file - --providers detected --sharing selected < /path/to/key
+```
+
+On Linux:
+
+```sh
+/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file /path/to/key --providers detected --sharing selected
+/usr/lib/agent-relay/agent-relay-probe setup --non-interactive --json --workspace YOUR-CLOUD-WORKSPACE-UUID --enrollment-key-file - --providers detected --sharing selected < /path/to/key
+```
+
+The file holds only the key. It must be owned by you with mode 0600
+(`chmod 600`) and must not be a symbolic link. The key never goes on a command
+line, in output, or in logs. The core reads the file itself and deletes it once
+Agent Relay accepts the key, because a key signs in only once. If Agent Relay
+does not accept the key, the file is kept. A file replaced after the core reads
+it is also left alone.
+
+With `-`, setup copies standard input to a private temporary file (mode 0600)
+and removes that copy when setup returns normally; it does not remove the
+original input source. If setup is interrupted or killed while it waits, an
+owner-only `agent-relay-enrollment-*` temporary file can remain and can still
+hold an unspent key. Before retrying, securely inspect and remove such a file
+after confirming that no setup process is using it.
+
+Setup waits, within `--timeout` and with or without `--wait`, until the key has
+signed in and the workspace is connected, or the sign-in fails. Setup reports
+one of these enrollment-key outcomes:
+
+| Outcome | Meaning |
+| --- | --- |
+| `enrollment_key_rejected` | Agent Relay did not accept the key. The message is the same whether the key was wrong, expired, revoked, or already used; ask the administrator for a new one. |
+| `enrollment_key_busy` | Agent Relay stayed busy after a few retries. Rerun setup with the same key. |
+| `enrollment_key_unsupported` | The site does not offer enrollment keys. Setup falls back to the device code: it prints the device instructions and exits with status 2 without waiting, even with `--wait`. Rerun setup with `--wait` to wait for the approval. |
+| `enrollment_key_unused` | The computer is already signed in or another sign-in is under way; the key is ignored. |
+
+Device approval stays the default. A computer whose session expired or was
+revoked renews it by device approval, and a site that does not offer
+enrollment keys falls back to device approval. After sign-in the machine keeps
+its session, so the core and its agents come back on the relay by themselves
+after a restart.
+
+An agent driving setup through the core's session socket uses
+`account.sign_in` with `flow: "enrollment_key"`; the `POST /setup/sign-in`
+route does not take enrollment keys.
 
 ## 3. Verify spawning separately from sign-in
 
@@ -257,8 +324,9 @@ Do not start paid model work just to diagnose connectivity without approval.
 ## Where is the workspace key for Default?
 
 This Cloud setup does not require finding, exporting, or pasting an `ar_ws_…`
-workspace key. Device approval authorizes the account-aware service for the
-selected workspace. A workspace ID or enrolled node ID is not a workspace key.
+workspace key. Device approval or an enrollment key authorizes the
+account-aware service for the selected workspace. A workspace ID or enrolled
+node ID is not a workspace key.
 `relay init --key` is a separate messaging-workspace join path for someone who
 already holds that credential; it is not a way to retrieve Desktop's login.
 
