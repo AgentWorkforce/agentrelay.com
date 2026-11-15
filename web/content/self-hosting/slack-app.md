@@ -59,7 +59,7 @@ secret store; never paste the values into a values file.
 | Secret | Keys | Value |
 | --- | --- | --- |
 | `slack-relay-slack` | `bot-token`, `app-token` | The `xoxb-` and `xapp-` tokens from above |
-| `slack-relay-anthropic` | `api-key` | An Anthropic API key (use a zero-data-retention key for regulated data) |
+| `slack-relay-anthropic` | `api-key` | An Anthropic API key. Use a zero-data-retention key if threads may contain regulated data; the chart can't check this. |
 | `slack-relay-relaycast` | `workspace-key` | A Relaycast workspace key for the agents' workspace (not needed with relaygate) |
 
 ## Install
@@ -79,12 +79,16 @@ slack:
   allowedChannels: [C0123456789]
 ```
 
+The chart isn't in a published release yet, so install it from a checkout of
+the infra repository:
+
 ```sh
-helm upgrade --install slack-relay agentworkforce/slack-relay -n agent-relay -f slack-relay-values.yaml
+git clone --depth 1 https://github.com/AgentWorkforce/infra.git
+helm upgrade --install slack-relay ./infra/charts/slack-relay -n agent-relay -f slack-relay-values.yaml
 ```
 
-Or set `components.slackRelay: true` in the umbrella and put the same values
-under `slack-relay:`.
+Or, if you install the umbrella from the same checkout, set
+`components.slackRelay: true` and put the same values under `slack-relay:`.
 
 **Done when:** the router logs `socket mode connected`, the host logs
 `registered relay agent slack-agent-host`, and an @mention in the allowed

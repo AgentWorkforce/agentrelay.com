@@ -7,6 +7,13 @@ description: The optional governance gate between agents and Relaycast and Sessi
 and Sessions. Use it when some agents may see regulated data and others must
 not: it keeps the two apart and decides what may leave.
 
+> **Status: early.** Today relaygate checks registration, Slack posts and
+> knowledge-base writes. It does **not** yet proxy Relaycast and Sessions, so
+> agents still reach them directly and regulated sessions are not isolated by
+> the gate. Until the proxy ships, don't rely on relaygate to keep regulated
+> data from other agents; restrict access to Relaycast and Sessions with
+> network policy and separate installs.
+
 ![relaygate between agents, Relaycast and Slack](/img/self-hosting/slack-relay-relaygate.svg)
 
 ## How it works
@@ -38,8 +45,7 @@ Generate one enrollment key per group, keep the keys in your secret store,
 and put only their sha256 in the policy:
 
 ```sh
-openssl rand -hex 32 > pit.key
-tr -d '\n' < pit.key | shasum -a 256
+for g in local pit bridge; do openssl rand -hex 32 > $g.key; printf '%s ' $g; tr -d '\n' < $g.key | shasum -a 256; done
 ```
 
 ```yaml
@@ -48,6 +54,7 @@ image:
   digest: sha256:<published digest>
 policy:
   enrollmentKeys:
+    - { id: local, gid: 11, sha256: "<sha256 of local.key>" }
     - { id: pit, gid: 22, sha256: "<sha256 of pit.key>" }
     - { id: slack-bridge, gid: 22, sha256: "<sha256 of the bridge key>", namePrefix: "slack-" }
   classifier:
@@ -56,12 +63,16 @@ secrets:
   anthropicApiKey: { name: relaygate-anthropic, key: api-key }   # only with the model classifier
 ```
 
+The chart isn't in a published release yet, so install it from a checkout of
+the infra repository:
+
 ```sh
-helm upgrade --install relaygate agentworkforce/relaygate -n agent-relay -f relaygate-values.yaml
+git clone --depth 1 https://github.com/AgentWorkforce/infra.git
+helm upgrade --install relaygate ./infra/charts/relaygate -n agent-relay -f relaygate-values.yaml
 ```
 
-Or set `components.relaygate: true` in the umbrella and put the same values
-under `relaygate:`.
+Or, if you install the umbrella from the same checkout, set
+`components.relaygate: true` and put the same values under `relaygate:`.
 
 **Done when:** the relaygate pod reports `/readyz` 200 and its log shows the
 policy loaded.
@@ -72,8 +83,10 @@ and its agents talk to Relaycast only through the gate.
 
 ## Status
 
-The current build serves registration, permission checks, the classifier and
-the audit log. Proxying all Relaycast and Sessions traffic through the gate is
-next; until then, also restrict Relaycast with a NetworkPolicy. Reference:
+The current build serves registration, permission checks, `/v1/check`, the
+classifier and the audit log. Proxying Relaycast and Sessions through the gate
+is next; only then does it enforce the table above for reads and messages.
+Until then, keep regulated agents in their own install and restrict Relaycast
+and Sessions with network policy. Reference:
 [docs/self-hosted-relaygate.md](https://github.com/AgentWorkforce/infra/blob/main/docs/self-hosted-relaygate.md)
 and [AgentWorkforce/relaygate](https://github.com/AgentWorkforce/relaygate).
