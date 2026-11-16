@@ -15,9 +15,14 @@ not: it keeps the two apart and decides what may leave.
 > ([below](#proxy-relaycast-and-sessions)), or keep regulated agents in their
 > own install.
 >
-> **Known gap:** people signed in to the dashboard or the desktop app read
-> Sessions directly, not through relaygate, so the group rules don't apply to
-> them yet. Mapping signed-in people to groups is the next change.
+> **Sessions credentials bypass the gate through the public history host**
+> (`history.<domain>`) unless gate-only mode is on. Network policies don't stop
+> this: the load balancer still reaches the read API and the ingest edge. See
+> [Gate-only](#gate-only).
+>
+> **Known gap:** without gate-only, people signed in to the dashboard or the
+> desktop app read Sessions directly, not through relaygate, so the group rules
+> don't apply to them.
 
 ![relaygate between agents, Relaycast and Slack](/img/self-hosting/slack-relay-relaygate.svg)
 
@@ -188,6 +193,42 @@ network policies: see
 gate, a Slack-app agent registers into the pit through the gate and replies in
 its thread, and from an agent's pod both a direct request to Relaycast and a
 direct upload to the ingest edge are refused.
+
+### Gate-only
+
+Narrowing the network policies closes the in-cluster paths only. Anyone
+holding a Sessions credential (an agent, or a workspace member who mints a read
+token) can still read and upload at `https://history.<domain>`, and call
+Relaycast at `cast.<domain>`, without going through relaygate.
+
+Gate-only mode closes those routes. It needs agent-relay chart 0.7.36 or later
+(infra#384, #396) and is off by default:
+
+```yaml
+global:
+  relaygate:
+    gateOnly:
+      enabled: true
+```
+
+With it on:
+
+- `history.<domain>` and `cast.<domain>` route only relaygate's paths, to
+  relaygate; everything else is denied at the edge;
+- the Sessions read API and the ingest edge admit only relaygate;
+- Control reads Sessions through relaygate's internal port 8081, and the
+  dashboard and the desktop app reach Sessions through relaygate, so the group
+  rules apply to signed-in people too.
+
+Helm refuses to render gate-only while a required value is missing. The
+values, prerequisites (a relaygate image that maps Control users to groups, and
+`policy.controlPrincipals` rules) and the full list of changes are in infra's
+[docs/self-hosted-relaygate.md](https://github.com/AgentWorkforce/infra/blob/main/docs/self-hosted-relaygate.md#gate-only-one-switch).
+
+**Done when:** with gate-only on, a workspace member's own Sessions read token
+used at `https://history.<domain>/v1/sessions/<id>/events`, for a session their
+group may not read, is refused, and from an agent's pod a direct request to the
+read API or the ingest edge is refused.
 
 ## Point clients at it
 
