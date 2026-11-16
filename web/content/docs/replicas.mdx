@@ -58,7 +58,7 @@ Call `bind_replica` with:
 }
 ```
 
-Use this for an existing chat such as a Replicas mothership. Binding does not create compute or send a repository task. Keep its returned `spawn_id`; if the binding is pending, call `get_replica_spawn` until it is bound.
+Use this for an existing chat such as a Replicas mothership. Binding does not create a replica or send a repository task. Keep its returned `spawn_id`; if the binding is pending, call `get_replica_spawn` until it is bound. Advancing setup can wake a sleeping replica, which is a paid provider operation.
 
 An existing local bridge and the Cloud binding cannot own the same chat. Stop the bridge before migrating the chat. A replica can have only one active Cloud binding, even when it has multiple chats; release the current binding before binding a different chat from that replica.
 
@@ -91,6 +91,8 @@ There is no supported self-hosted sequence for `list_replicas_environments`, `sp
 ## Release
 
 `release_replica` revokes the helper capability, removes the Relay identity and subscriptions, and sleeps the replica. It preserves the replica and its history. The operation can be repeated to finish partial cleanup.
+
+Cloud cannot release a create whose outcome is still unknown and has no verified `replica_id`. Recover the original launch with `recover_replica_spawn`, then release that same `spawn_id`.
 
 ## Hosted Cloud REST API
 
