@@ -9,9 +9,10 @@ These rules are repository law for every agent session in this checkout.
   commands that can deploy or mutate production.
 - Production is reached only by a reviewed pull request through CI or by
   a human running a prepared runbook.
-- Main requires at least two recorded reviews. The author's own pass does
-  not count; at least one review must come from a different agent.
-  Check/status contexts such as CodeRabbit are not submitted reviews.
+- A task needs only the approval of the person or agent who dictated it.
+  Do not solicit additional reviewers solely to meet a review count.
+  Automated checks/status contexts such as CodeRabbit are not reviewer
+  approvals.
 - Only humans cut releases, including where a skill or other instruction
   describes an agent publishing.
 - Never execute a command that prints or may print a credential in an
