@@ -1,6 +1,7 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
 import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
+import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowGet, readFacadeRoute } from "./src/cloud-facade.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
@@ -950,6 +951,20 @@ const router = {
       request = new Request(url.toString(), request);
     }
 
+    // Empty/invalid/unreadable config retains the existing dispatch below,
+    // including webhook offload and Cloud's unavailable-binding response.
+    const facade = await readFacadeRoute(request, env.ROUTER_CONFIG);
+    if (facade?.mode === "on") {
+      // This branch is not recorded. Cancel the unused tee so a streaming
+      // mutation body cannot accumulate in the recorder's unread branch.
+      void recorderRequestClone?.body?.cancel().catch(() => undefined);
+      timing.setOrigin(facadeOriginLabel(facade, url.pathname));
+      return timing.measure("up", () => fetchFacade(request, facade));
+    }
+    const shadowRequest = facade?.mode === "shadow" && isSafeShadowGet(request)
+      ? request.clone() as unknown as Request
+      : null;
+
     if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
       if (!env.CLOUD_WEB_WORKER) {
@@ -964,6 +979,10 @@ const router = {
 
       const cloudWebWorker = env.CLOUD_WEB_WORKER;
       const workerResponse = await timing.measure("up", () => cloudWebWorker.fetch(request));
+      if (shadowRequest && facade) {
+        timing.setOrigin("cloud");
+        ctx.waitUntil(compareFacadeShadow(shadowRequest, facade, workerResponse));
+      }
       if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
           maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
