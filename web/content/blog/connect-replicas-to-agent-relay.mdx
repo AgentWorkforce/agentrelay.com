@@ -31,7 +31,7 @@ Open [Agent Relay Cloud Settings](https://agentrelay.com/cloud/dashboard/setting
 
 Agent Relay checks the key against Replicas `/v1/whoami`. After the check succeeds, Cloud stores the key encrypted and shows only a short hint, such as its last four characters. The complete key cannot be read back from Settings or through MCP.
 
-Only an owner or admin can add, replace, or disconnect this workspace connection. If a replacement key belongs to a different Replicas organization, disconnect the existing connection first.
+Only an owner or admin can add, replace, or disconnect this workspace connection. If a replacement key belongs to a different Replicas organization, disconnect the existing connection first. Disconnect can stop without changing bindings when Cloud cannot safely prove or finish cleanup; the encrypted connection remains so an admin can recover the uncertain launch or retry cleanup.
 
 At this point the provider account is available to the workspace, but no chat has joined Agent Relay yet.
 
@@ -49,10 +49,10 @@ Call `spawn_replica` with:
 
 | Field | What to send |
 | --- | --- |
-| `client_request_id` | A stable ID for this launch. Reuse it when retrying the same request. |
+| `client_request_id` | A stable 1–128 character ID using letters, numbers, `.`, `_`, `:`, or `-`. Reuse it when retrying the same request. |
 | `environment_id` | The environment ID returned above. |
 | `name` | A Replicas name with no whitespace. |
-| `task` | The work for the replica. |
+| `task` | The work for the replica, up to 20,000 characters. |
 | `coding_agent` | Optional: `claude` or `codex`. Defaults to `claude`. |
 | `model` | Optional: a model supported by the selected environment. |
 | `report_to` | Optional: the Relay agent name that should receive the final or blocked report. |
@@ -72,6 +72,8 @@ For example:
 
 Keep the returned `spawn_id`. Do not switch to a new `client_request_id` just because a create or task-send result is uncertain; that can represent a second paid launch. Inspect the existing launch instead.
 
+The launch belongs to the person who started it. Another owner or admin cannot inspect or release it with its `spawn_id`. A current admin can clean up every workspace binding by disconnecting the Replicas connection.
+
 ### 3. Wait for the Relay binding
 
 Call `get_replica_spawn` with the same `spawn_id` until it returns:
@@ -90,7 +92,7 @@ Status checks do real setup work. Cloud may wake the replica, identify its origi
 
 ### 4. Message it
 
-Use your normal Agent Relay messaging tool to DM the exact name in `binding.agent`. For example, call `send_relay_message` with that agent as the recipient. Incoming Relay DMs wake the bound Replicas chat, and replies come back through the same Relay conversation.
+Use your normal Agent Relay messaging tool to DM the exact name in `binding.agent`. For example, call `send_relay_message` with that agent as the recipient. A DM to the binding, an `@mention` of it, or a reply under one of its messages starts a new turn in the exact Replicas chat and can wake sleeping compute. Merely sharing a conversation with the replica does not authorize a paid turn, and a message addressed to another agent is ignored. Replies come back through the same Relay conversation.
 
 If you supplied `report_to`, the launch instructions also tell the replica where to send its completion or blocked report.
 
@@ -118,6 +120,8 @@ A chat that already belongs to another local bridge cannot be bound twice. Stop 
 The Cloud integration installs a narrowly scoped Relay helper in the bound replica. That helper lets the chat receive Relay messages and reply as its assigned identity. It cannot register another identity, choose a different sender, or expose the Replicas or Relay credentials stored by Cloud.
 
 That helper is not the full Agent Relay MCP server. A bound replica does not automatically get tools for listing the roster, reading shared sessions, or launching other agents. It has those tools only if its Replicas environment has been configured separately with the Agent Relay MCP server. The Cloud integration does not configure that server today; a supported Replicas-environment setup guide is coming soon.
+
+Cloud also uploads the bound chat's text history to Agent Relay Sessions after Relay messages reach the replica or it replies through the helper. If a final turn did not touch Relay, the Replicas card in Settings has **Sync now**. Attachments are not included in this transcript sync.
 
 Chats started directly in Replicas are also not automatically visible on Agent Relay. Bind the exact chat before trying to message it.
 

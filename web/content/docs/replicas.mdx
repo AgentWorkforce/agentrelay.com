@@ -15,7 +15,7 @@ An Agent Relay workspace owner or admin opens [Cloud Settings](https://agentrela
 2. Paste it into **Replicas API key** and click **Connect**.
 3. Cloud verifies the key with Replicas `/v1/whoami`, stores it encrypted, and displays only a short hint. The complete key cannot be read back.
 
-Replacing a key from another Replicas organization requires disconnecting the current connection first. Disconnect also cleans up recorded Relay bindings.
+Replacing a key from another Replicas organization requires disconnecting the current connection first. Disconnect cleans up recorded Relay bindings, but it can refuse before changing them when Cloud cannot prove an uncertain create or finish cleanup. The encrypted connection remains available so an admin can recover the launch or retry disconnect.
 
 ## Launch through Agent Relay MCP
 
@@ -27,14 +27,16 @@ These tools are on the Agent Relay Cloud MCP connection and require a current pe
 4. Send ordinary Relay DMs to `binding.agent`.
 5. Call `release_replica` with `spawn_id` to disconnect and sleep it.
 
+A launch belongs to the person who started it or bound the existing chat. Another owner or admin cannot inspect or release it by using its `spawn_id`. A current admin can clean up every binding by disconnecting the workspace's Replicas connection.
+
 `spawn_replica` accepts:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `client_request_id` | Yes | Stable ID for this launch. Reuse it for an equivalent retry. |
+| `client_request_id` | Yes | Stable 1–128 character ID using letters, numbers, `.`, `_`, `:`, or `-`. Reuse it for an equivalent retry. |
 | `environment_id` | Yes | UUID returned by `list_replicas_environments`. |
 | `name` | Yes | Replicas name, 1–100 characters with no whitespace. |
-| `task` | Yes | Task text sent after the binding is ready. |
+| `task` | Yes | Task text sent after the binding is ready, up to 20,000 characters. |
 | `coding_agent` | No | `claude` or `codex`; defaults to `claude`. |
 | `model` | No | Model supported by the selected environment. |
 | `report_to` | No | Relay agent name for the completion or blocked report. |
@@ -60,13 +62,15 @@ An existing local bridge and the Cloud binding cannot own the same chat. Stop th
 
 ## Messages and capabilities
 
-Message `binding.agent` through normal Agent Relay DMs. A Relay message starts a new turn in the exact bound chat and can wake sleeping compute. The chat replies through a scoped helper installed by Cloud.
+Message `binding.agent` through normal Agent Relay DMs. A DM to the binding, an `@mention` of it, or a reply under one of its messages starts a new turn in the exact bound chat and can wake sleeping compute. Conversation visibility alone does not authorize a paid turn, and a message addressed to another agent is ignored. The chat replies through a scoped helper installed by Cloud.
 
-The helper can send only as that binding. It does not contain the provider key, Relay workspace key, or agent token, and its capability stops working after release or disconnect.
+The helper can send only as that binding. It does not contain the provider key, Relay workspace key, or agent token, and its capability stops working after release, disconnect, or loss of workspace access.
 
 The helper is not the full Agent Relay MCP server. Binding alone does not give the replica roster, shared-session, launch, or other MCP tools. Those tools are available only when the Replicas environment is separately configured with Agent Relay MCP. Cloud does not configure that server today; supported setup instructions are coming soon.
 
 Chats created directly in Replicas remain off the relay until you bind the exact `replica_id` and `chat_id`.
+
+Cloud uploads the bound chat's text history to Agent Relay Sessions after Relay messages reach the replica or it replies through the helper. Use **Sync now** on the Replicas Settings card for a final turn that did not touch Relay. Attachment transport is not part of this transcript sync.
 
 ## Release
 
