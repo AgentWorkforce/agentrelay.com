@@ -1,16 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../index.js";
-import { CLOUD_FACADE_KEY, decodedFacadePath, isSafeShadowGet, parseFacadeRoutes } from "../src/cloud-facade.js";
+import { CLOUD_FACADE_KEY, decodedFacadePath, isSafeShadowRequest, parseFacadeRoutes, fetchFacade, type FacadeRoute } from "../src/cloud-facade.js";
 import { startEdgeTiming } from "../src/edge-timing.js";
 
 const RC = "https://api.prod-aws.agentrelay.com";
 const WEB = "https://prod-aws.agentrelay.com";
+const CLOUD_BODY = JSON.stringify({ items: [{ id: "cloud-id", name: "Cloud" }] });
 const PATH = "/cloud/api/v1/workspaces/rw_private/sessions";
 const url = (path = PATH) => "https://agentrelay.com" + path;
 const rule = (overrides: Record<string, unknown> = {}) => ({ prefix: PATH, origin: RC, mode: "on", ...overrides });
 
 function setup(raw: string | null = null) {
-  const cloud = vi.fn(async (_request: Request) => new Response("cloud answer", {
+  const cloud = vi.fn(async (_request: Request) => new Response(_request.method === "HEAD" ? null : CLOUD_BODY, {
     status: 200, headers: { "content-type": "application/json", "x-cloud": "present", "set-cookie": "old=cloud; Domain=agentrelay.com; Secure" },
   }));
   const get = vi.fn(async (key: string) => key === CLOUD_FACADE_KEY ? raw : null);
@@ -19,7 +20,7 @@ function setup(raw: string | null = null) {
   const tasks: Promise<unknown>[] = [];
   const waitUntil = vi.fn((promise: Promise<unknown>) => { tasks.push(promise); });
   const ctx = { waitUntil, passThroughOnException() {} } as unknown as ExecutionContext;
-  const target = vi.fn(async (_request: Request) => new Response("target answer", {
+  const target = vi.fn(async (_request: Request) => new Response(_request.method === "HEAD" ? null : JSON.stringify({ items: [{ id: "target-id", name: "Target" }] }), {
     headers: { "content-type": "application/json" },
   }));
   vi.stubGlobal("fetch", target);
@@ -53,7 +54,7 @@ describe("facade config fail-safe", () => {
     const response = await s.run();
     expect(s.cloud).toHaveBeenCalledOnce();
     expect(s.target).not.toHaveBeenCalled();
-    expect(await response.text()).toBe("cloud answer");
+    expect(await response.text()).toBe(CLOUD_BODY);
     expect(response.headers.get("x-cloud")).toBe("present");
     expect(response.headers.get("set-cookie")).toBe("old=cloud; Domain=agentrelay.com; Secure");
     expect(response.headers.has("x-ar-origin")).toBe(false);
@@ -96,6 +97,16 @@ describe("facade config fail-safe", () => {
 });
 
 describe("decoded segment-boundary matching", () => {
+  it.each([
+    "/cloud/api/auth%2F..%2Fsessions", "/cloud/api/v1/auth%2f..%2fflows/x",
+    PATH.replace("/sessions", "%2fsessions"), "/cloud/api//sessions", "/cloud/api/%252fauth",
+    "/cloud/api/v1/sessions%2ejson",
+  ])("keeps ambiguous path %s on Cloud even inside a broad on rule", async path => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud" }), rule({ prefix: "/cloud/api/auth", mode: "off" })]));
+    await s.run(new Request(url(path)));
+    expect(s.cloud).toHaveBeenCalledOnce();
+    expect(s.target).not.toHaveBeenCalled();
+  });
   it("uses the longest matching prefix regardless of list order", async () => {
     for (const reverse of [false, true]) {
       const entries = [rule({ prefix: "/cloud", origin: WEB }), rule()];
@@ -122,15 +133,15 @@ describe("decoded segment-boundary matching", () => {
     expect(s.cloud).toHaveBeenCalledOnce();
     expect(s.target).not.toHaveBeenCalled();
   });
-  it.each([PATH, PATH + "/", PATH + "/session_1", PATH.replace("sessions", "%73essions"), PATH.replace("/sessions", "%2Fsessions")])("matches decoded path %s without rewriting its wire path", async path => {
+  it.each([PATH, PATH + "/", PATH + "/session_1", PATH.replace("sessions", "%73essions"), PATH.replace("sessions", "s%65ssions")])("matches decoded path %s without rewriting its wire path", async path => {
     const s = setup(JSON.stringify([rule()]));
     await s.run(new Request(url(path) + "?cursor=a%2Fb&cursor=next"));
     const forwarded = new URL(s.target.mock.calls[0][0].url);
     expect(forwarded.pathname).toBe(new URL(url(path)).pathname);
     expect(forwarded.search).toBe("?cursor=a%2Fb&cursor=next");
   });
-  it("normalizes decoded slash/dot segments before choosing the rule", () => {
-    expect(decodedFacadePath("/cloud//api/./v1%2F..%2Fsessions/")).toBe("/cloud/api/sessions");
+  it("rejects ambiguous slash/dot segments before choosing the rule", () => {
+    expect(decodedFacadePath("/cloud//api/./v1%2F..%2Fsessions/")).toBeNull();
     expect(decodedFacadePath("/cloud/%GG")).toBeNull();
     expect(decodedFacadePath("/cloud/%5Csecret")).toBeNull();
     expect(decodedFacadePath("/cloud/%00secret")).toBeNull();
@@ -158,6 +169,46 @@ describe("decoded segment-boundary matching", () => {
 });
 
 describe("on-mode forwarding", () => {
+  it("enforces the origin allowlist in the forwarder when parsing is bypassed", async () => {
+    const s = setup();
+    const response = await fetchFacade(new Request(url()), rule({ origin: "https://evil.invalid" }) as FacadeRoute);
+    expect(response.status).toBe(502);
+    expect(s.target).not.toHaveBeenCalled();
+  });
+  it("sanitizes forwarding headers and derives XFF only from Cloudflare's client IP", async () => {
+    const s = setup(JSON.stringify([rule()]));
+    await s.run(new Request(url(), { headers: { "x-forwarded-for": "spoof", "x-real-ip": "spoof",
+      "x-forwarded-prefix": "/evil", forwarded: "for=spoof", "cf-connecting-ip": "203.0.113.7" } }));
+    const forwarded = s.target.mock.calls[0][0].headers;
+    expect(forwarded.get("x-forwarded-for")).toBe("203.0.113.7");
+    for (const name of ["x-real-ip", "x-forwarded-prefix", "forwarded"]) expect(forwarded.has(name)).toBe(false);
+  });
+  it("drops a spoofed XFF when Cloudflare's client IP is unavailable", async () => {
+    const s = setup(JSON.stringify([rule()]));
+    await s.run(new Request(url(), { headers: { "x-forwarded-for": "spoof" } }));
+    expect(s.target.mock.calls[0][0].headers.has("x-forwarded-for")).toBe(false);
+  });
+  it("suppresses agent_relay_session cookies until the identity cookie contract is migrated", async () => {
+    const s = setup(JSON.stringify([rule()]));
+    const headers = new Headers();
+    headers.append("set-cookie", "agent_relay_session=new-control-session; Domain=prod-aws.agentrelay.com; Path=/cloud; HttpOnly");
+    headers.append("set-cookie", "agent_relay_session=; Domain=agentrelay.com; Path=/; Max-Age=0");
+    headers.append("set-cookie", "other=keep; Domain=prod-aws.agentrelay.com; Secure");
+    s.target.mockResolvedValue(new Response("ok", { headers }));
+    const response = await s.run(new Request(url(), { headers: { cookie: "agent_relay_session=legacy-cloud" } }));
+    expect(response.headers.getSetCookie()).toEqual(["other=keep; Secure"]);
+    expect(s.target.mock.calls[0][0].headers.get("cookie")).toBe("agent_relay_session=legacy-cloud");
+  });
+  it.each([RC, WEB, "//prod-aws.agentrelay.com"])("rewrites approved redirect host %s back to the apex", async origin => {
+    const s = setup(JSON.stringify([rule()]));
+    s.target.mockResolvedValue(new Response(null, { status: 302, headers: { location: origin + "/cloud/dashboard?next=%2Fcloud#section" } }));
+    expect((await s.run()).headers.get("location")).toBe("https://agentrelay.com/cloud/dashboard?next=%2Fcloud#section");
+  });
+  it.each(["/cloud/dashboard?next=x", "../dashboard", "https://elsewhere.invalid/page"])("preserves relative or foreign redirect %s", async location => {
+    const s = setup(JSON.stringify([rule()]));
+    s.target.mockResolvedValue(new Response(null, { status: 302, headers: { location } }));
+    expect((await s.run()).headers.get("location")).toBe(location);
+  });
   it("forwards a real streaming body without recording or awaiting an unused recorder tee", async () => {
     const s = setup(JSON.stringify([rule()]));
     const put = vi.fn();
@@ -234,10 +285,11 @@ describe("on-mode forwarding", () => {
     expect(s.target).toHaveBeenCalledOnce();
     expect(s.target.mock.calls[0][0].redirect).toBe("manual");
   });
-  it("keeps double-slash paths on the allowlisted host", async () => {
-    const s = setup(JSON.stringify([rule({ prefix: "/" })]));
-    await s.run(new Request(url("//evil.invalid/cloud")));
-    expect(new URL(s.target.mock.calls[0][0].url).origin).toBe(RC);
+  it("refuses ambiguous double-slash paths even with a manually constructed route", async () => {
+    const s = setup();
+    const response = await fetchFacade(new Request(url("//evil.invalid/cloud")), rule() as FacadeRoute);
+    expect(response.status).toBe(502);
+    expect(s.target).not.toHaveBeenCalled();
   });
   it("returns a generic 502 on target failure without replaying a mutation into Cloud or logging secrets", async () => {
     const s = setup(JSON.stringify([rule()]));
@@ -253,6 +305,115 @@ describe("on-mode forwarding", () => {
 });
 
 describe("safe asynchronous shadows", () => {
+  it("compares a KV-selected legacy web path without a hard-coded Cloud cohort", async () => {
+    const s = setup(JSON.stringify([rule({ prefix: "/pricing", mode: "shadow" })]));
+    s.target.mockImplementation(async request => new Response(new URL(request.url).origin === RC ? "new web" : "old web"));
+    const response = await s.run(new Request(url("/pricing")));
+    expect(await response.text()).toBe("old web");
+    await s.drain();
+    expect(s.target.mock.calls.map(([request]) => new URL(request.url).origin)).toEqual(["https://origin-web.agentrelay.com", RC]);
+  });
+  it("logs a missing Cloud binding as a skip instead of silently implying shadow matches", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    delete s.env.CLOUD_WEB_WORKER;
+    expect((await s.run()).status).toBe(503);
+    expect(s.target).not.toHaveBeenCalled();
+    expect(log.mock.calls.some(call => String(call[0]).includes('"reason":"cloud_binding_unavailable"'))).toBe(true);
+  });
+  it.each(["GET", "HEAD"])("shadows KV-selected %s reads outside the Sessions fixture", async method => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud/api/v1/catalog", mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const response = await s.run(new Request(url("/cloud/api/v1/catalog"), { method }));
+    expect(await response.text()).toBe(method === "HEAD" ? "" : CLOUD_BODY);
+    await s.drain();
+    expect(s.target).toHaveBeenCalledOnce();
+    expect(s.target.mock.calls[0][0].method).toBe(method);
+    expect(log.mock.calls.some(call => String(call[0]).includes('"outcome":"match"'))).toBe(true);
+  });
+  it("compares JSON types/keys rather than only status and content type", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    s.target.mockResolvedValue(new Response(JSON.stringify({ items: [{ id: "private-id", name: 42 }] }), {
+      headers: { "content-type": "application/json" },
+    }));
+    const response = await s.run();
+    expect(await response.text()).toBe(CLOUD_BODY);
+    await s.drain();
+    const entry = log.mock.calls.map(call => JSON.parse(String(call[0]))).find(e => e.event === "cloud_facade_shadow");
+    expect(entry).toMatchObject({ outcome: "mismatch", comparison: "json_shape", statusMatch: true, shapeMatch: false });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private-id");
+  });
+  it("hashes bounded non-JSON bodies without logging either body or digest", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    s.cloud.mockResolvedValue(new Response("private same bytes", { headers: { "content-type": "text/plain" } }));
+    s.target.mockResolvedValue(new Response("private same bytes", { headers: { "content-type": "text/plain" } }));
+    await s.run();
+    await s.drain();
+    const entry = log.mock.calls.map(call => JSON.parse(String(call[0]))).find(e => e.event === "cloud_facade_shadow");
+    expect(entry).toMatchObject({ outcome: "match", comparison: "body_hash", shapeMatch: true });
+    expect(entry).not.toHaveProperty("hash");
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private same bytes");
+  });
+  it.each(["cookie", "authorization"])("labels authenticated 401s as identity_unmigrated for %s", async header => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const target = new Response("private denial body", { status: 401 });
+    const read = vi.spyOn(target.body!, "getReader");
+    s.target.mockResolvedValue(target);
+    await s.run(new Request(url(), { headers: { [header]: "private-credential" } }));
+    await s.drain();
+    const entry = log.mock.calls.map(call => JSON.parse(String(call[0]))).find(e => e.event === "cloud_facade_shadow");
+    expect(entry).toMatchObject({ outcome: "identity_unmigrated", baselineStatus: 200, shadowStatus: 401 });
+    expect(read).not.toHaveBeenCalled();
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private");
+  });
+  it("retains mismatch classification for an unauthenticated 401", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    s.target.mockResolvedValue(new Response(CLOUD_BODY, { status: 401, headers: { "content-type": "application/json" } }));
+    await s.run(); await s.drain();
+    const entry = log.mock.calls.map(call => JSON.parse(String(call[0]))).find(e => e.event === "cloud_facade_shadow");
+    expect(entry).toMatchObject({ outcome: "mismatch", statusMatch: false });
+  });
+  it("caps body comparison without changing the client's large Cloud response", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const large = "p".repeat(70 * 1024);
+    s.cloud.mockResolvedValue(new Response(large));
+    s.target.mockResolvedValue(new Response(large));
+    const response = await s.run();
+    expect(await response.text()).toBe(large);
+    await s.drain();
+    expect(log.mock.calls.some(call => String(call[0]).includes('"outcome":"error"'))).toBe(true);
+  });
+  it("times out a stalled comparison copy while preserving the client's body stream", async () => {
+    vi.useFakeTimers();
+    try {
+      const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+      const log = vi.spyOn(console, "log").mockImplementation(() => {});
+      let source!: ReadableStreamDefaultController<Uint8Array>;
+      s.cloud.mockResolvedValue(new Response(new ReadableStream<Uint8Array>({ start(controller) { source = controller; } })));
+      const response = await s.run();
+      await vi.advanceTimersByTimeAsync(5_001);
+      await s.drain();
+      expect(log.mock.calls.some(call => String(call[0]).includes('"outcome":"error"'))).toBe(true);
+      source.enqueue(new TextEncoder().encode("client still owns this"));
+      source.close();
+      expect(await response.text()).toBe("client still owns this");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it("does not start a shadow when Cloud's response is an event stream", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    s.cloud.mockResolvedValue(new Response("event: private", { headers: { "content-type": "text/event-stream" } }));
+    const response = await s.run();
+    expect(await response.text()).toBe("event: private");
+    await s.drain();
+    expect(s.target).not.toHaveBeenCalled();
+  });
   it("bounds the shadow fetch with a five-second abort signal", async () => {
     const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
     vi.spyOn(console, "log").mockImplementation(() => {});
@@ -266,7 +427,7 @@ describe("safe asynchronous shadows", () => {
     controller.abort();
     await expect(s.drain()).resolves.toBeDefined();
   });
-  it("returns Cloud immediately and compares a deferred copy in waitUntil without reading bodies or logging credentials", async () => {
+  it("returns Cloud immediately and compares a deferred copy in waitUntil without returning target data or logging credentials", async () => {
     const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
     let resolve!: (value: Response) => void;
@@ -274,7 +435,7 @@ describe("safe asynchronous shadows", () => {
     const response = await s.run(new Request(url() + "?search=private-query", { headers: {
       cookie: "session=private-cookie", authorization: "Bearer private-token", "x-request-id": "private-id",
     } }));
-    expect(await response.text()).toBe("cloud answer");
+    expect(await response.text()).toBe(CLOUD_BODY);
     expect(response.headers.get("set-cookie")).toContain("old=cloud");
     expect(s.cloud).toHaveBeenCalledOnce();
     expect(s.waitUntil).toHaveBeenCalledOnce();
@@ -285,7 +446,7 @@ describe("safe asynchronous shadows", () => {
     expect(request.headers.get("x-forwarded-host")).toBe("agentrelay.com");
     expect(request.redirect).toBe("manual");
     expect(request.signal).toBeDefined();
-    const shadow = new Response("private-target-body", { headers: { "content-type": "application/json", "set-cookie": "new=private-target-cookie" } });
+    const shadow = new Response(JSON.stringify({ items: [{ name: "private-target-name", id: "private-target-id" }] }), { headers: { "content-type": "application/json", "set-cookie": "new=private-target-cookie" } });
     const text = vi.spyOn(shadow, "text");
     const json = vi.spyOn(shadow, "json");
     resolve(shadow);
@@ -294,7 +455,7 @@ describe("safe asynchronous shadows", () => {
     expect(json).not.toHaveBeenCalled();
     const line = log.mock.calls.map(call => String(call[0])).find(line => line.includes("cloud_facade_shadow"))!;
     expect(JSON.parse(line)).toEqual({ event: "cloud_facade_shadow", route: "/cloud/api", origin: "rc", outcome: "match",
-      statusMatch: true, shapeMatch: true, cloudStatus: 200, shadowStatus: 200 });
+      comparison: "json_shape", statusMatch: true, shapeMatch: true, baselineStatus: 200, shadowStatus: 200 });
     expect(line).not.toContain("private");
     expect(response.headers.get("set-cookie")).not.toContain("private-target-cookie");
   });
@@ -303,7 +464,7 @@ describe("safe asynchronous shadows", () => {
   ])("logs a mismatch for status %s and media shape %s", async (status, contentType, statusMatch, shapeMatch) => {
     const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    s.target.mockResolvedValue(new Response("private body", { status, headers: { "content-type": contentType } }));
+    s.target.mockResolvedValue(new Response(contentType === "application/json" ? CLOUD_BODY : "private body", { status, headers: { "content-type": contentType } }));
     await s.run();
     await s.drain();
     const entry = log.mock.calls.map(call => JSON.parse(String(call[0]))).find(e => e.event === "cloud_facade_shadow");
@@ -318,7 +479,7 @@ describe("safe asynchronous shadows", () => {
     expect(log.mock.calls.some(call => String(call[0]).includes('"outcome":"error"'))).toBe(true);
     expect(JSON.stringify(log.mock.calls)).not.toContain("private-");
   });
-  it.each(["POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])("never shadows %s", async method => {
+  it.each(["POST", "PUT", "PATCH", "DELETE", "OPTIONS"])("never shadows %s", async method => {
     const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
     await s.run(new Request(url(), { method }));
     expect(s.cloud).toHaveBeenCalledOnce();
@@ -329,16 +490,67 @@ describe("safe asynchronous shadows", () => {
     ["/cloud/api/auth/callback/google?code=private", {}], ["/cloud/oauth/authorize", {}],
     [PATH + "?grant=one-use", {}], [PATH + "?access_token=private", {}],
     [PATH, { accept: "text/event-stream" }], [PATH, { upgrade: "websocket" }],
-    [PATH, { range: "bytes=0-10" }], ["/cloud/api/v1/workspaces/rw_private/relayhistory/reset", {}],
+    ["/cloud/api/v1/workspaces/rw_private/relayfile/mount-session", {}],
   ])("does not shadow unsafe or streaming GET %s", async (path, headers) => {
     const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode: "shadow" })]));
     await s.run(new Request(url(path), { headers }));
     expect(s.target).not.toHaveBeenCalled();
     expect(s.waitUntil).not.toHaveBeenCalled();
   });
-  it("accepts audited History reads, but no arbitrary GET mutation route", () => {
-    expect(isSafeShadowGet(new Request(url("/cloud/api/v1/workspaces/rw_1/reflex/sessions/s_1/brief")))).toBe(true);
-    expect(isSafeShadowGet(new Request(url("/cloud/api/v1/arbitrary-get-action")))).toBe(false);
+  it("lets KV select any non-denied GET/HEAD cohort", () => {
+    expect(isSafeShadowRequest(new Request(url("/cloud/api/v1/workspaces/rw_1/reflex/sessions/s_1/brief")))).toBe(true);
+    expect(isSafeShadowRequest(new Request(url("/cloud/api/v1/catalog")))).toBe(true);
+    expect(isSafeShadowRequest(new Request(url("/cloud/api/v1/catalog"), { method: "HEAD" }))).toBe(true);
+  });
+});
+
+describe("KV-independent denylist", () => {
+  const denied = [
+    "/cloud/api/auth/session", "/cloud/login", "/cloud/logout", "/cloud/callback/google",
+    "/cloud/oauth/authorize", "/cloud/.well-known/openid-configuration", "/cloud/api/v1/grants",
+    "/cloud/api/v1/token/mint", "/cloud/api/v1/credential/mint", "/cloud/api/v1/auth/device/start",
+    "/cloud/api/v1/webhooks/nango", "/cloud/mcp", "/cloud/api/v1/provider-credentials/byok",
+    "/cloud/api/v1/setup-token", "/cloud/api/v1/workers/register", "/cloud/api/v1/relayfile/mount-session",
+    "/cloud/api/v1/workflows/local-run", "/cloud/api/v1/workflows/runs/run/clone/archive-lease",
+    "/cloud/api/v1/auth%2Fdevice", "/cloud/api/v1/%6fAuth/authorize", "/cloud/api/v1/MCP/relay-events",
+    "/cloud/api/v1/catalog?grant=single-use",
+  ];
+  for (const mode of ["on", "shadow"]) {
+    it.each(denied)(`never overrides denied path %s in ${mode} mode`, async path => {
+      const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode })]));
+      await s.run(new Request(url(path)));
+      await s.drain();
+      expect(s.cloud).toHaveBeenCalledOnce();
+      expect(s.target).not.toHaveBeenCalled();
+    });
+    it.each([
+      ["accept", "text/event-stream"], ["content-type", "text/event-stream"], ["upgrade", "websocket"],
+    ])(`never overrides streaming request headers in ${mode} mode`, async (name, value) => {
+      const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode })]));
+      await s.run(new Request(url(), { headers: { [name]: value } }));
+      await s.drain();
+      expect(s.cloud).toHaveBeenCalledOnce();
+      expect(s.target).not.toHaveBeenCalled();
+    });
+  }
+  it("denies grant-minting share-link POSTs despite a broad on entry", async () => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode: "on" })]));
+    await s.run(new Request(url("/cloud/api/v1/workspaces/rw_1/session-share-links"), { method: "POST" }));
+    expect(s.target).not.toHaveBeenCalled();
+  });
+  it.each(["/mcp", "/.well-known/oauth-authorization-server/cloud"])("retains the canonical Cloud alias for denied %s", async path => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode: "on" })]));
+    await s.run(new Request(url(path)));
+    expect(s.cloud).toHaveBeenCalledOnce();
+    expect(s.target).not.toHaveBeenCalled();
+  });
+  it("refuses an unexpected event-stream on response without returning or replaying it", async () => {
+    const s = setup(JSON.stringify([rule()]));
+    s.target.mockResolvedValue(new Response("event: private", { headers: { "content-type": "text/event-stream" } }));
+    const response = await s.run();
+    expect(response.status).toBe(502);
+    expect(await response.text()).not.toContain("private");
+    expect(s.cloud).not.toHaveBeenCalled();
   });
 });
 
