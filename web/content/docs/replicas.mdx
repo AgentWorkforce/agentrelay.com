@@ -15,7 +15,7 @@ An Agent Relay workspace owner or admin opens [Cloud Settings](https://agentrela
 2. Paste it into **Replicas API key** and click **Connect**.
 3. Cloud verifies the key with Replicas `/v1/whoami`, stores it encrypted, and displays only a short hint. The complete key cannot be read back.
 
-Replacing a key from another Replicas organization requires disconnecting the current connection first. Disconnect cleans up recorded Relay bindings, but it can refuse before changing them when Cloud cannot prove an uncertain create or finish cleanup. The encrypted connection remains available so an admin can recover the launch or retry disconnect.
+Replacing a key from another Replicas organization requires disconnecting the current connection first. Disconnect refuses before changing anything when Cloud cannot prove an uncertain create. If cleanup fails partway, helpers are already revoked and the encrypted connection remains so an admin can retry disconnect.
 
 ## Launch through Agent Relay MCP
 

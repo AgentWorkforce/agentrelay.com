@@ -31,7 +31,7 @@ Open [Agent Relay Cloud Settings](https://agentrelay.com/cloud/dashboard/setting
 
 Agent Relay checks the key against Replicas `/v1/whoami`. After the check succeeds, Cloud stores the key encrypted and shows only a short hint, such as its last four characters. The complete key cannot be read back from Settings or through MCP.
 
-Only an owner or admin can add, replace, or disconnect this workspace connection. If a replacement key belongs to a different Replicas organization, disconnect the existing connection first. Disconnect can stop without changing bindings when Cloud cannot safely prove or finish cleanup; the encrypted connection remains so an admin can recover the uncertain launch or retry cleanup.
+Only an owner or admin can add, replace, or disconnect this workspace connection. If a replacement key belongs to a different Replicas organization, disconnect the existing connection first. Disconnect refuses before changing anything when Cloud cannot prove an uncertain create. If cleanup fails partway, helpers are already revoked and the encrypted connection remains so an admin can retry.
 
 At this point the provider account is available to the workspace, but no chat has joined Agent Relay yet.
 
