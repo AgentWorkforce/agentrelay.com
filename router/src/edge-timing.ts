@@ -41,6 +41,8 @@ function ms(value: number): number {
 }
 
 export interface EdgeTiming {
+  /** Selected facade ingress, only when this request participates in a rollout. */
+  setOrigin(origin: "cloud" | "rc" | "rfc" | "web"): void;
   /** Times `operation` as `phase`; the last measurement of a phase wins. */
   measure<T>(phase: EdgePhase, operation: () => Promise<T>): Promise<T>;
   /** Adds `Server-Timing` to the response and logs it when slow. */
@@ -58,8 +60,12 @@ export function startEdgeTiming(
   const method = request.method;
   const colo = coloOf(request);
   const phases: Partial<Record<EdgePhase, number>> = {};
+  let origin: "cloud" | "rc" | "rfc" | "web" | undefined;
 
   return {
+    setOrigin(value) {
+      origin = value;
+    },
     async measure(phase, operation) {
       const start = clock();
       try {
@@ -74,6 +80,7 @@ export function startEdgeTiming(
         event: "router_request_failed",
         route,
         method,
+        ...(origin ? { origin } : {}),
         colo: colo ?? null,
         error: error instanceof Error ? error.name : typeof error,
         upMs: phases.up === undefined ? null : ms(phases.up),
@@ -93,6 +100,7 @@ export function startEdgeTiming(
           event: "router_slow_request",
           route,
           method,
+          ...(origin ? { origin } : {}),
           status: response.status,
           colo: colo ?? null,
           upMs: phases.up === undefined ? null : ms(phases.up),

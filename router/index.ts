@@ -1,6 +1,7 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
 import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
+import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
@@ -950,9 +951,32 @@ const router = {
       request = new Request(url.toString(), request);
     }
 
+    // Empty/invalid/unreadable config retains the existing dispatch below,
+    // including webhook offload and Cloud's unavailable-binding response.
+    const facade = await readFacadeRoute(request, env.ROUTER_CONFIG);
+    if (facade?.mode === "on") {
+      // This branch is not recorded. Cancel the unused tee so a streaming
+      // mutation body cannot accumulate in the recorder's unread branch.
+      void recorderRequestClone?.body?.cancel().catch(() => undefined);
+      timing.setOrigin(facadeOriginLabel(facade, url.pathname));
+      return timing.measure("up", () => fetchFacade(request, facade));
+    }
+    const shadowRequest = facade?.mode === "shadow" && isSafeShadowRequest(request)
+      ? request.clone() as unknown as Request
+      : null;
+    const queueShadow = (response: Response, baseline: "cloud" | "web") => {
+      if (shadowRequest && facade) {
+        timing.setOrigin(baseline);
+        ctx.waitUntil(compareFacadeShadow(shadowRequest, facade, response));
+      }
+    };
+
     if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
       if (!env.CLOUD_WEB_WORKER) {
+        if (shadowRequest && facade) {
+          console.log(JSON.stringify({ event: "cloud_facade_shadow", outcome: "skipped", reason: "cloud_binding_unavailable" }));
+        }
         return new Response(
           JSON.stringify({ error: "cloud web worker binding unavailable" }),
           {
@@ -964,6 +988,7 @@ const router = {
 
       const cloudWebWorker = env.CLOUD_WEB_WORKER;
       const workerResponse = await timing.measure("up", () => cloudWebWorker.fetch(request));
+      queueShadow(workerResponse, "cloud");
       if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
           maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
@@ -1064,6 +1089,7 @@ const router = {
         ctx.waitUntil(recordGuideFetched(guideAnalyticsRequest, guideAnalyticsHandle, env));
       }
 
+      queueShadow(response, "web");
       return response;
     } catch (error) {
       return new Response(JSON.stringify({ error: (error as Error).message }), {
