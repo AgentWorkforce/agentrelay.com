@@ -16,6 +16,8 @@ Replicas gives coding agents persistent cloud environments. Agent Relay gives th
 
 There are two separate steps: saving a Replicas API key in Agent Relay Cloud, then launching or binding a chat through Agent Relay MCP. Saving the key alone does **not** put any Replicas chat on the relay.
 
+The setup below covers hosted Agent Relay Cloud first. Self-hosted `relay-control` does not have the same Replicas lifecycle yet; its current boundary is documented in [Self-hosted](#self-hosted).
+
 ## What you need
 
 - An Agent Relay Cloud workspace where you are an owner or admin.
@@ -25,7 +27,7 @@ There are two separate steps: saving a Replicas API key in Agent Relay Cloud, th
 
 Starting and waking replicas are paid provider operations. Pick the environment and task deliberately before you call the launch tool.
 
-## Connect the Replicas account
+## Connect the Replicas account on hosted Cloud
 
 Open [Agent Relay Cloud Settings](https://agentrelay.com/cloud/dashboard/settings#connections), choose **Connections**, and find the **Replicas** card. Paste the dedicated key into **Replicas API key**, then click **Connect**.
 
@@ -35,7 +37,7 @@ Only an owner or admin can add, replace, or disconnect this workspace connection
 
 At this point the provider account is available to the workspace, but no chat has joined Agent Relay yet.
 
-## Start a new replica
+## Start a new replica on hosted Cloud
 
 The Replicas lifecycle tools are available through the Agent Relay Cloud MCP connection.
 
@@ -119,13 +121,33 @@ A chat that already belongs to another local bridge cannot be bound twice. Stop 
 
 The Cloud integration installs a narrowly scoped Relay helper in the bound replica. That helper lets the chat receive Relay messages and reply as its assigned identity. It cannot register another identity, choose a different sender, or expose the Replicas or Relay credentials stored by Cloud.
 
-That helper is not the full Agent Relay MCP server. A bound replica does not automatically get tools for listing the roster, reading shared sessions, or launching other agents. It has those tools only if its Replicas environment has been configured separately with the Agent Relay MCP server. The Cloud integration does not configure that server today; a supported Replicas-environment setup guide is coming soon.
+That helper is not the full Agent Relay MCP server. A bound replica does not automatically get tools for listing the roster, reading shared sessions, or launching other agents. It has those tools only if its Replicas environment has been configured separately with the Agent Relay MCP server.
+
+This gives a Replicas mothership three distinct states:
+
+- **Not connected:** a chat started directly in Replicas has no Relay identity.
+- **Bound for messages:** hosted Cloud has bound the exact chat, so it receives and replies through the scoped helper.
+- **Fully onboarded:** the Replicas environment also has Agent Relay MCP configured, so the agent can use the broader Relay tools exposed to that MCP connection.
+
+Treat the environment as fully onboarded only after its Agent Relay MCP connection is configured and reports the expected capabilities. Binding alone covers Relay delivery and replies, not the full MCP toolset. Hosted Cloud does not configure that server in the Replicas environment today.
+
+> **TODO:** Automatic Agent Relay MCP provisioning for Replicas environments is being built for hosted Cloud and self-hosted `relay-control`. Until that work lands, there is no supported provisioning command to copy from this guide. Follow [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99); this guide will link the implementation PR and exact steps once they are reviewed.
 
 Cloud also uploads the bound chat's text history to Agent Relay Sessions after Relay messages reach the replica or it replies through the helper. If a final turn did not touch Relay, the Replicas card in Settings has **Sync now**. Attachments are not included in this transcript sync.
 
-Chats started directly in Replicas are also not automatically visible on Agent Relay. Bind the exact chat before trying to message it.
+Chats started directly in Replicas are also not automatically visible on Agent Relay. On hosted Cloud, bind the exact chat before trying to message it.
 
-## REST endpoints
+## Self-hosted
+
+The hosted Cloud Replicas card and its lifecycle and REST contract do not carry over to self-hosted Agent Relay today. Self-hosted provider connection management can store Replicas credentials, but that alone does not activate a Replicas runtime.
+
+Current `relay-control` has a Replicas provider-catalog entry and a bounded internal transport for Replicas API calls. That transport explicitly does not activate a provider runtime, register public Replicas tools or routes, acquire a credential, create compute, install the reply helper, or start history sync. A saved provider connection is credentials-only until that runtime work lands.
+
+The self-hosted MCP endpoint is `/api/v1/mcp/shared-sessions`, but its current tool plan does not register the `replicas` group. `describe_capabilities` reports the Replicas tools as unavailable, and the provider catalog reports Replicas as not implemented, configured or enabled by the running build. Adding the general MCP endpoint to a client does not make `list_replicas_environments`, `spawn_replica`, `bind_replica`, `get_replica_spawn` or `release_replica` appear.
+
+There is therefore no supported self-hosted launch or binding sequence to document yet. The remaining runtime, binding, delivery, cleanup and history work is tracked in [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99). The automatic Replicas-environment MCP provisioning step will be added here with its reviewed PR; do not translate the hosted Cloud routes into self-hosted commands in the meantime.
+
+## Hosted Cloud REST endpoints
 
 The same connection and new-launch lifecycle is available to person-authenticated clients under `/api/v1/workspaces/{workspaceId}`:
 
