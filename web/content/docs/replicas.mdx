@@ -72,7 +72,7 @@ The helper is not the full Agent Relay MCP server. Binding alone does not give t
 
 A Replicas mothership can therefore be unconnected, bound for Relay messages through the hosted Cloud helper, or fully onboarded with Agent Relay MCP inside its environment. Treat it as fully onboarded only after that MCP connection is configured and reports the expected capabilities. Hosted Cloud does not configure the server in the Replicas environment today.
 
-> **TODO:** Automatic Agent Relay MCP provisioning for Replicas environments is being built for hosted Cloud and self-hosted `relay-control`. There is no supported provisioning command to publish yet. Track [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99); this page will link the implementation PR and exact reviewed steps when they land.
+> **TODO:** There is no supported automatic Agent Relay MCP provisioning command to publish yet. This page will link the implementation PR and exact hosted and self-hosted steps after they are reviewed. [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99) separately tracks the missing self-hosted Replicas runtime.
 
 Chats created directly in Replicas remain off the relay until you bind the exact `replica_id` and `chat_id`.
 

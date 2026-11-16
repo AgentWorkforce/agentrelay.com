@@ -131,7 +131,7 @@ This gives a Replicas mothership three distinct states:
 
 Treat the environment as fully onboarded only after its Agent Relay MCP connection is configured and reports the expected capabilities. Binding alone covers Relay delivery and replies, not the full MCP toolset. Hosted Cloud does not configure that server in the Replicas environment today.
 
-> **TODO:** Automatic Agent Relay MCP provisioning for Replicas environments is being built for hosted Cloud and self-hosted `relay-control`. Until that work lands, there is no supported provisioning command to copy from this guide. Follow [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99); this guide will link the implementation PR and exact steps once they are reviewed.
+> **TODO:** There is no supported automatic Agent Relay MCP provisioning command to copy from this guide yet. This guide will link the implementation PR and exact hosted and self-hosted steps after they are reviewed. [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99) separately tracks the missing self-hosted Replicas runtime.
 
 Cloud also uploads the bound chat's text history to Agent Relay Sessions after Relay messages reach the replica or it replies through the helper. If a final turn did not touch Relay, the Replicas card in Settings has **Sync now**. Attachments are not included in this transcript sync.
 
@@ -143,7 +143,7 @@ The hosted Cloud Replicas card and its lifecycle and REST contract do not carry 
 
 Current `relay-control` has a Replicas provider-catalog entry and a bounded internal transport for Replicas API calls. That transport explicitly does not activate a provider runtime, register public Replicas tools or routes, acquire a credential, create compute, install the reply helper, or start history sync. A saved provider connection is credentials-only until that runtime work lands.
 
-The self-hosted MCP endpoint is `/api/v1/mcp/shared-sessions`, but its current tool plan does not register the `replicas` group. `describe_capabilities` reports the Replicas tools as unavailable, and the provider catalog reports Replicas as not implemented, configured or enabled by the running build. Adding the general MCP endpoint to a client does not make `list_replicas_environments`, `spawn_replica`, `bind_replica`, `get_replica_spawn` or `release_replica` appear.
+The self-hosted MCP endpoint is `/api/v1/mcp/shared-sessions`, but its current tool plan does not register the `replicas` group. `describe_capabilities` reports the Replicas tools as unavailable, and the provider catalog reports the Replicas runtime as not implemented, configured or enabled by the running build. Adding the general MCP endpoint to a client does not make `list_replicas_environments`, `spawn_replica`, `bind_replica`, `get_replica_spawn` or `release_replica` appear.
 
 There is therefore no supported self-hosted launch or binding sequence to document yet. The remaining runtime, binding, delivery, cleanup and history work is tracked in [relay-control issue #99](https://github.com/AgentWorkforce/relay-control/issues/99). The automatic Replicas-environment MCP provisioning step will be added here with its reviewed PR; do not translate the hosted Cloud routes into self-hosted commands in the meantime.
 
