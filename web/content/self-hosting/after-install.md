@@ -279,7 +279,7 @@ kubectl -n agent-relay delete configmap native-agent-catalog-activation
 
 **Done when:** both rollouts complete and the agent filter answers 200.
 
-On GKE, mount the `cloud-sql-ca` ConfigMap instead of `rds-ca` in the Job. To
+On GKE, use [step 16 of the GKE guide](/docs/self-hosting/install-gke#16-turn-on-agent-search-once-after-first-sign-in) instead. To
 roll the filter back, [ask us](/docs/self-hosting/support): it is a database
 write.
 
