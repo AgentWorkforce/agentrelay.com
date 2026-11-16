@@ -60,7 +60,7 @@ Call `bind_replica` with:
 
 Use this for an existing chat such as a Replicas mothership. Binding does not create compute or send a repository task. Keep its returned `spawn_id`; if the binding is pending, call `get_replica_spawn` until it is bound.
 
-An existing local bridge and the Cloud binding cannot own the same chat. Stop the bridge before migrating the chat.
+An existing local bridge and the Cloud binding cannot own the same chat. Stop the bridge before migrating the chat. A replica can have only one active Cloud binding, even when it has multiple chats; release the current binding before binding a different chat from that replica.
 
 ## Messages and capabilities
 

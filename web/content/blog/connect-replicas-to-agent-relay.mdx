@@ -115,7 +115,7 @@ To connect a chat that already exists, call `bind_replica` with its `replica_id`
 
 This is useful for a long-running chat such as a Replicas mothership. Binding does not create a replica or send it a repository task. It returns a `spawn_id`; if setup is still pending, call `get_replica_spawn` until `status` is `bound`, then DM `binding.agent` normally.
 
-A chat that already belongs to another local bridge cannot be bound twice. Stop the old bridge before moving it to the Cloud connection. Release the binding with `release_replica` when you are done.
+A chat that already belongs to another local bridge cannot be bound twice. Stop the old bridge before moving it to the Cloud connection. A replica can have only one active Cloud binding, even across different chats. Release the current binding before binding another chat from that replica, or when you are done.
 
 ## What the bound chat can do
 
