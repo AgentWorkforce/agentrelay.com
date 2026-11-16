@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../index.js";
-import { CLOUD_FACADE_KEY, decodedFacadePath, isSafeShadowRequest, parseFacadeRoutes, fetchFacade, type FacadeRoute } from "../src/cloud-facade.js";
+import { CLOUD_FACADE_KEY, decodedFacadePath, isSafeShadowRequest, parseFacadeRoutes, readFacadeRoute, fetchFacade, type FacadeRoute } from "../src/cloud-facade.js";
 import { startEdgeTiming } from "../src/edge-timing.js";
 
 const RC = "https://api.prod-aws.agentrelay.com";
@@ -123,6 +123,46 @@ describe("decoded segment-boundary matching", () => {
   });
   it("allows a narrower off rule to fence an on subtree", async () => {
     const s = setup(JSON.stringify([rule({ prefix: "/cloud" }), rule({ mode: "off" })]));
+    await s.run();
+    expect(s.cloud).toHaveBeenCalledOnce();
+    expect(s.target).not.toHaveBeenCalled();
+  });
+  for (const mode of ["on", "shadow"]) {
+    it.each([
+      [PATH.replace("sessions", "SESSIONS"), PATH],
+      [PATH.replace("sessions", "SeSsIoNs"), PATH],
+      [PATH.replace("sessions", "%53essions"), PATH],
+      [PATH, PATH.toUpperCase()],
+      [PATH + "/child", PATH.replace("sessions", "SESSIONS")],
+      ["/cloud/api/v1/ADMIN", "/cloud/api/v1/admin"],
+    ])(`honors case-insensitive off fences under a broad ${mode} rule: %s / %s`, async (path, fence) => {
+      const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode }), rule({ prefix: fence, mode: "off" })]));
+      expect(await readFacadeRoute(new Request(url(path)), s.env.ROUTER_CONFIG)).toMatchObject({ mode: "off", prefix: fence });
+      const response = await s.run(new Request(url(path)));
+      expect(await response.text()).toBe(CLOUD_BODY);
+      await s.drain();
+      expect(s.cloud).toHaveBeenCalledOnce();
+      expect(s.target).not.toHaveBeenCalled();
+      expect(s.waitUntil).not.toHaveBeenCalled();
+    });
+  }
+  it("keeps mixed-case off fences segment-bounded", async () => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud" }), rule({ prefix: PATH.toUpperCase(), mode: "off" })]));
+    await s.run(new Request(url(PATH + "-other")));
+    expect(s.target).toHaveBeenCalledOnce();
+    expect(s.cloud).not.toHaveBeenCalled();
+  });
+  it("keeps case-insensitive off fences method-scoped", async () => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud" }), rule({ prefix: PATH.toUpperCase(), mode: "off", methods: ["POST"] })]));
+    await s.run();
+    expect(s.target).toHaveBeenCalledOnce();
+    await s.run(new Request(url(), { method: "POST", body: "mutation" }));
+    expect(s.cloud).toHaveBeenCalledOnce();
+    expect(s.target).toHaveBeenCalledOnce();
+  });
+  it("does not widen enabled prefixes to case-insensitive matches", async () => {
+    const s = setup(JSON.stringify([rule({ prefix: PATH.toUpperCase() })]));
+    expect(await readFacadeRoute(new Request(url()), s.env.ROUTER_CONFIG)).toBeNull();
     await s.run();
     expect(s.cloud).toHaveBeenCalledOnce();
     expect(s.target).not.toHaveBeenCalled();
@@ -305,13 +345,14 @@ describe("on-mode forwarding", () => {
 });
 
 describe("safe asynchronous shadows", () => {
-  it("compares a KV-selected legacy web path without a hard-coded Cloud cohort", async () => {
+  it("does not widen the audited read allowlist to a KV-selected marketing page", async () => {
     const s = setup(JSON.stringify([rule({ prefix: "/pricing", mode: "shadow" })]));
-    s.target.mockImplementation(async request => new Response(new URL(request.url).origin === RC ? "new web" : "old web"));
+    s.target.mockImplementation(async () => new Response("old web"));
     const response = await s.run(new Request(url("/pricing")));
     expect(await response.text()).toBe("old web");
     await s.drain();
-    expect(s.target.mock.calls.map(([request]) => new URL(request.url).origin)).toEqual(["https://origin-web.agentrelay.com", RC]);
+    expect(s.target.mock.calls.map(([request]) => new URL(request.url).origin)).toEqual(["https://origin-web.agentrelay.com"]);
+    expect(s.waitUntil).not.toHaveBeenCalled();
   });
   it("logs a missing Cloud binding as a skip instead of silently implying shadow matches", async () => {
     const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
@@ -321,10 +362,10 @@ describe("safe asynchronous shadows", () => {
     expect(s.target).not.toHaveBeenCalled();
     expect(log.mock.calls.some(call => String(call[0]).includes('"reason":"cloud_binding_unavailable"'))).toBe(true);
   });
-  it.each(["GET", "HEAD"])("shadows KV-selected %s reads outside the Sessions fixture", async method => {
-    const s = setup(JSON.stringify([rule({ prefix: "/cloud/api/v1/catalog", mode: "shadow" })]));
+  it.each(["GET", "HEAD"])("shadows an audited KV-selected %s read", async method => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode: "shadow" })]));
     const log = vi.spyOn(console, "log").mockImplementation(() => {});
-    const response = await s.run(new Request(url("/cloud/api/v1/catalog"), { method }));
+    const response = await s.run(new Request(url(PATH + "/activity"), { method }));
     expect(await response.text()).toBe(method === "HEAD" ? "" : CLOUD_BODY);
     await s.drain();
     expect(s.target).toHaveBeenCalledOnce();
@@ -497,10 +538,51 @@ describe("safe asynchronous shadows", () => {
     expect(s.target).not.toHaveBeenCalled();
     expect(s.waitUntil).not.toHaveBeenCalled();
   });
-  it("lets KV select any non-denied GET/HEAD cohort", () => {
-    expect(isSafeShadowRequest(new Request(url("/cloud/api/v1/workspaces/rw_1/reflex/sessions/s_1/brief")))).toBe(true);
-    expect(isSafeShadowRequest(new Request(url("/cloud/api/v1/catalog")))).toBe(true);
-    expect(isSafeShadowRequest(new Request(url("/cloud/api/v1/catalog"), { method: "HEAD" }))).toBe(true);
+  it.each([
+    "/cloud/api/v1/workspaces/rw_private/relayhistory/reset",
+    "/cloud/api/v1/invites/x/accept",
+    "/cloud/api/v1/billing/portal",
+    "/cloud/api/v1/organizations/org_private/billing/portal",
+    "/cloud/api/v1/workspaces/rw_private/integrations/github/install",
+    "/cloud/api/v1/catalog",
+    PATH + "/unknown",
+    PATH + "/unknown/child",
+    "/cloud/api/v1/workspaces/rw_private/session-pull-requests?refresh=1",
+  ])("never shadows an unaudited or side-effecting GET despite a broad KV prefix: %s", async path => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud", mode: "shadow" })]));
+    const response = await s.run(new Request(url(path), { headers: {
+      cookie: "agent_relay_session=private-cookie", authorization: "Bearer private-token",
+    } }));
+    expect(await response.text()).toBe(CLOUD_BODY);
+    await s.drain();
+    expect(s.cloud).toHaveBeenCalledOnce();
+    expect(s.target).not.toHaveBeenCalled();
+    expect(s.waitUntil).not.toHaveBeenCalled();
+  });
+  it.each([
+    PATH, PATH + "/activity", PATH + "/agents", PATH + "/output", PATH + "/s_1/delivery-evidence",
+    "/cloud/api/v1/workspaces/rw_private/reflex/sessions/s_1/analysis",
+    "/cloud/api/v1/workspaces/rw_private/reflex/sessions/s_1/brief",
+    "/cloud/api/v1/workspaces/rw_private/reflex/sessions/s_1/events",
+    "/cloud/api/v1/workspaces/rw_private/relayhistory/origin",
+  ])("permits only audited read paths for GET and HEAD: %s", path => {
+    for (const method of ["GET", "HEAD"]) {
+      expect(isSafeShadowRequest(new Request(url(path), { method }))).toBe(true);
+    }
+  });
+  it("requires a matching KV prefix even for an audited read path", async () => {
+    const s = setup(JSON.stringify([rule({ prefix: "/cloud/api/v1/workspaces/other/sessions", mode: "shadow" })]));
+    await s.run();
+    await s.drain();
+    expect(s.cloud).toHaveBeenCalledOnce();
+    expect(s.target).not.toHaveBeenCalled();
+    expect(s.waitUntil).not.toHaveBeenCalled();
+  });
+  it("does not copy range requests on otherwise audited paths", async () => {
+    const s = setup(JSON.stringify([rule({ mode: "shadow" })]));
+    await s.run(new Request(url(), { headers: { range: "bytes=0-100" } }));
+    expect(s.target).not.toHaveBeenCalled();
+    expect(s.waitUntil).not.toHaveBeenCalled();
   });
 });
 

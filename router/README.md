@@ -86,6 +86,9 @@ Each entry has `{prefix, methods?, origin, mode}`:
   nonempty array of uppercase HTTP method names.
 - The longest method-compatible prefix wins. Equal prefixes use array order.
   A narrower `off` rule fences a broader enabled rule for its matching methods.
+  Off fences compare decoded paths case-insensitively, so case variants cannot
+  escape into a broader rule. Enabled prefixes remain case-sensitive; this
+  fence check does not widen traffic selection.
 - `origin` must be exactly `https://api.prod-aws.agentrelay.com` or
   `https://prod-aws.agentrelay.com`. Credentials, ports, paths, queries,
   fragments, lookalike hosts and even trailing slashes are refused.
@@ -114,10 +117,25 @@ repeated query keys. This feature applies only to the `agentrelay.com` host,
 after the router's existing special routes and Cloud aliases are resolved.
 It does not change arelay.to behavior.
 
-`shadow` returns the existing response (Cloud or the legacy web origin). Prefix selection is entirely KV
-data; there is no hard-coded Sessions/History cohort. Only GET and HEAD are
-eligible for a shadow. The fixed denylist below applies to both `shadow` and
-`on`, regardless of the configured prefix or methods:
+`shadow` returns the existing response. Eligibility is the intersection of a
+matching KV shadow rule and the code-level `SHADOW_READ_PATH` allowlist of
+audited read routes. KV can narrow that set, never widen it. Only GET and HEAD
+are eligible, and Range requests are excluded. The current read shapes under
+`/cloud/api/v1/workspaces/:workspaceId` are:
+
+- `/sessions`, `/sessions/activity`, `/sessions/agents`, `/sessions/output`.
+- `/sessions/:sessionId/delivery-evidence`.
+- `/reflex/sessions/:sessionId/analysis`, `/brief`, `/events`.
+- `/relayhistory/origin`.
+
+These are exact path shapes, not arbitrary descendant prefixes. Unknown GETs,
+marketing pages, reset, invite acceptance, billing portal and provider-install
+routes are never shadowed, even under a `/cloud` rule. Session pull-request
+reads are also excluded because `refresh=1` persists provider state. Expanding
+the read allowlist requires an owner-side side-effect audit and code review.
+
+The fixed denylist below applies to both `shadow` and `on`, regardless of the
+configured prefix or methods:
 
 - Authentication, login/logout/sign-in, callbacks, OAuth, `.well-known`, device
   auth, grants, token/key/credential issuance and their known minting aliases.
@@ -127,7 +145,7 @@ eligible for a shadow. The fixed denylist below applies to both `shadow` and
 
 Denied requests retain legacy dispatch. The denylist is evaluated on decoded
 paths; ambiguous encodings fail closed, so a broad prefix cannot bypass it.
-Sessions/History paths appear only as test fixtures. The code includes
+The code includes
 credential-mint aliases such as Relayfile mount sessions, archive leases,
 worker enrollment, local-run tokens and share-link creation.
 

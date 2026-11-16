@@ -74,7 +74,12 @@ export async function readFacadeRoute(request: Request, config?: Config): Promis
   }
   let match: FacadeRoute | null = null;
   for (const route of routes) {
-    const within = route.prefix === "/" || pathname === route.prefix || pathname.startsWith(route.prefix + "/");
+    // Cloud can accept case variants of these segments. Fold off fences so
+    // those variants cannot escape into a broader enabled rule. Keep enabled
+    // prefixes literal: this safety check must not widen traffic selection.
+    const path = route.mode === "off" ? pathname.toLowerCase() : pathname;
+    const prefix = route.mode === "off" ? route.prefix.toLowerCase() : route.prefix;
+    const within = prefix === "/" || path === prefix || path.startsWith(prefix + "/");
     if (!within || (route.methods && !route.methods.includes(request.method))) continue;
     // Equal-length ties retain list order. An off entry can fence a narrower subtree.
     if (!match || route.prefix.length > match.prefix.length) match = route;
@@ -193,9 +198,16 @@ export function isFacadeDenied(request: Request): boolean {
   return credentialQuery;
 }
 
+// GET alone is not a safety guarantee. This audited read-only upper bound is
+// independent of KV: configuration may narrow it, never add another route.
+// Use exact read shapes, not arbitrary Sessions descendants. In particular,
+// session-pull-requests is excluded because refresh=1 persists provider state.
+const SHADOW_READ_PATH = /^\/cloud\/api\/v1\/workspaces\/[^/]+\/(?:sessions(?:\/(?:activity|agents|output))?|sessions\/[^/]+\/delivery-evidence|reflex\/sessions\/[^/]+\/(?:analysis|brief|events)|relayhistory\/origin)$/;
 export function isSafeShadowRequest(request: Request): boolean {
-  return (request.method === "GET" || request.method === "HEAD") &&
-    !isFacadeDenied(request);
+  if ((request.method !== "GET" && request.method !== "HEAD") ||
+    request.headers.has("range") || isFacadeDenied(request)) return false;
+  const path = decodedFacadePath(new URL(request.url).pathname);
+  return path !== null && SHADOW_READ_PATH.test(path);
 }
 
 const MAX_COMPARE_BYTES = 64 * 1024;
