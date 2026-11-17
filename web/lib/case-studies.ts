@@ -138,11 +138,15 @@ function normalizeFrontmatter(data: matter.GrayMatterFile<string>['data']): Case
 
 function readCaseStudyFromFile(fileName: string): CaseStudy | null {
   const slug = fileName.replace(/\.mdx$/, '');
+  return readCaseStudyBySlug(slug);
+}
+
+function readCaseStudyBySlug(slug: string): CaseStudy | null {
   if (!isValidCaseStudySlug(slug)) {
     return null;
   }
 
-  const raw = readContentFile(`case-studies/${fileName}`);
+  const raw = readContentFile(`case-studies/${slug}.mdx`);
   if (raw === null) {
     return null;
   }
@@ -176,23 +180,16 @@ export function getAllCaseStudies(): CaseStudy[] {
  * missing so their page, metadata, and Open Graph routes all return not found.
  */
 export function getCaseStudy(slug: string): CaseStudy | null {
-  if (!isValidCaseStudySlug(slug)) {
-    return null;
-  }
+  const study = readCaseStudyBySlug(slug);
+  return study?.frontmatter.published === false ? null : study;
+}
 
-  const raw = readContentFile(`case-studies/${slug}.mdx`);
-  if (raw === null) return null;
-
-  const { data, content } = matter(raw);
-
-  const frontmatter = normalizeFrontmatter(data);
-  if (frontmatter.published === false) return null;
-
-  return {
-    slug,
-    frontmatter,
-    content,
-    readTime: estimateReadTime(content),
-    toc: extractCaseStudyToc(content),
-  };
+/**
+ * Resolve a draft only on the local Next development server. Public lookups
+ * remain publication-gated, and production/preview builds cannot use this
+ * helper to expose unpublished content.
+ */
+export function getCaseStudyDraftForDevelopment(slug: string): CaseStudy | null {
+  if (process.env.NODE_ENV !== 'development') return null;
+  return readCaseStudyBySlug(slug);
 }

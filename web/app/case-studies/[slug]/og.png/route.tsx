@@ -1,7 +1,11 @@
 import { ImageResponse } from 'next/og';
 import { notFound } from 'next/navigation';
 
-import { getAllCaseStudies, getCaseStudy } from '../../../../lib/case-studies';
+import {
+  getAllCaseStudies,
+  getCaseStudy,
+  getCaseStudyDraftForDevelopment,
+} from '../../../../lib/case-studies';
 import { BlogVariant, loadBrandFonts, OG_SIZE } from '../../../../lib/og/template';
 
 export const runtime = 'nodejs';
@@ -38,7 +42,7 @@ function formatDate(value: string): string | undefined {
  */
 export async function GET(_request: Request, { params }: RouteContext) {
   const { slug } = await params;
-  const study = getCaseStudy(slug);
+  const study = getCaseStudy(slug) ?? getCaseStudyDraftForDevelopment(slug);
 
   if (!study) {
     notFound();

@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { extractCaseStudyToc, getAllCaseStudies, getCaseStudy } from '../case-studies';
+import {
+  extractCaseStudyToc,
+  getAllCaseStudies,
+  getCaseStudy,
+  getCaseStudyDraftForDevelopment,
+} from '../case-studies';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -13,10 +18,17 @@ describe('case studies', () => {
     expect(getCaseStudy('pomerado')).toBeNull();
   });
 
-  it('does not expose unpublished studies from a local development route', () => {
+  it('allows an explicit draft lookup only on the local development server', () => {
     vi.stubEnv('NODE_ENV', 'development');
 
     expect(getCaseStudy('pomerado')).toBeNull();
+    expect(getCaseStudyDraftForDevelopment('pomerado')?.frontmatter.published).toBe(false);
+  });
+
+  it('does not expose drafts through the development helper in production', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+
+    expect(getCaseStudyDraftForDevelopment('pomerado')).toBeNull();
   });
 
   it('uses visible link text for both TOC labels and heading IDs', () => {

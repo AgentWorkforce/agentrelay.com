@@ -15,7 +15,12 @@ import { SignupBand } from '../../../components/home/SignupBand';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import { SiteNavActions } from '../../../components/SiteNavActions';
-import { getAllCaseStudies, getCaseStudy, slugifyHeading } from '../../../lib/case-studies';
+import {
+  getAllCaseStudies,
+  getCaseStudy,
+  getCaseStudyDraftForDevelopment,
+  slugifyHeading,
+} from '../../../lib/case-studies';
 import { getAuthorInitials, getBlogAuthor } from '../../../lib/blog-authors';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../../lib/site';
@@ -59,6 +64,10 @@ const mdxComponents = {
   h3: HeadingWithId(3),
 };
 
+function getVisibleCaseStudy(slug: string) {
+  return getCaseStudy(slug) ?? getCaseStudyDraftForDevelopment(slug);
+}
+
 // Prebuild published case studies. Drafts never resolve through public routes.
 export async function generateStaticParams() {
   return getAllCaseStudies().map((study) => ({ slug: study.slug }));
@@ -66,7 +75,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
-  const study = getCaseStudy(slug);
+  const study = getVisibleCaseStudy(slug);
   if (!study) notFound();
   const studyUrl = absoluteUrl(`/case-studies/${slug}`);
   const usingGeneratedCard = !study.frontmatter.coverImage;
@@ -126,7 +135,7 @@ function formatFooterReadTime(readTime: string): string {
 
 export default async function CaseStudyPage({ params }: PageProps) {
   const { slug } = await params;
-  const study = getCaseStudy(slug);
+  const study = getVisibleCaseStudy(slug);
   if (!study) notFound();
 
   const author = getBlogAuthor(study.frontmatter.author);
