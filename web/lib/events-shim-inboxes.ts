@@ -167,33 +167,26 @@ export function restore(input: { hash: string; stored: string | null; legacy: st
   const selected = fromLink.agentId ?? (fromLink.session ? DEFAULT_AGENT : store.selected);
   store = { ...store, selected };
 
-  let legacyMigrated = false;
+  // The link's inbox takes the selected tab first; the legacy inbox is placed around it afterwards,
+  // and counts as migrated only if the final map still holds it.
+  if (fromLink.session) store = withInbox(store, selected, fromLink.session);
+
   let legacy: unknown = null;
   try {
     legacy = JSON.parse(input.legacy || 'null');
   } catch {
     legacy = null;
   }
-  if (input.legacy !== null && !isSession(legacy, apiBase)) {
-    // Unreadable leftovers: nothing to keep.
-    legacyMigrated = true;
-  } else if (isSession(legacy, apiBase)) {
-    const alreadyKept = Object.values(store.inboxes).some((session) => session?.manageToken === legacy.manageToken);
-    if (alreadyKept) {
-      legacyMigrated = true;
-    } else {
-      // The link's inbox is about to take the selected tab; don't park the legacy one there to be overwritten.
-      const reserved = fromLink.session && fromLink.session.manageToken !== legacy.manageToken ? selected : null;
-      const target = [selected, DEFAULT_AGENT].find((id) => id !== reserved && !store.inboxes[id]);
-      if (target) {
-        store = withInbox(store, target, legacy);
-        legacyMigrated = true;
-      }
-    }
+  if (input.legacy === null) return { store, legacyMigrated: false };
+  // Unreadable leftovers: nothing to keep.
+  if (!isSession(legacy, apiBase)) return { store, legacyMigrated: true };
+  const kept: Session = legacy;
+  const held = (current: Store) => Object.values(current.inboxes).some((session) => session?.manageToken === kept.manageToken);
+  if (!held(store)) {
+    const target = [selected, DEFAULT_AGENT].find((id) => !store.inboxes[id]);
+    if (target) store = withInbox(store, target, kept);
   }
-
-  if (fromLink.session) store = withInbox(store, selected, fromLink.session);
-  return { store, legacyMigrated };
+  return { store, legacyMigrated: held(store) };
 }
 
 /**

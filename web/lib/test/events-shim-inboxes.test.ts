@@ -129,6 +129,20 @@ describe('restoring the page', () => {
     expect(result.legacyMigrated).toBe(false);
   });
 
+  it('keeps the legacy key when a link displaces the stored copy of that inbox', () => {
+    const existing = stored({ selected: 'claude-code', inboxes: { 'claude-code': A } });
+    const result = restore({ hash: hashOf(B), stored: existing, legacy: JSON.stringify(A), apiBase: API });
+    expect(result.store.inboxes).toEqual({ 'claude-code': B });
+    expect(result.legacyMigrated).toBe(false);
+  });
+
+  it('moves a displaced legacy inbox to the default tab when that is free', () => {
+    const existing = stored({ selected: 'codex', inboxes: { codex: A } });
+    const result = restore({ hash: hashOf(B, 'codex'), stored: existing, legacy: JSON.stringify(A), apiBase: API });
+    expect(result.store.inboxes).toEqual({ codex: B, 'claude-code': A });
+    expect(result.legacyMigrated).toBe(true);
+  });
+
   it('drops unreadable legacy data', () => {
     expect(restore({ hash: '', stored: null, legacy: '{oops', apiBase: API }).legacyMigrated).toBe(true);
     expect(restore({ hash: '', stored: null, legacy: JSON.stringify({ manageToken: 'x' }), apiBase: API }).legacyMigrated).toBe(true);

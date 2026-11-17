@@ -248,6 +248,9 @@ export function EventsShimTry() {
   const session: Session | null = store?.inboxes[agentId] ?? null;
   const feed = session && loaded?.token === session.manageToken ? loaded.feed : null;
   const bearerToken = session && generated?.token === session.manageToken ? generated.secret : null;
+  /** The selected inbox right now, for completions that finish after a tab switch. */
+  const selectedToken = useRef<string | null>(null);
+  selectedToken.current = session?.manageToken ?? null;
 
   const load = useCallback(
     async (owner: AgentId, current: Session, signal: AbortSignal) => {
@@ -351,7 +354,8 @@ export function EventsShimTry() {
       const body = (await response.json()) as { secret?: string; message?: string };
       if (!response.ok) throw new Error(body.message || 'Could not save the secret.');
       if (body.secret) setGenerated({ token: current.manageToken, secret: body.secret });
-      setSecretDraft('');
+      // A late completion must not wipe a draft typed for another tab's inbox.
+      if (selectedToken.current === current.manageToken) setSecretDraft('');
       await load(owner, current, new AbortController().signal);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : 'Could not save the secret.');
