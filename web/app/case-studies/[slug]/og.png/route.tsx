@@ -5,8 +5,8 @@ import { getAllCaseStudies, getCaseStudy } from '../../../../lib/case-studies';
 import { BlogVariant, loadBrandFonts, OG_SIZE } from '../../../../lib/og/template';
 
 export const runtime = 'nodejs';
-// Prerender one card per published case study at build time. Drafts resolve
-// only on the local development server and return not found everywhere else.
+// Prerender one card per published case study at build time. Drafts never
+// resolve through this public route.
 export const dynamic = 'force-static';
 
 type RouteContext = {

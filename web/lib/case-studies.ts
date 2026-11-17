@@ -19,9 +19,8 @@ export interface CaseStudyFrontmatter {
   /** Optional path to the customer's logo (e.g. `/logos/pomerado.svg`). */
   logo?: string;
   /**
-   * Draft flag. When `false`, the entry is excluded from public lists and can
-   * only be resolved by slug on the local development server. Defaults to
-   * published when omitted.
+   * Draft flag. When `false`, the entry is excluded from public lists and
+   * public slug lookups. Defaults to published when omitted.
    */
   published?: boolean;
 }
@@ -52,17 +51,42 @@ export function slugifyHeading(text: string): string {
     .replace(/^-|-$/g, '');
 }
 
-function extractToc(content: string): TocItem[] {
-  const toc: TocItem[] = [];
-  const headingRegex = /^(#{2,3})\s+(.+)$/gm;
-  let match: RegExpExecArray | null;
+function visibleHeadingText(markdown: string): string {
+  return markdown
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/[*_~]/g, '')
+    .replace(/\\([\\`*_[\]{}()#+\-.!>])/g, '$1')
+    .trim();
+}
 
-  while ((match = headingRegex.exec(content)) !== null) {
-    const text = match[2].replace(/`([^`]+)`/g, '$1').trim();
+export function extractCaseStudyToc(content: string): TocItem[] {
+  const toc: TocItem[] = [];
+  let fence: { marker: '`' | '~'; length: number } | null = null;
+
+  for (const line of content.split(/\r?\n/)) {
+    const fenceMatch = line.match(/^\s*(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      const marker = fenceMatch[1][0] as '`' | '~';
+      if (!fence) {
+        fence = { marker, length: fenceMatch[1].length };
+      } else if (marker === fence.marker && fenceMatch[1].length >= fence.length) {
+        fence = null;
+      }
+      continue;
+    }
+
+    if (fence) continue;
+
+    const headingMatch = line.match(/^ {0,3}(#{2,3})[ \t]+(.+?)[ \t]*#*[ \t]*$/);
+    if (!headingMatch) continue;
+
+    const text = visibleHeadingText(headingMatch[2]);
     toc.push({
       id: slugifyHeading(text),
       text,
-      level: match[1].length as 2 | 3,
+      level: headingMatch[1].length as 2 | 3,
     });
   }
 
@@ -129,7 +153,7 @@ function readCaseStudyFromFile(fileName: string): CaseStudy | null {
     frontmatter: normalizeFrontmatter(data),
     content,
     readTime: estimateReadTime(content),
-    toc: extractToc(content),
+    toc: extractCaseStudyToc(content),
   };
 }
 
@@ -148,10 +172,8 @@ export function getAllCaseStudies(): CaseStudy[] {
 }
 
 /**
- * Resolve a case study by slug. Unpublished studies are only addressable from
- * the local development server; production, preview builds, and tests treat
- * them as missing so their page, metadata, and Open Graph routes all return
- * not found.
+ * Resolve a published case study by slug. Unpublished studies are treated as
+ * missing so their page, metadata, and Open Graph routes all return not found.
  */
 export function getCaseStudy(slug: string): CaseStudy | null {
   if (!isValidCaseStudySlug(slug)) {
@@ -163,17 +185,14 @@ export function getCaseStudy(slug: string): CaseStudy | null {
 
   const { data, content } = matter(raw);
 
-  const study: CaseStudy = {
+  const frontmatter = normalizeFrontmatter(data);
+  if (frontmatter.published === false) return null;
+
+  return {
     slug,
-    frontmatter: normalizeFrontmatter(data),
+    frontmatter,
     content,
     readTime: estimateReadTime(content),
-    toc: extractToc(content),
+    toc: extractCaseStudyToc(content),
   };
-
-  if (study.frontmatter.published === false && process.env.NODE_ENV !== 'development') {
-    return null;
-  }
-
-  return study;
 }

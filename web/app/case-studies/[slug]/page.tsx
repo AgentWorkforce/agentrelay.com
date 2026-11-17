@@ -59,8 +59,7 @@ const mdxComponents = {
   h3: HeadingWithId(3),
 };
 
-// Prebuild published case studies. Drafts remain available only in local
-// development and are never emitted by a production or preview build.
+// Prebuild published case studies. Drafts never resolve through public routes.
 export async function generateStaticParams() {
   return getAllCaseStudies().map((study) => ({ slug: study.slug }));
 }
