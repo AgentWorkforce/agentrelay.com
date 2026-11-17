@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
+  adoptStored,
   fragmentFor,
   LEGACY_STORAGE_KEY,
   restore,
@@ -161,6 +162,14 @@ function readStore(): Store {
   return store;
 }
 
+function readStored(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
 function writeStore(store: Store) {
   try {
     localStorage.setItem(STORAGE_KEY, serializeStore(store));
@@ -204,7 +213,8 @@ export function EventsShimTry() {
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('open');
   const [secretDraft, setSecretDraft] = useState('');
-  const [bearerToken, setBearerToken] = useState<string | null>(null);
+  /** A generated bearer token, tagged with its inbox so it never shows under another tab's inbox. */
+  const [generated, setGenerated] = useState<{ token: string; secret: string } | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -218,14 +228,26 @@ export function EventsShimTry() {
     if (store) writeStore(store);
   }, [store]);
 
+  // Every change starts from the latest stored inboxes, so another window's new inbox is never written over.
   const update = useCallback((change: (current: Store) => Store) => {
-    setStore((current) => (current ? change(current) : current));
+    setStore((current) => (current ? change(adoptStored(current, readStored(), apiBase())) : current));
+  }, []);
+
+  // Pick up inboxes another window created or cleared.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY) return;
+      setStore((current) => (current ? adoptStored(current, event.newValue, apiBase()) : current));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   const ready = store !== null;
   const agentId: AgentId = store?.selected ?? 'claude-code';
   const session: Session | null = store?.inboxes[agentId] ?? null;
   const feed = session && loaded?.token === session.manageToken ? loaded.feed : null;
+  const bearerToken = session && generated?.token === session.manageToken ? generated.secret : null;
 
   const load = useCallback(
     async (owner: AgentId, current: Session, signal: AbortSignal) => {
@@ -277,7 +299,7 @@ export function EventsShimTry() {
     // Per-inbox UI state belongs to the inbox being left.
     setError(null);
     setSecretDraft('');
-    setBearerToken(null);
+    setGenerated(null);
     setExpanded(null);
   }
 
@@ -328,7 +350,7 @@ export function EventsShimTry() {
       });
       const body = (await response.json()) as { secret?: string; message?: string };
       if (!response.ok) throw new Error(body.message || 'Could not save the secret.');
-      if (body.secret) setBearerToken(body.secret);
+      if (body.secret) setGenerated({ token: current.manageToken, secret: body.secret });
       setSecretDraft('');
       await load(owner, current, new AbortController().signal);
     } catch (failure) {

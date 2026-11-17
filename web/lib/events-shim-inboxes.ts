@@ -195,3 +195,18 @@ export function restore(input: { hash: string; stored: string | null; legacy: st
   if (fromLink.session) store = withInbox(store, selected, fromLink.session);
   return { store, legacyMigrated };
 }
+
+/**
+ * Takes the inboxes from the stored map (shared by every window on this origin) and keeps this
+ * window's selected tab. Changes are applied on top of this, so a window opened earlier cannot
+ * write back a stale map and erase an inbox another window created or cleared since.
+ *
+ * @param raw - The stored map, or `null` when there is none or storage is unavailable (keeps `current`).
+ */
+export function adoptStored(current: Store, raw: string | null, apiBase: string): Store {
+  if (raw === null) return current;
+  const inboxes = parseStore(raw, apiBase).inboxes;
+  // Unchanged: return the same object, so windows with different selected tabs don't keep rewriting each other.
+  const same = AGENT_IDS.every((id) => current.inboxes[id]?.manageToken === inboxes[id]?.manageToken && current.inboxes[id]?.mcpUrl === inboxes[id]?.mcpUrl);
+  return same ? current : { selected: current.selected, inboxes };
+}

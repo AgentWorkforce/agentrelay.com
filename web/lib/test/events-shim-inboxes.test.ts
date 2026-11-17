@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  adoptStored,
   fragmentFor,
   isSession,
   parseFragment,
@@ -148,5 +149,22 @@ describe('restoring the page', () => {
     const crafted = { manageToken: A.manageToken, mcpUrl: 'https://evil.test/cloud/api/v1/events-shim/t/esm_x/mcp' };
     const result = restore({ hash: hashOf(crafted, 'codex'), stored: null, legacy: null, apiBase: API });
     expect(result.store).toEqual({ selected: 'codex', inboxes: {} });
+  });
+});
+
+describe('several windows', () => {
+  it('starts each change from the stored inboxes and keeps this window’s tab', () => {
+    const mine: Store = { selected: 'codex', inboxes: { 'claude-code': A } };
+    // Another window added a Grok inbox since this one loaded.
+    const latest = stored({ selected: 'grok', inboxes: { 'claude-code': A, grok: C } });
+    const merged = adoptStored(mine, latest, API);
+    expect(merged).toEqual({ selected: 'codex', inboxes: { 'claude-code': A, grok: C } });
+    expect(withInbox(merged, 'codex', B).inboxes).toEqual({ 'claude-code': A, grok: C, codex: B });
+  });
+
+  it('keeps the same object when nothing changed, and this window’s map when storage is unavailable', () => {
+    const mine: Store = { selected: 'codex', inboxes: { 'claude-code': A } };
+    expect(adoptStored(mine, stored({ selected: 'grok', inboxes: { 'claude-code': A } }), API)).toBe(mine);
+    expect(adoptStored(mine, null, API)).toBe(mine);
   });
 });
