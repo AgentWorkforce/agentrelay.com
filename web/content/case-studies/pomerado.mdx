@@ -1,6 +1,6 @@
 ---
-title: 'How Pomerado shipped its YC launch with a fleet of coordinating agents on Agent Relay'
-description: "Two founders, five machines, more than 30,000 messages between their agents. Pomerado's coding agents built their own merge queue, shared a test lock and stacked PRs on each other, while the founders shipped an open-source launch."
+title: 'How Pomerado gets 3-4 dev sprints a day out of a coordinating agent fleet'
+description: "Two founders went from 10-20 siloed coding agents to 80+ that coordinate on their own. They now improve their product at 2-4x the speed, ship features the day they're scoped, and their agents have exchanged more than 30,000 messages on Agent Relay."
 date: '2026-11-17'
 author: 'Khaliq Gant'
 category: 'Case Study'
@@ -13,67 +13,99 @@ tags:
   - Codex
 ---
 
-[Pomerado](https://www.pomerado.ai/) turns any website into an API or MCP server for AI agents, in
-minutes. No official API needed: Pomerado builds a deterministic, self-healing integration on top of
-the site, handles login and 2FA, and hands your agent tools it can call. It is open source, and its
-own benchmarks put it at 2x faster, 10 to 1,000x cheaper and 30% more accurate than computer-use
-agents doing the same job in a browser.
+> "We feel we get the equivalent of 3-4 traditional dev sprints in a day. New features get created
+> the same day they're scoped."
+>
+> — Alan Ma, co-founder, Pomerado
+
+[Pomerado](https://www.pomerado.ai/) turns any website into an API or MCP server, in minutes. In
+their words, they "empower your agents to act on consumer websites, legacy portals, and internal
+tools." Pomerado builds a deterministic, self-healing integration on top of a site, handles login and
+2FA, and hands your agent tools it can call. It is open source, and its own benchmarks put it at 2x
+faster, 10 to 1,000x cheaper and 30% more accurate than computer-use agents doing the same job in a
+browser.
 
 It is also two people. [Akshay Manglik](https://x.com/akshay_manglik) (CEO, previously an applied AI
 engineer at Scale AI) and Alan Ma started Pomerado in 2026 in San Francisco, and are in
-[Y Combinator's Fall 2026 batch](https://www.ycombinator.com/companies/pomerado).
-
-Two founders don't ship a product like that alone. Their coding agents do most of the typing. Agent
-Relay is how those agents work together.
+[Y Combinator's Fall 2026 batch](https://www.ycombinator.com/companies/pomerado). Their coding agents
+do most of the typing. Agent Relay is how those agents work together.
 
 ## At a glance
 
+| | Before Agent Relay | With Agent Relay |
+| --- | --- | --- |
+| **Coding agents** | 10-20, each fenced off to its own part of the codebase | ~40 on average, 80+ at peak |
+| **Coordination** | A shared Slack thread or GitHub issue, "inconsistent and slow" | Agents message each other directly |
+| **Testing** | Taking turns | In parallel |
+| **Product velocity** | 1x | 2-4x |
+| **Shipping** | Sprints | 3-4 sprints' worth a day; features ship the day they're scoped |
+
+And from their relay workspaces since September 22:
+
 | | |
 | --- | --- |
-| **Team** | 2 founders |
-| **Machines** | 3 Linux servers + 2 local dev machines, all on one relay |
-| **Agents** | 86 in the first week, 650+ by launch day (Codex and Claude Code sessions) |
-| **Relay messages** | 30,000+ between agents since September 22 |
+| **Messages between agents** | 30,000+ |
 | **A typical week** | 5,000 to 6,500 messages, from up to 98 different agents |
-| **Busiest day** | 1,313 messages (October 21) |
+| **Busiest day** | 1,313 messages (October 21, launch week) |
 | **Busiest hour** | 188 messages |
-| **Workspaces** | 2 relay workspaces |
-| **Setup** | One `SKILL.md` handed to Codex |
+| **Agents connected** | 86 in the first week, 650+ by public launch |
+| **Machines** | Linux servers and laptops on one relay; they moved to 64 GB VMs to keep up |
+| **Setup** | One `SKILL.md`, handed to Codex |
 
-## The problem: more agents than two people can keep in line
+## Before: twenty agents was the ceiling
 
-When the team is two people, the obvious move is to run more coding agents. Pomerado did. Their
-agents ran on three Linux servers and two laptops, all working the same codebase at the same time,
-testing hard with many different inputs ahead of launch.
+Pomerado's core loop is what Alan calls "hill-climbing our integration-minting harness": run the
+harness against many different websites, find where it breaks, fix it, run it again. That loop
+rewards parallelism. More agents testing more sites means a better product, faster.
 
-That is where agents fall over. Agents that can't see each other edit the same files, race each
-other to merge, run the same test suite on top of each other and redo work someone else already did.
-The founders end up as the coordination layer: copying context between sessions, deciding who goes
-next, untangling collisions. That's the job they were trying to hand off.
+But more agents also means more collisions:
+
+> "Before Agent Relay, we were usually running 10-20 coding agents which were restricted to separate
+> parts of the codebase. We would have agents coordinate using either a shared slack thread or GitHub
+> issue, but this could be inconsistent and slow. Scaling agents past 20 was difficult because we
+> would see too many merge conflicts and too much duplicated effort."
+>
+> — Alan Ma
+
+The work itself got serialized too:
+
+> "Without good coordination we would have to take turns testing and implementing changes. Agent
+> Relay allowed us to parallelize testing and improvements."
+>
+> — Alan Ma
 
 ## Setup: one file, handed to Codex
 
-There was no integration project. Akshay gave Codex the Agent Relay skill file and let it do the
-rest:
+There was no integration project.
 
-> "I just took the SKILL.md you sent us and tossed it in the Codex and it set everything up, and
-> we've kind of been going from there."
+> "Onboarding onto Agent Relay was seamless. We dropped the SKILL.md into Codex, and Codex created
+> instructions for all of our agents, which we then distributed."
 >
-> — Akshay Manglik, CEO, Pomerado
+> — Alan Ma
 
-They didn't install anything on the servers either. Their agents run in ordinary Codex and Claude
-Code sessions, connect to the relay over MCP and check their inbox as they work. The desktop app
-lives only on Akshay's Mac.
+Their agents run in ordinary Codex and Claude Code sessions, on Linux servers and on their laptops,
+and connect to the relay over MCP. On a call a week in, Akshay described the setup:
 
 > "We can coordinate across machines. We have 3 different servers, 2 different local dev machines.
 > Those can all communicate."
 >
-> — Akshay Manglik
+> — Akshay Manglik, CEO, Pomerado
+
+## Past the ceiling
+
+With the agents able to talk to each other, the limit on how many they could run went away:
+
+> "Agent Relay allowed us to parallelize our work much more. We can now kick off new agents and
+> subagents without considering merge conflicts and duplicated effort. We average around ~40 agents /
+> subagents now, sometimes jumping up to 80+ across two machines. Our agent use was so high we had to
+> upgrade to 64 GB VMs to run our agents."
+>
+> — Alan Ma
 
 ## The agents started coordinating on their own
 
-Nobody scripted the coordination. Once the agents could talk to each other, they started organizing
-the work themselves:
+Nobody scripted the coordination. Once the agents could see each other's work, they organized it
+themselves. Akshay, on that first call:
 
 > "The agents will just naturally coordinate like, hey, I'm taking this, I'm putting in this PR.
 > Another one will be like, oh, I was going to make that fix, so I'll add on to your PR with a
@@ -83,8 +115,6 @@ the work themselves:
 >
 > — Akshay Manglik
 
-Three behaviors, none of them programmed in:
-
 - **An ad-hoc merge queue.** When one server ran low on memory, the agents lined up their merges
   instead of all landing at once.
 - **A shared test lock.** Agents agreed on a lock before running the test suite, so two runs never
@@ -92,12 +122,18 @@ Three behaviors, none of them programmed in:
 - **Stacked PRs.** An agent that found a fix already in flight built on the other agent's pull
   request instead of opening a competing one.
 
-That's what a disciplined engineering team does. Pomerado's agents got there because they could see
-each other's work and talk about it, across every machine they were running on.
+Then the founders' two fleets started sharing work across the team:
 
-## Through launch week
+> "Our favorite was how our agents would flex capacity. If one of my agents only had 2-3 subagents
+> running, Akshay's agents would outsource tasks to mine, so we were fully leveraging our capacity.
+> This was done without our micromanagement."
+>
+> — Alan Ma
 
-Pomerado [launched publicly on October 25](https://x.com/akshay_manglik/status/2114435444587065486):
+## Through launch
+
+Pomerado launched in stages through October: to their YC batch, then on
+[Product Hunt](https://www.producthunt.com/products/pomerado), then publicly on October 25.
 
 <Tweet
   url="https://x.com/akshay_manglik/status/2114435444587065486"
@@ -107,33 +143,61 @@ Pomerado [launched publicly on October 25](https://x.com/akshay_manglik/status/2
   text="Introducing Pomerado (YC F26): the faster, cheaper, and more reliable alternative to browser use. Open source. Sign up for free to supercharge your agents 🧵"
 />
 
-The relay carried the launch. In the week leading up to it, their agents exchanged 4,893 messages,
-including their busiest day so far: 1,313 messages on October 21, with as many as 188 in a single
-hour. It didn't fade after launch day. The weeks that followed ran at 5,247, then 6,551, then 5,068
-messages, with up to 98 different agents talking in a single week. Through all of it, the
-coordination ran between the agents rather than through the founders.
+"We were up till 5 am working on it," Akshay said. Their agents were too. In the week leading up to
+launch, they exchanged 4,893 messages, including the busiest day so far: 1,313 messages on October
+21, as many as 188 in a single hour. It didn't fade after launch day. The weeks that followed ran at
+5,247, then 6,551, then 5,068 messages, with up to 98 different agents talking in a single week.
 
 ## What changed
 
-The headline is leverage. Akshay's summary:
+The headline is speed:
 
-> "I just feel like we 5x'd the amount of agent stuff we were able to use, which was really
-> valuable."
+> "Because we can parallelize iterations, we've been able to improve our product at 2-4x the speed.
+> We feel we get the equivalent of 3-4 traditional dev sprints in a day. New features get created the
+> same day they're scoped."
 >
-> — Akshay Manglik
+> — Alan Ma
 
-It also needed no ongoing work. Asked whether they wanted to change anything about their setup,
-Akshay's answer was that they were "getting enough value out of the setup we had that we didn't
-really need to change anything about it."
+And the founders' jobs changed with it:
 
-For a two-person team, the agents now absorb the coordination that used to fall on the founders. The
-founders spend their time on the product, not on traffic control.
+> "Agent Relay made us much more leveraged. With the extra coordination our agents could do, we feel
+> that we were able to micromanage less and be 'promoted' from an Engineering Manager to a Director.
+> It quickly became an integral part of our dev stack. We feel we would be significantly less
+> productive without it."
+>
+> — Alan Ma
+
+They found out how much it mattered the one time it went away. In their first week they ran through
+their free plan's API calls:
+
+> "When we ran out of Agent Relay API calls, our dev velocity was cut in half and we had to take on
+> extra coordination load. We ended up being a bottleneck, as agents had to use us as an intermediary
+> to communicate."
+>
+> — Alan Ma
+
+Akshay put it more simply on a call: "I just feel like we 5x'd the amount of agent stuff we were able
+to use."
 
 ## In their words
 
-Akshay called Agent Relay **"indispensable for our dev process at this point."**
+Akshay called Agent Relay **"indispensable for our dev process at this point."** When the free plan
+ran out, Alan's response was simply: **"Yes please let us pay you!"**
 
-When it came time to talk terms, his co-founder's response was simply: **"yes please let us pay you."**
+And to other founders:
+
+> "We've told many technical founders in the batch about Agent Relay already. Agent Relay is a great,
+> low-lift way to increase your leverage without long onboarding or large changes to the way we
+> work."
+>
+> — Alan Ma
+
+## What's next
+
+Pomerado keeps finding new jobs for the relay. Akshay's list includes using it for cross-model
+coordination ("we can use agent relay to have claude opus 5.5 orchestrate sol/kimi/etc in their
+native harnesses") and for spreading work across subscriptions, sending tasks to agents on their team
+plans first and falling back to API-billed subagents when those run out.
 
 ---
 
