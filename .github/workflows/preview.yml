@@ -38,6 +38,9 @@ jobs:
         env:
           NEXT_PUBLIC_POSTHOG_HOST: ${{ vars.NEXT_PUBLIC_POSTHOG_HOST || 'https://i.agentrelay.com' }}
           NEXT_PUBLIC_POSTHOG_KEY: ${{ vars.NEXT_PUBLIC_POSTHOG_KEY }}
+          # PR previews show draft case studies (labelled, noindex); the
+          # production deploy never sets this.
+          CASE_STUDY_DRAFTS: '1'
         run: npm run cf:build
 
       - name: Verify font faces

@@ -4,7 +4,8 @@ import {
   extractCaseStudyToc,
   getAllCaseStudies,
   getCaseStudy,
-  getCaseStudyDraftForDevelopment,
+  getCaseStudyDraft,
+  getListedCaseStudies,
 } from '../case-studies';
 
 afterEach(() => vi.unstubAllEnvs());
@@ -22,13 +23,25 @@ describe('case studies', () => {
     vi.stubEnv('NODE_ENV', 'development');
 
     expect(getCaseStudy('pomerado')).toBeNull();
-    expect(getCaseStudyDraftForDevelopment('pomerado')?.frontmatter.published).toBe(false);
+    expect(getCaseStudyDraft('pomerado')?.frontmatter.published).toBe(false);
   });
 
-  it('does not expose drafts through the development helper in production', () => {
+  it('does not expose drafts in production', () => {
     vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('CASE_STUDY_DRAFTS', '');
 
-    expect(getCaseStudyDraftForDevelopment('pomerado')).toBeNull();
+    expect(getCaseStudyDraft('pomerado')).toBeNull();
+    expect(getListedCaseStudies().some((study) => study.slug === 'pomerado')).toBe(false);
+  });
+
+  it('lists and resolves drafts in PR preview builds', () => {
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('CASE_STUDY_DRAFTS', '1');
+
+    expect(getCaseStudy('pomerado')).toBeNull();
+    expect(getCaseStudyDraft('pomerado')?.frontmatter.published).toBe(false);
+    expect(getListedCaseStudies().some((study) => study.slug === 'pomerado')).toBe(true);
+    expect(getAllCaseStudies().some((study) => study.slug === 'pomerado')).toBe(false);
   });
 
   it('uses visible link text for both TOC labels and heading IDs', () => {

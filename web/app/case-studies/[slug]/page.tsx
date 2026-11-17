@@ -18,7 +18,8 @@ import { SiteNavActions } from '../../../components/SiteNavActions';
 import {
   getAllCaseStudies,
   getCaseStudy,
-  getCaseStudyDraftForDevelopment,
+  getCaseStudyDraft,
+  getListedCaseStudies,
   slugifyHeading,
 } from '../../../lib/case-studies';
 import { getAuthorInitials, getBlogAuthor } from '../../../lib/blog-authors';
@@ -65,12 +66,13 @@ const mdxComponents = {
 };
 
 function getVisibleCaseStudy(slug: string) {
-  return getCaseStudy(slug) ?? getCaseStudyDraftForDevelopment(slug);
+  return getCaseStudy(slug) ?? getCaseStudyDraft(slug);
 }
 
-// Prebuild published case studies. Drafts never resolve through public routes.
+// Prebuild listed case studies. Drafts resolve only in development and PR
+// preview builds.
 export async function generateStaticParams() {
-  return getAllCaseStudies().map((study) => ({ slug: study.slug }));
+  return getListedCaseStudies().map((study) => ({ slug: study.slug }));
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -89,6 +91,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     alternates: {
       canonical: studyUrl,
     },
+    // A draft shown on a PR preview stays out of search indexes.
+    ...(study.frontmatter.published === false ? { robots: { index: false, follow: false } } : {}),
     openGraph: {
       siteName: SITE_NAME,
       title: study.frontmatter.title,
@@ -271,7 +275,9 @@ export default async function CaseStudyPage({ params }: PageProps) {
 
       <section className={styles.postHero}>
         <div className={styles.postHeroInner}>
-          <p className={styles.postHeroCategory}>{study.frontmatter.category}</p>
+          <p className={styles.postHeroCategory}>
+            {study.frontmatter.published === false ? `Draft · ${study.frontmatter.category}` : study.frontmatter.category}
+          </p>
           <h1 className={styles.postHeroTitle}>{study.frontmatter.title}</h1>
           <p className={styles.postHeroDek}>{study.frontmatter.description}</p>
         </div>

@@ -185,11 +185,34 @@ export function getCaseStudy(slug: string): CaseStudy | null {
 }
 
 /**
- * Resolve a draft only on the local Next development server. Public lookups
- * remain publication-gated, and production/preview builds cannot use this
- * helper to expose unpublished content.
+ * Whether this build shows drafts: the local Next development server, and PR
+ * preview builds, which set `CASE_STUDY_DRAFTS=1` (see
+ * `.github/workflows/preview.yml`). The production deploy never sets it.
  */
-export function getCaseStudyDraftForDevelopment(slug: string): CaseStudy | null {
-  if (process.env.NODE_ENV !== 'development') return null;
+export function showCaseStudyDrafts(): boolean {
+  return process.env.NODE_ENV === 'development' || process.env.CASE_STUDY_DRAFTS === '1';
+}
+
+/**
+ * Resolve a draft only where drafts are shown (local development and PR
+ * previews). Public lookups remain publication-gated, and production builds
+ * cannot use this helper to expose unpublished content.
+ */
+export function getCaseStudyDraft(slug: string): CaseStudy | null {
+  if (!showCaseStudyDrafts()) return null;
   return readCaseStudyBySlug(slug);
+}
+
+/**
+ * The case studies this build lists and prerenders: the published ones, plus
+ * drafts where drafts are shown. The sitemap uses `getAllCaseStudies()`, so
+ * drafts are never in it.
+ */
+export function getListedCaseStudies(): CaseStudy[] {
+  if (!showCaseStudyDrafts()) return getAllCaseStudies();
+  return listContentFiles('case-studies')
+    .filter((file) => file.endsWith('.mdx'))
+    .map((file) => readCaseStudyFromFile(file))
+    .filter((study): study is CaseStudy => study !== null)
+    .sort((a, b) => (a.frontmatter.date > b.frontmatter.date ? -1 : 1));
 }

@@ -5,7 +5,7 @@ import styles from '../../components/blog/blog.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { SiteNavActions } from '../../components/SiteNavActions';
-import { getAllCaseStudies } from '../../lib/case-studies';
+import { getListedCaseStudies } from '../../lib/case-studies';
 import { getAuthorInitials, getBlogAuthor } from '../../lib/blog-authors';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../lib/site';
@@ -44,7 +44,8 @@ function formatDate(dateStr: string): string {
 }
 
 export default function CaseStudiesIndexPage() {
-  const studies = getAllCaseStudies();
+  // Published studies; PR preview builds also list drafts, labelled.
+  const studies = getListedCaseStudies();
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -54,7 +55,9 @@ export default function CaseStudiesIndexPage() {
     isPartOf: SITE_URL,
     mainEntity: {
       '@type': 'ItemList',
-      itemListElement: studies.map((study, index) => ({
+      itemListElement: studies
+        .filter((study) => study.frontmatter.published !== false)
+        .map((study, index) => ({
         '@type': 'ListItem',
         position: index + 1,
         name: study.frontmatter.title,
@@ -114,7 +117,9 @@ export default function CaseStudiesIndexPage() {
                       className={styles.postListRowLink}
                     >
                       <div className={styles.postListTopline}>
-                        <h3 className={styles.postListTitle}>{study.frontmatter.title}</h3>
+                        <h3 className={styles.postListTitle}>
+                          {study.frontmatter.published === false ? `Draft: ${study.frontmatter.title}` : study.frontmatter.title}
+                        </h3>
                         <span className={styles.postListMeta}>
                           <span
                             className={`${styles.postListAvatar} ${studyAuthor.image ? styles.authorAvatarPhoto : ''}`}

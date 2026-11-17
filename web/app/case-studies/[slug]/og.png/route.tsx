@@ -1,25 +1,21 @@
 import { ImageResponse } from 'next/og';
 import { notFound } from 'next/navigation';
 
-import {
-  getAllCaseStudies,
-  getCaseStudy,
-  getCaseStudyDraftForDevelopment,
-} from '../../../../lib/case-studies';
+import { getCaseStudy, getCaseStudyDraft, getListedCaseStudies } from '../../../../lib/case-studies';
 import { BlogVariant, loadBrandFonts, OG_SIZE } from '../../../../lib/og/template';
 
 export const runtime = 'nodejs';
-// Prerender one card per published case study at build time. Drafts never
-// resolve through this public route.
+// Prerender one card per listed case study at build time. Drafts resolve only
+// in development and PR preview builds.
 export const dynamic = 'force-static';
 
 type RouteContext = {
   params: Promise<{ slug: string }>;
 };
 
-/** Prerender a card for every published case study. */
+/** Prerender a card for every listed case study. */
 export function generateStaticParams() {
-  return getAllCaseStudies().map((study) => ({ slug: study.slug }));
+  return getListedCaseStudies().map((study) => ({ slug: study.slug }));
 }
 
 function formatDate(value: string): string | undefined {
@@ -42,7 +38,7 @@ function formatDate(value: string): string | undefined {
  */
 export async function GET(_request: Request, { params }: RouteContext) {
   const { slug } = await params;
-  const study = getCaseStudy(slug) ?? getCaseStudyDraftForDevelopment(slug);
+  const study = getCaseStudy(slug) ?? getCaseStudyDraft(slug);
 
   if (!study) {
     notFound();
