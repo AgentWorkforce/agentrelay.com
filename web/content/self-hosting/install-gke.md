@@ -7,8 +7,9 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 **Done when** line before you move on. Expect about an hour and a half, most of
 it waiting on Google Cloud: the HTTPS certificate alone can take up to an hour.
 
-**Release:** `agent-relay-2026.11.9` (infra commit `5370050a`, chart 0.7.21).
-Read [Known limits](#known-limits) before a production rollout.
+**Release:** `agent-relay-2026.11.16` (infra commit `ece71b9d`, chart 0.7.54).
+The downloadable `values.yaml` renders against this release, which was not
+installed on GKE. Read [Known limits](#known-limits) before a production rollout.
 
 **You need:**
 
@@ -55,14 +56,14 @@ curl -fsSLO "$base/SHA256SUMS"
 for f in $(awk '{print $2}' SHA256SUMS); do curl -fsSLO "$base/$f"; done
 shasum -a 256 -c SHA256SUMS
 git clone https://github.com/AgentWorkforce/infra.git
-git -C infra checkout agent-relay-2026.11.9
-test "$(git -C infra rev-parse HEAD)" = 5370050a974f330b120831ef376903ff2f7447b7 && echo "release ok"
-mkdir release && gh release download agent-relay-2026.11.9 -R AgentWorkforce/infra -D release
-(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.21.tgz) | tail -1
+git -C infra checkout agent-relay-2026.11.16
+test "$(git -C infra rev-parse HEAD)" = ece71b9df93df64cb63676d2a0ca2767eccc6599 && echo "release ok"
+mkdir release && gh release download agent-relay-2026.11.16 -R AgentWorkforce/infra -D release
+(cd release && shasum -a 256 -c SHA256SUMS && tar -xzf agent-relay-0.7.54.tgz) | tail -1
 ```
 
 No `gh`? Download the same assets from the
-[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.9)
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.16)
 into `release/`.
 
 Tools: `gcloud` (with `gke-gcloud-auth-plugin`), `terraform` 1.11 or later (or
@@ -313,7 +314,7 @@ export MIRROR_ROOT=<region>-docker.pkg.dev/<project id>/agent-relay-mirror
 export NAMESPACE=agent-relay
 export HELM_RELEASE=agent-relay
 export STATIC_IP_NAME=agent-relay-ingress
-export SERVICES_IMAGE=$MIRROR_ROOT/ghcr.io/agentworkforce/sessions-pipeline@sha256:3d9c0a4dff67c92da30964857713e625f3f967bc2ff98851614a70adbb4fe3fe
+export SERVICES_IMAGE=$MIRROR_ROOT/ghcr.io/agentworkforce/sessions-pipeline@sha256:fd2efd61dca4761dfb55256aa4797cb7f61c3434cc8af4833287e0e7bb7b59a9
 export PSQL_IMAGE=$MIRROR_ROOT/ghcr.io/cloudnative-pg/postgresql@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
 export CHART="$INSTALL_DIR/release/agent-relay"
@@ -449,7 +450,7 @@ instead of this block. vals works with Google Secret Manager.
 ## 11. Install with Helm
 
 ```sh
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.21.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.54.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -485,7 +486,7 @@ done
 bash cloud-sql-setup.sh post
 kubectl -n $NAMESPACE rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n $NAMESPACE get jobs -o name | grep search-indexer-bootstrap); do kubectl -n $NAMESPACE delete "$j"; done
-helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.21.tgz" --namespace $NAMESPACE \
+helm upgrade --install $HELM_RELEASE "$INSTALL_DIR/release/agent-relay-0.7.54.tgz" --namespace $NAMESPACE \
   -f "$CHART/values-gcp.yaml" -f "$CHART/values-gcp-native.yaml" \
   -f "$INSTALL_DIR/managed-values.json" -f "$INSTALL_DIR/values.yaml" \
   -f "$INSTALL_DIR/release-images.values.yaml" --timeout 25m
@@ -916,7 +917,7 @@ equal to the `proven` in the plan line you kept, and `exit 0`.
 
 ## Known limits
 
-What release `agent-relay-2026.11.9` doesn't do on GKE yet:
+What release `agent-relay-2026.11.16` doesn't do on GKE yet:
 
 1. **Upgrading from 2026.11.5 or earlier: re-stamp once.** Those releases
    recorded sessions uploaded to Cloud Storage as if they were in S3, so their

@@ -7,11 +7,12 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 **Done when** line before you move on. Expect about two hours, most of it
 waiting on AWS.
 
-**Release:** `agent-relay-2026.11.5` (infra commit `ef3f69ab`, chart 0.7.10).
+**Release:** `agent-relay-2026.11.16` (infra commit `ece71b9d`, chart 0.7.54).
 These steps were run end to end on an existing EKS cluster on 2026-11-14:
-installed with `agent-relay-2026.11.3`, then upgraded to this release with
-[Upgrades](/docs/self-hosting/upgrades). To run a newer release, install this
-one and then follow Upgrades.
+installed with `agent-relay-2026.11.3`, then upgraded to `agent-relay-2026.11.5`
+with [Upgrades](/docs/self-hosting/upgrades). `values.yaml` renders against
+`agent-relay-2026.11.16` but was not installed from it. To run a newer release,
+install this one and then follow Upgrades.
 
 **You need:**
 
@@ -49,8 +50,8 @@ curl -fsSLO "$base/SHA256SUMS"
 for f in $(awk '{print $2}' SHA256SUMS); do curl -fsSLO "$base/$f"; done
 shasum -a 256 -c SHA256SUMS
 git clone https://github.com/AgentWorkforce/infra.git
-git -C infra checkout agent-relay-2026.11.5
-test "$(git -C infra rev-parse HEAD)" = ef3f69ab8e557fb9282eb292b6975c210501c61f && echo "release ok"
+git -C infra checkout agent-relay-2026.11.16
+test "$(git -C infra rev-parse HEAD)" = ece71b9df93df64cb63676d2a0ca2767eccc6599 && echo "release ok"
 ```
 
 Tools: `terraform` 1.11 or later, `helm` 3.10 or later (Helm 3, not Helm 4),
@@ -252,7 +253,7 @@ export AWS_REGION=<region>
 export ALB_SUBNET_CIDR_A=<CIDR of load balancer subnet 1>
 export ALB_SUBNET_CIDR_B=<CIDR of load balancer subnet 2>
 export IMAGE_REPO_PREFIX=ghcr.io/agentworkforce
-export SERVICES_IMAGE=ghcr.io/agentworkforce/sessions-pipeline@sha256:ba02f1498d53a089da7ff8fdb7e47215f561c55d9f292e1995b7b5c97d9c37a1
+export SERVICES_IMAGE=ghcr.io/agentworkforce/sessions-pipeline@sha256:fd2efd61dca4761dfb55256aa4797cb7f61c3434cc8af4833287e0e7bb7b59a9
 export PSQL_IMAGE=ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3
 export NAMESPACE=agent-relay
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
@@ -725,10 +726,10 @@ first four; `rds-setup.sh` runs the services image and the PostgreSQL client.
 
 | Image | Version | `image@digest` |
 |---|---|---|
-| Control API | `c276e638` | `ghcr.io/agentworkforce/relay-control@sha256:46e2cb514ba2ab3ec753fb3f3c0e17caff562350cbb671dbfc9f49b9463e0d49` |
-| Dashboard | `0090a040` | `ghcr.io/agentworkforce/relay-webapp@sha256:9414d55446bbd4db9c82e344c109a4e829d76f536a49bd5917e7ebcc86ed3f23` |
-| Relaycast | 12.8.0-pg.3 | `ghcr.io/agentworkforce/relaycast-self-host@sha256:cc2a79f02d39978fa04322b5a45497737ff137bc2a5db5615c7eee690030de83` |
-| Sessions services | `f8ac49b3` | `ghcr.io/agentworkforce/sessions-pipeline@sha256:ba02f1498d53a089da7ff8fdb7e47215f561c55d9f292e1995b7b5c97d9c37a1` |
+| Control API | 0.5.34 (`2258889a`) | `ghcr.io/agentworkforce/relay-control@sha256:377bc2b9477d0bbd966cccd61380dd9d7f6e022a76ff0f7ad80e391d56ec0a83` |
+| Dashboard | `be770cac` | `ghcr.io/agentworkforce/relay-webapp@sha256:da0cc80476eac734299c0c6ceb94e2bca7dae7913cce56a8ca8592cf086dd02e` |
+| Relaycast | 12.10.0 | `ghcr.io/agentworkforce/relaycast-self-host@sha256:ec062ef901af15cf575b53a71d7eb09f2e6ab6e7c0d5be2da35339a275a5c6cc` |
+| Sessions services | `b96e1e1e` | `ghcr.io/agentworkforce/sessions-pipeline@sha256:fd2efd61dca4761dfb55256aa4797cb7f61c3434cc8af4833287e0e7bb7b59a9` |
 | PostgreSQL client | 17-standard-trixie | `ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3` |
 
 Each image line in `values.yaml` sits under `x-pins`. Don't swap an image on
@@ -749,10 +750,10 @@ export ECR=<account>.dkr.ecr.<region>.amazonaws.com
 aws ecr get-login-password --region "$AWS_REGION" | crane auth login "$ECR" -u AWS --password-stdin
 copied=0
 for src in \
-  ghcr.io/agentworkforce/relay-control@sha256:46e2cb514ba2ab3ec753fb3f3c0e17caff562350cbb671dbfc9f49b9463e0d49 \
-  ghcr.io/agentworkforce/relay-webapp@sha256:9414d55446bbd4db9c82e344c109a4e829d76f536a49bd5917e7ebcc86ed3f23 \
-  ghcr.io/agentworkforce/relaycast-self-host@sha256:cc2a79f02d39978fa04322b5a45497737ff137bc2a5db5615c7eee690030de83 \
-  ghcr.io/agentworkforce/sessions-pipeline@sha256:ba02f1498d53a089da7ff8fdb7e47215f561c55d9f292e1995b7b5c97d9c37a1 \
+  ghcr.io/agentworkforce/relay-control@sha256:377bc2b9477d0bbd966cccd61380dd9d7f6e022a76ff0f7ad80e391d56ec0a83 \
+  ghcr.io/agentworkforce/relay-webapp@sha256:da0cc80476eac734299c0c6ceb94e2bca7dae7913cce56a8ca8592cf086dd02e \
+  ghcr.io/agentworkforce/relaycast-self-host@sha256:ec062ef901af15cf575b53a71d7eb09f2e6ab6e7c0d5be2da35339a275a5c6cc \
+  ghcr.io/agentworkforce/sessions-pipeline@sha256:fd2efd61dca4761dfb55256aa4797cb7f61c3434cc8af4833287e0e7bb7b59a9 \
   ghcr.io/cloudnative-pg/postgresql@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3
 do
   repo="agent-relay/${src%@*}"; digest="${src#*@}"
@@ -773,6 +774,6 @@ whole block again; images already copied are quick.
 Then, in `settings.sh` (step 6):
 
 - `IMAGE_REPO_PREFIX=$ECR/agent-relay/ghcr.io/agentworkforce`;
-- `SERVICES_IMAGE=$ECR/agent-relay/ghcr.io/agentworkforce/sessions-pipeline@sha256:ba02f149…`
+- `SERVICES_IMAGE=$ECR/agent-relay/ghcr.io/agentworkforce/sessions-pipeline@sha256:fd2efd61…`
   and `PSQL_IMAGE=$ECR/agent-relay/ghcr.io/cloudnative-pg/postgresql@sha256:ed6923f9…`,
   with the full digests from the loop.
