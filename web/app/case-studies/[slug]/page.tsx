@@ -12,6 +12,7 @@ import { BlogTableOfContents } from '../../../components/blog/BlogTableOfContent
 import styles from '../../../components/blog/blog.module.css';
 import { HighlightedPre } from '../../../components/docs/HighlightedCode';
 import { SignupBand } from '../../../components/home/SignupBand';
+import { Tweet } from '../../../components/case-studies/Tweet';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
 import { SiteNavActions } from '../../../components/SiteNavActions';
@@ -63,6 +64,7 @@ const mdxComponents = {
   pre: HighlightedPre,
   h2: HeadingWithId(2),
   h3: HeadingWithId(3),
+  Tweet,
 };
 
 function getVisibleCaseStudy(slug: string) {
