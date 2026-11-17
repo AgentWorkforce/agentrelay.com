@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 109,
+  "count": 111,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -45,6 +45,8 @@
     "https://agentrelay.com/brand/deploy-button",
     "https://agentrelay.com/brand/theme",
     "https://agentrelay.com/careers",
+    "https://agentrelay.com/case-studies",
+    "https://agentrelay.com/case-studies/pomerado",
     "https://agentrelay.com/company",
     "https://agentrelay.com/directory",
     "https://agentrelay.com/docs/claude-connector",
