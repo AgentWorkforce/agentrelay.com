@@ -69,9 +69,18 @@ never authorize resending a message or changing Desktop launch settings.
 
 ### Coordinated receipt patch before a suite release
 
-A paired image patch has been tested on a **PostgreSQL-backend GKE install**
-with its original chart (agent-relay 0.7.8, suite 2026.11.3). **It has not been
-exercised with SQLite or proven on AKS.** A full chart upgrade is a separate
+A paired image patch has been tested on two installs, each with its original
+chart:
+
+- a **PostgreSQL-backend GKE install** (agent-relay 0.7.8, suite 2026.11.3);
+- a **SQLite-backend AKS install** from the
+  [Azure install guide](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/README.md)
+  (agent-relay 0.7.15, suite 2026.11.8), including a restore of both backups
+  back to the starting release. The guide's
+  [AKS receipts upgrade qualification](https://github.com/AgentWorkforce/infra/blob/main/docs/azure-install/README.md#aks-receipts-upgrade-qualification)
+  lists the backup and restore commands and the evidence.
+
+Other starting charts are not qualified, and a full chart upgrade is a separate
 qualification. For an Azure install, have your Agent Relay contact
 review the existing release, database backend and backup plan before applying
 this patch. The EKS upgrader does not support Azure.
@@ -174,18 +183,20 @@ silently carry these fixed digests forward as the last overlay.
 **Done when:** backups are recorded, the reviewed pair of digests is running,
 all required migrations completed, both services are healthy, and the bot can
 look up its own sent message. Publishing this procedure does not establish
-that an Azure rollout has been tested or that a customer's install is upgraded.
+that a customer's install is upgraded.
 
 If a migration or rollout fails, collect its status and logs and stop for
 support. A Helm rollback does not restore the database. A downgrade needs a
 reviewed backup-restore plan; do not assume the older images can use a migrated
-schema.
+schema. For the Azure guide's install, the qualification above restores both
+backups with Relaycast and Control stopped, then upgrades with the original
+chart and values files without the patch overlay.
 
 <!-- agent
 Do not turn this patch into an automatic customer upgrade. Confirm the actual
 backend and original chart/values first. Keep rendered manifests and values
-private. For Azure, say that this path has not been proven on AKS and obtain a
-reviewed site-specific plan. Never run cluster commands from this guide without
+private. For Azure, say that this path was qualified on AKS only from suite
+2026.11.8 (chart 0.7.15) with SQLite, and obtain a reviewed site-specific plan. Never run cluster commands from this guide without
 the human's approval of the exact commands and completed backup evidence.
 -->
 
