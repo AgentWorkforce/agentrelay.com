@@ -109,7 +109,8 @@ yourself.
 | `agent-relay-2026.11.6` (infra commit `6b98a4ab`) | 0.7.11 | GKE |
 | `agent-relay-2026.11.7` (infra commit `b63ec4a3`) | 0.7.14 | GKE |
 | `agent-relay-2026.11.8` (infra commit `e15513ba`) | 0.7.15 | GKE |
-| `agent-relay-2026.11.9` (infra commit `5370050a`) | 0.7.21 | [GKE](/docs/self-hosting/install-gke) (current; see its [known limits](/docs/self-hosting/install-gke#known-limits)) |
+| `agent-relay-2026.11.9` (infra commit `5370050a`) | 0.7.21 | GKE |
+| `agent-relay-2026.11.16` (infra commit `ece71b9d`) | 0.7.54 | [EKS](/docs/self-hosting/install-eks), [GKE](/docs/self-hosting/install-gke) and [AKS](/docs/self-hosting/install-aks) (current; see the [GKE known limits](/docs/self-hosting/install-gke#known-limits) and [AKS known limits](/docs/self-hosting/install-aks#known-limits)) |
 
 Charts, Terraform and helper scripts come from the public
 [AgentWorkforce/infra](https://github.com/AgentWorkforce/infra) repository at a
