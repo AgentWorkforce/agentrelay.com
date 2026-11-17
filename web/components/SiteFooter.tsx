@@ -41,6 +41,7 @@ const footerColumns: FooterColumn[] = [
     links: [
       { label: 'Home', href: '/' },
       { label: 'Blog', href: '/blog' },
+      { label: 'Case Studies', href: '/case-studies' },
       { label: 'Careers', href: '/careers' },
     ],
   },

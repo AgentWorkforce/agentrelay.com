@@ -24,7 +24,12 @@ const nextConfig = {
   },
   outputFileTracingRoot: path.resolve(__dirname, '..'),
   outputFileTracingIncludes: {
-    '/*': ['content/docs/**/*', 'content/blog/**/*', 'content/self-hosting/**/*'],
+    '/*': [
+      'content/docs/**/*',
+      'content/blog/**/*',
+      'content/case-studies/**/*',
+      'content/self-hosting/**/*',
+    ],
     // The Pear OG card embeds these at render time.
     '/pear/og.png': ['public/img/pear-app.png', 'public/brand-kit/pear-icon-transparent.png'],
   },
