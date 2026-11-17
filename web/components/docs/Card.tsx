@@ -12,10 +12,12 @@ interface CardProps {
   title: string;
   icon?: string;
   href?: string;
+  /** Pass false for per-reader pages that must not be fetched ahead of a click. */
+  prefetch?: boolean;
   children?: ReactNode;
 }
 
-export function Card({ title, href, children }: CardProps) {
+export function Card({ title, href, prefetch, children }: CardProps) {
   const inner = (
     <>
       <div className={styles.cardHeader}>
@@ -29,7 +31,7 @@ export function Card({ title, href, children }: CardProps) {
   if (href) {
     if (isInternalHref(href)) {
       return (
-        <Link href={href} className={styles.card}>
+        <Link href={href} prefetch={prefetch} className={styles.card}>
           {inner}
         </Link>
       );

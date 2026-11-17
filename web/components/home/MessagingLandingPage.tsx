@@ -1,31 +1,26 @@
 import { DurableWorkflowFeature } from './DeliveryFeature';
-import { GitHubStarsBadge } from '../GitHubStars';
 import { SiteFooter } from '../SiteFooter';
 import { SiteNav } from '../SiteNav';
-import {
-  A2AFeature,
-  AgentToolsFeature,
-  Deploy,
-  Hero,
-  HowItWorks,
-  MessagingFeature,
-  QuickStart,
-  Waitlist,
-  WaveDivider,
-} from './index';
+import { SiteNavActions } from '../SiteNavActions';
+import { Deploy } from './Deploy';
+import { Hero } from './Hero';
+import { HowItWorks } from './HowItWorks';
+import { MessagingFeature } from './MessagingFeature';
+import { QuickStart } from './QuickStart';
+import { SignupBand } from './SignupBand';
 import s from '../../app/landing.module.css';
 
-export function MessagingLandingPage({ showInvestors = false }: { showInvestors?: boolean }) {
+export function MessagingLandingPage() {
   return (
     <div className={`${s.page} ${s.messagingPage}`}>
       <a className="skip-link" href="#main">
         Skip to content
       </a>
 
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
-        <Hero showInvestors={showInvestors} />
+        <Hero />
 
         <div className={s.featuresWrapper}>
           <section className={s.featuresSection}>
@@ -33,10 +28,6 @@ export function MessagingLandingPage({ showInvestors = false }: { showInvestors?
             <HowItWorks />
             <DurableWorkflowFeature />
             <QuickStart />
-            <WaveDivider variant="feature" />
-            <AgentToolsFeature />
-            <WaveDivider variant="a2a" className={s.a2aSeparator} />
-            <A2AFeature />
           </section>
         </div>
 
@@ -44,7 +35,7 @@ export function MessagingLandingPage({ showInvestors = false }: { showInvestors?
           <Deploy />
         </div>
 
-        <Waitlist />
+        <SignupBand />
       </main>
 
       <SiteFooter />

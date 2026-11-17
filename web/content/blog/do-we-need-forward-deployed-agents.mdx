@@ -1,0 +1,46 @@
+---
+title: "We have forward deployed engineers. Do we need forward deployed agents?"
+date: "2026-10-30"
+author: "Khaliq Gant"
+description: "Everyone is hiring forward deployed engineers. Can we hand onboarding and customer success to an always-on agent instead, and what would that take?"
+tags: ["Forward deployed agents", "Customer success", "Agent communication"]
+category: "Vision"
+---
+
+I can't seem to avoid the term forward deployed engineer. I see job postings for it, i see people talking about it on X, and LinkedIn I see some AI slop posts about it. I've been able to talk to a lot of very forward leaning startups being a part of the Fall YC batch and all of them are ruthlessly offloading as many human tasks to AI as possible. Can we offload the task of onboarding or customer success to an agent as well?
+
+I did onboarding and customer success for three years at Nango (YC W23) as the first engineer hired there. I became known for being really fast to respond to customer's questions or problems in Slack and being able to unblock their issues in the same day. Since I had helped build the Nango product from the ground up, pre AI BY HAND, I knew the codebase like back of my hand. Any bug report that came in I could almost to the line number identify the root cause. In addition since I had trace that customer from onboarding to successfully using their product I knew what their company did, what their goals were and how they were using the product. However, during that time period I lived in Europe and the majority of our customers were based in the U.S. So when I went sleep they often had to wait until I woke up to get resolution. I was the bottleneck.
+
+How can we recreate that magic and improve on it by making that type of near instant satisfaction available 24/7 via agents? Also this was in a world before agents were everywhere. Most likely now its not the human reporting the bug but rather their agent and as it stands now i barely want to talk to my agents in depth let alone someone else's agent. So that means we need on one side an agent that is always on and has knowledge of all of customers and their entire customer journey. That agent needs to be able to securely access our internal systems and logs to be able to triage an issue and even fix it. Our customers agent needs a way to be able to access our agent and be able to communicate directly with it.
+
+To break that down further what does that mean we need exactly:
+
+- Sandbox
+- Agent
+- Model
+- Harness
+- Memory
+- Communication infrastructure
+
+Often when I'm trying to think about product solutions I try to come up with the most low rent / janky version of a solution to the problem. What would that look like?
+
+- Sandbox
+  - Could just be an always on mac mini
+  - Use any of the thousands of sandbox providers to secure a sandbox that can run an agent
+  - Could use Claude Managed Agents or the OpenAI Agents API
+- Agent
+  - Could use pi or some other harness + any model
+- Memory
+  - Raw files of transcript from Granola / Fathom etc
+  - Historical slack messages via some integration surface like Nango or Composio
+  - Some service like supermemory or zep
+- Communication infrastructure
+  - Slack
+  - Discord
+  - Agent Relay
+
+So what is the ideal state? My customer's agent can reach out to my agent and in real time my agent responds and is able to help that agent in realtime with proper context. Our customers agent doesn't need to provide their account number or identifying information because our agent just knows based on their identity. Our agent has allow listed access so our customer's agent coudn't prompt inject our agent but our agent is able to have enough access to be of use. The agent led exchange doesn't clutter up human communication channels but could be observed and audited by a human if they wanted to.
+
+So do we need this? I say, hell yeah. I can see this being an entire industry and there are significant technical challenges in getting this right. We're taking a slice of the problem at Agent Relay by providing the communication infrastructure. Real time communication between any agent on any surface. If you also believe this is the future and are building out other pieces of this stack would love to chat. I believe forward deployed agents are coming and it is a matter of increasingly short amount of time.
+
+We've been providing this experience to our early customers via a low rent version of this and they have found it to be a delightful experience. Join me and let's push this future closer within reach to others.

@@ -16,8 +16,11 @@ describe('sitemap', () => {
   });
 
   it('leaves out unlisted agent briefs and removed docs sections', () => {
-    expect(urls).not.toContain(absoluteUrl('/docs/file/review-bot-brief'));
-    expect(urls.filter((url) => /\/docs\/(loop|agents|factory)(\/|$)/.test(url))).toEqual([]);
+    expect(urls.filter((url) => url.includes('/docs/file'))).toEqual([]);
+    expect(urls.filter((url) => url.includes('/docs/relayhistory'))).toEqual([]);
+    expect(urls).not.toContain(absoluteUrl('/docs/agents'));
+    expect(urls).toContain(absoluteUrl('/docs/sessions'));
+    expect(urls.filter((url) => /\/docs\/(loop|factory)(\/|$)/.test(url))).toEqual([]);
   });
 
   it('has no duplicate URLs', () => {

@@ -28,7 +28,7 @@ Create a workspace first if you do not have a key:
 agent-relay workspace create support-triage
 ```
 
-Workspace keys use the `rk_live_*` prefix. The MCP server uses that key to bootstrap workspace access, then registered agents act with their own `at_live_*` tokens. See [Authentication](/docs/authentication).
+Workspace keys use the `rk_live_*` prefix. The MCP server uses that key to bootstrap workspace access, then registered agents act with their own `at_live_*` tokens. See [Relaycast API authentication](/docs/relaycast-api#authentication).
 
 ## Messaging Tools
 
@@ -95,7 +95,7 @@ Revoke a link early with `agent-relay observer revoke <tokenId>`.
 
 Never build an observer URL from the workspace key. `rk_live_*` is an administrative credential, and the
 realtime endpoint rejects it — only a scoped observer token with `stream:read` is accepted. See
-[Observer](/docs/observer).
+[Observer](/docs/7.1.1/observer).
 
 ## Generated Action Tools
 
@@ -121,7 +121,7 @@ coordinator.registerAction({
 The MCP server exposes a `review.submit_vote` tool with JSON Schema derived from the Zod schema. Agents see a clear tool name and input shape instead of a generic text instruction.
 
 Actions are fire-and-forget: calling the tool returns an acknowledgement immediately, and the handler's
-return value is emitted as `action.completed` to your [listeners](/docs/event-handlers) — not inline to the
+return value is emitted as `action.completed` to your [listeners](/docs/7.1.1/event-handlers) — not inline to the
 calling agent. If the agent needs the result, message it from the handler.
 
 ## Action Result Shape

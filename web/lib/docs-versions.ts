@@ -49,7 +49,11 @@ export function getDocsVersionForPath(pathname: string): DocsVersionId {
 function getDocsSlugFromPath(pathname: string): string {
   const normalized = normalizePathname(pathname);
 
-  if (normalized === '/docs' || normalized === legacyDocsBasePath || normalized === legacyV8DocsBasePath) {
+  if (normalized === '/docs' || normalized === legacyV8DocsBasePath) {
+    return 'getting-started';
+  }
+
+  if (normalized === legacyDocsBasePath) {
     return 'introduction';
   }
 
@@ -77,7 +81,7 @@ export function getDocsVersionHref(version: DocsVersionId, pathname: string): st
       : `${legacyDocsBasePath}/introduction`;
   }
 
-  return currentDocsSlugs.includes(slug) ? `${v8DocsBasePath}/${slug}` : `${v8DocsBasePath}/introduction`;
+  return currentDocsSlugs.includes(slug) ? `${v8DocsBasePath}/${slug}` : `${v8DocsBasePath}/getting-started`;
 }
 
 export function getDefaultDocsVersionForSlug(slug: string): DocsVersionId {

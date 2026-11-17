@@ -8,6 +8,16 @@ describe('getWebsiteAnalyticsPage', () => {
       expect(getWebsiteAnalyticsPage(pathname)).toEqual({ pageGroup: 'flows', pathname });
     }
   });
+  it('tracks the homepage, sign-in, agent signup, and download pages', () => {
+    expect(getWebsiteAnalyticsPage('/')).toEqual({ pageGroup: 'home', pathname: '/' });
+    expect(getWebsiteAnalyticsPage('/login')).toEqual({ pageGroup: 'login', pathname: '/login' });
+    for (const pathname of ['/signup/teams', '/signup/flows']) {
+      expect(getWebsiteAnalyticsPage(pathname)).toEqual({ pageGroup: 'signup', pathname });
+    }
+    expect(getWebsiteAnalyticsPage('/download')).toEqual({ pageGroup: 'download', pathname: '/download' });
+    expect(getWebsiteAnalyticsPage('/loginx')).toBeNull();
+  });
+
   it('tracks docs routes', () => {
     expect(getWebsiteAnalyticsPage('/docs/quickstart')).toEqual({
       pageGroup: 'docs',

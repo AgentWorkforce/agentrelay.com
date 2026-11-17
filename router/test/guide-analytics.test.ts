@@ -4,6 +4,7 @@ import worker, {
   carriesDashboardGrant,
   getGuideAnalyticsHandle,
   isAgentPageRequestPath,
+  isSelfhostRunbookApiPath,
 } from "../index.js";
 import {
   classifyClient,
@@ -168,6 +169,39 @@ describe("router dashboard recorder exclusion", () => {
     expect(isAgentPageRequestPath("/user")).toBe(false);
     expect(carriesDashboardGrant(new URL("https://agentrelay.com/x?Grant=1"))).toBe(true);
     expect(carriesDashboardGrant(new URL("https://agentrelay.com/x?granted=1"))).toBe(false);
+  });
+});
+
+describe("router self-hosting runbook API recorder exclusion", () => {
+  it("never records Cloud's private runbook API", async () => {
+    const cloudWorker = vi.fn(async () => new Response('{"entitled":true,"doc":{"markdown":"SENTINEL-RUNBOOK"}}', { status: 200 }));
+    const { put, fetch } = setup(200, { CLOUD_WEB_WORKER: { fetch: cloudWorker } });
+    await fetch("https://agentrelay.com/cloud/api/v1/me/selfhost-docs?doc=upgrades", { headers: AGENT });
+    await fetch("https://agentrelay.com/cloud/api/v1/me/selfhost%2Ddocs", { headers: AGENT });
+    expect(cloudWorker).toHaveBeenCalledTimes(2);
+    expect(put).not.toHaveBeenCalled();
+  });
+
+  it("matches only the runbook API, not the public guides", () => {
+    for (const path of [
+      "/cloud/api/v1/me/selfhost-docs",
+      "/cloud/api/v1/me/selfhost-docs/",
+      "/Cloud/API/v1/me/selfhost-docs",
+      "/cloud/api/v1/me/selfhost%2Ddocs",
+      "/cloud/api/v1/me/%E0%A4%A",
+    ]) {
+      expect(isSelfhostRunbookApiPath(path), path).toBe(true);
+    }
+    for (const path of [
+      "/docs/self-hosting",
+      "/docs/self-hosting/upgrades",
+      "/docs/self-hosting/agents/install-eks.md",
+      "/self-hosting/files/eks/rds-setup.sh",
+      "/cloud/api/v1/me/selfhost-docsx",
+      "/cloud/api/v1/me/integrations",
+    ]) {
+      expect(isSelfhostRunbookApiPath(path), path).toBe(false);
+    }
   });
 });
 

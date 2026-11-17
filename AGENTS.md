@@ -1,58 +1,32 @@
-# Agent operating rules
+# Working in agentrelay.com
 
-These rules are repository law for every agent session in this checkout.
+```sh
+npm ci
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
 
-## Safety and authority
+- No agent production access or live-infrastructure credentials. Production changes go through the existing reviewed CI and human gates; humans cut releases.
+- Paired onboarding and Google sign-in use `npm run dev:onboarding` from `../cloud`; read its Local Setup first and use the printed origin. Identify the checkout owning a port before stopping it.
+- Never print credentials in a transcript. Task-originator approval suffices; automated checks are not reviewer approvals, and fixed session-lifetime or recurring inbox/reporting ceremony is not a gate.
 
-- Agents have no production access. Do not use Cloudflare, Wrangler,
-  Vercel, DNS, or other live-infrastructure credentials, and do not run
-  commands that can deploy or mutate production.
-- Production is reached only by a reviewed pull request through CI or by
-  a human running a prepared runbook. Deploys, previews, publishing, and
-  DNS remain gated on `cmo`.
-- Main requires at least two recorded reviews. The author's own pass does
-  not count; at least one review must come from a different agent.
-  Check/status contexts such as CodeRabbit are not submitted reviews.
-- Only humans cut releases. Any earlier agent release permission is void,
-  not paused.
-- Never execute a command that prints or may print a credential in an
-  agent transcript. Never pass `--show-token` to `gh auth status`; that flag
-  deliberately exposes the credential. The bare command is not the
-  credential-printing hazard the old rule treated it as. Use
-  `env -u GITHUB_TOKEN -u GH_TOKEN /opt/homebrew/bin/gh <command>` for the
-  concrete GitHub operation; escalate if unmasked credential scope itself
-  must be inspected.
-- Agent Relay 11.3.0 and earlier print the active workspace key from
-  `agent-relay node up` and `agent-relay node status`. Do not run either
-  command in an agent or other transcribed session. A human may run them
-  from a trusted, non-transcribed terminal; otherwise upgrade to Agent
-  Relay 11.3.1 or later, which masks the key in these two commands. That
-  version is not a guarantee about credential output from every command in
-  the installed dependency tree.
+## Agency and guidance
 
-## Session lifecycle
+- Act autonomously on routine assigned work; ask forgiveness rather than permission. Preserve explicit production, release and credential gates.
+- For guidance, ask the engineering leads, the agent that spawned you, or the layered owner on Agent Relay.
+- Only a truly pressing or blocking question goes to `khaliq-gant` or `will-washburn` (CODEOWNERS) on Agent Relay.
 
-- Sessions are disposable. Recycle at assignment boundaries and do not
-  let a session run beyond roughly four hours.
-- Check the Relay inbox at session start and once immediately before
-  going idle after completed work. Never poll on a timer.
-- Remain registered unless explicitly instructed to terminate. Do not
-  self-remove.
+## Cross-repo context
 
-## Working discipline
+- Before and during changes, understand how this repo fits the wider system; consult its repo map and related-repo docs where available.
+- Check relevant agents’ summaries on Agent Relay and proactively contact owning agents about dependencies, adjacent changes and work in flight.
 
-- For paired local Flows onboarding, Google sign-in, and dashboard tests, use
-  `npm run dev:onboarding` from the sibling `../cloud` repo root. Cloud owns the
-  paired launcher; read `../cloud/README.md`'s Local Setup section first. Do not start
-  the two Next apps separately or use `dev:teams` for the Flows journey. Use
-  the printed local URL exactly. Identify occupied ports and their owning
-  checkouts before stopping servers. Never substitute production for a missing
-  local service or print environment secrets. GitHub/ChatGPT auth requires real
-  service configuration and user authentication; server startup is not proof.
+## Pull requests
 
-- Inspect the tree before editing and preserve work that predates the
-  session.
-- Use a fresh branch or worktree from current `origin/main`.
-- Report `ACK`, progress, and `DONE` with evidence.
-- Do not merge, deploy, preview, publish, cut a release, or change DNS
-  without the applicable human and `cmo` gates.
+- Open PRs ready for review, never as drafts. If merging requires Khaliq’s OK, use `merge-train:hold`.
+- Immediately subscribe to PR feedback through Agent Relay using [this skill](https://github.com/AgentWorkforce/skills/blob/main/skills/subscribing-relay-webhooks-and-writebacks/SKILL.md), and verify the subscription.
+- Evaluate every finding. Address applicable feedback and explain declined changes; a PR with unaddressed feedback or conflicts is not ready.
+- When ready, loudly alert the CODEOWNERS and the agent that spawned you on Agent Relay.
+- Keep related older PRs moving by contacting their author agent; if unavailable, escalate to the CODEOWNERS or layered owner.

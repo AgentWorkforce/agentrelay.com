@@ -1,0 +1,103 @@
+import { describe, expect, it } from 'vitest';
+import {
+  alternateDesktopAsset,
+  DESKTOP_ASSETS,
+  desktopAssetByFile,
+  desktopAssetUrl,
+  desktopStartHref,
+  shouldStartDownload,
+  detectDesktopPlatform,
+  primaryDesktopAsset,
+} from '../desktop-downloads';
+
+const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
+const LINUX_X64 = 'Mozilla/5.0 (X11; Linux x86_64; rv:131.0) Gecko/20100101 Firefox/131.0';
+const LINUX_ARM = 'Mozilla/5.0 (X11; Linux aarch64; rv:131.0) Gecko/20100101 Firefox/131.0';
+const WINDOWS = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+
+describe('detectDesktopPlatform', () => {
+  it('takes a Mac to be Apple silicon unless Client Hints report x86', () => {
+    expect(detectDesktopPlatform(MAC)).toEqual({ os: 'macos', arch: 'arm64' });
+    expect(detectDesktopPlatform(MAC, { architecture: 'arm' })).toEqual({ os: 'macos', arch: 'arm64' });
+    expect(detectDesktopPlatform(MAC, { architecture: 'x86' })).toEqual({ os: 'macos', arch: 'x64' });
+  });
+
+  it('reads the Linux architecture from Client Hints or the user agent', () => {
+    expect(detectDesktopPlatform(LINUX_X64)).toEqual({ os: 'linux', arch: 'x64' });
+    expect(detectDesktopPlatform(LINUX_ARM)).toEqual({ os: 'linux', arch: 'arm64' });
+    expect(detectDesktopPlatform(LINUX_X64, { architecture: 'arm' })).toEqual({ os: 'linux', arch: 'arm64' });
+  });
+
+  it('takes Windows to be x64 unless Client Hints report Arm', () => {
+    expect(detectDesktopPlatform(WINDOWS)).toEqual({ os: 'windows', arch: 'x64' });
+    expect(detectDesktopPlatform(WINDOWS, { architecture: 'arm' })).toEqual({ os: 'windows', arch: 'arm64' });
+  });
+
+  it('has no build for phones, tablets, or ChromeOS', () => {
+    expect(detectDesktopPlatform(MAC, { touchPoints: 5 })).toBeNull();
+    expect(detectDesktopPlatform('Mozilla/5.0 (Linux; Android 14; Pixel 8)')).toBeNull();
+    expect(detectDesktopPlatform('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')).toBeNull();
+    expect(detectDesktopPlatform('Mozilla/5.0 (X11; CrOS x86_64 14541.0.0)')).toBeNull();
+  });
+});
+
+describe('desktop assets', () => {
+  it('leads with the DMG on macOS, the Debian package on Linux, and Setup on Windows', () => {
+    expect(primaryDesktopAsset({ os: 'macos', arch: 'x64' }).file).toBe('AgentRelay-macOS-x64.dmg');
+    expect(primaryDesktopAsset({ os: 'linux', arch: 'arm64' }).file).toBe('AgentRelay-Linux-arm64.deb');
+    expect(primaryDesktopAsset({ os: 'windows', arch: 'x64' }).file).toBe('AgentRelay-Windows-x64-Setup.exe');
+  });
+
+  it('offers the other architecture on macOS and Windows, and the tarball on Linux', () => {
+    expect(alternateDesktopAsset({ os: 'macos', arch: 'arm64' }).file).toBe('AgentRelay-macOS-x64.dmg');
+    expect(alternateDesktopAsset({ os: 'windows', arch: 'x64' }).file).toBe('AgentRelay-Windows-arm64-Setup.exe');
+    expect(alternateDesktopAsset({ os: 'linux', arch: 'x64' }).file).toBe('AgentRelay-Linux-x64.tar.gz');
+  });
+
+  it('lists every build from the latest release', () => {
+    expect(DESKTOP_ASSETS.map((asset) => asset.file)).toEqual([
+      'AgentRelay-macOS-arm64.dmg',
+      'AgentRelay-macOS-x64.dmg',
+      'AgentRelay-Linux-x64.deb',
+      'AgentRelay-Linux-arm64.deb',
+      'AgentRelay-Linux-x64.tar.gz',
+      'AgentRelay-Linux-arm64.tar.gz',
+      'AgentRelay-Windows-x64-Setup.exe',
+      'AgentRelay-Windows-arm64-Setup.exe',
+      'AgentRelay-Windows-x64.zip',
+      'AgentRelay-Windows-arm64.zip',
+    ]);
+    expect(desktopAssetUrl('AgentRelay-macOS-arm64.dmg.sha256')).toBe(
+      'https://github.com/AgentWorkforce/relay-desktop-releases/releases/latest/download/AgentRelay-macOS-arm64.dmg.sha256',
+    );
+  });
+});
+
+describe('download start page', () => {
+  it('links each build to the start page and resolves only known builds back', () => {
+    for (const asset of DESKTOP_ASSETS) {
+      const build = new URL(desktopStartHref(asset.file), 'https://agentrelay.com').searchParams.get('build') ?? undefined;
+      expect(desktopAssetByFile(build)).toBe(asset);
+    }
+    expect(desktopAssetByFile('evil.exe')).toBeUndefined();
+    expect(desktopAssetByFile(undefined)).toBeUndefined();
+  });
+});
+
+describe('shouldStartDownload', () => {
+  const href = desktopAssetUrl('AgentRelay-macOS-arm64.dmg');
+
+  it('downloads on a fresh page load', () => {
+    expect(shouldStartDownload(href, 'navigate', new Set())).toBe(true);
+  });
+
+  it('does not download again on a reload or Back/Forward', () => {
+    expect(shouldStartDownload(href, 'reload', new Set())).toBe(false);
+    expect(shouldStartDownload(href, 'back_forward', new Set())).toBe(false);
+  });
+
+  it('does not download again when this document already started the build', () => {
+    expect(shouldStartDownload(href, 'navigate', new Set([href]))).toBe(false);
+    expect(shouldStartDownload(desktopAssetUrl('AgentRelay-Linux-x64.deb'), 'navigate', new Set([href]))).toBe(true);
+  });
+});

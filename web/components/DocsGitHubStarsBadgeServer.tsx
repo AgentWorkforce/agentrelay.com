@@ -3,8 +3,8 @@ import { DocsGitHubStarsBadge, type DocsStarRepo } from './DocsGitHubStarsBadge'
 import { DEFAULT_REPO } from './GitHubStars';
 
 /**
- * Docs header badge that follows the active section: Relayfile under
- * `/docs/file`, Relayhistory under `/docs/relayhistory`, Agent Relay elsewhere. The
+ * Docs header badge that follows the active section: Flows under
+ * `/docs/relayflows`, Agent Relay elsewhere. The
  * client loads only the active repo's count, so the docs route stays static.
  *
  * Lives apart from GitHubStars.tsx so pages that only show the Agent Relay

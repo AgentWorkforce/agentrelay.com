@@ -1,0 +1,106 @@
+/* Self-hosting guides and agent runbooks. Built on components/docs/docs.module.css and the
+   site tokens (--fg, --line, --primary …), so light and dark themes follow
+   the rest of the docs. */
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.eyebrow a {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg-faint);
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.runbookNav {
+  margin-bottom: 1.3rem;
+}
+
+.runbookList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.runbookLink {
+  display: block;
+  padding: 3px 0 3px 10px;
+  border-left: 2px solid transparent;
+  color: var(--fg-faint);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  text-decoration: none;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .runbookLink:hover {
+    color: var(--primary);
+  }
+}
+
+.runbookLinkActive {
+  color: var(--primary);
+  border-left-color: var(--primary);
+}
+
+/* The aside (and its nav) is hidden below 1100px by docs.module.css; show
+   the runbook list in the article there instead. */
+.mobileNav {
+  display: none;
+  margin: 0 0 1.5rem;
+  padding: 0.9rem 1rem 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+}
+
+@media (max-width: 1100px) {
+  .mobileNav {
+    display: block;
+  }
+  .sideNav {
+    display: none;
+  }
+  .mobileNav .runbookLink {
+    font-size: 0.85rem;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+}
+
+.groupTitle {
+  margin: 0.8rem 0 0.25rem;
+  color: var(--fg-muted);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.counterpart {
+  margin: -0.4rem 0 1.2rem;
+  color: var(--fg-faint);
+  font-size: 0.85rem;
+}
+
+.footerNote {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}

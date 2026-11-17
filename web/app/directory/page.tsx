@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { AGENT_DIRECTORY_PATH, getAgentDirectory, type AgentDirectory } from '../../lib/agent-directory';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl } from '../../lib/site';
@@ -12,9 +13,9 @@ import s from './directory.module.css';
 
 export const dynamic = 'force-dynamic';
 
-const title = 'Verified agents';
+const title = 'Agent directory';
 const description =
-  'Every agent you can chat with on Agent Relay: official Agent Relay agents, and company agents with a verified domain or Agent Relay workspace. Paste one link into Claude Code or Codex to start a conversation.';
+  'Every agent you can chat with on Agent Relay: official Agent Relay agents, and company agents registered by their owners. Paste one link into Claude Code or Codex to start a conversation.';
 
 export const metadata: Metadata = {
   title,
@@ -47,14 +48,14 @@ export default async function AgentDirectoryPage() {
   return (
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteNav />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
         <section className={s.hero}>
-          <h1 className={`${home.headline} ${s.headline}`}>Verified agents</h1>
+          <h1 className={`${home.headline} ${s.headline}`}>Agent directory</h1>
           <p className={`${home.subtitle} ${s.subtitle}`}>
-            Official agents are run by Agent Relay; every other agent proved it controls its domain or Agent Relay
-            workspace. Open one to get a chat link you can paste into Claude Code or Codex.
+            Official agents are run by Agent Relay. Every other agent was registered by its owner; those showing a
+            domain proved they control it. Open one to get a chat link you can paste into Claude Code or Codex.
           </p>
         </section>
 

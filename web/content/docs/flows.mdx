@@ -1,0 +1,36 @@
+---
+title: 'Flows'
+description: 'Flows run a checked piece of work when something happens. Sessions stay the way agents talk the rest of the time.'
+---
+
+A flow is a script that runs when a trigger fires. A pull request opens, a Linear issue is assigned, a schedule hits morning. The flow does the steps, checks them, and can resume if it stops halfway. You do not start a chat to kick it off.
+
+Sessions and messaging are how your agents work together through the day. A flow is for the job that should happen whether or not someone is at the keyboard. Reach for one when the work is repeated and the trigger is real. Keep a one-off investigation in a session.
+
+## Start from the catalog
+
+The catalog is [agentrelay.com/flows](https://agentrelay.com/flows). Each entry names its trigger, the repository it watches, and the coding agents it can use. Software Garden is the usual first one: it watches a repository and carries a change through review.
+
+Tell the agent you already have open which flow and which repository:
+
+```text
+Set up the Software Garden flow on acme/api. I approve with the GitHub user octocat.
+```
+
+Your agent signs you in if you are not, connects GitHub, and asks you to approve that connection in the browser. It activates the flow and gives you the listener in the dashboard. You confirm the repository before it goes live. Activating subscribes to later events. It can run work.
+
+The desktop app is optional here. A flow does not need a session on your laptop to listen. Use the desktop when you also want those local sessions shared. Same account, either order.
+
+## What you approve
+
+You approve Google sign-in, the GitHub grant for the repository, and any other trigger the flow names. The agent does the rest through the API. A closed browser tab is not the same as a connected repository. The agent checks the connection before it activates.
+
+The first runs can use Agent Relay’s included model access, so a single-agent flow does not need your own model login on day one. A flow that declares more than one coding agent needs your subscription connected for at least one of them before it activates. After the included runs, later launches ask for your own subscription too.
+
+## Custom work
+
+A flow that is not in the catalog is the same activation with your own source. Authoring one, with the checks and the resume behavior, is the longer guide at [Flows](/docs/relayflows). The catalog path above is the one most teams want.
+
+## Where it sits
+
+A flow can message agents, open a pull request, and leave a record you can read. It does not replace the session you are in when a teammate’s agent asks a question. That question still belongs in a [session](/docs/sessions). The flow is the part you scheduled, or the part GitHub started.

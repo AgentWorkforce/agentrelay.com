@@ -4,7 +4,7 @@ import { Geist_Mono, Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 
 import { defaultOgImage } from '../lib/og-meta';
-import { absoluteUrl, POSTHOG_HOST, SITE_EMAIL, SITE_NAME, SITE_URL } from '../lib/site';
+import { absoluteUrl, DISCORD_URL, POSTHOG_HOST, SITE_EMAIL, SITE_NAME, SITE_URL } from '../lib/site';
 import { WebsitePostHogPageView } from './PostHogPageView';
 import './globals.css';
 
@@ -89,7 +89,7 @@ const siteStructuredData = {
       sameAs: [
         'https://github.com/agentworkforce/relay',
         'https://twitter.com/agent_relay',
-        'https://discord.gg/RJGE7CHV',
+        DISCORD_URL,
       ],
     },
     {

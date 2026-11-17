@@ -1,8 +1,10 @@
 import Image from 'next/image';
-import type { CSSProperties } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 
 import { AgentToolLogo, type AgentTool } from '../AgentToolLogos';
 import { Grok } from '../brand-icons';
+import { APP_META, HeroAppWindow, type AppWindowCard } from './HeroAppWindow';
+import { HeroPhone, PHONE_META, type PhoneCard } from './HeroPhone';
 import s from '../../app/landing.module.css';
 
 type TerminalAgent = Extract<AgentTool, 'claude' | 'codex' | 'opencode'> | 'grok';
@@ -29,15 +31,6 @@ export type TerminalStyle = CSSProperties & {
   '--line-delay'?: string;
   '--term-cycle'?: string;
   '--term-phase'?: string;
-};
-
-type RelayRoute = {
-  d: string;
-  delay: string;
-  duration: string;
-  id: string;
-  origin: { x: number; y: number };
-  target: { x: number; y: number };
 };
 
 export const AGENT_META: Record<
@@ -117,51 +110,10 @@ function terminalLineCopy(line: TerminalLine) {
   return line.text.replace(/^(?:⎿|✓|↑|→)\s*/, '');
 }
 
-const RELAY_ROUTES: RelayRoute[] = [
-  {
-    id: 'hero-relay-route-one',
-    d: 'M 318 62 C 410 62 438 202 552 202',
-    duration: '10.6s',
-    delay: '-1.4s',
-    origin: { x: 318, y: 62 },
-    target: { x: 552, y: 202 },
-  },
-  {
-    id: 'hero-relay-route-two',
-    d: 'M 654 202 C 758 202 782 344 904 344',
-    duration: '12.2s',
-    delay: '-6.8s',
-    origin: { x: 654, y: 202 },
-    target: { x: 904, y: 344 },
-  },
-  {
-    id: 'hero-relay-route-three',
-    d: 'M 956 344 C 1078 344 1080 62 1206 62',
-    duration: '11.3s',
-    delay: '-4.1s',
-    origin: { x: 956, y: 344 },
-    target: { x: 1206, y: 62 },
-  },
-  {
-    id: 'hero-relay-route-four',
-    d: 'M 1184 62 C 1088 62 1030 202 872 202',
-    duration: '13.1s',
-    delay: '-9.3s',
-    origin: { x: 1184, y: 62 },
-    target: { x: 872, y: 202 },
-  },
-  {
-    id: 'hero-relay-route-five',
-    d: 'M 338 344 C 450 344 476 62 624 62',
-    duration: '11.8s',
-    delay: '-11.1s',
-    origin: { x: 338, y: 344 },
-    target: { x: 624, y: 62 },
-  },
-];
-
 /**
- * Three rows of Claude Code, Codex, Grok and OpenCode sessions. Each title bar
+ * Three rows of Claude Code, Codex, Grok and OpenCode terminal sessions, with
+ * Conductor, Claude, Codex, Devin, Paseo, Hermes and Capy desktop app windows,
+ * and ChatGPT dots, GrokBot and Muse phones mixed into the band. Each title bar
  * names the agent, while repository and activity context stay in the terminal.
  * The animated lines show the prompt, what the tool did, and where the result
  * went, which for Agent Relay means a channel, a DM or a PR.
@@ -177,7 +129,7 @@ export const ROW_ONE: TerminalCard[] = [
     lines: [
       { tone: 'prompt', text: '$ claude "fix the flaky retry test"' },
       { tone: 'tool', text: '⎿ ran 26 tests - 26 passed' },
-      { tone: 'relay', text: '↑ pushed fix-retry → PR #482' },
+      { tone: 'relay', text: '→ handed PR #482 to Khaliq’s Codex' },
     ],
   },
   {
@@ -318,6 +270,184 @@ export const ROW_THREE: TerminalCard[] = [
   },
 ];
 
+const APP_CONDUCTOR: AppWindowCard = {
+  kind: 'app',
+  app: 'conductor',
+  repo: 'relay/router',
+  title: 'Fix reconnect gap',
+  ask: 'Close the 30s reconnect gap Codex found',
+  reply: 'Retry now backs off from 250ms and resumes the cursor.',
+  relay: '#build-router · Reviewer approved',
+  sessions: ['fix-reconnect-gap', 'usage-export', 'pricing-table'],
+};
+
+const APP_CLAUDE: AppWindowCard = {
+  kind: 'app',
+  app: 'claude',
+  repo: 'relay/billing',
+  title: 'Double-charge in checkout',
+  ask: 'Customers see duplicate charges. Find and fix it?',
+  reply: 'Two POST /charges fire before the first lands. Adding an idempotency key.',
+  relay: 'DM to Coder: ship it with the backfill',
+  sessions: ['Double-charge in checkout', 'Weekly dependency audit', 'Tests for payments'],
+};
+
+const APP_CODEX: AppWindowCard = {
+  kind: 'app',
+  app: 'codex',
+  repo: 'relay/sdk',
+  title: 'Swift threads',
+  ask: 'Port py threads to the Swift SDK',
+  reply: 'Added Thread.reply and streaming. Parity with py and ts.',
+  relay: 'Posted to #sdk-parity · 3 agents acked',
+  sessions: ['Swift threads', 'Pull latest main', 'Fix corner radii', 'Accessibility pass'],
+};
+
+const APP_CODEX_HANDOFF: AppWindowCard = {
+  kind: 'app',
+  app: 'codex',
+  repo: 'agentrelay/web',
+  title: 'Review PR #482',
+  from: 'Will’s Claude Code',
+  ask: 'PR #482 fixes the flaky retry test. Can you review?',
+  reply: 'Reviewed with Will’s session as context. One nit, then merge.',
+  relay: 'Replied to Will’s Claude Code',
+  sessions: ['Review PR #482', 'Pull latest main', 'Retry budget', 'Docs links'],
+};
+
+const APP_DEVIN: AppWindowCard = {
+  kind: 'app',
+  app: 'devin',
+  repo: 'relay/auth',
+  title: 'Add enterprise SSO',
+  ask: 'Add SAML SSO for enterprise workspaces',
+  reply: 'SSO is wired into org settings. Tested sign-in end to end.',
+  relay: 'PR #503 open · asked Reviewer in #build-auth',
+  sessions: ['Add enterprise SSO', 'Multi-region failover', 'Upgrade Node', 'API latency spike'],
+};
+
+const APP_PASEO: AppWindowCard = {
+  kind: 'app',
+  app: 'paseo',
+  repo: 'relay/web',
+  title: 'Docs search',
+  ask: 'Add search to the docs sidebar',
+  reply: 'Search indexes every page at build time. Cmd-K opens it.',
+  relay: 'Handed to Claude Code for review via #build-web',
+  sessions: ['Docs search', 'Page titles', 'Commit safe area', 'Editor typing lag'],
+};
+
+const PHONE_DOTS: PhoneCard = {
+  kind: 'phone',
+  agent: 'dots',
+  bot: 'Release dot',
+  ask: 'Did 9.4 ship?',
+  reply: 'Shipped at 9:12. Two agents still on 9.3.',
+  relay: 'Pinged them in #ship-it',
+};
+
+const PHONE_GROKBOT: PhoneCard = {
+  kind: 'phone',
+  agent: 'grokbot',
+  bot: 'Inbox bot',
+  ask: 'Anything urgent from customers?',
+  reply: 'Three bug reports. Repro steps attached.',
+  relay: 'Filed in #support for Codex',
+};
+
+const PHONE_MUSE: PhoneCard = {
+  kind: 'phone',
+  agent: 'muse',
+  bot: 'Muse',
+  ask: 'Move my 3pm, the deploy is running late',
+  reply: 'Moved to 4:30 and told the team.',
+  relay: 'Planner updated in #ship-it',
+};
+
+type MarqueeCard = TerminalCard | AppWindowCard | PhoneCard;
+
+type Teammate = 'Will' | 'Khaliq' | 'Mary' | 'Ingrid';
+
+/** A card in a row, labelled with whose agent it is. */
+type Seat = {
+  card: MarqueeCard;
+  owner: Teammate;
+  /** Draws the relay hop into this card from the card before it. */
+  handoff?: boolean;
+};
+
+const seat = (card: MarqueeCard, owner: Teammate, handoff = false): Seat => ({ card, owner, handoff });
+
+const APP_DEVIN_FAILOVER: AppWindowCard = {
+  kind: 'app',
+  app: 'devin',
+  repo: 'relay/api',
+  title: 'Multi-region failover',
+  ask: 'Fail over to the EU region when US is down',
+  reply: 'Health checks flip traffic in under 20s. Drill passed.',
+  relay: 'DM to Hermes: update the runbook',
+  sessions: ['Multi-region failover', 'Add enterprise SSO', 'API latency spike'],
+};
+
+/**
+ * Each row alternates terminal and app, three of each, with one phone between
+ * a terminal and an app, so no two neighbours are the same kind of surface or
+ * the same tool, across the loop seam too. Every card names the teammate it
+ * belongs to; row one opens on Will's Claude Code handing a PR to Khaliq's
+ * Codex.
+ */
+const MARQUEE_ROW_ONE: Seat[] = [
+  seat(ROW_ONE[0], 'Will'),
+  seat(APP_CODEX_HANDOFF, 'Khaliq', true),
+  seat(ROW_TWO[1], 'Mary'),
+  seat(PHONE_DOTS, 'Ingrid'),
+  seat(APP_CONDUCTOR, 'Khaliq'),
+  seat(ROW_ONE[1], 'Will'),
+  seat(APP_DEVIN, 'Mary'),
+];
+
+const MARQUEE_ROW_TWO: Seat[] = [
+  seat(ROW_TWO[0], 'Ingrid'),
+  seat(APP_CLAUDE, 'Will'),
+  seat(ROW_TWO[2], 'Khaliq'),
+  seat(PHONE_GROKBOT, 'Mary'),
+  seat(APP_DEVIN_FAILOVER, 'Ingrid'),
+  seat(ROW_TWO[3], 'Will'),
+  seat(APP_PASEO, 'Khaliq'),
+];
+
+const APP_HERMES: AppWindowCard = {
+  kind: 'app',
+  app: 'hermes',
+  repo: 'relay/gateway',
+  title: 'Rotate webhook secrets',
+  ask: 'Rotate the webhook secrets before Friday',
+  reply: 'Rotated all four. Saved the steps as a skill for next time.',
+  relay: 'Posted the rollout plan in #ops',
+  sessions: ['Rotate webhook secrets', 'Morning briefing', 'Backup check'],
+};
+
+const APP_CAPY: AppWindowCard = {
+  kind: 'app',
+  app: 'capy',
+  repo: 'relay/engine',
+  title: 'SCO-031 Find critical bugs',
+  ask: 'Audit recent commits for high-severity bugs',
+  reply: 'One race in the fanout ack path. Patched with a test.',
+  relay: 'Thread in #build-router · Codex picked it up',
+  sessions: ['SCO-031 Find critical bugs', 'SCO-028 Flaky e2e', 'SCO-024 Docs drift'],
+};
+
+const MARQUEE_ROW_THREE: Seat[] = [
+  seat(ROW_THREE[0], 'Mary'),
+  seat(APP_CODEX, 'Khaliq'),
+  seat(ROW_THREE[2], 'Ingrid'),
+  seat(PHONE_MUSE, 'Will'),
+  seat(APP_HERMES, 'Mary'),
+  seat(ROW_THREE[4], 'Khaliq'),
+  seat(APP_CAPY, 'Ingrid'),
+];
+
 const SIZE_CLASS = {
   sm: s.heroTermSm,
   md: s.heroTermMd,
@@ -328,79 +458,6 @@ function TerminalAgentLogo({ agent, idPrefix }: { agent: TerminalAgent; idPrefix
   if (agent === 'grok') return <Grok className={s.heroTermMark} />;
 
   return <AgentToolLogo className={s.heroTermMark} idPrefix={idPrefix} provider={agent} />;
-}
-
-function RelayNetwork() {
-  return (
-    <svg
-      className={s.heroRelayNetwork}
-      focusable="false"
-      preserveAspectRatio="none"
-      viewBox="0 0 1280 410"
-    >
-      {RELAY_ROUTES.map((route) => (
-        <g key={route.id}>
-          <path className={s.heroRelayRoute} d={route.d} id={route.id} />
-          <circle
-            className={s.heroRelayOrigin}
-            cx={route.origin.x}
-            cy={route.origin.y}
-            opacity="0"
-            r="7"
-          >
-            <animate
-              attributeName="opacity"
-              begin={route.delay}
-              dur={route.duration}
-              keyTimes="0;0.14;0.16;0.2;1"
-              repeatCount="indefinite"
-              values="0;0;0.68;0;0"
-            />
-          </circle>
-          <g className={s.heroRelayPacket} opacity="0">
-            <path className={s.heroRelayPacketTail} d="M -19 0 H -5" />
-            <circle className={s.heroRelayPacketHalo} r="7" />
-            <circle className={s.heroRelayPacketCore} r="3.1" />
-            <animateMotion
-              begin={route.delay}
-              calcMode="linear"
-              dur={route.duration}
-              keyPoints="0;0;1;1"
-              keyTimes="0;0.16;0.42;1"
-              repeatCount="indefinite"
-              rotate="auto"
-            >
-              <mpath href={`#${route.id}`} />
-            </animateMotion>
-            <animate
-              attributeName="opacity"
-              begin={route.delay}
-              dur={route.duration}
-              keyTimes="0;0.15;0.17;0.39;0.42;1"
-              repeatCount="indefinite"
-              values="0;0;1;1;0;0"
-            />
-          </g>
-          <circle
-            className={s.heroRelayArrival}
-            cx={route.target.x}
-            cy={route.target.y}
-            opacity="0"
-            r="9"
-          >
-            <animate
-              attributeName="opacity"
-              begin={route.delay}
-              dur={route.duration}
-              keyTimes="0;0.4;0.42;0.48;1"
-              repeatCount="indefinite"
-              values="0;0;0.78;0;0"
-            />
-          </circle>
-        </g>
-      ))}
-    </svg>
-  );
 }
 
 function GrokTerminalBody({ card }: { card: TerminalCard }) {
@@ -637,6 +694,7 @@ export function HeroTerminalCard({
   card,
   className,
   idPrefix,
+  owner,
   showAvatar = false,
   style,
 }: {
@@ -644,6 +702,8 @@ export function HeroTerminalCard({
   card: TerminalCard;
   className?: string;
   idPrefix: string;
+  /** Whose session this is, shown before the tool name. */
+  owner?: string;
   showAvatar?: boolean;
   style?: TerminalStyle;
 }) {
@@ -663,7 +723,7 @@ export function HeroTerminalCard({
         </span>
         <span className={s.heroTermTitle}>
           <TerminalAgentLogo agent={card.agent} idPrefix={idPrefix} />
-          {meta.label}
+          {owner ? `${owner} · ${meta.label}` : meta.label}
         </span>
         {showAvatar && avatar && (
           <Image
@@ -680,6 +740,7 @@ export function HeroTerminalCard({
 
       {card.agent === 'grok' ? (
         <GrokTerminalBody card={card} />
+
       ) : card.agent === 'opencode' ? (
         <OpenCodeTerminalBody card={card} />
       ) : card.agent === 'codex' ? (
@@ -723,20 +784,29 @@ export function HeroTerminalCard({
 
 // Display-sized copies (scripts/generate-web-images.mjs): the originals are
 // 150–800 KB each and production serves /_next/image sources untouched.
-const TEAM_AVATARS = [
-  { src: '/authors/will-128.webp', name: 'Will Washburn' },
-  { src: '/authors/khaliq-128.webp', name: 'Khaliq Gant' },
-  { src: '/authors/mary-128.webp', name: 'Mary' },
-  { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
-];
+const TEAM_AVATARS: Record<Teammate, { src: string; name: string }> = {
+  Will: { src: '/authors/will-128.webp', name: 'Will Washburn' },
+  Khaliq: { src: '/authors/khaliq-128.webp', name: 'Khaliq Gant' },
+  Mary: { src: '/authors/mary-128.webp', name: 'Mary' },
+  Ingrid: { src: '/authors/ingrid-128.webp', name: 'Ingrid' },
+};
+
+/** The relay hop between two neighbouring cards: a packet crossing the gap. */
+function HandoffBridge() {
+  return (
+    <span className={s.heroHandoffBridge}>
+      <span className={s.heroHandoffPacket} />
+    </span>
+  );
+}
 
 function TerminalRow({
-  cards,
+  seats,
   rowClass,
   rowKey,
   showAvatars,
 }: {
-  cards: TerminalCard[];
+  seats: Seat[];
   rowClass: string;
   rowKey: string;
   showAvatars: boolean;
@@ -751,24 +821,48 @@ function TerminalRow({
     <div className={s.heroMarqueeRow}>
       <div className={`${s.heroMarqueeTrack} ${rowClass}`}>
         {copies.map((copy, copyIndex) =>
-          cards.map((card, index) => {
-            const meta = AGENT_META[card.agent];
-            const avatar = TEAM_AVATARS[index % TEAM_AVATARS.length];
+          seats.map(({ card, owner, handoff }, index) => {
             const phase = -(rowPhase + index * 0.83 + copyIndex * 0.37);
-            const terminalStyle: TerminalStyle = {
-              '--term-cycle': meta.cycle,
-              '--term-phase': `${phase}s`,
-            };
+            const key = `${rowKey}-${copy}-${index}`;
+            const idPrefix = `hero-mq-${key}`;
+            let rendered;
+
+            if ('kind' in card && card.kind === 'phone') {
+              rendered = (
+                <HeroPhone
+                  card={card}
+                  idPrefix={idPrefix}
+                  owner={owner}
+                  style={{ '--term-cycle': PHONE_META[card.agent].cycle, '--term-phase': `${phase}s` }}
+                />
+              );
+            } else if ('kind' in card) {
+              rendered = (
+                <HeroAppWindow
+                  card={card}
+                  idPrefix={idPrefix}
+                  owner={owner}
+                  style={{ '--term-cycle': APP_META[card.app].cycle, '--term-phase': `${phase}s` }}
+                />
+              );
+            } else {
+              rendered = (
+                <HeroTerminalCard
+                  avatar={TEAM_AVATARS[owner]}
+                  card={card}
+                  idPrefix={idPrefix}
+                  owner={owner}
+                  showAvatar={showAvatars}
+                  style={{ '--term-cycle': AGENT_META[card.agent].cycle, '--term-phase': `${phase}s` }}
+                />
+              );
+            }
 
             return (
-              <HeroTerminalCard
-                card={card}
-                idPrefix={`hero-mq-${rowKey}-${copy}-${index}`}
-                key={`${rowKey}-${copy}-${index}`}
-                showAvatar={showAvatars}
-                avatar={avatar}
-                style={terminalStyle}
-              />
+              <Fragment key={key}>
+                {handoff ? <HandoffBridge /> : null}
+                {rendered}
+              </Fragment>
             );
           }),
         )}
@@ -780,22 +874,21 @@ function TerminalRow({
 export function HeroTerminalMarquee({ showAvatars = false }: { showAvatars?: boolean }) {
   return (
     <div aria-hidden="true" className={s.heroMarquee} data-marquee-band="">
-      <RelayNetwork />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={ROW_ONE}
+        seats={MARQUEE_ROW_ONE}
         rowClass={s.heroMarqueeTrackOne}
         rowKey="one"
       />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={ROW_TWO}
+        seats={MARQUEE_ROW_TWO}
         rowClass={s.heroMarqueeTrackTwo}
         rowKey="two"
       />
       <TerminalRow
         showAvatars={showAvatars}
-        cards={ROW_THREE}
+        seats={MARQUEE_ROW_THREE}
         rowClass={s.heroMarqueeTrackThree}
         rowKey="three"
       />

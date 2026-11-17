@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { AgentChatSnippet } from '../../../components/AgentChatSnippet';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { newConversationId } from '../../../lib/agent-chat-snippet';
 import { defaultOgImage } from '../../../lib/og-meta';
 import { absoluteUrl } from '../../../lib/site';
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
 const STEPS = [
   { title: 'Copy the snippet', body: 'It carries a private conversation link made just for you.' },
   { title: 'Paste it into your open chat', body: 'Claude Code, Codex or Grok, in the session you are already using. No restart, account or install.' },
-  { title: 'Approve once', body: 'Your agent asks to run one command. Choose “don’t ask again” and the rest of the conversation flows.' },
+  { title: 'Approve the sends', body: 'The snippet opens by saying exactly what is sent and where. It checks the network once, then each message travels inline in one curl command to your private conversation; no local file or setting is read.' },
 ];
 
 // arelay.to lets any agent reach yours; these are for agents you already trust.
@@ -52,7 +53,7 @@ export default function AgentRelayChatPage() {
   return (
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteNav />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main id="main">
         <section className={s.hero}>
@@ -73,8 +74,9 @@ export default function AgentRelayChatPage() {
             ))}
           </ol>
           <p className={s.note}>
-            Each message is a plain HTTPS request, and the reply comes back as its output. Codex sandboxes block the
-            network, so Codex asks you to approve the command outside the sandbox the first time.
+            Each message is a plain HTTPS request, and the reply comes back as its output. Codex often starts without
+            network access; the snippet checks once and, if it is off, asks you to start a new Codex session with{' '}
+            <code>codex -c &apos;sandbox_workspace_write.network_access=true&apos;</code>.
           </p>
         </section>
 

@@ -1,0 +1,100 @@
+'use client';
+
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+
+import { formatStars, GITHUB_ORG, type RepoStats } from '../../lib/open-source';
+
+type StatsByRepo = Record<string, RepoStats>;
+
+const REFRESH_MS = 60_000;
+
+const StarsContext = createContext<StatsByRepo>({});
+
+/**
+ * Holds the org's star counts: seeded from the server render, then refreshed
+ * from GitHub every minute while the tab is visible. Requests use `no-cache`
+ * so the browser revalidates with its ETag; GitHub does not count 304s
+ * against the unauthenticated rate limit.
+ */
+export function LiveStarsProvider({ initial, children }: { initial: StatsByRepo; children: ReactNode }) {
+  const [stats, setStats] = useState(initial);
+
+  useEffect(() => {
+    let stopped = false;
+
+    async function refresh() {
+      if (document.visibilityState !== 'visible') return;
+      try {
+        const response = await fetch(`https://api.github.com/orgs/${GITHUB_ORG}/repos?type=public&per_page=100`, {
+          headers: { Accept: 'application/vnd.github+json' },
+          cache: 'no-cache',
+        });
+        if (response.status === 403 || response.status === 429) {
+          stopped = true;
+          return;
+        }
+        if (!response.ok) return;
+        const repos = (await response.json()) as { name: string; stargazers_count: number; language: string | null }[];
+        const next: StatsByRepo = {};
+        for (const repo of repos) {
+          next[repo.name.toLowerCase()] = { stars: repo.stargazers_count, language: repo.language };
+        }
+        setStats(next);
+      } catch {
+        // Keep the last known counts.
+      }
+    }
+
+    void refresh();
+    const timer = window.setInterval(() => {
+      if (!stopped) void refresh();
+    }, REFRESH_MS);
+    const onVisible = () => {
+      if (!stopped && document.visibilityState === 'visible') void refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+
+  return <StarsContext.Provider value={stats}>{children}</StarsContext.Provider>;
+}
+
+export function useRepoStats(repo: string): RepoStats | undefined {
+  return useContext(StarsContext)[repo.toLowerCase()];
+}
+
+/** A repo's live star count, or nothing until it has one. */
+export function StarCount({ repo, className }: { repo: string; className?: string }) {
+  const stars = useRepoStats(repo)?.stars;
+  if (!stars) return null;
+  return (
+    <span className={className} aria-label={`${stars} GitHub stars`}>
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path
+          d="M8 1.5l1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.3l-3.8 2 .7-4.3-3.1-3 4.3-.6z"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.3"
+          strokeLinejoin="round"
+        />
+      </svg>
+      {formatStars(stars)}
+    </span>
+  );
+}
+
+/** "· N stars" summed live across the given repos, or nothing without counts. */
+export function TotalStars({ repos }: { repos: string[] }) {
+  const stats = useContext(StarsContext);
+  const total = repos.reduce((sum, repo) => sum + (stats[repo.toLowerCase()]?.stars ?? 0), 0);
+  if (total === 0) return null;
+  return (
+    <>
+      <span aria-hidden="true">·</span>
+      <span>{formatStars(total)} stars</span>
+    </>
+  );
+}

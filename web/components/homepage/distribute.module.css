@@ -1,0 +1,46 @@
+/* Same grid as "Move faster" and "Unblock automatically": copy on the left,
+   the globe whole in the 480px visual column. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  align-items: center;
+  gap: clamp(40px, 6vw, 96px);
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 60px 40px 96px;
+}
+
+.copy {
+  display: grid;
+  gap: 18px;
+}
+
+.title {
+  composes: title from './middle-options.module.css';
+}
+
+.line {
+  composes: line from './middle-options.module.css';
+}
+
+.globe {
+  justify-self: center;
+  width: 420px;
+  max-width: 100%;
+  /* The canvas keeps a band above the sphere for arcs to rise into; pull
+     it up so the gap above reads the same as the other rows. */
+  margin: -56px 0 -12px;
+}
+
+@media (max-width: 900px) {
+  .section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 16px 56px;
+  }
+
+  .globe {
+    width: min(420px, 100%);
+    justify-self: center;
+    margin-top: -24px;
+  }
+}

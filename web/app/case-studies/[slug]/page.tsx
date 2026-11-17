@@ -11,14 +11,14 @@ import remarkGfm from 'remark-gfm';
 import { BlogTableOfContents } from '../../../components/blog/BlogTableOfContents';
 import styles from '../../../components/blog/blog.module.css';
 import { HighlightedPre } from '../../../components/docs/HighlightedCode';
-import { Waitlist } from '../../../components/home';
+import { SignupBand } from '../../../components/home/SignupBand';
 import { SiteFooter } from '../../../components/SiteFooter';
 import { SiteNav } from '../../../components/SiteNav';
+import { SiteNavActions } from '../../../components/SiteNavActions';
 import { getAllCaseStudies, getCaseStudy, slugifyHeading } from '../../../lib/case-studies';
 import { getAuthorInitials, getBlogAuthor } from '../../../lib/blog-authors';
 import { OG_IMAGE_HEIGHT, OG_IMAGE_WIDTH } from '../../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../../lib/site';
-import landingStyles from '../../landing.module.css';
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -59,9 +59,8 @@ const mdxComponents = {
   h3: HeadingWithId(3),
 };
 
-// Prebuild the published case studies. Drafts (`published: false`) are omitted
-// here but still resolve on demand via `getCaseStudy`, so a draft URL renders
-// at its address for preview/review.
+// Prebuild published case studies. Drafts remain available only in local
+// development and are never emitted by a production or preview build.
 export async function generateStaticParams() {
   return getAllCaseStudies().map((study) => ({ slug: study.slug }));
 }
@@ -69,7 +68,7 @@ export async function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const study = getCaseStudy(slug);
-  if (!study) return { title: 'Not Found' };
+  if (!study) notFound();
   const studyUrl = absoluteUrl(`/case-studies/${slug}`);
   const usingGeneratedCard = !study.frontmatter.coverImage;
   const imageUrl = study.frontmatter.coverImage || absoluteUrl(`/case-studies/${slug}/og.png`);
@@ -137,16 +136,6 @@ export default async function CaseStudyPage({ params }: PageProps) {
     .slice(0, 4);
   const studyUrl = absoluteUrl(`/case-studies/${slug}`);
   const imageUrl = study.frontmatter.coverImage || absoluteUrl(`/case-studies/${slug}/og.png`);
-  const navGetStartedLink = (
-    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
-  const mobileGetStartedLink = (
-    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Article',
@@ -270,7 +259,7 @@ export default async function CaseStudyPage({ params }: PageProps) {
 
   return (
     <div className={styles.blogPage}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <section className={styles.postHero}>
         <div className={styles.postHeroInner}>
@@ -368,7 +357,7 @@ export default async function CaseStudyPage({ params }: PageProps) {
         </section>
       )}
 
-      <Waitlist />
+      <SignupBand />
 
       <SiteFooter />
     </div>

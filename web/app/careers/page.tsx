@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { HOME_OG_IMAGE_PATH, ogImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME } from '../../lib/site';
 import s from '../landing.module.css';
@@ -30,20 +30,10 @@ export const metadata: Metadata = {
 };
 
 export default function CareersPage() {
-  const navGetStartedLink = (
-    <Link href="/docs" className={`${s.ctaPrimary} ${s.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
-  const mobileGetStartedLink = (
-    <Link href="/docs" className={`${s.ctaPrimary} ${s.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
 
   return (
     <div className={`${s.page} ${s.homePage}`}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main className={`${s.homeMain} ${s.careersMain}`}>
         <section className={s.careersCallout} aria-label="Careers contact">

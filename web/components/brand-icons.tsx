@@ -65,6 +65,20 @@ const OPEN_CLAW_PATHS = [
   'M9.046 8.16a.527.527 0 100-1.056.527.527 0 000 1.055zM15.376 8.16a.527.527 0 100-1.055.527.527 0 000 1.054z',
 ];
 
+/**
+ * The mono marks' path data, all in lobehub's 0 0 24 24 frame, for drawing them
+ * where SVG can't go (a canvas). Fill each path with the evenodd rule.
+ */
+export const BRAND_MARK_PATHS = {
+  claudeCode: [CLAUDE_CODE_PATH],
+  codex: [CODEX_PATH],
+  openCode: [OPEN_CODE_PATH],
+  cursor: [CURSOR_PATH],
+  grok: [GROK_PATH],
+  muse: [MUSE_PATH],
+  hermesAgent: HERMES_AGENT_PATHS,
+} as const;
+
 function ClaudeCodeMono(props: IconProps) {
   return (
     <IconSvg title="Claude Code" {...props}>

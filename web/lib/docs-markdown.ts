@@ -1,9 +1,10 @@
 import matter from 'gray-matter';
 
 import { readContentFile } from './content-store';
-import { docsNav, getAllDocSlugs } from './docs-nav';
+import { agentDocs, docsNav, getAllMarkdownDocSlugs, markdownOnlyDocs } from './docs-nav';
 import { absoluteUrl } from './site';
 import { providersByCategory } from './integrations';
+import { getSelfhostGuides, getSelfhostMarkdown, selfhostMarkdownPath } from './selfhost-docs';
 
 const DOCS_BASE_URL = absoluteUrl('/docs');
 
@@ -132,8 +133,12 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
     return null;
   }
 
-  const canonicalUrl = `${DOCS_BASE_URL}/${slug}`;
+  const canonicalUrl = `${DOCS_BASE_URL}/${slug === 'introduction' ? 'getting-started' : slug}`;
   const markdownUrl = getDocMarkdownUrl(slug);
+  // Longer agent-facing guidance belongs in the markdown mirror and full
+  // bundle, without expanding the corresponding human-facing MDX page.
+  const supplement = readContentFile(`docs-markdown/${slug}.mdx`);
+  const body = [doc.content, supplement].filter(Boolean).join('\n\n');
   const header = [
     `# ${doc.title}`,
     doc.description ? `\n${doc.description}` : '',
@@ -148,19 +153,19 @@ export function getDocMarkdown(slug: string): MarkdownDoc | null {
     slug,
     title: doc.title,
     description: doc.description,
-    markdown: `${header}\n${renderMarkdownBody(doc.content)}\n`,
+    markdown: `${header}\n${renderMarkdownBody(body)}\n`,
   };
 }
 
 export function getDocsMarkdownIndex(): string {
-  const docs = getAllDocSlugs()
+  const docs = getAllMarkdownDocSlugs()
     .map((slug) => getDocMarkdown(slug))
     .filter((doc): doc is MarkdownDoc => doc !== null);
 
   const lines = [
     '# Agent Relay Docs (Markdown)',
     '',
-    'These markdown views are generated directly from `web/content/docs/*.mdx`.',
+    'These markdown views are generated from `web/content/docs/*.mdx` and optional `web/content/docs-markdown/*.mdx` supplements.',
     'They are meant for agents, CLI tooling, and raw browser access.',
     '',
     ...docs.map(
@@ -179,22 +184,36 @@ type DocsLink = {
   description: string;
 };
 
+function linksFor(items: { slug: string }[]): DocsLink[] {
+  return items.flatMap((item) => {
+    const doc = getDocMarkdown(item.slug);
+    if (!doc) {
+      return [];
+    }
+    return [
+      {
+        title: doc.title,
+        url: getDocMarkdownUrl(item.slug),
+        description: doc.description,
+      },
+    ];
+  });
+}
+
 function getCurrentDocsLinks(): DocsLink[] {
-  return docsNav.flatMap((group) =>
-    group.items.flatMap((item) => {
-      const doc = getDocMarkdown(item.slug);
-      if (!doc) {
-        return [];
-      }
-      return [
-        {
-          title: doc.title,
-          url: getDocMarkdownUrl(item.slug),
-          description: doc.description,
-        },
-      ];
-    })
-  );
+  return linksFor(docsNav.flatMap((group) => group.items));
+}
+
+function getAgentDocsLinks(): DocsLink[] {
+  return linksFor([...agentDocs, ...markdownOnlyDocs]);
+}
+
+function getSelfhostLinks(audience: 'human' | 'agent'): DocsLink[] {
+  return getSelfhostGuides().map((guide) => ({
+    title: audience === 'agent' ? `${guide.title} (agent runbook)` : guide.title,
+    url: absoluteUrl(selfhostMarkdownPath(guide.slug, audience)),
+    description: guide.description,
+  }));
 }
 
 function formatLink({ title, url, description }: DocsLink): string {
@@ -210,9 +229,9 @@ export function getLlmsText(): string {
   const lines = [
     '# Agent Relay',
     '',
-    '> Agent Relay is Headless Slack for agents: a communication layer for workspaces, messages, delivery receipts, actions, events, sessions, harnesses, and CLI/MCP tooling.',
+    '> Agent Relay connects the agents you already use so they can message each other and read each other’s sessions.',
     '',
-    `\`/llms.txt\` and \`/llm.txt\` return this same Markdown index. Every docs page has a plain-markdown mirror: append \`.md\` to its URL (for example ${DOCS_BASE_URL}/typescript-sdk.md) or use the canonical form ${DOCS_BASE_URL}/markdown/{slug}.md. Use \`/llms-full.txt\` when you need all docs in one file.`,
+    `\`/llms.txt\` and \`/llm.txt\` return this same Markdown index. Every docs page has a plain-markdown mirror: append \`.md\` to its URL (for example ${DOCS_BASE_URL}/agents.md) or use the canonical form ${DOCS_BASE_URL}/markdown/{slug}.md. Use \`/llms-full.txt\` when you need all docs in one file.`,
     '',
     '## Documentation',
     '',
@@ -229,6 +248,27 @@ export function getLlmsText(): string {
       description: 'Per-page Markdown endpoints for current docs.',
     }),
     ...getCurrentDocsLinks().map(formatLink),
+    '',
+    '## For agents',
+    '',
+    'Procedures an agent follows. These pages are omitted from the human sidebar.',
+    '',
+    ...getAgentDocsLinks().map(formatLink),
+    '',
+    '## Self-hosting',
+    '',
+    'Run Agent Relay in your own AWS (EKS) or Google Cloud (GKE) account. Human guides first; each has an agent runbook with the same steps plus checks and stop points.',
+    '',
+    ...getSelfhostLinks('human').map(formatLink),
+    '',
+    '### Self-hosting runbooks for agents',
+    '',
+    formatLink({
+      title: 'Rules for coding agents',
+      url: absoluteUrl(selfhostMarkdownPath(undefined, 'agent')),
+      description: 'Read first: never print secrets, ask the human before every change, and where to stop.',
+    }),
+    ...getSelfhostLinks('agent').map(formatLink),
     '',
     '## Optional',
     '',
@@ -251,17 +291,25 @@ function getMarkdownBundle(slugs: string[]): string[] {
 }
 
 export function getLlmsFullText(): string {
-  const currentDocs = getMarkdownBundle(getAllDocSlugs());
+  const currentDocs = getMarkdownBundle(getAllMarkdownDocSlugs());
+  const selfhostDocs = getSelfhostGuides()
+    .map((guide) => getSelfhostMarkdown(guide.slug, 'human'))
+    .filter((markdown): markdown is string => markdown !== null)
+    .map((markdown) => markdown.trim());
   const sections = [
     '# Agent Relay Full Documentation',
     '',
     '> Combined Markdown documentation for Agent Relay.',
     '',
-    'Generated from `web/content/docs/*.mdx`.',
+    'Generated from `web/content/docs/*.mdx` and optional `web/content/docs-markdown/*.mdx` supplements.',
     '',
     '## Documentation',
     '',
     currentDocs.join('\n\n---\n\n'),
+    '',
+    '## Self-hosting',
+    '',
+    selfhostDocs.join('\n\n---\n\n'),
     '',
   ];
 

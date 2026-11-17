@@ -3,8 +3,9 @@ import type { MetadataRoute } from 'next';
 import { allAgentSlugs } from '../lib/agents';
 import { getAllPosts } from '../lib/blog';
 import { getAllCaseStudies } from '../lib/case-studies';
-import { getAllDocSlugs } from '../lib/docs-nav';
+import { getHumanDocSlugs } from '../lib/docs-nav';
 import { productBasePath, productSections } from '../lib/product-docs-nav';
+import { getSelfhostSitemapPaths } from '../lib/selfhost-docs';
 import { absoluteUrl } from '../lib/site';
 
 // ISR so OpenNext serves it from the incremental cache on Cloudflare Workers;
@@ -21,6 +22,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 1.0,
+    },
+    { url: absoluteUrl('/download'), lastModified: now, changeFrequency: 'weekly', priority: 0.9 },
+    {
+      url: absoluteUrl('/open-source'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
     {
       url: absoluteUrl('/pear'),
@@ -53,6 +61,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     {
+      url: absoluteUrl('/mcp-events-shim'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
+      url: absoluteUrl('/mcp-events-shim/api'),
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    {
       url: absoluteUrl('/openclaw/skill'),
       lastModified: now,
       changeFrequency: 'weekly',
@@ -81,12 +101,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: 'monthly',
       priority: 0.8,
-    },
-    {
-      url: absoluteUrl('/primitives'),
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.9,
     },
     {
       url: absoluteUrl('/directory'),
@@ -142,6 +156,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'monthly',
       priority: 0.5,
     },
+    ...['/trust', '/security'].map((path) => ({
+      url: absoluteUrl(path), lastModified: now, changeFrequency: 'monthly' as const, priority: 0.5,
+    })),
     {
       url: absoluteUrl('/privacy'),
       lastModified: now,
@@ -165,12 +182,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: now,
       changeFrequency: 'weekly',
       priority: 0.9,
-    },
-    {
-      url: absoluteUrl('/reflex'),
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.8,
     },
     {
       url: absoluteUrl('/process'),
@@ -210,20 +221,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const docsRoutes: MetadataRoute.Sitemap = getAllDocSlugs().map((slug) => ({
+  // Agent pages stay out of the sitemap. Agents find them from llms.txt.
+  const docsRoutes: MetadataRoute.Sitemap = getHumanDocSlugs().map((slug) => ({
     url: absoluteUrl(`/docs/${slug}`),
     lastModified: now,
     changeFrequency: 'weekly',
-    priority: slug === 'introduction' ? 0.9 : 0.8,
+    priority: slug === 'getting-started' ? 0.9 : 0.8,
   }));
 
-  // Product docs (Relayfile, Relayhistory, Flows): every page in each section's
+  // Product docs (Flows): every page in each section's
   // sidebar. Unlisted slugs are agent-facing briefs and stay out.
   const productDocsRoutes: MetadataRoute.Sitemap = productSections.flatMap((section) =>
     section.nav.flatMap((group) =>
       group.items.map((item) => ({ url: absoluteUrl(`${productBasePath(section)}/${item.slug}`) }))
     )
   );
+
+  // Self-hosting guides. Their agent runbooks are listed in llms.txt instead.
+  const selfhostRoutes: MetadataRoute.Sitemap = getSelfhostSitemapPaths().map((path) => ({
+    url: absoluteUrl(path),
+    lastModified: now,
+    changeFrequency: 'weekly',
+    priority: path === '/docs/self-hosting' ? 0.8 : 0.7,
+  }));
 
   const agentRoutes: MetadataRoute.Sitemap = allAgentSlugs().map((slug) => ({
     url: absoluteUrl(`/agents/${slug}`),
@@ -254,5 +274,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }));
 
-  return [...staticRoutes, ...agentRoutes, ...docsRoutes, ...productDocsRoutes, ...blogRoutes, ...caseStudyRoutes];
+  return [
+    ...staticRoutes,
+    ...agentRoutes,
+    ...docsRoutes,
+    ...selfhostRoutes,
+    ...productDocsRoutes,
+    ...blogRoutes,
+    ...caseStudyRoutes,
+  ];
 }

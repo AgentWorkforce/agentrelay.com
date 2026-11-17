@@ -12,6 +12,7 @@ const __dirname = path.dirname(__filename);
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
+    agentUpgrade: 'security',
     // Default ("loose") chunking merged unrelated route CSS into one
     // render-blocking file: the homepage was shipping the /brand, /enterprise,
     // /telemetry and /legal stylesheets — about 60% of its critical CSS —
@@ -23,7 +24,12 @@ const nextConfig = {
   },
   outputFileTracingRoot: path.resolve(__dirname, '..'),
   outputFileTracingIncludes: {
-    '/*': ['content/docs/**/*', 'content/blog/**/*', 'content/case-studies/**/*'],
+    '/*': [
+      'content/docs/**/*',
+      'content/blog/**/*',
+      'content/case-studies/**/*',
+      'content/self-hosting/**/*',
+    ],
     // The Pear OG card embeds these at render time.
     '/pear/og.png': ['public/img/pear-app.png', 'public/brand-kit/pear-icon-transparent.png'],
   },
@@ -40,6 +46,12 @@ const nextConfig = {
     config.module.rules.push({
       test: /\.mdx$/,
       include: path.resolve(__dirname, 'content'),
+      type: 'asset/source',
+    });
+    // The self-hosting guides are plain Markdown (lib/selfhost-docs.ts).
+    config.module.rules.push({
+      test: /\.md$/,
+      include: path.resolve(__dirname, 'content/self-hosting'),
       type: 'asset/source',
     });
 
@@ -61,10 +73,12 @@ const nextConfig = {
       '/docs/llms.txt',
       '/docs/markdown.md',
       '/docs/markdown/:path*',
-      '/docs/file/markdown/:path*',
-      '/docs/relayhistory/markdown/:path*',
       '/docs/relayflows/markdown/:path*',
       '/docs/:slug([^/]+\\.md)',
+      '/docs/self-hosting/markdown/:path*',
+      '/docs/self-hosting/:slug([^/]+\\.md)',
+      '/docs/self-hosting/agents/:slug([^/]+\\.md)',
+      '/self-hosting/files/:path*',
       '/.well-known/:path*',
       '/u/:handle/agent.md',
       '/agents/register/checklist.md',
@@ -144,6 +158,13 @@ const nextConfig = {
         // Append .md to any docs URL to get its markdown mirror. afterFiles
         // runs after static routes (so /docs/markdown.md is untouched) but
         // before the /docs/[slug] dynamic page.
+        // Self-hosting guides and agent runbooks: same convention, served from
+        // app/docs/self-hosting/markdown. Listed before the generic rule, which
+        // would otherwise send /docs/self-hosting.md to the main docs.
+        { source: '/docs/self-hosting.md', destination: '/docs/self-hosting/markdown/index.md' },
+        { source: '/docs/self-hosting/agents.md', destination: '/docs/self-hosting/markdown/agents.md' },
+        { source: '/docs/self-hosting/agents/:slug([^/]+\\.md)', destination: '/docs/self-hosting/markdown/agents/:slug' },
+        { source: '/docs/self-hosting/:slug([^/]+\\.md)', destination: '/docs/self-hosting/markdown/:slug' },
         { source: '/docs/:slug([^/]+\\.md)', destination: '/docs/markdown/:slug' },
       ],
     };
@@ -158,7 +179,7 @@ const nextConfig = {
       },
       {
         source: '/khaliq',
-        destination: 'https://calendly.com/khaliq-agent-relay/30min',
+        destination: 'https://calendar.google.com/calendar/appointments/schedules/AcZssZ1epyhijCW6PzM54mrk-T3ebYZIpfi7GN62lywkJxGc3Dg7vO2kvYAK0ywdLONAts2KxsWTMJ0b',
         permanent: false,
       },
       // In-person event banner QR code → homepage, tagged so the traffic is
@@ -179,27 +200,35 @@ const nextConfig = {
           'https://agentrelay.com/?utm_source=ai-engineer-worldfair&utm_medium=banner&utm_campaign=ai-engineer-worldfair-2026',
         permanent: false,
       },
-      // In-person event QR card → the relay GitHub repo, tagged like /banner
-      // above so card scans are attributable to the current event. Temporary
-      // for the same repointing reason.
+      // In-person QR card → the Agent Relay GitHub repo. Temporary for the
+      // same repointing reason.
       {
         source: '/qr-card',
-        destination:
-          'https://github.com/agentworkforce/relay?utm_source=ai-engineer-worldfair&utm_medium=qr-card&utm_campaign=ai-engineer-worldfair-2026',
+        destination: 'https://github.com/agentworkforce/relay',
         permanent: false,
       },
       { source: '/quickstart', destination: '/docs/quickstart', permanent: true },
-      { source: '/relayfile', destination: '/primitives#file', permanent: true },
-      { source: '/relayfile/:path*', destination: '/primitives#file', permanent: true },
-      { source: '/relayauth', destination: '/primitives#auth', permanent: true },
-      { source: '/relayauth/:path*', destination: '/primitives#auth', permanent: true },
-      { source: '/relaycast', destination: '/primitives#message', permanent: true },
-      { source: '/relaycast/:path*', destination: '/primitives#message', permanent: true },
+      { source: '/docs/introduction', destination: '/docs/getting-started', permanent: true },
+      { source: '/docs/self-host', destination: '/docs/self-hosting', permanent: true },
+      { source: '/docs/self-host/:path*', destination: '/docs/self-hosting/:path*', permanent: true },
+      { source: '/primitives', destination: '/', permanent: true },
+      { source: '/relayfile', destination: '/file', permanent: true },
+      { source: '/relayfile/:path*', destination: '/file', permanent: true },
+      { source: '/auth', destination: '/docs/relaycast-api#authentication', permanent: true },
+      { source: '/relayauth', destination: '/docs/relaycast-api#authentication', permanent: true },
+      { source: '/relayauth/:path*', destination: '/docs/relaycast-api#authentication', permanent: true },
+      { source: '/message', destination: '/docs/relaycast-api', permanent: true },
+      { source: '/relaycast', destination: '/docs/relaycast-api', permanent: true },
+      { source: '/relaycast/:path*', destination: '/docs/relaycast-api', permanent: true },
+      { source: '/schedule', destination: '/docs', permanent: true },
       { source: '/docs/reference-sdk', destination: '/docs/typescript-sdk', permanent: true },
       { source: '/docs/reference-sdk-py', destination: '/docs/typescript-sdk', permanent: true },
-      // The Reflex docs described the relayhistory repository; Relayhistory's docs replace them.
-      { source: '/docs/loop', destination: '/docs/relayhistory', permanent: true },
-      { source: '/docs/loop/:path*', destination: '/docs/relayhistory', permanent: true },
+      // Retired product pages. Session history lives with the current Sessions docs.
+      { source: '/reflex', destination: '/teams', permanent: true },
+      { source: '/docs/loop', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/loop/:path*', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/relayhistory', destination: '/docs/sessions', permanent: true },
+      { source: '/docs/relayhistory/:path*', destination: '/docs/sessions', permanent: true },
     ];
   },
 };

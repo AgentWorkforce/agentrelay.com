@@ -1,0 +1,285 @@
+/* The open source catalog: a plain navy hero, the homepage's wave break,
+   then one band of ruled rows, one row of sections per category. Lines and
+   type do the work; no panels or glows. */
+
+/* ---- Hero ---- */
+
+.hero {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 144px 40px 104px;
+}
+
+.heroTitle {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(3rem, 6.4vw, 5rem);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.heroLine {
+  max-width: 46ch;
+  margin: 24px 0 0;
+  color: var(--fg-muted);
+  font-size: 1.2rem;
+  line-height: 1.55;
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 32px 0 0;
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.heroMeta a {
+  color: #74b8e2;
+  text-decoration: none;
+}
+
+.heroMeta a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Catalog ---- */
+
+.catalog {
+  position: relative;
+  isolation: isolate;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 40px 120px;
+}
+
+/* The band behind the catalog steps down a tone from the hero, full bleed. */
+.catalog::before {
+  position: absolute;
+  inset: 0 calc(50% - 50vw);
+  z-index: -1;
+  background: #0b1c2a;
+  border-top: 1px solid rgba(116, 184, 226, 0.1);
+  content: '';
+}
+
+.category {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 64px;
+  padding: 72px 0;
+  scroll-margin-top: 24px;
+}
+
+.categoryHeader {
+  position: sticky;
+  top: calc(var(--nav-clearance) + 24px);
+  align-self: start;
+}
+
+.categoryTitle {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.categoryDescription {
+  margin: 12px 0 0;
+  color: var(--fg-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+/* Two ruled columns, like the homepage's why row. */
+.repos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(116, 184, 226, 0.16);
+  list-style: none;
+}
+
+.repo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 28px 22px;
+  border-bottom: 1px solid rgba(116, 184, 226, 0.16);
+}
+
+.repo:nth-child(odd) {
+  padding-left: 0;
+  border-right: 1px solid rgba(116, 184, 226, 0.16);
+}
+
+.repoHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repoName {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+/* The name's link covers the row; the Docs link sits above it. */
+.repoLink {
+  color: inherit;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.repoLink::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+}
+
+.repo:hover .repoLink {
+  color: #74b8e2;
+}
+
+.repoLink:focus-visible {
+  outline: none;
+}
+
+.repo:has(.repoLink:focus-visible) {
+  outline: 2px solid #74b8e2;
+  outline-offset: -2px;
+}
+
+.stars {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-muted);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.stars svg {
+  width: 13px;
+  height: 13px;
+}
+
+.repoDescription {
+  flex: 1;
+  margin: 8px 0 16px;
+  color: #a8b8c8;
+  font-size: 0.94rem;
+  line-height: 1.55;
+}
+
+.repoMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.repoPath {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--fg-faint);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.76rem;
+}
+
+.languageDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 0.4em;
+  border-radius: 50%;
+}
+
+.repoDocs {
+  position: relative;
+  z-index: 1;
+  color: #74b8e2;
+  font-size: 0.82rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.repoDocs:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---- Closing ---- */
+
+.closing {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 128px 40px 120px;
+  text-align: center;
+}
+
+@media (max-width: 960px) {
+  .category {
+    grid-template-columns: 1fr;
+    gap: 28px;
+    padding: 56px 0;
+  }
+
+  .categoryHeader {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .hero {
+    padding: 104px 16px 72px;
+  }
+
+  /* The org link takes its own line so the counts never wrap after a dot. */
+  .heroOrg {
+    flex-basis: 100%;
+  }
+
+  .heroOrgSep {
+    display: none;
+  }
+
+  .catalog {
+    padding: 16px 16px 88px;
+  }
+
+  .repos {
+    grid-template-columns: 1fr;
+  }
+
+  .repo,
+  .repo:nth-child(odd) {
+    padding: 22px 0 20px;
+    border-right: 0;
+  }
+
+  .closing {
+    padding: 96px 16px 88px;
+  }
+}

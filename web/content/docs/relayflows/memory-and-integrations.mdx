@@ -1,9 +1,9 @@
 ---
 title: 'Memory & integrations'
-description: 'Relayhistory-backed memory and Relayfile-backed integrations — the two substrates a flow reaches without hand-rolling either.'
+description: 'Memory across runs, and helpers for Slack, GitHub, and Linear.'
 ---
 
-A flow doesn't carry its own database or its own Slack client. Two existing systems back it instead: [Relayhistory](/docs/relayhistory) for memory across runs, and [Relayfile](/docs/file) for everything a flow reads from or writes to outside itself.
+A flow doesn't carry its own database or its own Slack client. Memory is what a step can recall from earlier runs. Slack, GitHub, and Linear are helpers on the flow.
 
 ## Memory
 
@@ -25,7 +25,7 @@ export default flow('triage', { memory: { script: true } }, async (f) => {
 });
 ```
 
-Under the hood this is [Relayhistory](/docs/relayhistory)'s `ai-hist pack` — the same searchable, local-first history your team already builds just by using Claude Code, Codex, and Agent Relay. A flow's memory queries hit that same corpus, so an agent step can cite a fix an engineer already worked out by hand, instead of rediscovering it from scratch.
+A flow's memory reads the local session history already on the machine, so an agent step can cite a fix an engineer already worked out by hand.
 
 <Note>
   What this feature is judged on is retrieval quality, not the plumbing:
@@ -43,7 +43,7 @@ Under the hood this is [Relayhistory](/docs/relayhistory)'s `ai-hist pack` — t
 
 ## Integrations
 
-Reaching Slack, GitHub, or Linear from a flow doesn't mean writing a provider SDK call and hoping the token scope is right. [Relayfile](/docs/file) mounts each provider as a directory a flow reads and writes:
+Reach Slack, GitHub, or Linear with a helper. Turn the tool on, then call it:
 
 ```ts
 import { flow } from '@relayflows/surface';
@@ -57,14 +57,11 @@ export default flow('release-note', { tools: { slack: true } }, async (f) => {
 });
 ```
 
-`f.slack`, `f.github`, `f.linear`, and every other generated helper compile to a write against Relayfile's [adapter catalog](/docs/file/adapters-and-providers) — the same 50 providers Relayfile ships today, each turned into a flow-native verb. The receipt a helper returns *is* the journaled effect record, so if a step retries and posts the same Slack message twice, the second write gets deduped instead of double-sending. A helper needs a Relayfile mount for its provider (Cloud provides one for connected providers); locally, `flows check` refuses `helper_slack.mount_required` until one exists, and `RELAYFLOWS_SLACK_MOCK=1` records the effect instead of sending it.
+`f.slack`, `f.github`, and `f.linear` are generated helpers. The receipt a helper returns is the journaled effect, so a retry that posts the same Slack message twice is deduped. Cloud provides a connected provider. Locally, `flows check` refuses `helper_slack.mount_required` until that provider is connected, and `RELAYFLOWS_SLACK_MOCK=1` records the effect instead of sending it.
 
 ## Next
 
 <CardGroup cols={2}>
-  <Card title="Relayfile" href="/docs/file">
-    The full integration catalog a flow can reach.
-  </Card>
   <Card title="Reliability" href="/docs/relayflows/reliability">
     How an effect stays exactly-once across a crash.
   </Card>

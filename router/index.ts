@@ -1,6 +1,7 @@
 import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
 import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
+import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
@@ -18,6 +19,10 @@ interface Env extends AnalyticsEnv {
     fetch(request: Request): Promise<Response>;
   };
   WEBHOOK_WORKER_ORIGIN?: string;
+  // Worker secret holding OpenAI's apps domain-verification token. Shipped by
+  // deploy-router.yml from the OPENAI_APPS_CHALLENGE_TOKEN GitHub Actions
+  // secret; never committed. Unset means the challenge path 404s.
+  OPENAI_APPS_CHALLENGE_TOKEN?: string;
 }
 
 function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
@@ -50,7 +55,11 @@ const HANDLE_SEGMENT = "[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])";
 const RESERVED_AGENT_PAGE_HANDLES = new Set([
   "register", "connect", "api", "cloud", "admin", "www", "help", "support",
   "docs", "status", "security", "abuse", "login", "signup", "agents", "directory",
+  "download",
 ]);
+// Desktop download links name arelay.to/download; the page lives on the
+// primary host.
+const DOWNLOAD_PAGE_PATH = "/download";
 // The verified-agent directory page. web/lib/agent-directory.ts names the same
 // path (AGENT_DIRECTORY_PATH); keep the two in step.
 const AGENT_DIRECTORY_PAGE_PATH = "/directory";
@@ -62,13 +71,17 @@ const AGENT_CHAT_PATH = new RegExp(`^/(${HANDLE_SEGMENT})/([0-9a-f]{32})/?$`);
 const REGISTRY_API_PATH = /^\/api\/v1\/(?:registrations|agents)(?:\/|$)/;
 const WEBHOOK_ORIGIN_FLAG_KEY = "WEBHOOK_ORIGIN";
 export const WILL_CALENDAR_URL = "https://calendar.app.google/RqLuQyT3dYe5e2YdA";
-export const KHALIQ_CALENDAR_URL = "https://calendly.com/khaliq-agent-relay/30min";
+export const KHALIQ_CALENDAR_URL = "https://calendar.google.com/calendar/appointments/schedules/AcZssZ1epyhijCW6PzM54mrk-T3ebYZIpfi7GN62lywkJxGc3Dg7vO2kvYAK0ywdLONAts2KxsWTMJ0b";
 const VIRTUAL_OFFICE_URL = "https://meet.google.com/ijx-gpfb-brt";
-const VANITY_REDIRECTS = new Map<string, string>([
+// A vanity path maps to one destination, or to several that are chosen from
+// uniformly at random per request (/founder splits meetings between the two
+// founders' calendars).
+const VANITY_REDIRECTS = new Map<string, string | readonly string[]>([
   ["/meet-with-will", WILL_CALENDAR_URL],
   ["/will", WILL_CALENDAR_URL],
   ["/meet-with-khaliq", KHALIQ_CALENDAR_URL],
   ["/khaliq", KHALIQ_CALENDAR_URL],
+  ["/founder", [WILL_CALENDAR_URL, KHALIQ_CALENDAR_URL]],
   ["/virtual-office", VIRTUAL_OFFICE_URL],
 ]);
 
@@ -111,6 +124,43 @@ function isFileObserverPath(pathname: string): boolean {
 
 function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean {
   return hostname === PRIMARY_HOST && isFileObserverPath(pathname);
+}
+
+// The Cloud authorization server's issuer is https://agentrelay.com/cloud.
+// RFC 8414 inserts the well-known suffix before the issuer path, while RFC
+// 9728 does the same for protected-resource metadata. These canonical URLs
+// sit outside /cloud, so route them back to the Cloud app that owns the
+// metadata rather than letting the marketing app return a 404.
+//
+// https://agentrelay.com/mcp is the short MCP URL for third-party clients. Its
+// RFC 9728 document is /.well-known/oauth-protected-resource/mcp. The bare
+// root documents are fallbacks for clients that skip path insertion: the
+// protected-resource one describes /mcp, and pre-2025-06 MCP clients look
+// for authorization-server metadata at the MCP server's origin root.
+const CLOUD_OAUTH_WELL_KNOWN_REWRITES: ReadonlyArray<readonly [string, string]> = [
+  ["/.well-known/oauth-authorization-server/cloud", "/cloud/.well-known/oauth-authorization-server"],
+  ["/.well-known/openid-configuration/cloud", "/cloud/.well-known/openid-configuration"],
+  ["/.well-known/oauth-authorization-server", "/cloud/.well-known/oauth-authorization-server"],
+  ["/.well-known/oauth-protected-resource", "/cloud/.well-known/oauth-protected-resource/mcp"],
+  ["/.well-known/oauth-protected-resource/mcp", "/cloud/.well-known/oauth-protected-resource/mcp"],
+];
+const CLOUD_PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource/cloud/";
+
+export function rewriteCloudOAuthWellKnownPath(pathname: string): string | null {
+  for (const [from, to] of CLOUD_OAUTH_WELL_KNOWN_REWRITES) {
+    if (pathname === from) return to;
+  }
+  if (pathname.startsWith(CLOUD_PROTECTED_RESOURCE_PREFIX)) {
+    return `/cloud${pathname}`;
+  }
+  return null;
+}
+
+// The root MCP endpoint is served by the Cloud app at /cloud/mcp. Unlike the
+// discovery documents it takes every method (Streamable HTTP POSTs JSON-RPC,
+// GETs an SSE stream, DELETEs a session), so it is not limited to GET/HEAD.
+export function rewriteCloudMcpPath(pathname: string): string | null {
+  return pathname === "/mcp" || pathname === "/mcp/" ? "/cloud/mcp" : null;
 }
 
 function isCloudPath(pathname: string): boolean {
@@ -253,6 +303,21 @@ export function isAgentPageRequestPath(pathname: string): boolean {
   return /^\/u(?:\/|$)/i.test(pathname);
 }
 
+// Cloud's self-hosting runbook API returns the private support runbooks to
+// entitled customers, so its responses stay out of the replay corpus. (The
+// public guides at /docs/self-hosting are ordinary docs pages and need no
+// exclusion.) Matched on the decoded path (so /cloud/api/v1/me/selfhost%2Ddocs
+// is excluded too), and an undecodable path fails closed.
+export function isSelfhostRunbookApiPath(pathname: string): boolean {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    return true;
+  }
+  return /^\/cloud\/api\/v1\/me\/selfhost-docs(?:\/|$)/i.test(decoded);
+}
+
 // Dashboard grants are single-use bearer credentials. Any request carrying a
 // grant parameter, on any path, stays out of the replay corpus.
 export function carriesDashboardGrant(url: URL): boolean {
@@ -327,9 +392,13 @@ export function isRelayAgentRegistryRoute(
   return REGISTRY_API_PATH.test(pathname);
 }
 
-// arelay.to only fronts agent chat: its root, its www alias and the signed-in
-// cloud app redirect to the primary host.
+// arelay.to only fronts agent chat: its root, the download page, its www alias
+// and the signed-in cloud app redirect to the primary host.
 export function getShortHostRedirect(url: URL): string | undefined {
+  const shortHost = url.hostname === SHORT_HOST || url.hostname === SHORT_HOST_WWW;
+  if (shortHost && url.pathname.replace(/\/$/, "") === DOWNLOAD_PAGE_PATH) {
+    return `https://${PRIMARY_HOST}${DOWNLOAD_PAGE_PATH}${url.search}`;
+  }
   if (url.hostname === SHORT_HOST_WWW) {
     return `https://${SHORT_HOST}${url.pathname}${url.search}`;
   }
@@ -350,7 +419,11 @@ export function getVanityRedirect(hostname: string, pathname: string): string | 
   const normalizedPathname = (pathname.length > 1
     ? pathname.replace(/\/$/, "")
     : pathname).toLowerCase();
-  return VANITY_REDIRECTS.get(normalizedPathname);
+  const destination = VANITY_REDIRECTS.get(normalizedPathname);
+  if (typeof destination === "string" || destination === undefined) {
+    return destination;
+  }
+  return destination[Math.floor(Math.random() * destination.length)];
 }
 
 // True only for the exact paths the webhook worker knows how to handle. Used
@@ -659,9 +732,64 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
   return globalThis.fetch(buildRelayAgentRequest(request, url, validatedRelayAgentOrigin(origin)));
 }
 
+// OpenAI apps domain verification. OpenAI fetches this apex path and expects
+// the bare token as text/plain with a 200 — no HTML, JSON or redirect. The
+// token comes from the OPENAI_APPS_CHALLENGE_TOKEN Worker secret; when it is
+// unset or blank the path 404s rather than falling through to the marketing
+// site. Answered before any upstream dispatch so the token never reaches the
+// traffic recorder.
+const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
+
+export function getOpenAiAppsChallengeResponse(
+  request: Request,
+  url: URL,
+  env: Pick<Env, "OPENAI_APPS_CHALLENGE_TOKEN">,
+): Response | null {
+  if (url.hostname !== PRIMARY_HOST || url.pathname !== OPENAI_APPS_CHALLENGE_PATH) {
+    return null;
+  }
+
+  const headers = {
+    "content-type": "text/plain; charset=utf-8",
+    "cache-control": "no-store",
+  };
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: { ...headers, allow: "GET, HEAD" },
+    });
+  }
+
+  const token = env.OPENAI_APPS_CHALLENGE_TOKEN?.trim();
+  if (!token) {
+    return new Response("Not Found", { status: 404, headers });
+  }
+
+  return new Response(request.method === "HEAD" ? null : token, {
+    status: 200,
+    headers,
+  });
+}
+
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
+
+    const openAiAppsChallenge = getOpenAiAppsChallengeResponse(request, url, env);
+    if (openAiAppsChallenge) {
+      return openAiAppsChallenge;
+    }
+
+    const cloudRewritePath = url.hostname !== PRIMARY_HOST
+      ? null
+      : rewriteCloudMcpPath(url.pathname)
+        ?? (request.method === "GET" || request.method === "HEAD"
+          ? rewriteCloudOAuthWellKnownPath(url.pathname)
+          : null);
+    if (cloudRewritePath) {
+      url.pathname = cloudRewritePath;
+      request = new Request(url.toString(), request);
+    }
 
     const insecureShortHost = getInsecureShortHostResponse(url, request.method);
     if (insecureShortHost) {
@@ -672,9 +800,13 @@ const router = {
     if (vanityRedirect) {
       const redirectUrl = new URL(vanityRedirect);
       url.searchParams.forEach((value, key) => {
-        redirectUrl.searchParams.set(key, value);
+        redirectUrl.searchParams.append(key, value);
       });
-      return Response.redirect(redirectUrl.toString(), 302);
+      // Never cache: a cached 302 would pin a visitor to one /founder calendar.
+      return new Response(null, {
+        status: 302,
+        headers: { Location: redirectUrl.toString(), "Cache-Control": "no-store" },
+      });
     }
 
     const agentChatCloudPath = getAgentChatCloudPath(
@@ -748,10 +880,12 @@ const router = {
     // Conversation URLs are bearer secrets and request bodies are private chat
     // content, so neither the new route nor the existing Cloud fallback belongs
     // in the replay corpus. Agent pages and guides mint a conversation URL in
-    // every response, so they stay out too, however they were reached.
+    // every response, so they stay out too, however they were reached. So does
+    // Cloud's private self-hosting runbook API.
     const recorderRequestClone = recorderEnv
       && !relayAgentRoute
       && !isAgentPageRequestPath(url.pathname)
+      && !isSelfhostRunbookApiPath(url.pathname)
       && !carriesDashboardGrant(url)
       ? (request.clone() as unknown as Request)
       : null;
@@ -817,9 +951,32 @@ const router = {
       request = new Request(url.toString(), request);
     }
 
+    // Empty/invalid/unreadable config retains the existing dispatch below,
+    // including webhook offload and Cloud's unavailable-binding response.
+    const facade = await readFacadeRoute(request, env.ROUTER_CONFIG);
+    if (facade?.mode === "on") {
+      // This branch is not recorded. Cancel the unused tee so a streaming
+      // mutation body cannot accumulate in the recorder's unread branch.
+      void recorderRequestClone?.body?.cancel().catch(() => undefined);
+      timing.setOrigin(facadeOriginLabel(facade, url.pathname));
+      return timing.measure("up", () => fetchFacade(request, facade));
+    }
+    const shadowRequest = facade?.mode === "shadow" && isSafeShadowRequest(request)
+      ? request.clone() as unknown as Request
+      : null;
+    const queueShadow = (response: Response, baseline: "cloud" | "web") => {
+      if (shadowRequest && facade) {
+        timing.setOrigin(baseline);
+        ctx.waitUntil(compareFacadeShadow(shadowRequest, facade, response));
+      }
+    };
+
     if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
       if (!env.CLOUD_WEB_WORKER) {
+        if (shadowRequest && facade) {
+          console.log(JSON.stringify({ event: "cloud_facade_shadow", outcome: "skipped", reason: "cloud_binding_unavailable" }));
+        }
         return new Response(
           JSON.stringify({ error: "cloud web worker binding unavailable" }),
           {
@@ -831,6 +988,7 @@ const router = {
 
       const cloudWebWorker = env.CLOUD_WEB_WORKER;
       const workerResponse = await timing.measure("up", () => cloudWebWorker.fetch(request));
+      queueShadow(workerResponse, "cloud");
       if (recorderRequestClone && recorderEnv) {
         ctx.waitUntil(
           maybeRecord(recorderRequestClone, workerResponse.clone(), recorderEnv, ctx),
@@ -931,6 +1089,7 @@ const router = {
         ctx.waitUntil(recordGuideFetched(guideAnalyticsRequest, guideAnalyticsHandle, env));
       }
 
+      queueShadow(response, "web");
       return response;
     } catch (error) {
       return new Response(JSON.stringify({ error: (error as Error).message }), {

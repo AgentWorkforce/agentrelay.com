@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 
 import { SiteFooter } from '../../../../components/SiteFooter';
 import { SiteNav } from '../../../../components/SiteNav';
+import { SiteNavActions } from '../../../../components/SiteNavActions';
 import {
   DASHBOARD_SESSION_COOKIE,
   dashboardPath,
@@ -99,7 +100,7 @@ function Shell({ handle, children }: { handle: string; children: ReactNode }) {
   return (
     <div className={`${flows.page} ${home.messagingPage} ${s.page}`}>
       <a className="skip-link" href="#main">Skip to content</a>
-      <SiteNav />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
       {/* ph-sensitive/ph-no-capture: session replay must never record dashboard data. */}
       <main id="main" className={`${s.main} ph-sensitive ph-no-capture`}>
         <header className={s.header}>

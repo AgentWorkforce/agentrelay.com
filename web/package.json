@@ -13,9 +13,9 @@
     "start": "next start",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "precf:build": "node scripts/generate-setup-skills.mjs",
+    "precf:build": "node scripts/generate-setup-skills.mjs && node scripts/prepare-opennext.mjs",
     "cf:build": "opennextjs-cloudflare build",
-    "prepreview": "node scripts/generate-setup-skills.mjs",
+    "prepreview": "node scripts/generate-setup-skills.mjs && node scripts/prepare-opennext.mjs",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview"
   },
   "dependencies": {
@@ -26,18 +26,21 @@
     "@tailwindcss/postcss": "^4.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "fflate": "0.4.9",
     "gray-matter": "^4.0.3",
+    "hast-util-to-jsx-runtime": "^2.3.6",
     "lucide-react": "^1.0.1",
-    "next": "16.3.8",
+    "next": "16.4.3",
     "postcss": "^8.5.8",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-icons": "^5.6.0",
     "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.2",
     "shiki": "^4.0.2",
     "tailwind-merge": "^3.5.0",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.2",
+    "unified": "^11.0.5"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "^1.20.1",
@@ -50,6 +53,8 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.0",
     "wrangler": "^4.91.0",
-    "esbuild": "0.25.4"
+    "esbuild": "0.25.4",
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4"
   }
 }

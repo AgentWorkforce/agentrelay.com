@@ -6,9 +6,7 @@ import { absoluteUrl, SITE_NAME } from './site';
 /**
  * Metadata for the Relayfile landing page.
  *
- * The page is served from two paths — `/file` (canonical) and the `/relayfile`
- * alias, which re-exports the same component — so the descriptors are built here
- * once and both routes point their canonical at `/file`. Copy mirrors the live
+ * The page lives at `/file`; `/relayfile` redirects there. Copy mirrors the live
  * hero (badge, headline, subtitle) so the search snippet and the social card say
  * the same thing the page does.
  */

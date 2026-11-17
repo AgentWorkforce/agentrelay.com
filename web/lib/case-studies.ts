@@ -19,9 +19,9 @@ export interface CaseStudyFrontmatter {
   /** Optional path to the customer's logo (e.g. `/logos/pomerado.svg`). */
   logo?: string;
   /**
-   * Draft flag. When `false`, the entry is excluded from the public list
-   * (`getAllCaseStudies`) but still resolvable by slug (`getCaseStudy`) so a
-   * draft URL renders in preview. Defaults to published when omitted.
+   * Draft flag. When `false`, the entry is excluded from public lists and can
+   * only be resolved by slug on the local development server. Defaults to
+   * published when omitted.
    */
   published?: boolean;
 }
@@ -135,7 +135,7 @@ function readCaseStudyFromFile(fileName: string): CaseStudy | null {
 
 /**
  * Every published case study, newest first. Drafts (`published: false`) are
- * excluded from this list; use `getCaseStudy` to resolve a draft by slug.
+ * excluded from this list.
  */
 export function getAllCaseStudies(): CaseStudy[] {
   const files = listContentFiles('case-studies').filter((file) => file.endsWith('.mdx'));
@@ -148,8 +148,10 @@ export function getAllCaseStudies(): CaseStudy[] {
 }
 
 /**
- * Resolve a single case study by slug regardless of its `published` flag, so a
- * draft URL still renders at its address for preview/review.
+ * Resolve a case study by slug. Unpublished studies are only addressable from
+ * the local development server; production, preview builds, and tests treat
+ * them as missing so their page, metadata, and Open Graph routes all return
+ * not found.
  */
 export function getCaseStudy(slug: string): CaseStudy | null {
   if (!isValidCaseStudySlug(slug)) {
@@ -161,11 +163,17 @@ export function getCaseStudy(slug: string): CaseStudy | null {
 
   const { data, content } = matter(raw);
 
-  return {
+  const study: CaseStudy = {
     slug,
     frontmatter: normalizeFrontmatter(data),
     content,
     readTime: estimateReadTime(content),
     toc: extractToc(content),
   };
+
+  if (study.frontmatter.published === false && process.env.NODE_ENV !== 'development') {
+    return null;
+  }
+
+  return study;
 }

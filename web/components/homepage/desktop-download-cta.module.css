@@ -1,0 +1,10 @@
+/* The label is hidden, not removed, until the visitor's OS is read; the
+   shared button transition then fades it in. The button's surface holds its
+   place and the text never swaps in view. Only browsers that run scripts hide
+   it, so no-script visitors (and browsers without the media feature) always
+   see the getting-started label. */
+@media (scripting: enabled) {
+  .cta[data-detecting] {
+    color: transparent;
+  }
+}

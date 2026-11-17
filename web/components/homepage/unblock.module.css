@@ -1,0 +1,40 @@
+/* Same rhythm as "Move faster": copy on the left, the channel card from
+   "Let your agents talk" on the right. */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  align-items: center;
+  gap: clamp(40px, 6vw, 96px);
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 60px 40px;
+}
+
+.copy {
+  display: grid;
+  gap: 18px;
+}
+
+.title {
+  composes: title from './middle-options.module.css';
+}
+
+.line {
+  composes: line from './middle-options.module.css';
+}
+
+/* Doubled class: outranks the shared preview's own height. */
+.card.card {
+  height: 380px;
+}
+
+@media (max-width: 900px) {
+  .section {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0 16px 56px;
+  }
+
+  .card.card {
+    height: 340px;
+  }
+}

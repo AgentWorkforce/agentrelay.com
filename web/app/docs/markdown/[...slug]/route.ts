@@ -1,5 +1,5 @@
 import { getDocMarkdown } from '../../../../lib/docs-markdown';
-import { getAllDocSlugs } from '../../../../lib/docs-nav';
+import { getAllMarkdownDocSlugs } from '../../../../lib/docs-nav';
 
 // Prerender every doc's `.md` mirror and serve it via ISR from the incremental
 // cache on Cloudflare Workers (the handler reads docs from the filesystem, which
@@ -11,7 +11,7 @@ export const dynamicParams = false;
 
 export function generateStaticParams() {
   // The rewrite only matches single-segment `.md` paths, so skip nested slugs.
-  return getAllDocSlugs()
+  return getAllMarkdownDocSlugs()
     .filter((slug) => !slug.includes('/'))
     .map((slug) => ({ slug: [`${slug}.md`] }));
 }

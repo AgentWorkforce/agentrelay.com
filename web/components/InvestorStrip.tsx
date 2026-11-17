@@ -6,7 +6,7 @@ import s from './investor-strip.module.css';
 // and already web-ready, so they skip the /_next/image round trip too.
 const LOGO_IMAGE_PROPS = { loading: 'eager', unoptimized: true } as const;
 
-export function InvestorStrip() {
+export function InvestorStrip({ compact = false }: { compact?: boolean } = {}) {
   const logos = [
     <Image key="0" className={s.investorHustle} src="/investors/hustle-fund.svg" alt="Hustle Fund" {...LOGO_IMAGE_PROPS} width={205} height={27} />,
     <Image key="1" className={s.investorActive} src="/investors/active-capital.svg" alt="Active Capital" {...LOGO_IMAGE_PROPS} width={185} height={30} />,
@@ -26,7 +26,7 @@ export function InvestorStrip() {
   ];
 
   return (
-    <section className={s.backers} aria-label="Agent Relay investors">
+    <section className={`${s.backers}${compact ? ` ${s.compact}` : ''}`} aria-label="Agent Relay investors">
       <p>Backed by</p>
       <div className={`${s.investorGroup} ${s.desktopInvestors}`}>{logos}</div>
       <div className={s.mobileInvestors} role="img" aria-label="Hustle Fund, Active Capital, Y Combinator, Cortical Ventures, and Yonder">

@@ -4,11 +4,11 @@ import Link from 'next/link';
 import styles from '../../components/blog/blog.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { getAllCaseStudies } from '../../lib/case-studies';
 import { getAuthorInitials, getBlogAuthor } from '../../lib/blog-authors';
 import { defaultOgImage } from '../../lib/og-meta';
 import { absoluteUrl, SITE_NAME, SITE_URL } from '../../lib/site';
-import landingStyles from '../landing.module.css';
 
 export const metadata: Metadata = {
   title: { absolute: 'Agent Relay Case Studies — How Teams Run Their Agents' },
@@ -45,16 +45,6 @@ function formatDate(dateStr: string): string {
 
 export default function CaseStudiesIndexPage() {
   const studies = getAllCaseStudies();
-  const navGetStartedLink = (
-    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
-  const mobileGetStartedLink = (
-    <Link href="/docs" className={`${landingStyles.ctaPrimary} ${landingStyles.homeNavAction}`}>
-      Get Started
-    </Link>
-  );
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
@@ -75,7 +65,7 @@ export default function CaseStudiesIndexPage() {
 
   return (
     <div className={styles.blogPage}>
-      <SiteNav actions={navGetStartedLink} mobileMenuContent={mobileGetStartedLink} hideLinks />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main className={styles.blogMain}>
         <script

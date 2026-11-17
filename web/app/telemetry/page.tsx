@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
-import { GitHubStarsBadge } from '../../components/GitHubStars';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
+import { SiteNavActions } from '../../components/SiteNavActions';
 import { absoluteUrl } from '../../lib/site';
 import s from './telemetry.module.css';
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default function TelemetryPage() {
   return (
     <div className={s.page}>
-      <SiteNav actions={<GitHubStarsBadge />} />
+      <SiteNav hideLinks singleAction actions={<SiteNavActions />} />
 
       <main className={s.content}>
         <h1 className={s.title}>Telemetry</h1>

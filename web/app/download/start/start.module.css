@@ -1,0 +1,312 @@
+/* While the app downloads, a split like sign-in: the task on the left (the promise,
+   the download status, the next step), and on the right, plainly, what the
+   app does on your computer and what it shares. Nothing moves but the
+   download marker. */
+
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 100dvh;
+  background: #0b1c2a;
+  color: var(--fg);
+}
+
+@media (min-width: 960px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* ---- Left: the task ---- */
+
+.side {
+  display: flex;
+  flex-direction: column;
+  padding: 36px clamp(24px, 6vw, 88px) 56px;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  align-self: flex-start;
+  color: #fff;
+}
+
+.brand svg:first-child {
+  width: auto;
+  height: 26px;
+  color: #74b8e2;
+}
+
+.brand svg:nth-child(2) {
+  width: auto;
+  height: 22px;
+  color: #fff;
+}
+
+.content {
+  width: 100%;
+  max-width: 540px;
+  margin: auto 0;
+  padding-top: 64px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0 0;
+  color: var(--fg-faint);
+  font-size: 0.86rem;
+}
+
+.status a {
+  color: #74b8e2;
+  text-decoration: none;
+}
+
+.status a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* The way out if the download misbehaves: present, but quiet. */
+.fallback {
+  margin: 56px 0 0;
+  color: rgba(168, 184, 200, 0.72);
+  font-size: 0.82rem;
+}
+
+.fallback a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(168, 184, 200, 0.35);
+  text-underline-offset: 3px;
+}
+
+.fallback a:hover {
+  color: var(--fg-muted);
+  text-decoration-color: currentColor;
+}
+
+.title {
+  margin: 0;
+  color: #fff;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(2.2rem, 3.6vw, 3.1rem);
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.lead {
+  margin: 16px 0 0;
+  color: var(--fg-muted);
+  font-size: 1.08rem;
+  line-height: 1.5;
+  text-wrap: balance;
+}
+
+
+
+/* ---- Right: what it does on your computer ---- */
+
+.explainer {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 56px clamp(24px, 6vw, 88px);
+  border-left: 1px solid rgba(160, 205, 235, 0.08);
+  background: #08131d;
+}
+
+
+.facts {
+  display: grid;
+  gap: 32px;
+  max-width: 460px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.factIcon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(116, 184, 226, 0.28);
+  border-radius: 12px 12px 12px 3px;
+  background: rgba(16, 38, 57, 0.8);
+  color: #74b8e2;
+}
+
+.factIcon svg {
+  width: 19px;
+  height: 19px;
+  stroke-width: 1.8;
+}
+
+.fact h3 {
+  margin: 0;
+  padding-top: 2px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fact p {
+  margin: 6px 0 0;
+  color: var(--fg-muted);
+  font-size: 0.94rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.agents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.agents li {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 7px;
+  border: 1px solid rgba(160, 205, 235, 0.14);
+  border-radius: 9px 9px 9px 2px;
+  background: #0f1d2b;
+}
+
+.agents li svg,
+.agents li img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.agents .more {
+  width: auto;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+}
+
+/* ---- The download marker ---- */
+
+.marker {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(160, 205, 235, 0.22);
+  border-radius: 9px 9px 9px 2px;
+  transition:
+    background-color 240ms ease,
+    border-color 240ms ease;
+}
+
+.markerDownload {
+  overflow: hidden;
+  border-color: rgba(116, 184, 226, 0.4);
+  color: #74b8e2;
+}
+
+.markerDownload svg {
+  position: absolute;
+  inset: 6px;
+  width: 16px;
+  height: 16px;
+}
+
+/* The arrow drops into the tray twice while the download starts. */
+.arrow {
+  animation: drop 900ms cubic-bezier(0.55, 0, 0.45, 1) 2;
+}
+
+@keyframes drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-9px);
+  }
+  35% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(1px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+.check {
+  opacity: 0;
+  transform: scale(0.6);
+}
+
+/* Settled: the brand blue filled in, never a green that the page has nowhere else. */
+.markerDownload[data-settled] {
+  border-color: rgba(116, 184, 226, 0.6);
+  background: rgba(116, 184, 226, 0.16);
+}
+
+.markerDownload[data-settled] .arrow,
+.markerDownload[data-settled] .tray {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.markerDownload[data-settled] .check {
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 200ms ease,
+    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrow {
+    animation: none;
+  }
+
+  .marker,
+  .markerDownload[data-settled] .arrow,
+  .markerDownload[data-settled] .tray,
+  .markerDownload[data-settled] .check {
+    transition: none;
+  }
+}
+
+/* ---- Stacked: the task first, what it does beneath ---- */
+
+@media (max-width: 959px) {
+  .content {
+    padding-top: 56px;
+  }
+
+  .explainer {
+    border-top: 1px solid rgba(160, 205, 235, 0.08);
+    border-left: 0;
+  }
+}

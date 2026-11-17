@@ -5,7 +5,7 @@
 // (`pear-arm64.dmg`), so GitHub's `releases/latest/download/<name>` URL — which
 // resolves "latest" server-side — is a constant target:
 //
-//   wget --content-disposition https://origin.agentrelay.net/pear/download
+//   wget --content-disposition https://agentrelay.com/pear/download
 const LATEST_DMG = 'https://github.com/AgentWorkforce/pear/releases/latest/download/pear-arm64.dmg';
 
 export function GET() {

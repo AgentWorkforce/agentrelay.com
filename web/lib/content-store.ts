@@ -3,7 +3,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Read-only access to the MDX under `content/` (docs + blog), resolved without
+ * Read-only access to the MDX under `content/` (docs + blog) and the Markdown
+ * self-hosting guides under `content/self-hosting/`, resolved without
  * any filesystem access at runtime.
  *
  * The Cloudflare Workers runtime has no filesystem (OpenNext polyfills `node:fs`
@@ -34,6 +35,13 @@ try {
       return [key.replace(/^\.\//, ''), raw as string];
     })
   );
+  // The self-hosting guides are plain Markdown (lib/selfhost-docs.ts), loaded
+  // as raw strings by the `content/self-hosting` rule in next.config.mjs.
+  const selfhost = require.context('../content/self-hosting', false, /\.md$/, 'sync');
+  for (const key of selfhost.keys() as string[]) {
+    const value = selfhost(key);
+    bundled.set(`self-hosting/${key.replace(/^\.\//, '')}`, (typeof value === 'string' ? value : value.default) as string);
+  }
 } catch {
   // No webpack context (vite/node test run) — fall back to filesystem reads.
   bundled = null;
