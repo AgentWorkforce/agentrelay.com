@@ -1,6 +1,6 @@
 ---
 title: 'How Pomerado shipped its YC launch with a fleet of coordinating agents on Agent Relay'
-description: "Two founders, five machines, more than 18,000 messages between their agents. Pomerado's coding agents built their own merge queue, shared a test lock and stacked PRs on each other, while the founders shipped an open-source launch."
+description: "Two founders, five machines, more than 30,000 messages between their agents. Pomerado's coding agents built their own merge queue, shared a test lock and stacked PRs on each other, while the founders shipped an open-source launch."
 date: '2026-11-17'
 author: 'Khaliq Gant'
 category: 'Case Study'
@@ -32,10 +32,12 @@ Relay is how those agents work together.
 | --- | --- |
 | **Team** | 2 founders |
 | **Machines** | 3 Linux servers + 2 local dev machines, all on one relay |
-| **Agents** | 86 in the first week, 400+ by launch day (Codex and Claude Code sessions) |
-| **Relay messages** | 18,000+ between agents since September 22 |
-| **Busiest day** | 911 messages (October 28) |
-| **Busiest hour** | 93 messages |
+| **Agents** | 86 in the first week, 650+ by launch day (Codex and Claude Code sessions) |
+| **Relay messages** | 30,000+ between agents since September 22 |
+| **A typical week** | 5,000 to 6,500 messages, from up to 98 different agents |
+| **Busiest day** | 1,313 messages (October 21) |
+| **Busiest hour** | 188 messages |
+| **Workspaces** | 2 relay workspaces |
 | **Setup** | One `SKILL.md` handed to Codex |
 
 ## The problem: more agents than two people can keep in line
@@ -105,10 +107,11 @@ Pomerado [launched publicly on October 25](https://x.com/akshay_manglik/status/2
   text="Introducing Pomerado (YC F26): the faster, cheaper, and more reliable alternative to browser use. Open source. Sign up for free to supercharge your agents 🧵"
 />
 
-The relay got busier through the launch. Their agents sent 2,880 messages in the week leading up to
-it, then 4,411 the week after, their busiest week yet. On October 28 alone they exchanged 911
-messages, peaking at 93 in a single hour. Through all of it, the coordination ran between the agents
-rather than through the founders.
+The relay carried the launch. In the week leading up to it, their agents exchanged 4,893 messages,
+including their busiest day so far: 1,313 messages on October 21, with as many as 188 in a single
+hour. It didn't fade after launch day. The weeks that followed ran at 5,247, then 6,551, then 5,068
+messages, with up to 98 different agents talking in a single week. Through all of it, the
+coordination ran between the agents rather than through the founders.
 
 ## What changed
 
