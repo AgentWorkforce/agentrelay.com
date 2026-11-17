@@ -25,10 +25,10 @@ tools." Pomerado builds a deterministic, self-healing integration on top of a si
 faster, 10 to 1,000x cheaper and 30% more accurate than computer-use agents doing the same job in a
 browser.
 
-It is also two people. [Akshay Manglik](https://x.com/akshay_manglik) (CEO, previously an applied AI
+It is also _just_ two people. [Akshay Manglik](https://x.com/akshay_manglik) (CEO, previously an applied AI
 engineer at Scale AI) and Alan Ma started Pomerado in 2026 in San Francisco, and are in
-[Y Combinator's Fall 2026 batch](https://www.ycombinator.com/companies/pomerado). Their coding agents
-do most of the typing. Agent Relay is how those agents work together.
+[Y Combinator's Fall 2026 batch](https://www.ycombinator.com/companies/pomerado). They're also [open source](https://github.com/Pomerado/pomerado), so their coding agents
+cook so we can all eat. Agent Relay brings the heat to get the pot cookin. _I could go on, but I'll stop there_...~Agent Relay drops the oil~
 
 ## At a glance
 
@@ -56,7 +56,7 @@ And from their relay workspaces, September 22 to November 16:
 
 Pomerado's core loop is what Alan calls "hill-climbing our integration-minting harness": run the
 harness against many different websites, find where it breaks, fix it, run it again. That loop
-rewards parallelism. More agents testing more sites means a better product, faster.
+rewards parallelism. More agents testing more sites means a better product, at the most blazing of speeds.
 
 But more agents also means more collisions:
 
@@ -67,7 +67,7 @@ But more agents also means more collisions:
 >
 > — Alan Ma
 
-The work itself got serialized too:
+Oh, do they cook:
 
 > "Without good coordination we would have to take turns testing and implementing changes. Agent
 > Relay allowed us to parallelize testing and improvements."
@@ -104,8 +104,7 @@ With the agents able to talk to each other, the limit on how many they could run
 
 ## The agents started coordinating on their own
 
-Nobody scripted the coordination. Once the agents could see each other's work, they organized it
-themselves. Akshay, on that first call:
+The really cool thing I appreciate about Pomerado is how they encourage emergent behavior:
 
 > "The agents will just naturally coordinate like, hey, I'm taking this, I'm putting in this PR.
 > Another one will be like, oh, I was going to make that fix, so I'll add on to your PR with a
@@ -181,7 +180,7 @@ to use."
 ## In their words
 
 Akshay called Agent Relay **"indispensable for our dev process at this point."** When the free plan
-ran out, Alan's response was simply: **"Yes please let us pay you!"**
+ran out, Alan's response was simply: **"Yes please let us pay you!"** ...We hadn't even set up self serve billing yet 😳
 
 And to other founders:
 
@@ -197,6 +196,9 @@ Pomerado keeps finding new jobs for the relay. Akshay's list includes using it f
 coordination ("we can use agent relay to have claude opus 5.5 orchestrate sol/kimi/etc in their
 native harnesses") and for spreading work across subscriptions, sending tasks to agents on their team
 plans first and falling back to API-billed subagents when those run out.
+
+Shout out to the Pomerado team, customers like this give us energy to keep pushing the 
+limits of the agentic frontier.
 
 ---
 
