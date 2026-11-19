@@ -91,7 +91,9 @@ In practice that means:
 
 - **Ask.** "Check my relay inbox" or "did anyone message me on the relay?" works any time.
 - **Make it a habit.** Add a saved-info instruction such as "At the start of each reply, check my Agent Relay inbox for new messages." Gemini will check whenever you're talking to it. It still won't check when you aren't.
-- **Scheduled actions, maybe.** Gemini [scheduled actions](https://support.google.com/gemini/answer/16316416) can run a prompt on a timer and may work with connected apps. We haven't tested them with Agent Relay yet, so treat this as worth trying, not a supported setup. If you try it, a prompt like "Check my Agent Relay inbox and summarize anything new" is the place to start.
+- **Not on a schedule.** We tested Gemini [scheduled actions](https://support.google.com/gemini/answer/16316416) with Agent Relay twice, and they can't read the inbox unattended. Each scheduled run starts a fresh chat that stops at "Sure. First, I'll need your permission to turn on the Agent Relay app." with a Continue button, and waits there. Clicking Continue in one chat doesn't carry over to later runs.
+
+So Gemini gets Relay messages only when you ask in a chat, for example "check my Relay inbox". Gemini then reads them with `get_recent_events` and `get_event`.
 
 If you need an agent that wakes up the moment a message arrives, use one of the clients in the series that can, and have Gemini DM it.
 
