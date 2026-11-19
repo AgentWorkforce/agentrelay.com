@@ -41,20 +41,47 @@ A repository `.cursor/hooks.json` isn't needed and isn't used for identity.
 
 Cursor cloud agents enrol at relaygate as hosted participants of client
 `cursor-cloud`. A hosted participant matches only rules that name the hosted
-kind, never a catch-all rule. Put them in the pit (gid 22), where they may
-write into local inboxes only as your policy allows and never read local data:
+kind, never a catch-all rule. They run in Cursor's cloud, outside your
+network.
+
+Don't put them in the pit (gid 22) of the [default policy](/docs/self-hosting/relaygate#the-policy).
+That group is inside the boundary: it may read `relaycast:channel/` and
+`relaycast:inbox/local-`. Give them a group of their own instead (gid 55
+below), with a ceiling that keeps them out of the pit. Then grant only what
+they need:
 
 ```json
+"groups": [..., {"gid": 55, "name": "cursor-cloud"}],
 "controlPrincipals": [
-  {"match": {"orgIds": ["<org>"], "kinds": ["hosted"], "clients": ["cursor-cloud"], "as": ["agent"]}, "gid": 22, "namePrefix": "cursor-cloud-"},
+  {"match": {"orgIds": ["<org>"], "kinds": ["hosted"], "clients": ["cursor-cloud"], "as": ["agent"]}, "gid": 55, "namePrefix": "cursor-cloud-"},
   ...
   {"match": {"orgIds": ["<org>"]}, "gid": 11}
 ],
+"streamDefaults": [
+  {"prefix": "relaycast:inbox/cursor-cloud-", "gid": 55, "mode": "660", "acl": [{"gid": 11, "perm": "w"}]},
+  {"prefix": "relaycast:inbox/local-", "gid": 11, "mode": "660", "acl": [{"gid": 22, "perm": "r"}, {"gid": 55, "perm": "w"}]},
+  ...
+],
+"ceilings": [..., {"gid": 55, "never": [22]}],
 "reservedNamePrefixes": ["cursor-cloud-"]
 ```
 
-`reservedNamePrefixes` keeps desktops and enrollment keys from taking
-`cursor-cloud-` names; Control's hosted enrolment may still use them.
+With this policy:
+
+- Local agents may DM a cloud agent run (`w` on its inbox).
+- A run may DM local agents (`w` on `relaycast:inbox/local-`). It may not read
+  their inboxes.
+- A run reads nothing else of the local group's. Default channels are owned
+  by local with no ACL entry for 55, so channels are closed to it unless you
+  add an entry.
+- The ceiling keeps it out of every pit stream, whatever an ACL says.
+- `reservedNamePrefixes` keeps desktops and enrollment keys from taking
+  `cursor-cloud-` names. Control's hosted enrolment may still use them.
+
+Writes that cross a group boundary are classified, as for any group. Merge
+these entries into your existing lists rather than replacing them. Keep the
+`relaycast:inbox/local-` entry's existing ACL (the pit's read) and add 55's
+write to it.
 
 Other hosted MCP clients (`chatgpt`, `grok-bot`, `muse`, `mcp`) need rules of
 their own in the same shape. See "Hosted participants" in the
@@ -64,9 +91,13 @@ their own in the same shape. See "Hosted participants" in the
 > enrols as `cursor-cloud`, not `grok-bot`. If your rule allows only
 > `"grok-bot"`, add `"cursor-cloud"` to its `clients`.
 
-**Done when:** `POST /admin/v1/explain` with
-`{"as": {"control": {"userId": "<user>", "orgId": "<org>", "kind": "hosted", "client": "cursor-cloud"}}, "op": "w", "resource": {"kind": "stream", "id": "relaycast:inbox/<a local agent>"}}`
-names the pit as the subject's group.
+**Done when:** `relaygate-explain` (or `POST /admin/v1/explain`) answers, for
+`{"control": {"userId": "<user>", "orgId": "<org>", "kind": "hosted", "client": "cursor-cloud"}}`:
+
+- `allow` for `"op": "w"` on `relaycast:inbox/local-<agent>`, with group `cursor-cloud`;
+- `deny` for `"op": "r"` on the same inbox;
+- `deny` for `"op": "r"` on `relaycast:channel/<a channel>`;
+- `deny` for anything in the pit.
 
 ## Optional settings
 
