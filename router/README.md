@@ -242,5 +242,5 @@ and target-unavailable responses retain their status, body, retry and maintenanc
 headers, with an added correlation header. Dispatch configuration is unchanged.
 
 This fallback works outside the application isolate; it diagnoses a platform
-kill without claiming to fix its memory allocation. Production and preview
-publication retain the repository's human and `cmo` release gates.
+kill without claiming to fix its memory allocation. Production changes retain
+the repository's reviewed CI and human release gates.
