@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import worker from "../index.js";
+import { withMcpGatewayErrors } from "../src/mcp-gateway-errors.js";
 
 const ctx = { waitUntil: () => undefined, passThroughOnException: () => undefined } as unknown as ExecutionContext;
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -16,6 +17,13 @@ function call(path: string, fetch: (request: Request) => Promise<Response>, meth
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("hosted MCP gateway failures", () => {
+  it("keeps other hosts outside the MCP fallback, including an arelay.to handle named mcp", async () => {
+    const original = new Response("chat failure", { status: 503 });
+    const response = await withMcpGatewayErrors(new Request("https://arelay.to/mcp", { method: "POST" }), async () => original);
+    expect(response).toBe(original);
+    expect(response.headers.get("x-correlation-id")).toBeNull();
+    expect(await response.text()).toBe("chat failure");
+  });
   it.each(paths)("gives a blank platform 503 at %s a useful body and one correlation ID", async path => {
     const log = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const upstream = vi.fn(async (request: Request) => {

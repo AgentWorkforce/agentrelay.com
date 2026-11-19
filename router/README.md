@@ -227,7 +227,7 @@ npm run lint
 
 ## Hosted MCP gateway failures
 
-POST failures on the Shared Sessions (`/mcp` included), Events and Replica MCP
+On `agentrelay.com`, POST failures on the Shared Sessions (`/mcp` included), Events and Replica MCP
 facades receive a safe JSON-RPC error when an upstream 5xx has no application
 correlation header, including a blank response from a killed application Worker.
 The gateway returns the original HTTP status, a generated `X-Correlation-Id`,

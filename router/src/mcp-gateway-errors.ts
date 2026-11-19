@@ -2,7 +2,9 @@ type McpEndpoint = "shared-sessions" | "relay-events" | "replicas";
 
 function endpointFor(request: Request): McpEndpoint | null {
   if (request.method !== "POST") return null;
-  const path = new URL(request.url).pathname.replace(/^\/cloud(?=\/)/, "").replace(/\/+$/, "");
+  const url = new URL(request.url);
+  if (url.hostname !== "agentrelay.com") return null;
+  const path = url.pathname.replace(/^\/cloud(?=\/)/, "").replace(/\/+$/, "");
   if (path === "/mcp" || path === "/api/v1/mcp/shared-sessions") return "shared-sessions";
   if (path === "/api/v1/mcp/relay-events") return "relay-events";
   return path === "/api/v1/replicas/mcp" ? "replicas" : null;
