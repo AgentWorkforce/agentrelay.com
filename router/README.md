@@ -224,3 +224,23 @@ Offline router validation:
 ~/.local/bin/aw-heavy -- npm --workspace router run typecheck
 npm run lint
 ```
+
+## Hosted MCP gateway failures
+
+On `agentrelay.com`, POST failures on the Shared Sessions (`/mcp` included), Events and Replica MCP
+facades receive a safe JSON-RPC error when an upstream 5xx has no application
+correlation header, including a blank response from a killed application Worker.
+The gateway returns the original HTTP status, a generated `X-Correlation-Id`,
+and the same ID in the error message and `error.data.correlation_id`. A thrown
+dispatch failure becomes a correlated 503. Calls are forwarded once.
+
+The `hosted_mcp_gateway_failure` log joins that ID to a validated platform
+CF-Ray and a fixed failure category. Request bodies, headers, URLs, upstream
+bodies and exception messages are excluded from the log. Successful streams and
+already-correlated application failures pass through unread. Database cutover
+and target-unavailable responses retain their status, body, retry and maintenance
+headers, with an added correlation header. Dispatch configuration is unchanged.
+
+This fallback works outside the application isolate; it diagnoses a platform
+kill without claiming to fix its memory allocation. Production changes retain
+the repository's reviewed CI and human release gates.
