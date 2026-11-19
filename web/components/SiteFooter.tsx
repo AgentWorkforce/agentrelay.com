@@ -24,6 +24,7 @@ const footerColumns: FooterColumn[] = [
     title: 'Product',
     links: [
       { label: 'Sign up', href: teamsGoogleAuthHref('footer'), navigate: true },
+      { label: 'Pricing', href: '/pricing' },
       { label: 'Desktop app', href: '/download' },
       { label: 'Open source', href: '/open-source' },
     ],
