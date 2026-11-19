@@ -71,7 +71,13 @@ export function KeepInbox({ manageToken }: { manageToken: string }) {
   useEffect(() => {
     if (autoTried.current) return;
     autoTried.current = true;
-    if (new URLSearchParams(window.location.search).get('keep') === '1') void keep();
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('keep') !== '1') return;
+    // Keep once, for the inbox open on return from sign-up. Each agent tab has its own inbox
+    // (and its own KeepInbox), so drop the flag before another tab's inbox could be kept too.
+    url.searchParams.delete('keep');
+    window.history.replaceState(null, '', url.toString());
+    void keep();
   }, [keep]);
 
   return (
