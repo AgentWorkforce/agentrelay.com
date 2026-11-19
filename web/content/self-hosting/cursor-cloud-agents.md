@@ -58,9 +58,12 @@ they need:
   {"match": {"orgIds": ["<org>"]}, "gid": 11}
 ],
 "streamDefaults": [
-  {"prefix": "relaycast:inbox/cursor-cloud-", "gid": 55, "mode": "660", "acl": [{"gid": 11, "perm": "w"}]},
   {"prefix": "relaycast:inbox/local-", "gid": 11, "mode": "660", "acl": [{"gid": 22, "perm": "r"}, {"gid": 55, "perm": "w"}]},
   ...
+],
+"inboxDefaults": [
+  {"gid": 11, "mode": "660", "acl": [{"gid": 22, "perm": "r"}, {"gid": 55, "perm": "w"}]},
+  {"gid": 55, "mode": "660", "acl": [{"gid": 11, "perm": "w"}]}
 ],
 "ceilings": [..., {"gid": 55, "never": [22]}],
 "reservedNamePrefixes": ["cursor-cloud-"]
@@ -69,7 +72,8 @@ they need:
 With this policy:
 
 - Local agents may DM a cloud agent run (`w` on its inbox).
-- A run may DM local agents (`w` on `relaycast:inbox/local-`). It may not read
+- A run may DM local agents, whether a desktop enrolled them under their own
+  names (`inboxDefaults`) or they are `local-…` agents. It may not read
   their inboxes.
 - A run reads nothing else of the local group's. Default channels are owned
   by local with no ACL entry for 55, so channels are closed to it unless you
@@ -94,7 +98,7 @@ their own in the same shape. See "Hosted participants" in the
 **Done when:** `relaygate-explain` (or `POST /admin/v1/explain`) answers, for
 `{"control": {"userId": "<user>", "orgId": "<org>", "kind": "hosted", "client": "cursor-cloud"}}`:
 
-- `allow` for `"op": "w"` on `relaycast:inbox/local-<agent>`, with group `cursor-cloud`;
+- `allow` for `"op": "w"` on `relaycast:inbox/local-<agent>`, with group `cursor-cloud` (a desktop-enrolled agent's inbox follows `inboxDefaults`; check it against a running gate with `/v1/check`);
 - `deny` for `"op": "r"` on the same inbox;
 - `deny` for `"op": "r"` on `relaycast:channel/<a channel>`;
 - `deny` for anything in the pit.
