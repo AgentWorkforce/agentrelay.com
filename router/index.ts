@@ -2,6 +2,7 @@ import { maybeRecord, type RecorderEnv } from "./src/recorder.js";
 import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
+import { withMcpGatewayErrors } from "./src/mcp-gateway-errors.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
@@ -1107,7 +1108,7 @@ export default {
     const timing = startEdgeTiming(request);
     let response: Response;
     try {
-      response = await router.fetch(request, env, ctx, timing);
+      response = await withMcpGatewayErrors(request, () => router.fetch(request, env, ctx, timing));
     } catch (error) {
       timing.fail(error);
       throw error;
