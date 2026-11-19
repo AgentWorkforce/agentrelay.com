@@ -31,6 +31,10 @@ export const docsNav: NavGroup[] = [
     ],
   },
   {
+    title: 'Hosted agents',
+    items: [{ title: 'Replicas', slug: 'replicas' }],
+  },
+  {
     title: 'Flows',
     items: [{ title: 'Flows', slug: 'flows' }],
   },
