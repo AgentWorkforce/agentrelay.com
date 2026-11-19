@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 111,
+  "count": 112,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -72,6 +72,7 @@
     "https://agentrelay.com/docs/self-hosting/backup-and-restore",
     "https://agentrelay.com/docs/self-hosting/bring-your-own-aws",
     "https://agentrelay.com/docs/self-hosting/bring-your-own-gcp",
+    "https://agentrelay.com/docs/self-hosting/cursor-cloud-agents",
     "https://agentrelay.com/docs/self-hosting/desktop-app",
     "https://agentrelay.com/docs/self-hosting/downloads",
     "https://agentrelay.com/docs/self-hosting/durable-actors",
