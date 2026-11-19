@@ -40,7 +40,7 @@ Used by [this guide](/docs/self-hosting/install-gke). Checksums: [`SHA256SUMS`](
 | [`add-user.sh`](https://agentrelay.com/self-hosting/files/gke/add-user.sh) | `64656f743f1c04b69044f5403bb70914d824179edfb3de596f84e559e7105303` |
 | [`cloud-sql-setup.sh`](https://agentrelay.com/self-hosting/files/gke/cloud-sql-setup.sh) | `044f4227a119438cf4bf42b5eb32a2bcac112dcc223dbd4a5bb99df290639a0b` |
 | [`create-workload-identity.sh`](https://agentrelay.com/self-hosting/files/gke/create-workload-identity.sh) | `b474bf2ddd9e01ca67c905a1d9652ccaf80b74eb47a56ddffb46071b2fafff7e` |
-| [`first-admin.sh`](https://agentrelay.com/self-hosting/files/gke/first-admin.sh) | `35a1d8eab7855d451c5dae2eb3072afd6411dea4ccde8f188936e08cbe38386f` |
+| [`first-admin.sh`](https://agentrelay.com/self-hosting/files/gke/first-admin.sh) | `7991981ce1bab75fd4385f851f7a1e67bdc9733a51ad3ab9951ca3fbd7c3e2a0` |
 | [`helm-secrets-prepare.sh`](https://agentrelay.com/self-hosting/files/gke/helm-secrets-prepare.sh) | `2ae3074e1577fd32f3b10c2d104a239b144454068a37fb0cecdb62e31de3d124` |
 | [`managed-values-byo.sh`](https://agentrelay.com/self-hosting/files/gke/managed-values-byo.sh) | `9fa8e76b98949612855498795c36a77557717a905b18d7cfe34dca78aeac56ea` |
 | [`okta-setup.sh`](https://agentrelay.com/self-hosting/files/gke/okta-setup.sh) | `d2208cdf9011cd06fb103250da1fc9129b69dc6f4119456da531593c2728f1d7` |
