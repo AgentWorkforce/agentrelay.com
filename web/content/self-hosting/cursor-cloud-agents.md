@@ -108,7 +108,7 @@ Set these on Control (the `relay-control` service):
 | `SELFHOST_CURSOR_CLOUD_TRUSTED_TEAMS` | empty | Comma-separated Cursor team ids. A token from one of these teams links its owner automatically when its email is the person's own Agent Relay email. |
 | `SELFHOST_CURSOR_CLOUD_RUN_IDENTITY` | `optional` | `required` makes a Cursor connection act only as verified runs, never as its shared connector agent. Keep `optional` if people use Grok Bot routines. |
 | `SELFHOST_CURSOR_CLOUD_ALLOW_SELF_HOSTED` | `off` | Accept tokens from self-hosted Cursor workers. Any process running as the worker's user can mint those, so leave it off unless you need it. |
-| `SELFHOST_CURSOR_CLOUD` | `on` | `off` turns per-run identity off. |
+| `SELFHOST_CURSOR_CLOUD` | `on` | `off` turns per-run identity off. It does not remove access: connections keep their shared agent (see [Revoke and clean up](#revoke-and-clean-up)). |
 
 ## Connect Cursor (each person)
 
@@ -142,8 +142,14 @@ reads replies with `check_relay_inbox`.
 - **A person's connection:** disconnect it in Agent Relay's connected apps, or
   remove the MCP server in Cursor and revoke the grant. Agent Relay then
   releases every run of that connection.
-- **Everyone:** set `SELFHOST_CURSOR_CLOUD=off`, or, with relaygate, remove the
-  `cursor-cloud` rule. New joins are then refused.
+- **Everyone, on a gate-only install:** remove the `cursor-cloud` relaygate
+  rule. relaygate then refuses every Cursor cloud agent connection, per-run or
+  not.
+- **Everyone, without relaygate:** revoke the Cursor connections' OAuth grants
+  (each person's connected apps, or an admin's grant revocation).
+  `SELFHOST_CURSOR_CLOUD=off` turns off per-run identity only. A Cursor
+  connection can still call `join_relay` without a token and act as its
+  connection's shared agent.
 
 ## Troubleshooting
 
