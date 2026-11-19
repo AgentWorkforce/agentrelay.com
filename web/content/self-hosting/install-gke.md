@@ -178,7 +178,7 @@ network_self_link    = "projects/<project id>/global/networks/<cluster VPC>"
 sessions_bucket_name = "<globally unique bucket name, e.g. acme-agent-relay-sessions>"
 deletion_protection  = true
 image_mirror_repository = "agent-relay-mirror"   # step 5's registry, readable by the GKE nodes
-# desktop_feed_bucket_name = "<globally unique, e.g. acme-agent-relay-desktop-feed>"   # optional: the desktop app's update feed
+# desktop_feed_bucket_name = "<globally unique, e.g. acme-agent-relay-desktop-feed>"   # optional: leave it out for now (see below)
 # gke_node_service_account = "<email>"   # only if the node pool has its own service account
 # kms_key_name = "projects/<p>/locations/<region>/keyRings/<ring>/cryptoKeys/<key>"   # optional CMEK
 labels = { app = "agent-relay" }
@@ -200,11 +200,18 @@ exists.
 signed update feed in your project: a private bucket, and a Google service
 account that relay-control uses through Workload Identity to write releases
 there and sign download links. Creating that service account needs Service
-Account Admin. `managed-values.json` carries the feed's settings into step 11.
-If your `values.yaml` sets `relay-control.extraEnv`, copy the `env` entries
-from `terraform output desktop_feed` into it: Helm replaces a list instead of
-merging it. The feed also needs a signing key: see
+Account Admin. The feed also needs a signing key, so **leave this line
+commented out during the install** and add it later with the key, in
 [Signed desktop update feed](#signed-desktop-update-feed-optional).
+
+The bucket puts the feed's storage settings into `managed-values.json`, and
+relay-control won't start with storage but no signing key. It exits with
+`SELFHOST_DESKTOP_FEED_SIGNER and SELFHOST_DESKTOP_FEED_STORAGE must be set together`,
+and the pod restarts again and again. Already hit it? See
+[Troubleshooting](/docs/self-hosting/troubleshooting#relay-control-exits-signer-and-storage-must-be-set-together).
+If your `values.yaml` sets `relay-control.extraEnv`, copy the `env` entries
+from `terraform output desktop_feed` into it once the feed is on: Helm
+replaces a list instead of merging it.
 
 **Where the Terraform state lives.** The example has no `backend` block, so
 `terraform init` keeps the state in a local file. To keep it in Cloud Storage
@@ -331,6 +338,25 @@ EOF
 source settings.sh
 bash -c 'source ./settings.sh; for v in DOMAIN ORG_ID ORG_NAME ADMIN_EMAIL GCP_PROJECT_ID REGION MIRROR_ROOT CLOUD_SQL_INSTANCE CLOUD_SQL_HOST CLOUD_SQL_ADMIN_USER CLOUD_SQL_ADMIN_SECRET_ID CLOUD_SQL_CA_SHA256 SESSIONS_BUCKET; do [ -n "${!v}" ] && [ "${!v}" != null ] && [[ "${!v}" != *"<"* ]] || echo "MISSING: $v"; done; echo "settings checked"'
 ```
+
+**`SERVICES_IMAGE`, `PSQL_IMAGE` and `agent-relay-0.7.54.tgz` belong to
+`agent-relay-2026.11.16`** (chart 0.7.54), the release this guide installs.
+Installing another release? Don't reuse these digests: the Jobs in steps 8, 13
+and 16 would run an older services image than the rest of the install. Read
+the three values from that release's own files in `release/` (step 1, with its
+tag):
+
+```sh
+ls release/agent-relay-*.tgz
+jq -r '.images[] | select(.name == "sessions-pipeline" or .name == "sessions-migration-postgresql") | "\(.name) \(.ref)"' release/release-manifest.json
+```
+
+`SERVICES_IMAGE` is `$MIRROR_ROOT/` followed by the `sessions-pipeline` ref,
+and `PSQL_IMAGE` is `$MIRROR_ROOT/` followed by the
+`sessions-migration-postgresql` ref. The `.tgz` name replaces
+`agent-relay-0.7.54.tgz` in steps 11 and 13. The infra checkout also records
+the services image for each release, in
+`infra/releases/<release tag>/pins.json` (`.pins["sessions-pipeline"]`).
 
 **Brought your own resources (step 3)?** Replace the six lines between `PG=` and
 `unset` with the values from
@@ -512,7 +538,8 @@ with `echo $CLOUD_SQL_CA_SHA256`.
 kubectl -n $NAMESPACE get managedcertificate agent-relay -o jsonpath='{.status.certificateStatus}{"\n"}'
 ```
 
-Repeat until it prints `Active`. Then:
+Repeat until it prints `Active` (what is normal while you wait is below).
+Then:
 
 ```sh
 curl -fsS "https://api.$DOMAIN/readyz" && echo " api ok"
@@ -524,12 +551,32 @@ curl -s -o /dev/null -w "history %{http_code}\n" "https://history.$DOMAIN/v1/ses
 **Done when:** `Active`, then `api ok`, `cast ok`, `dashboard 200` and
 `history 401`.
 
+**The Ingress can take 15 to 20 minutes to get its address** after step 11.
+The certificate can't leave `Provisioning` before that. To look:
+
+```sh
+kubectl -n $NAMESPACE get ingress
+kubectl -n $NAMESPACE describe ingress | sed -n '/^Events:/,$p'
+```
+
+A `Translation failed ... no BackendConfig for service port exists` warning
+on the first sync is harmless if it doesn't repeat. The load balancer
+controller read the Services before their BackendConfigs, and a later sync
+fixes it by itself. Worry only if the `ADDRESS` column is still empty, or the
+warning still repeats, after about 20 minutes; then send us the events.
+
 - **Still `Provisioning` after an hour:** one of the four names doesn't resolve
   to the address from step 6, or a CAA record blocks Google. Fix DNS; the
   certificate retries by itself.
 - **`FailedNotVisible`:** the same: DNS doesn't point at the load balancer yet.
 - **502 for a few minutes after `Active`:** the load balancer's health checks
   are still converging. Wait 5 minutes.
+- **502 on `/internal` and other closed paths is not an outage.** The chart
+  sends paths that must not be public (for example
+  `https://api.<domain>/internal/...`) to the `...-cast-edge-deny` Service,
+  which has no endpoints on purpose. Without a Cloud Armor policy the load
+  balancer answers those paths with 502, not 403 or 404. Only the four checks
+  above tell you whether the install is up.
 
 <!-- agent
 Poll the certificate status every 2 minutes for up to 60 minutes. Do not
@@ -568,6 +615,21 @@ hours: the script never retries, and it stops if the secret already exists. A
 `403 csrf_rejected` means the request lacked your dashboard's origin; it is
 refused before the key is read, so the key stays unused.
 
+Two settings, both optional:
+
+- **The API isn't at `api.<domain>`** (you chose your own host names): name it
+  with `API_HOST=<api hostname> bash first-admin.sh ...`. Give only the host
+  name, without `https://` or a path. The script calls that host and still
+  sends `<domain>` as the origin.
+- **No Secret Manager** (the API is off, or you may not create secrets there):
+  `PASSWORD_FILE=<path> bash first-admin.sh ...` keeps the password in that
+  new local file (mode 0600) instead. `gcloud` isn't needed then, and the
+  project ID isn't used: you can pass `-`. The script stops if the file (or a
+  link with that name) already exists. Hand the file to the admin over a
+  channel you trust, then delete it. Without `PASSWORD_FILE`, the script needs
+  `secretmanager.googleapis.com` and permission to create a secret in the
+  project.
+
 Then add users:
 
 ```sh
@@ -584,7 +646,8 @@ Do NOT run the setup-key command or add-user.sh yourself: each prints a
 credential. ASK THE HUMAN (the first admin) to run them in their own terminal
 and to tell you only "signed in" when done.
 Run first-admin.sh only if the human explicitly asks you to. It prints no
-credential. STOP on anything but "first admin set".
+credential. With PASSWORD_FILE, never read, print or copy that file.
+STOP on anything but "first admin set".
 -->
 
 ## 16. Turn on agent search (once, after first sign-in)
@@ -749,6 +812,10 @@ token it publishes with. The token itself stays with Agent Relay.
    (cd infra/terraform/examples/gcp && terraform plan -out tfplan && terraform apply tfplan \
      && terraform output -json chart_values > ../../../../managed-values.json)
    ```
+
+   Don't run step 11's or step 13's `helm upgrade` again until item 3 below:
+   until the signing key is in place, relay-control won't start with these
+   settings.
 2. **Signing key:** create an Ed25519 key for the profile and store it in the
    cluster. The private key never leaves your cluster and Secret Manager:
 

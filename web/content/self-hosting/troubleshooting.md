@@ -36,6 +36,17 @@ HUMAN before running anything that changes the cluster or cloud account.
   with `permission denied for schema sessions`. It recovers by itself.
 - **`helm upgrade --install` prints `STATUS: deployed` with a failed migration
   Job.** Helm doesn't wait for Jobs here: always run the migration check.
+- **On GKE, the Ingress has no address for 15 to 20 minutes after step 11,**
+  and its events may show one `Translation failed ... no BackendConfig for
+  service port exists` warning. The load balancer controller read the Services
+  before their BackendConfigs; a later sync fixes it by itself. Worry only if
+  the address is still empty, or the warning still repeats, after about 20
+  minutes (see [step 14 of the GKE guide](/docs/self-hosting/install-gke#14-wait-for-the-certificate-and-check-up-to-60-minutes)).
+- **On GKE, `/internal` and other closed paths answer 502.** The chart sends
+  them to the `...-cast-edge-deny` Service, which has no endpoints on purpose.
+  Without a Cloud Armor policy the load balancer answers 502 there, not 403 or
+  404. This is not an outage: the four checks in step 14 tell you whether the
+  install is up.
 
 ## Common problems
 
@@ -119,6 +130,30 @@ kubectl -n agent-relay get managedcertificate -o wide
 ```
 
 Don't roll back mid-provisioning: that starts another replacement.
+
+### relay-control exits: signer and storage must be set together
+
+relay-control restarts again and again, and its log ends with
+`SELFHOST_DESKTOP_FEED_SIGNER and SELFHOST_DESKTOP_FEED_STORAGE must be set together`.
+`desktop_feed_bucket_name` is set in `terraform.tfvars`, so
+`managed-values.json` carries the desktop feed's storage settings, but the
+feed's signing key isn't in place yet.
+
+Keep the bucket, and take the storage settings out until the key exists. From
+the install folder:
+
+```sh
+jq 'del(.["relay-control"].extraEnv)' managed-values.json > managed-values.tmp && mv managed-values.tmp managed-values.json
+```
+
+Also remove any `SELFHOST_DESKTOP_FEED_*` entries you copied into
+`values.yaml`. The service account annotations can stay. Then run step 11's
+`helm upgrade` command again. The Terraform in `agent-relay-2026.11.16` has
+no setting that does this for you, so use the `jq` line.
+
+When the key is in place, follow
+[Signed desktop update feed](/docs/self-hosting/install-gke#signed-desktop-update-feed-optional):
+its first item writes `managed-values.json` again with the storage settings.
 
 ### Other GKE issues
 
