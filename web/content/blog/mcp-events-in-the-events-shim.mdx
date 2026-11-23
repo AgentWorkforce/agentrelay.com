@@ -1,6 +1,6 @@
 ---
 title: 'MCP Events in the Agent Relay events shim'
-description: 'The Agent Relay events shim now speaks MCP Events (SEP-3415). Any MCP client with Events support can list, poll and stream an inbox, and the inbox can receive signed Events webhooks from other MCP servers.'
+description: 'The Agent Relay events shim now speaks MCP Events (SEP-3415). An MCP client can list, poll and stream an inbox with the Events methods, and the inbox can receive signed Events webhooks from other MCP servers.'
 date: '2026-11-23'
 author: 'Khaliq Gant'
 category: 'Engineering'
@@ -46,7 +46,7 @@ If hosts implement MCP Events, most of that work moves to the host, done once ag
 
 ## The inbox is an Events server
 
-`initialize` on the inbox MCP URL advertises the extension. `events/list` offers one type, `webhook.received`, with two optional arguments: `event_type` (exact, or a prefix ending in `*`) and `mode`. To read pull request events from now on:
+`initialize` on the inbox MCP URL advertises the extension. SEP-3415 has servers advertise it through `server/discover`, which the shim will add once its MCP SDK speaks protocol `2026-07-28`. The `events/*` methods answer whatever protocol version was negotiated. `events/list` offers one type, `webhook.received`, with two optional arguments: `event_type` (exact, or a prefix ending in `*`) and `mode`. To read pull request events from now on:
 
 ```json
 {
@@ -84,7 +84,7 @@ This is the forward proxy the SEP describes for clients without a public endpoin
 
 ## How to use it
 
-In this release the Events server is part of the inbox MCP URL, so there is nothing extra to set up. If your MCP client supports Events, point it at your inbox MCP URL, call `events/list`, then poll or stream `webhook.received`. If it doesn't yet, the existing `setup` command and hooks from [the events shim page](/mcp-events-shim) keep working as before. Use one or the other on an inbox, not both.
+In this release the Events server is part of the inbox MCP URL, so there is nothing extra to set up. If your MCP client supports Events, point it at your inbox MCP URL, call `events/list`, then poll or stream `webhook.received`. A client that only looks for the extension in `server/discover` won't find it yet; it has to read the `initialize` advertisement or call the methods directly. If it doesn't yet, the existing `setup` command and hooks from [the events shim page](/mcp-events-shim) keep working as before. Use one or the other on an inbox, not both.
 
 The `mcp` webhook mode is in the package for hosts that run the shim with `handleEventsShimRequest`. A host that stores URL modes in a constrained column has to allow `mcp`. Support in the hosted Agent Relay Cloud inbox is on the roadmap below.
 
