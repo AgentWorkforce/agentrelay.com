@@ -11,6 +11,22 @@ Route precedence:
   `www.arelay.to`. The Worker owns registry lookup and its 404/410 decisions.
 - everything else falls back to the legacy proxy target.
 
+`public.agentrelay.com` (production router) and `public-staging.agentrelay.com`
+(staging router, `wrangler deploy --env staging`) are additional hosts
+(`src/hosts.ts`). They route like `agentrelay.com`, plus `X-Robots-Tag:
+noindex` on every response; the OpenAI apps challenge stays apex-only. Existing
+hosts are unchanged: `scripts/no-disruption.sh` replays a request matrix
+through the base and current router and diffs the production wrangler config.
+
+Staging routing applies on the staging Worker (`ROUTER_ENV=staging`) and to any
+`public-staging.agentrelay.com` request. It falls back to the staging web
+Worker (`WEB_ORIGIN`), and its `/cloud*` never reaches production Cloud (no
+cloud-web Worker, webhook Worker, facade or `CLOUD_APP_ORIGIN`): it answers
+503, or proxies to `CLOUD_PROXY_ORIGIN` when that names a staging Cloud
+(Control) origin. `ROUTER_ENV`, `WEB_ORIGIN` and `CLOUD_PROXY_ORIGIN` are
+staging-only and ignored on production hosts. Staging deploys only through the
+manual `deploy-staging.yml` workflow and has no analytics.
+
 RelayFile observer deployment is wired from the production job in
 `.github/workflows/deploy.yml`. The job runs
 `scripts/deploy-file-observer-pages.sh`, which packs
@@ -113,8 +129,8 @@ Matching decodes the request path once. Encoded separators/dots/percent signs,
 duplicate slashes, dot segments, malformed encoding and control/backslash
 characters retain legacy routing instead of risking a different backend parse.
 Forwarding preserves the caller's original escaped path and query, including
-repeated query keys. This feature applies only to the `agentrelay.com` host,
-after the router's existing special routes and Cloud aliases are resolved.
+repeated query keys. This feature applies only to the `agentrelay.com` host (and its
+`public.*` aliases, see below), after the router's existing special routes and Cloud aliases are resolved.
 It does not change arelay.to behavior.
 
 `shadow` returns the existing response. Eligibility is the intersection of a

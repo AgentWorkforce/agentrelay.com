@@ -22,5 +22,19 @@
   "preview_urls": true,
   "observability": {
     "enabled": true
+  },
+  // Staging: `wrangler deploy --env staging` (deploy-staging.yml, manual only).
+  // A separate Worker the staging router (public-staging.agentrelay.com)
+  // falls back to. Routes are not inherited, so the origin domain is set here.
+  "env": {
+    "staging": {
+      "name": "agentrelay-web-staging",
+      "routes": [
+        {
+          "pattern": "origin-web-staging.agentrelay.com",
+          "custom_domain": true
+        }
+      ]
+    }
   }
 }

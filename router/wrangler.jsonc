@@ -60,10 +60,46 @@
     // Short agent-chat front door. Its zone must be in this account with no
     // existing apex/www DNS records before the first deploy attaches these.
     { "pattern": "arelay.to", "custom_domain": true },
-    { "pattern": "www.arelay.to", "custom_domain": true }
+    { "pattern": "www.arelay.to", "custom_domain": true },
+    // Serves exactly what agentrelay.com serves (src/hosts.ts lists it as a
+    // primary-host alias; responses carry X-Robots-Tag: noindex). Its DNS name
+    // must have no existing record before the first deploy attaches it.
+    { "pattern": "public.agentrelay.com", "custom_domain": true }
   ],
 
   "workers_dev": false,
   "preview_urls": true,
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+
+  // Staging: `wrangler deploy --env staging` (deploy-staging.yml, manual only).
+  // A separate Worker fronting public-staging.agentrelay.com, falling back to
+  // the staging web Worker. Wrangler does not inherit bindings, vars or routes
+  // into an environment, so everything staging gets is listed here.
+  //
+  // Deliberately NOT bound in staging (no staging counterparts exist; the
+  // router tolerates every one being absent). Never add the production ones:
+  //   - CLOUD_WEB_WORKER (cloud-web-worker): staging /cloud* never reaches
+  //     production Cloud. It answers 503 unless the STAGING-ONLY
+  //     CLOUD_PROXY_ORIGIN names a staging Cloud (Control) origin.
+  //     TODO(staging-cloud): choose that target.
+  //   - CLOUD_APP_ORIGIN: not set; ROUTER_ENV=staging makes the router ignore it.
+  //   - RELAY_AGENT_WORKER (relay-agent): agent-chat/registry routes are
+  //     arelay.to only, and staging does not serve arelay.to.
+  //   - ROUTER_CONFIG KV: no webhook flag, recorder or cloud facade in staging.
+  //   - TRAFFIC_RECORDER R2: no replay recording in staging.
+  //   - ARELAY_ANALYTICS: staging analytics stay off.
+  "env": {
+    "staging": {
+      "name": "agentrelay-router-staging",
+      "vars": {
+        "ROUTER_ENV": "staging",
+        "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",
+        "WEB_ORIGIN": "https://origin-web-staging.agentrelay.com"
+        // TODO(staging-cloud): "CLOUD_PROXY_ORIGIN": "<staging Cloud (Control) origin>"
+      },
+      "routes": [
+        { "pattern": "public-staging.agentrelay.com", "custom_domain": true }
+      ]
+    }
+  }
 }

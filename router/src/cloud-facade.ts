@@ -1,4 +1,5 @@
 import { routeClass } from "./edge-timing.js";
+import { isPrimaryHost } from "./hosts.js";
 
 export const CLOUD_FACADE_KEY = "cloud-facade-routes";
 const ALLOWED_ORIGINS = new Set([
@@ -63,7 +64,7 @@ export function parseFacadeRoutes(raw: string | null): FacadeRoute[] {
 export async function readFacadeRoute(request: Request, config?: Config): Promise<FacadeRoute | null> {
   const url = new URL(request.url);
   // Keep the arelay.to registry, redirects and chat routing independent.
-  if (url.hostname !== "agentrelay.com" || isFacadeDenied(request)) return null;
+  if (!isPrimaryHost(url.hostname) || isFacadeDenied(request)) return null;
   const pathname = decodedFacadePath(url.pathname);
   if (pathname === null) return null;
   let routes: FacadeRoute[];
