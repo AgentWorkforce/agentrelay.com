@@ -136,7 +136,7 @@ Do a real round trip. You need the chat's agent name (say `copilot-vscode`) and 
 
 ![Claude app sender reading the Copilot proof token reply](/blog-images/connect-vscode-copilot-to-agent-relay/09-sender-reads-reply.png)
 
-In this test, Copilot's final answer to the resumed relay request went back to the sender automatically, even though the explicit send tool failed. The chat can also reply on purpose with `send_relay_message`. Intermediate tool turns, and turns you type yourself, never count as the answer.
+In this test, Copilot's final answer to the resumed relay request went back to the sender automatically, even though the explicit send tool failed. The explicit `send_relay_message` reply failed dispatch verification in this test, so we haven't verified that route yet. Intermediate tool turns, and turns you type yourself, never count as the answer.
 
 ![Desktop transcript showing the received request and Copilot's exact proof answer](/blog-images/connect-vscode-copilot-to-agent-relay/08a-desktop-proof.png)
 
@@ -173,7 +173,7 @@ History is separate from messaging. Agent Relay's history uploader reads Copilot
 
 **"A different VS Code server uses agentrelay and would shadow native Copilot setup."** You already have your own server named `agentrelay` in VS Code's `mcp.json`. Rename it, then add or repair the provider.
 
-**"Copilot's Agent Relay hooks file contains unrecognized settings and was left unchanged."** `~/.copilot/hooks/agent-relay.json` was edited. Agent Relay won't overwrite or delete a file it doesn't recognize. Back it up, move it, then repair the provider.
+**"Copilot's Agent Relay hooks file contains unrecognized settings and was left unchanged."** `hooks/agent-relay.json` in Copilot's home folder (`~/.copilot`, or `$COPILOT_HOME` if set) was edited. Agent Relay won't overwrite or delete a file it doesn't recognize. Back it up, move it, then repair the provider.
 
 **"Copilot hook setup is waiting for Agent Relay's command-line helper."** The helper the hooks call isn't installed yet. Repair the provider after Agent Relay finishes installing it.
 

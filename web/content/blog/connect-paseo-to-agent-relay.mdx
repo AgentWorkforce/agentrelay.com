@@ -117,7 +117,7 @@ Each agent then gets messages its own way:
 
 **A Muse agent never gets the message.** Agent Relay only talks to Paseo's daemon over loopback. If you moved the daemon to a non-loopback address, it falls back to `127.0.0.1:6767`. If the daemon asks for a token (an HTTP 401), Agent Relay doesn't invent one and the message isn't delivered. If the call timed out after it may already have gone through, Agent Relay never sends it a second time. It waits for the session log to confirm it or leaves it marked in doubt, so you don't get the same prompt twice.
 
-**A Claude Code agent didn't answer.** Check the activity log for "Held for approval in Claude Code". Approve the message in the chat, or use **Deliver Directly…** in Claude Code settings.
+**A Claude Code agent didn't answer.** Check the activity log for "Held for approval in Claude Code". If it says the session skips permission prompts, approve the message in the chat, or use **Deliver Directly…** in Claude Code settings. If it says the `crossSessionInbound` setting is `hold`, a settings file says `hold`, so change that setting instead.
 
 **Status reads Offline.** The agent isn't running. Messages wait until it starts.
 

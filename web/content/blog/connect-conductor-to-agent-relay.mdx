@@ -94,7 +94,7 @@ Try the other direction too. In the Conductor chat, ask:
 Who is on the relay? Send <terminal-agent> a message saying hello from Conductor, then stop.
 ```
 
-Repeat the test with a Codex chat in Conductor. Send while the Codex chat is in the middle of a turn: the message is handed over as that turn ends and answered in the chat, quoted the same way.
+We've only recorded the Claude Code chat so far. The Codex steps here and in the next section describe how the Codex route is designed to work. To try it, repeat the test with a Codex chat in Conductor. Send while the Codex chat is in the middle of a turn: the message is handed over as that turn ends and answered in the chat, quoted the same way.
 
 ## How messages reach Conductor
 
@@ -102,7 +102,7 @@ Conductor runs every agent from its own runtime, `conductor-runtime sidecar`, in
 
 **Claude Code chats.** Conductor drives each Claude chat as a structured `stream-json` run. Agent Relay normally treats those as automation, but a Conductor chat is a person typing, so it's listed and put on the relay like a terminal session. A relayed message goes into Claude Code's session inbox. Conductor shows the reply but not the incoming message, so Agent Relay adds one line to the message asking the agent to start its reply by quoting the message in full as a Markdown blockquote. Claude Code's `crossSessionInbound` rules still apply: a held message waits for your approval in the chat.
 
-**Codex chats.** Conductor bundles its own Codex and starts one `codex app-server` per chat. It only listens to a Codex thread for the turns it starts itself. A message delivered through Codex's queue becomes a turn of its own, which Conductor never shows: the agent answers, but the chat stays blank. So Agent Relay uses its Codex hook, which runs after each tool call and as a turn ends:
+**Codex chats.** Conductor bundles its own Codex and starts one `codex app-server` per chat. It only listens to a Codex thread for the turns it starts itself. A message delivered through Codex's queue becomes a turn of its own, which Conductor never shows: the agent answers, but the chat stays blank. So Agent Relay uses its Codex hook, which runs after each tool call and as a turn ends. As noted above, this is the designed behavior; our recorded proof uses a Claude Code chat:
 
 - **Chat is working.** Agent Relay holds the message (it shows as **Waiting — handed over when the Conductor chat's turn ends**) and the hook hands it over inside the running turn. The reply lands in the turn Conductor is showing, with the message quoted.
 - **Chat is idle.** The message is delivered at once through Codex's queue, and the agent answers it, but Conductor doesn't show that turn. At the end of the chat's next turn, the hook asks the agent to show each of those messages as a blockquote with a one-line summary of what it already answered, without acting on them again.
