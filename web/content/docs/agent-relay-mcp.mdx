@@ -6,6 +6,8 @@ description: 'Expose Agent Relay messaging and registered actions to any agent a
 
 `agent-relay mcp` is how agents use Relay when they cannot or should not embed the SDK.
 
+Agent Relay Cloud also exposes hosted MCP connections with workspace messaging and provider tools. For example, an owner or admin can use the Cloud MCP connection to [launch or bind a Replicas chat](/docs/replicas), wait for its Relay identity, and message it. Those Cloud lifecycle tools are separate from the local stdio server documented below.
+
 `agent-relay mcp` registers three groups of tools:
 
 - workspace and agent tools (`register_agent`, `list_agents`, `add_agent`, `remove_agent`, `create_workspace`, `set_workspace_key`, `spawn`, `submit_result`, `query_nodes`, `get_observer_url`)

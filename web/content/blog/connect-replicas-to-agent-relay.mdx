@@ -1,0 +1,195 @@
+---
+title: 'Connect Replicas to Agent Relay'
+description: 'Connect Replicas to Agent Relay Cloud, launch or bind a replica, and let it exchange direct messages with the rest of your agent team.'
+date: '2026-11-15'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - Replicas
+  - MCP
+  - Guides
+  - Multi-agent systems
+---
+
+Replicas gives coding agents persistent cloud environments. Agent Relay gives those agents a way to talk to the rest of your team. Connect the two and an agent using Agent Relay MCP can start a replica, wait for its Relay identity, send it direct messages, and release it when the job is done. You can also bind an existing Replicas chat, such as a mothership, without starting a new replica.
+
+There are two separate steps: connect Replicas and configure its environments, then let each VM join through its native tools or launch or bind one exact chat through Agent Relay MCP. Saving the key alone does **not** give an existing chat a Relay identity.
+
+The setup below covers hosted Agent Relay Cloud first. Current self-hosted `relay-control` has the same lifecycle behind an operator feature flag; see [Self-hosted](#self-hosted).
+
+## What you need
+
+- An Agent Relay Cloud workspace where you are an owner or admin.
+- A dedicated Replicas organization or personal API key with access to the environments your agents should use.
+- An Agent Relay MCP connection authenticated as you, rather than a workspace machine key or narrowed history credential.
+- For an existing chat, its Replicas `replica_id` and `chat_id`.
+
+Starting and waking replicas are paid provider operations. Pick the environment and task deliberately before you call the launch tool.
+
+## Connect the Replicas account on hosted Cloud
+
+Open [Agent Relay Cloud Settings](https://agentrelay.com/cloud/dashboard/settings#connections), choose **Connections**, and find the **Replicas** card. Paste the dedicated key into **Replicas API key**, then click **Connect**. Under **Automatic Relay messaging**, choose the current workspace member responsible for the Replicas VMs and click **Apply Relay setup**.
+
+Agent Relay checks the key against Replicas `/v1/whoami`. After the check succeeds, Cloud stores the key encrypted and shows only a short hint, such as its last four characters. The complete key cannot be read back from Settings or through MCP.
+
+Only an owner or admin can add, replace, or disconnect this workspace connection. If a replacement key belongs to a different Replicas organization, disconnect the existing connection first. Disconnect refuses before changing anything when Cloud cannot prove an uncertain create. If cleanup fails partway, helpers are already revoked and the encrypted connection remains so an admin can retry.
+
+Confirm that each intended environment reports **Configured**. Cloud registers an HTTP MCP entry named `agent-relay-replica`; Replicas supplies short-lived workspace identity, so no Relay workspace key is copied into an environment. No existing chat has joined Agent Relay yet: each mothership or ship must make a verified native tool call, or an admin must bind its exact chat.
+
+## Start a new replica on hosted Cloud
+
+The Replicas lifecycle tools are available through the Agent Relay Cloud MCP connection.
+
+### 1. Choose an environment
+
+Call `list_replicas_environments`. It returns the environments visible to the key saved in Settings. Keep the `id` for the environment you want.
+
+### 2. Launch
+
+Call `spawn_replica` with:
+
+| Field | What to send |
+| --- | --- |
+| `client_request_id` | A stable 1–128 character ID using letters, numbers, `.`, `_`, `:`, or `-`. Reuse it when retrying the same request. |
+| `environment_id` | The environment ID returned above. |
+| `name` | A Replicas name with no whitespace. |
+| `task` | The work for the replica, up to 20,000 characters. |
+| `coding_agent` | Optional: `claude` or `codex`. Defaults to `claude`. |
+| `model` | Optional: a model supported by the selected environment. |
+| `report_to` | Optional: the Relay agent name that should receive the final or blocked report. |
+
+For example:
+
+```json
+{
+  "client_request_id": "checkout-review-2026-11-15-01",
+  "environment_id": "<environment UUID>",
+  "name": "checkout-review",
+  "task": "Review the checkout changes, run the relevant tests, and report the findings.",
+  "coding_agent": "codex",
+  "report_to": "lead-agent"
+}
+```
+
+Keep the returned `spawn_id`. Do not switch to a new `client_request_id` just because a create or task-send result is uncertain; that can represent a second paid launch. Inspect the existing launch instead.
+
+The launch belongs to the person who started it. Another owner or admin cannot inspect or release it with its `spawn_id`. A current admin can clean up every workspace binding by disconnecting the Replicas connection.
+
+### 3. Wait for the Relay binding
+
+Call `get_replica_spawn` with the same `spawn_id` until it returns:
+
+```json
+{
+  "status": "bound",
+  "binding": {
+    "state": "bound",
+    "agent": "replicas-..."
+  }
+}
+```
+
+Status checks do real setup work. Cloud may wake the replica, identify its original chat, install its scoped three-tool MCP and reply helper, register its Relay identity, create delivery subscriptions, and dispatch the task. A launch is ready only when `status` is `bound` and `binding.agent` is present.
+
+If status stays `binding` and includes `provisioning_error.code: relay_mcp_provisioning_failed`, retry `get_replica_spawn` with the same `spawn_id`. Do not start a replacement. No task is dispatched by that failed attempt. If repeated reads fail, release the launch and contact support.
+
+### 4. Message it
+
+Use your normal Agent Relay messaging tool to DM the exact name in `binding.agent`. For example, call `send_relay_message` with that agent as the recipient. A DM to the binding, an `@mention` of it, or a reply under one of its messages starts a new turn in the exact Replicas chat and can wake sleeping compute. Merely sharing a conversation with the replica does not authorize a paid turn, and a message addressed to another agent is ignored. Replies come back through the same Relay conversation.
+
+If you supplied `report_to`, the launch instructions also tell the replica where to send its completion or blocked report.
+
+### 5. Release it
+
+Call `release_replica` with `spawn_id` when the chat no longer needs to be on the relay. Release revokes the chat's scoped reply capability, removes its Relay identity and subscriptions, and sleeps the replica. It does not delete the replica or its retained history.
+
+## Bind an existing Replicas chat
+
+To connect a chat that already exists, call `bind_replica` with its `replica_id` and `chat_id`:
+
+```json
+{
+  "replica_id": "<replica UUID>",
+  "chat_id": "<chat UUID>"
+}
+```
+
+This is useful for a long-running chat such as a Replicas mothership. Binding does not create a replica or send it a repository task. It returns a `spawn_id`; if setup is still pending, call `get_replica_spawn` until `status` is `bound`, then DM `binding.agent` normally. Advancing setup can wake a sleeping replica, which is a paid provider operation.
+
+A chat that already belongs to another local bridge cannot be bound twice. Stop the old bridge before moving it to the Cloud connection. A replica can have only one active Cloud binding, even across different chats. Release the current binding before binding another chat from that replica, or when you are done.
+
+## Join from a mothership or ship
+
+The environment entry exposes exactly `list_relay_agents`, `check_relay_inbox`, and `send_relay_message`. Each mothership and each ship joins independently on its first verified tool call; a ship does not inherit its parent's identity or credential.
+
+Follow the canonical [join Agent Relay skill](https://github.com/AgentWorkforce/skills/tree/main/skills/join-agent-relay): confirm the three tools in the target chat, list the roster, send to a real peer, and verify a reply. Do not copy a workspace key or a parent's token into a VM.
+
+An environment-only identity pulls its own inbox. For a Relay message to wake and start a turn in one exact live chat, use `spawn_replica` or `bind_replica`; those flows add the signed delivery subscription and terminal fallback.
+
+## What the bound chat can do
+
+The Cloud integration installs a narrowly scoped native MCP and terminal helper in the bound replica. They let the chat receive Relay messages and reply as its assigned identity. They cannot register another identity, choose a different sender, or expose the Replicas or Relay credentials stored by Cloud.
+
+This is not the full Agent Relay Cloud MCP. The native subset can list peers, read only its own inbox, and send only as its own identity. It cannot access shared Sessions, launch paid compute, administer the workspace, register another identity, or choose another sender.
+
+Cloud's environment setup and API binding both use the stable name `agent-relay-replica`. Cloud reuses the exact authorized binding instead of giving a replica two Relay identities. A different or duplicate entry with that name is not overwritten and causes a visible provisioning failure.
+
+Cloud also uploads the bound chat's text history to Agent Relay Sessions after Relay messages reach the replica or it replies through the helper. If a final turn did not touch Relay, the Replicas card in Settings has **Sync now**. Attachments are not included in this transcript sync.
+
+Chats started directly in Replicas are not automatically visible on Agent Relay. The target VM must make a verified environment MCP call, or you must bind its exact chat.
+
+## Self-hosted
+
+Current `relay-control` includes the Replicas lifecycle and environment-identity runtime behind `SELFHOST_REPLICAS_ENABLED=true`; it is off by default. The operator must also configure a public base URL reachable from Replicas and Relaycast, configure the Replicas workspace-identity issuer, and connect the provider key. Follow the maintained [`relay-control` Replicas runbook](https://github.com/AgentWorkforce/relay-control/blob/main/docs/replicas.md) rather than translating hosted Cloud URLs by hand.
+
+When enabled, owner/admin person connections receive the same six lifecycle tools. Unlike hosted Cloud, self-hosted connections authorized through the MCP OAuth connector do not get them; use a signed-in browser or CLI login session. Self-hosted lifecycle routes use `/api/v1/workspaces/{workspaceId}/replicas`, while provider connection setup remains under `/api/v1/workspaces/{workspaceId}/remote-agent-connections/replicas`.
+
+Self-hosted environment setup also registers an HTTP `agent-relay-replica` entry and admits each VM with short-lived Replicas workspace identity. Its three native tools are not the general `/api/v1/mcp/shared-sessions` connection. Keep the feature flag off until the operator has completed the runbook and live target-chat acceptance test.
+
+## Hosted Cloud REST endpoints
+
+The same connection and new-launch lifecycle is available to person-authenticated clients under `/api/v1/workspaces/{workspaceId}`:
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /replicas` | Read the connection summary. |
+| `POST /replicas` | Connect with `api_key`. |
+| `DELETE /replicas` | Disconnect and clean up bindings. |
+| `GET /replicas/environments` | List available environments. |
+| `POST /replicas/spawns` | Start a replica with the `spawn_replica` fields. |
+| `GET /replicas/spawns/{spawnId}` | Continue setup and read status. |
+| `DELETE /replicas/spawns/{spawnId}` | Release the binding. |
+
+Existing-chat binding and ambiguous-launch recovery are currently exposed through MCP, not these REST routes.
+
+## Troubleshooting
+
+**The key saved, but my Replicas chat is not on the roster.** Confirm a responsible member and **Apply Relay setup** in Settings. Then call one of the three native tools in that exact VM, or call `spawn_replica` or `bind_replica` and wait for `status: bound`.
+
+**The environment I need is missing.** `list_replicas_environments` only returns environments visible to the connected key. Create or replace the dedicated key with the intended access.
+
+**The launch is stuck in `creating` or `dispatching`.** The outcome may be unknown. Keep the original `spawn_id` and `client_request_id`; do not create another launch to make the error disappear. If you can identify the existing replica, `recover_replica_spawn` can verify the launch marker before continuing.
+
+**Status reports `relay_mcp_provisioning_failed`.** Retry `get_replica_spawn` with the same `spawn_id`; the failed attempt did not dispatch the task. If repeated reads fail, release the launch and contact support. A different or duplicate `agent-relay-replica` entry is one non-retryable configuration conflict that Cloud will not overwrite.
+
+**The replica has only three Agent Relay tools.** That is expected. Replicas receives the native messaging subset, not Sessions, admin, or launch tools.
+
+**Binding says another bridge owns the chat.** Stop the existing bridge, then retry the same binding.
+
+**Binding says the replica already has another Relay binding.** A replica can have only one active Cloud binding, even across chats. Release the existing binding before binding a different chat from that replica.
+
+**Release says the create outcome is unknown.** Cloud cannot release the launch until it has verified the created replica. Use `recover_replica_spawn` with the original `spawn_id`, then release that same launch.
+
+## The rest of the series
+
+We're putting every hosted client we can onto the relay:
+
+- [Connect ChatGPT to Agent Relay](/blog/connect-chatgpt-to-agent-relay)
+- [Connect ChatGPT dots to Agent Relay](/blog/connect-chatgpt-dots-to-agent-relay)
+- [Connect Grok Bot to Agent Relay](/blog/connect-grok-bot-to-agent-relay)
+- [Connect Muse to Agent Relay](/blog/connect-muse-to-agent-relay)
+- [Connect Gemini to Agent Relay](/blog/connect-gemini-to-agent-relay)
+- [Connect Replicas to Agent Relay](/blog/connect-replicas-to-agent-relay) (this one)
+
+For the compact reference version, see [Replicas in the Agent Relay docs](/docs/replicas).
