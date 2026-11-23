@@ -3,9 +3,18 @@ import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
 import { withMcpGatewayErrors } from "./src/mcp-gateway-errors.js";
+import { isPrimaryHost, PRIMARY_HOST, withAliasHostHeaders } from "./src/hosts.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
+  // When CLOUD_WEB_WORKER is not bound, /cloud* is proxied to this origin
+  // instead of answering 503. Production binds the Worker and leaves this
+  // unset; the staging router (no cloud binding) uses it once a target is set.
+  CLOUD_PROXY_ORIGIN?: string;
+  // The web (OpenNext) origin everything else falls back to. Unset in
+  // production, which uses FALLBACK_PROXY_ORIGIN; the staging router points it
+  // at the staging web Worker.
+  WEB_ORIGIN?: string;
   CLOUD_WEB_WORKER?: {
     fetch(request: Request): Promise<Response>;
   };
@@ -36,7 +45,6 @@ function hasRecorderEnv(env: Env): env is Env & RecorderEnv {
 const FALLBACK_PROXY_ORIGIN = "https://origin-web.agentrelay.com";
 const OBSERVER_ORIGIN = "https://observer.relaycast.dev";
 const DEFAULT_FILE_OBSERVER_ORIGIN = "https://relayfile-file-observer.pages.dev";
-const PRIMARY_HOST = "agentrelay.com";
 const FILE_OBSERVER_PATH_PREFIX = "/observer/file";
 const OBSERVER_PATH_PREFIX = "/observer";
 const CLOUD_PATH_PREFIX = "/cloud";
@@ -124,7 +132,7 @@ function isFileObserverPath(pathname: string): boolean {
 }
 
 function isPrimaryFileObserverPath(hostname: string, pathname: string): boolean {
-  return hostname === PRIMARY_HOST && isFileObserverPath(pathname);
+  return isPrimaryHost(hostname) && isFileObserverPath(pathname);
 }
 
 // The Cloud authorization server's issuer is https://agentrelay.com/cloud.
@@ -175,7 +183,7 @@ export function getConnectInviteCloudPath(
   pathname: string,
   method: string,
 ): string | undefined {
-  if (hostname !== PRIMARY_HOST || (method !== "GET" && method !== "HEAD")) {
+  if (!isPrimaryHost(hostname) || (method !== "GET" && method !== "HEAD")) {
     return undefined;
   }
 
@@ -194,12 +202,12 @@ export function getAgentChatCloudPath(
   if (method !== "POST") {
     return undefined;
   }
-  if (hostname !== PRIMARY_HOST && hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW) {
+  if (!isPrimaryHost(hostname) && hostname !== SHORT_HOST && hostname !== SHORT_HOST_WWW) {
     return undefined;
   }
 
   const match = AGENT_CHAT_PATH.exec(pathname);
-  if (!match || (hostname === PRIMARY_HOST && match[1] !== "agent-relay")) {
+  if (!match || (isPrimaryHost(hostname) && match[1] !== "agent-relay")) {
     return undefined;
   }
   return `${CLOUD_PATH_PREFIX}/api/v1/agent-chat/${match[1]}/${match[2]}`;
@@ -223,7 +231,7 @@ export function getAgentPagePath(
   let agent: string | undefined;
   if (hostname === SHORT_HOST || hostname === SHORT_HOST_WWW) {
     agent = new RegExp(`^/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
-  } else if (hostname === PRIMARY_HOST) {
+  } else if (isPrimaryHost(hostname)) {
     agent = new RegExp(`^/u/(${HANDLE_SEGMENT})/?$`).exec(pathname)?.[1];
   }
   if (!agent || RESERVED_AGENT_PAGE_HANDLES.has(agent)) {
@@ -254,7 +262,7 @@ export function getAgentDirectoryPath(
   const path = pathname.replace(/\/$/, "");
   const directory = hostname === SHORT_HOST || hostname === SHORT_HOST_WWW
     ? path === "/agents"
-    : hostname === PRIMARY_HOST && path === AGENT_DIRECTORY_PAGE_PATH;
+    : isPrimaryHost(hostname) && path === AGENT_DIRECTORY_PAGE_PATH;
   if (!directory) {
     return undefined;
   }
@@ -342,13 +350,14 @@ export function getGuideAnalyticsHandle(
 }
 
 // The page first shipped at agentrelay.com/agent-relay; keep that link working.
+// Aliases of the primary host redirect on their own host.
 export function getLegacyAgentPageRedirect(url: URL): string | undefined {
-  if (url.hostname !== PRIMARY_HOST) {
+  if (!isPrimaryHost(url.hostname)) {
     return undefined;
   }
   const agent = /^\/([a-z0-9-]+)\/?$/.exec(url.pathname)?.[1];
   return agent === "agent-relay"
-    ? `https://${PRIMARY_HOST}/u/${agent}${url.search}`
+    ? `https://${url.hostname}/u/${agent}${url.search}`
     : undefined;
 }
 
@@ -413,7 +422,7 @@ export function getShortHostRedirect(url: URL): string | undefined {
 }
 
 export function getVanityRedirect(hostname: string, pathname: string): string | undefined {
-  if (hostname !== PRIMARY_HOST) {
+  if (!isPrimaryHost(hostname)) {
     return undefined;
   }
 
@@ -547,14 +556,14 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   // /cloud* defaults to the Next.js cloud app regardless of host. Requests only
   // reach this fallback when the cloud-web Worker service binding is absent.
   if (isCloudPath(pathname)) {
-    return env.CLOUD_APP_ORIGIN;
+    return cloudProxyOrigin(env) ?? env.CLOUD_APP_ORIGIN;
   }
 
-  // The production agentrelay.com apex is a split router:
+  // The production agentrelay.com apex (and its aliases) is a split router:
   //   1. /observer/file* goes to the RelayFile file observer app
   //   2. /observer* stays on the Relaycast observer app
   //   3. everything else falls back to the relay web origin
-  if (hostname === PRIMARY_HOST) {
+  if (isPrimaryHost(hostname)) {
     if (isPrimaryFileObserverPath(hostname, pathname)) {
       return env.FILE_OBSERVER_ORIGIN ?? DEFAULT_FILE_OBSERVER_ORIGIN;
     }
@@ -564,7 +573,11 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
     }
   }
 
-  return FALLBACK_PROXY_ORIGIN;
+  return env.WEB_ORIGIN?.trim() || FALLBACK_PROXY_ORIGIN;
+}
+
+function cloudProxyOrigin(env: Env): string | undefined {
+  return env.CLOUD_PROXY_ORIGIN?.trim() || undefined;
 }
 
 async function shouldUseCloudWebWorker(
@@ -739,6 +752,8 @@ async function fetchRelayAgent(request: Request, url: URL, env: Env): Promise<Re
 // unset or blank the path 404s rather than falling through to the marketing
 // site. Answered before any upstream dispatch so the token never reaches the
 // traffic recorder.
+// Apex only: the token verifies agentrelay.com itself, so the public.* aliases
+// do not answer it (they fall through to the site like any other path).
 const OPENAI_APPS_CHALLENGE_PATH = "/.well-known/openai-apps-challenge";
 
 export function getOpenAiAppsChallengeResponse(
@@ -781,7 +796,7 @@ const router = {
       return openAiAppsChallenge;
     }
 
-    const cloudRewritePath = url.hostname !== PRIMARY_HOST
+    const cloudRewritePath = !isPrimaryHost(url.hostname)
       ? null
       : rewriteCloudMcpPath(url.pathname)
         ?? (request.method === "GET" || request.method === "HEAD"
@@ -972,7 +987,12 @@ const router = {
       }
     };
 
-    if (await shouldUseCloudWebWorker(url.pathname, request, env)) {
+    // Without the binding, an explicit CLOUD_PROXY_ORIGIN sends /cloud* through
+    // the generic proxy below (getOrigin returns it for cloud paths).
+    if (
+      await shouldUseCloudWebWorker(url.pathname, request, env)
+      && (env.CLOUD_WEB_WORKER || !cloudProxyOrigin(env))
+    ) {
       logPhase5aLambdaEliminatedOnce();
       if (!env.CLOUD_WEB_WORKER) {
         if (shadowRequest && facade) {
@@ -1113,6 +1133,6 @@ export default {
       timing.fail(error);
       throw error;
     }
-    return timing.finish(response);
+    return withAliasHostHeaders(request, timing.finish(response));
   },
 };

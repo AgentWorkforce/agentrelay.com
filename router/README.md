@@ -11,6 +11,15 @@ Route precedence:
   `www.arelay.to`. The Worker owns registry lookup and its 404/410 decisions.
 - everything else falls back to the legacy proxy target.
 
+`public.agentrelay.com` (production router) and `public-staging.agentrelay.com`
+(staging router, `wrangler deploy --env staging`) are primary-host aliases
+(`src/hosts.ts`): they route exactly like `agentrelay.com`, except that their
+responses carry `X-Robots-Tag: noindex` and the OpenAI apps challenge is
+answered on `agentrelay.com` only. The staging router falls back to the staging
+web Worker via `WEB_ORIGIN` and, with no Cloud binding, answers 503 for
+`/cloud*` unless `CLOUD_PROXY_ORIGIN` is set. Staging deploys only through the
+manual `deploy-staging.yml` workflow.
+
 RelayFile observer deployment is wired from the production job in
 `.github/workflows/deploy.yml`. The job runs
 `scripts/deploy-file-observer-pages.sh`, which packs
@@ -113,8 +122,8 @@ Matching decodes the request path once. Encoded separators/dots/percent signs,
 duplicate slashes, dot segments, malformed encoding and control/backslash
 characters retain legacy routing instead of risking a different backend parse.
 Forwarding preserves the caller's original escaped path and query, including
-repeated query keys. This feature applies only to the `agentrelay.com` host,
-after the router's existing special routes and Cloud aliases are resolved.
+repeated query keys. This feature applies only to the `agentrelay.com` host (and its
+`public.*` aliases, see below), after the router's existing special routes and Cloud aliases are resolved.
 It does not change arelay.to behavior.
 
 `shadow` returns the existing response. Eligibility is the intersection of a
