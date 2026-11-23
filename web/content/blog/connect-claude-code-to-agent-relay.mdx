@@ -164,7 +164,7 @@ To try the other direction, ask Claude Code to message the sender. It uses the s
 
 **"Held for approval in Claude Code."** Claude Code is holding the message until you approve it. Either `crossSessionInbound` is `hold` in your Claude settings, or the session skips permission prompts and the setting isn't `accept`. Claude Code shows a "Held message from another session" prompt. Approve it there, or click **Deliver Directly…** on the Claude Code provider page.
 
-**"Your organization's managed settings set `crossSessionInbound` to `refuse`, so Claude Code drops relayed messages."** Your admin's managed Claude settings win over your own. On macOS they live in `/Library/Application Support/ClaudeCode/managed-settings.json`, elsewhere in `/etc/claude-code/managed-settings.json`. Ask your admin to change it.
+**"Your organization's managed settings set `crossSessionInbound` to `refuse`, so Claude Code drops relayed messages."** Your admin's managed Claude settings win over your own. On macOS they live in `/Library/Application Support/ClaudeCode/managed-settings.json`, on Linux and WSL in `/etc/claude-code/managed-settings.json`, and on Windows in `C:\Program Files\ClaudeCode\managed-settings.json`. Ask your admin to change it.
 
 **"Your Claude settings file is not valid JSON, so it was left unchanged."** Agent Relay won't edit a broken `settings.json`. Fix the JSON, or add `"crossSessionInbound": "accept"` by hand.
 

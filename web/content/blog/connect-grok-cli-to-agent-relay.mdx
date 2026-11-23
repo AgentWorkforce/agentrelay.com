@@ -137,7 +137,7 @@ You can also fork one of your Grok sessions into a new agent. Grok makes the cop
 
 **"No Grok leader is running for this session. Turn on Grok leader mode in Settings, then restart Grok."** The session was started without a leader, or its leader stopped. Turn leader mode on if it's off, then start Grok again.
 
-**"Your Grok config.toml could not be updated safely; set `use_leader` under `[cli]` yourself."** Agent Relay only rewrites one line. If `config.toml` names `use_leader` in more than one place, or can't be read as text, it stops. Add the two lines from step 3 by hand.
+**"Your Grok config.toml could not be updated safely; set `use_leader` under `[cli]` yourself."** Agent Relay only rewrites one line. If `config.toml` names `use_leader` in more than one place, or can't be read as text, it stops. Fix it by hand: under the existing `[cli]` table, set `use_leader = true`, and remove any duplicate `use_leader` there. Only add a `[cli]` table if the file has none, because TOML rejects a table defined twice. Leave `use_leader` keys in other tables alone.
 
 **Leader mode won't stay on.** Grok refuses leader mode when a sandbox profile is on (`--sandbox` or `GROK_SANDBOX`). A managed Grok config can also pin it off. Neither is something Agent Relay overrides.
 
