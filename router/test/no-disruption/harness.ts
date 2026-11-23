@@ -73,7 +73,7 @@ export const PATHS = [
   "/.well-known/openid-configuration/cloud", "/.well-known/oauth-protected-resource",
   "/.well-known/oauth-protected-resource/mcp",
   "/.well-known/oauth-protected-resource/cloud/api/v1/mcp/shared-sessions",
-  "/.well-known/openai-apps-challenge",
+  "/.well-known/openai-apps-challenge", "/.well-known/mcp-webhook-receiver.json",
   // Relay Connect
   `/connect/${ID32}`, `/connect/${ID32}.json`, `/connect/${ID32}/`, "/connect",
   // Observers
