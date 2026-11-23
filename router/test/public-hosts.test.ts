@@ -81,17 +81,44 @@ describe("primary host aliases", () => {
     ["vanity redirect", "/virtual-office"],
   ];
 
-  it.each(cases)("routes %s on public hosts the same as agentrelay.com", async (_name, path, init) => {
+  // Cases whose request ends up on a /cloud* path (directly or via a rewrite).
+  const cloudCases = new Set(["cloud app", "connect invite", "OAuth well-known", "root MCP endpoint"]);
+
+  it.each(cases)("routes %s on public.agentrelay.com the same as agentrelay.com", async (_name, path, init) => {
     const apex = await routeOf(APEX, path, init);
-    for (const host of [PUBLIC, PUBLIC_STAGING]) {
-      const alias = await routeOf(host, path, init);
+    const alias = await routeOf(PUBLIC, path, init);
+    expect(alias.status).toBe(apex.status);
+    expect(alias.location).toBe(apex.location);
+    expect(alias.upstream).toBe(apex.upstream);
+    expect(alias.cloudPath).toBe(apex.cloudPath);
+    if (apex.forwardedHost) expect(alias.forwardedHost).toBe(PUBLIC);
+    expect(alias.response.headers.get("x-robots-tag")).toBe("noindex");
+  });
+
+  it.each(cases.filter(([name]) => !cloudCases.has(name)))(
+    "routes %s on public-staging.agentrelay.com the same as agentrelay.com",
+    async (_name, path, init) => {
+      const apex = await routeOf(APEX, path, init);
+      const alias = await routeOf(PUBLIC_STAGING, path, init);
       expect(alias.status).toBe(apex.status);
       expect(alias.location).toBe(apex.location);
       expect(alias.upstream).toBe(apex.upstream);
       expect(alias.cloudPath).toBe(apex.cloudPath);
-      if (apex.forwardedHost) expect(alias.forwardedHost).toBe(host);
-    }
-  });
+      if (apex.forwardedHost) expect(alias.forwardedHost).toBe(PUBLIC_STAGING);
+      expect(alias.response.headers.get("x-robots-tag")).toBe("noindex");
+    },
+  );
+
+  it.each(cases.filter(([name]) => cloudCases.has(name)))(
+    "never sends %s on public-staging.agentrelay.com to production Cloud",
+    async (_name, path, init) => {
+      const alias = await routeOf(PUBLIC_STAGING, path, init);
+      expect(alias.status).toBe(503);
+      expect(alias.cloudPath).toBeNull();
+      expect(alias.upstream).toBeNull();
+      expect(alias.response.headers.get("x-robots-tag")).toBe("noindex");
+    },
+  );
 
   it("sends representative paths where agentrelay.com sends them", async () => {
     expect((await routeOf(PUBLIC, "/docs")).upstream).toBe("https://origin-web.agentrelay.com/docs");
@@ -142,35 +169,93 @@ describe("primary host aliases", () => {
   });
 });
 
-describe("staging router configuration", () => {
-  it("falls back to WEB_ORIGIN when set", async () => {
-    const staging = await routeOf(PUBLIC_STAGING, "/docs", {}, {
-      WEB_ORIGIN: "https://origin-web-staging.agentrelay.com",
-    });
-    expect(staging.upstream).toBe("https://origin-web-staging.agentrelay.com/docs");
-    expect(staging.forwardedHost).toBe(PUBLIC_STAGING);
-  });
+// The staging Worker's env, as `wrangler deploy --env staging` binds it.
+const STAGING_ENV = {
+  ROUTER_ENV: "staging",
+  FILE_OBSERVER_ORIGIN: "https://relayfile-file-observer.pages.dev",
+  WEB_ORIGIN: "https://origin-web-staging.agentrelay.com",
+};
+const PROD_CLOUD_ORIGIN = "https://origin.agentrelay.cloud";
+const STAGING_CLOUD = "https://cloud-staging.test.invalid";
 
-  it("answers 503 for /cloud* with no cloud binding and no CLOUD_PROXY_ORIGIN", async () => {
-    const result = await routeOf(PUBLIC_STAGING, "/cloud/x", {}, { CLOUD_WEB_WORKER: undefined });
+// Everything production Cloud could be reached through, all present at once,
+// to prove staging ignores every one of them.
+function prodCloudEverywhere() {
+  const routerConfig = new Map([
+    ["WEBHOOK_ORIGIN", "worker"],
+    ["cloud-facade-routes", JSON.stringify([
+      { prefix: "/cloud", origin: "https://prod-aws.agentrelay.com", mode: "on" },
+    ])],
+  ]);
+  return {
+    CLOUD_APP_ORIGIN: PROD_CLOUD_ORIGIN,
+    CLOUD_WEB_WORKER: { fetch: vi.fn(async () => new Response("prod cloud")) },
+    WEBHOOK_WORKER: { fetch: vi.fn(async () => new Response("prod webhook worker")) },
+    WEBHOOK_WORKER_ORIGIN: "https://incoming-webhooks.agentrelay.com",
+    ROUTER_CONFIG: { get: async (key: string) => routerConfig.get(key) ?? null },
+  };
+}
+
+describe("staging router", () => {
+  const cloudPaths = [
+    "/cloud", "/cloud/x", "/cloud/api/v1/webhooks/nango", "/mcp",
+    "/.well-known/oauth-authorization-server", "/connect/abcdefghijklmnopqrstuvwxyz012345",
+  ];
+
+  it.each(cloudPaths)("answers 503 for %s with no staging Cloud target", async (path) => {
+    const result = await routeOf(PUBLIC_STAGING, path, {}, { ...STAGING_ENV, CLOUD_WEB_WORKER: undefined, CLOUD_APP_ORIGIN: undefined });
     expect(result.status).toBe(503);
     expect(result.upstream).toBeNull();
   });
 
-  it("proxies /cloud* to CLOUD_PROXY_ORIGIN when the cloud binding is absent", async () => {
-    const result = await routeOf(PUBLIC_STAGING, "/cloud/x", {}, {
-      CLOUD_WEB_WORKER: undefined,
-      CLOUD_PROXY_ORIGIN: "https://cloud-staging.test.invalid",
-    });
-    expect(result.status).toBe(200);
-    expect(result.upstream).toBe("https://cloud-staging.test.invalid/cloud/x");
+  it.each(cloudPaths)("never reaches production Cloud for %s, even with every prod path bound", async (path) => {
+    for (const env of [{ ...STAGING_ENV, ...prodCloudEverywhere() }, prodCloudEverywhere()]) {
+      // Second env: a production-shaped Worker receiving a public-staging
+      // request (host-based guard, no ROUTER_ENV).
+      const upstream = stubUpstream();
+      const response = await worker.fetch(new Request(`https://${PUBLIC_STAGING}${path}`), env as unknown as Env, buildCtx());
+      expect(response.status).toBe(503);
+      expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
+      expect(env.WEBHOOK_WORKER.fetch).not.toHaveBeenCalled();
+      expect(upstream).not.toHaveBeenCalled();
+      vi.unstubAllGlobals();
+    }
   });
 
-  it("prefers the cloud binding over CLOUD_PROXY_ORIGIN", async () => {
-    const result = await routeOf(APEX, "/cloud/x", {}, {
-      CLOUD_PROXY_ORIGIN: "https://cloud-staging.test.invalid",
-    });
-    expect(result.cloudPath).toBe("/cloud/x");
-    expect(result.upstream).toBeNull();
+  it("guards any host on the staging Worker, not only public-staging", async () => {
+    const env = { ...STAGING_ENV, ...prodCloudEverywhere() };
+    const upstream = stubUpstream();
+    const response = await worker.fetch(new Request("https://agentrelay-router-staging.example.workers.dev/cloud/x"), env as unknown as Env, buildCtx());
+    expect(response.status).toBe(503);
+    expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("proxies /cloud* to the staging CLOUD_PROXY_ORIGIN only", async () => {
+    const env = { ...STAGING_ENV, ...prodCloudEverywhere(), CLOUD_PROXY_ORIGIN: STAGING_CLOUD };
+    const upstream = stubUpstream();
+    const response = await worker.fetch(new Request(`https://${PUBLIC_STAGING}/cloud/api/v1/webhooks/nango`), env as unknown as Env, buildCtx());
+    expect(response.status).toBe(200);
+    expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
+    expect(env.WEBHOOK_WORKER.fetch).not.toHaveBeenCalled();
+    const urls = upstream.mock.calls.map(([request]) => new URL((request as Request).url).origin);
+    expect(urls).toEqual([STAGING_CLOUD]);
+  });
+
+  it("falls back to the staging web origin", async () => {
+    const staging = await routeOf(PUBLIC_STAGING, "/docs", {}, STAGING_ENV);
+    expect(staging.upstream).toBe("https://origin-web-staging.agentrelay.com/docs");
+    expect(staging.forwardedHost).toBe(PUBLIC_STAGING);
+  });
+
+  it("ignores the staging-only vars on existing hosts", async () => {
+    const env = { WEB_ORIGIN: "https://origin-web-staging.agentrelay.com", CLOUD_PROXY_ORIGIN: STAGING_CLOUD };
+    expect((await routeOf(APEX, "/docs", {}, env)).upstream).toBe("https://origin-web.agentrelay.com/docs");
+    expect((await routeOf(PUBLIC, "/docs", {}, env)).upstream).toBe("https://origin-web.agentrelay.com/docs");
+    expect((await routeOf(APEX, "/cloud/x", {}, env)).cloudPath).toBe("/cloud/x");
+    expect((await routeOf(PUBLIC, "/cloud/x", {}, env)).cloudPath).toBe("/cloud/x");
+    const unbound = await routeOf(APEX, "/cloud/x", {}, { ...env, CLOUD_WEB_WORKER: undefined });
+    expect(unbound.status).toBe(503);
+    expect(unbound.upstream).toBeNull();
   });
 });

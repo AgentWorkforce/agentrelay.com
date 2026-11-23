@@ -3,17 +3,19 @@ import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
 import { withMcpGatewayErrors } from "./src/mcp-gateway-errors.js";
-import { isPrimaryHost, PRIMARY_HOST, withAliasHostHeaders } from "./src/hosts.js";
+import { isPrimaryHost, isStagingHost, PRIMARY_HOST, withAliasHostHeaders } from "./src/hosts.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
-  // When CLOUD_WEB_WORKER is not bound, /cloud* is proxied to this origin
-  // instead of answering 503. Production binds the Worker and leaves this
-  // unset; the staging router (no cloud binding) uses it once a target is set.
+  // STAGING ONLY. "staging" on the agentrelay-router-staging Worker
+  // (wrangler env.staging); unset in production. See isStagingRouting.
+  ROUTER_ENV?: string;
+  // STAGING ONLY: the staging Cloud (Control) origin /cloud* is proxied to.
+  // Ignored unless staging routing applies; unset means staging /cloud*
+  // answers 503. Never a production Cloud origin.
   CLOUD_PROXY_ORIGIN?: string;
-  // The web (OpenNext) origin everything else falls back to. Unset in
-  // production, which uses FALLBACK_PROXY_ORIGIN; the staging router points it
-  // at the staging web Worker.
+  // STAGING ONLY: the staging web Worker origin. Ignored unless staging
+  // routing applies; production always uses FALLBACK_PROXY_ORIGIN.
   WEB_ORIGIN?: string;
   CLOUD_WEB_WORKER?: {
     fetch(request: Request): Promise<Response>;
@@ -556,7 +558,14 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
   // /cloud* defaults to the Next.js cloud app regardless of host. Requests only
   // reach this fallback when the cloud-web Worker service binding is absent.
   if (isCloudPath(pathname)) {
-    return cloudProxyOrigin(env) ?? env.CLOUD_APP_ORIGIN;
+    if (isStagingRouting(env, hostname)) {
+      // Staging never falls back to the production Cloud origin. The router
+      // answers 503 before reaching here when no staging target is set.
+      const stagingCloud = stagingCloudOrigin(env);
+      if (!stagingCloud) throw new Error("staging cloud origin is not configured");
+      return stagingCloud;
+    }
+    return env.CLOUD_APP_ORIGIN;
   }
 
   // The production agentrelay.com apex (and its aliases) is a split router:
@@ -573,10 +582,22 @@ export function getOrigin(hostname: string, pathname: string, env: Env): string 
     }
   }
 
-  return env.WEB_ORIGIN?.trim() || FALLBACK_PROXY_ORIGIN;
+  if (isStagingRouting(env, hostname)) {
+    const stagingWeb = env.WEB_ORIGIN?.trim();
+    if (stagingWeb) return stagingWeb;
+  }
+  return FALLBACK_PROXY_ORIGIN;
 }
 
-function cloudProxyOrigin(env: Env): string | undefined {
+// Staging routing applies on the staging Worker (ROUTER_ENV=staging) and to
+// any request for public-staging.agentrelay.com, whichever Worker receives
+// it. Production (no ROUTER_ENV) on its existing hosts never takes it, so
+// the staging-only vars cannot change agentrelay.com or arelay.to routing.
+export function isStagingRouting(env: Pick<Env, "ROUTER_ENV">, hostname: string): boolean {
+  return env.ROUTER_ENV === "staging" || isStagingHost(hostname);
+}
+
+function stagingCloudOrigin(env: Env): string | undefined {
   return env.CLOUD_PROXY_ORIGIN?.trim() || undefined;
 }
 
@@ -967,9 +988,23 @@ const router = {
       request = new Request(url.toString(), request);
     }
 
+    // Staging /cloud* must never reach production Cloud: not the cloud-web
+    // Worker binding, the webhook Worker, the facade origins, nor
+    // CLOUD_APP_ORIGIN. It goes to the staging CLOUD_PROXY_ORIGIN through the
+    // generic proxy below, or answers 503 when none is configured.
+    const staging = isStagingRouting(env, url.hostname);
+    const stagingCloudRoute = staging && isCloudPath(url.pathname);
+    if (stagingCloudRoute && !stagingCloudOrigin(env)) {
+      void recorderRequestClone?.body?.cancel().catch(() => undefined);
+      return new Response(
+        JSON.stringify({ error: "staging cloud target not configured" }),
+        { status: 503, headers: { "content-type": "application/json", "cache-control": "no-store" } },
+      );
+    }
+
     // Empty/invalid/unreadable config retains the existing dispatch below,
     // including webhook offload and Cloud's unavailable-binding response.
-    const facade = await readFacadeRoute(request, env.ROUTER_CONFIG);
+    const facade = staging ? null : await readFacadeRoute(request, env.ROUTER_CONFIG);
     if (facade?.mode === "on") {
       // This branch is not recorded. Cancel the unused tee so a streaming
       // mutation body cannot accumulate in the recorder's unread branch.
@@ -987,12 +1022,7 @@ const router = {
       }
     };
 
-    // Without the binding, an explicit CLOUD_PROXY_ORIGIN sends /cloud* through
-    // the generic proxy below (getOrigin returns it for cloud paths).
-    if (
-      await shouldUseCloudWebWorker(url.pathname, request, env)
-      && (env.CLOUD_WEB_WORKER || !cloudProxyOrigin(env))
-    ) {
+    if (!stagingCloudRoute && await shouldUseCloudWebWorker(url.pathname, request, env)) {
       logPhase5aLambdaEliminatedOnce();
       if (!env.CLOUD_WEB_WORKER) {
         if (shadowRequest && facade) {
@@ -1018,7 +1048,7 @@ const router = {
       return workerResponse;
     }
 
-    if (await shouldUseWebhookWorker(url.pathname, request, env)) {
+    if (!stagingCloudRoute && await shouldUseWebhookWorker(url.pathname, request, env)) {
       // Build the forwarded Request inside each branch: request.body is a
       // ReadableStream that can back only one Request, so constructing it before
       // the env.WEBHOOK_WORKER check would disturb the stream and make the

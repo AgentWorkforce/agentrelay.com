@@ -12,13 +12,20 @@ Route precedence:
 - everything else falls back to the legacy proxy target.
 
 `public.agentrelay.com` (production router) and `public-staging.agentrelay.com`
-(staging router, `wrangler deploy --env staging`) are primary-host aliases
-(`src/hosts.ts`): they route exactly like `agentrelay.com`, except that their
-responses carry `X-Robots-Tag: noindex` and the OpenAI apps challenge is
-answered on `agentrelay.com` only. The staging router falls back to the staging
-web Worker via `WEB_ORIGIN` and, with no Cloud binding, answers 503 for
-`/cloud*` unless `CLOUD_PROXY_ORIGIN` is set. Staging deploys only through the
-manual `deploy-staging.yml` workflow.
+(staging router, `wrangler deploy --env staging`) are additional hosts
+(`src/hosts.ts`). They route like `agentrelay.com`, plus `X-Robots-Tag:
+noindex` on every response; the OpenAI apps challenge stays apex-only. Existing
+hosts are unchanged: `scripts/no-disruption.sh` replays a request matrix
+through the base and current router and diffs the production wrangler config.
+
+Staging routing applies on the staging Worker (`ROUTER_ENV=staging`) and to any
+`public-staging.agentrelay.com` request. It falls back to the staging web
+Worker (`WEB_ORIGIN`), and its `/cloud*` never reaches production Cloud (no
+cloud-web Worker, webhook Worker, facade or `CLOUD_APP_ORIGIN`): it answers
+503, or proxies to `CLOUD_PROXY_ORIGIN` when that names a staging Cloud
+(Control) origin. `ROUTER_ENV`, `WEB_ORIGIN` and `CLOUD_PROXY_ORIGIN` are
+staging-only and ignored on production hosts. Staging deploys only through the
+manual `deploy-staging.yml` workflow and has no analytics.
 
 RelayFile observer deployment is wired from the production job in
 `.github/workflows/deploy.yml`. The job runs
