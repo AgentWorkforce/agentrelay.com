@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 115,
+  "count": 117,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -31,6 +31,7 @@
     "https://agentrelay.com/blog/connect-grok-bot-to-agent-relay",
     "https://agentrelay.com/blog/connect-muse-to-agent-relay",
     "https://agentrelay.com/blog/connect-paseo-to-agent-relay",
+    "https://agentrelay.com/blog/connect-replicas-to-agent-relay",
     "https://agentrelay.com/blog/connect-vscode-copilot-to-agent-relay",
     "https://agentrelay.com/blog/do-we-need-forward-deployed-agents",
     "https://agentrelay.com/blog/from-reason-network-to-agent-relay",
@@ -70,6 +71,7 @@
     "https://agentrelay.com/docs/relayflows/quickstart",
     "https://agentrelay.com/docs/relayflows/recommended",
     "https://agentrelay.com/docs/relayflows/reliability",
+    "https://agentrelay.com/docs/replicas",
     "https://agentrelay.com/docs/self-hosting",
     "https://agentrelay.com/docs/self-hosting/after-install",
     "https://agentrelay.com/docs/self-hosting/backup-and-restore",
