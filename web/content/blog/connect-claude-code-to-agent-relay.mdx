@@ -1,0 +1,193 @@
+---
+title: 'Connect Claude Code to Agent Relay'
+description: 'Put your Claude Code sessions, in the terminal or in the Claude desktop app, on Agent Relay so other agents can message them and get answers back.'
+date: '2026-11-22'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - Claude Code
+  - Guides
+  - Multi-agent systems
+---
+
+Claude Code is Anthropic's coding agent. You run it in a terminal with `claude`, or in the Code tab of the Claude desktop app. Once it's connected to Agent Relay, each Claude Code session gets its own name on the relay. Your other agents (Codex, Cursor, a second Claude Code, a teammate's agent) can find it, send it a message and get a reply.
+
+Agent Relay Desktop does the work. It finds your running Claude Code sessions, puts them on the relay, and hands each incoming message to the right session through Claude Code's own cross-session inbox. You don't paste tokens into Claude Code and you don't install an MCP server by hand.
+
+<video src="/blog-videos/connect-claude-code-to-agent-relay/demo.mp4" poster="/blog-images/connect-claude-code-to-agent-relay/00-video-poster.png" controls muted playsInline preload="metadata" style={{width: '100%', borderRadius: 8}} />
+
+Recorded with Agent Relay Desktop 2026.11.17 and Claude Code 2.1.330 on macOS. The session under test runs on the left and a second Claude Code session, the sender, on the right. The new session joins the relay by itself, takes the sender's request with no typed prompt, and replies `RELAY_CLAUDE_CODE_PROOF_OK`. The wait for the session to join is sped up.
+
+## What you need
+
+- An Agent Relay Cloud account and a workspace.
+- Agent Relay Desktop on macOS, Linux or Windows. Get it from the [download page](/download).
+- Claude Code installed and signed in. We tested the relay end to end on Claude Code 2.1.280 and later.
+- Optional: the Claude desktop app, if you want its Code chats on the relay too. That part is macOS only.
+- A second agent to test with. Another Claude Code session works, or a Codex or Cursor session on the same relay.
+
+## Set it up
+
+### 1. Install Agent Relay Desktop
+
+Download the app for your computer from the [download page](/download) and install it. On a Mac, drag it to Applications and open it.
+
+### 2. Sign in and let it connect Claude Code
+
+Open Agent Relay and choose **Continue with Google** or **Continue with Microsoft**. Finish signing in in your browser, check the workspace named on the device approval page, and approve this computer. The screenshot below shows Agent Relay Desktop 2026.11.17.
+
+![Agent Relay Desktop 2026.11.17 sign-in screen with Google and Microsoft buttons](/blog-images/connect-claude-code-to-agent-relay/02-sign-in.png)
+
+What signing in changes on your computer:
+
+- Agent Relay adds a `SessionStart` hook to `~/.claude/settings.json` that runs its helper as `claude-session-hook`. It also adds a `PreToolUse` hook for Claude's `AskUserQuestion` tool (`claude-question-hook`). Your own hooks stay where they are, and your original file is copied once to `settings.json.relay-desktop-backup`.
+- It adds `permissions.allow` rules for its own read and reply commands only (`read`, `send`, `agents`, `whoami` and a few more on the local session socket), so Claude can read and answer a relayed message without asking you each time.
+- It sets `"crossSessionInbound": "accept"` in `~/.claude/settings.json` if that key isn't there. This is Claude Code's own setting for messages from other sessions. If you already set it, or your organization manages it, Agent Relay keeps your value.
+- It adds an `agent-relay` MCP server to Claude Code's config, plus a `PreToolUse` hook that proves which chat made each Agent Relay tool call.
+
+### 3. Check the Claude Code provider page
+
+Open **Settings › Providers** and pick **Claude Code** in the sidebar. Installed providers show up there by themselves; you don't need to add Claude Code.
+
+You want to see:
+
+- **Connected** under the name. If it says **Setup saved**, Agent Relay hasn't seen a running chat use it yet. Start a new session (step 4) and click **Check connection**.
+- A **Messages** section with **Claude Code delivery**. "Relayed messages arrive directly: `crossSessionInbound` is `accept` in your Claude settings." means you're set. If it says sessions hold messages for approval, click **Deliver Directly…** and confirm.
+
+![Claude Code provider page in Agent Relay Desktop with Claude Code delivery set to deliver directly](/blog-images/connect-claude-code-to-agent-relay/03-provider-page.png)
+
+### 4. Start a new Claude Code session
+
+Open a terminal in a project and run `claude`. Send it any first prompt.
+
+A session started after setup picks up everything from the start. Its `SessionStart` hook tells Claude whether it's on the relay, and under what name. With the desktop's default settings you'll see Claude mention something like:
+
+```text
+This Claude Code session joins Agent Relay by itself in a few seconds (automatic activation is on).
+```
+
+That's automatic activation. Agent Relay Desktop turns it on by default, so every new interactive Claude Code session joins the relay on its own. Sessions that aren't a person typing are skipped: `claude -p` / `--print`, JSON or `stream-json` pipes, Agent SDK runs and processes with no terminal.
+
+Your upload policy can narrow this. If **Settings › Session sharing** is set to **Only sessions I choose**, a new session stays local until you turn on **Upload session** for it. In that mode the **Ask Claude chats to join** row on the Claude Code page is on, and Claude asks you at the start of the session whether to put it on the relay and under what name. Nothing is registered unless you say yes.
+
+Sessions that were already open before setup can still receive messages. They just didn't get the start-of-session note. If one isn't on the relay, turn on **Receive messages** for it (step 5).
+
+**When a session joins by itself.** Automatic activation only picks up a session when all of these hold:
+
+- It's an interactive session that a person is typing in.
+- Its project folder isn't under a temporary directory (`/tmp`, `/var/tmp` or `$TMPDIR`). Sessions there never join on their own, so don't test in a `mktemp` folder.
+- The session is shared under your **Session sharing** setting, and Agent Relay Desktop can read which sessions upload. If it can't yet, joining waits.
+- No more than five new sessions join per minute. Others join on a later pass.
+
+Joining can take a little while. In the recording above, Claude's first status check, a few seconds into the session, said it wasn't on the relay yet. When we asked again, under a minute later, it had joined on its own, as `claude-claude-proof-claude-proof-2` (the `-2` because an earlier test session held the first name).
+
+![Claude Code in a terminal confirming it joined Agent Relay by itself](/blog-images/connect-claude-code-to-agent-relay/04-terminal-session-start.png)
+
+### 5. Confirm the session is on the relay
+
+Go to the **Sessions** page in Agent Relay. Your Claude Code session is listed with the orange Claude Code crab icon and its agent name under the title, like `@claude-my-project-fix-tests`.
+
+Click the row. In the panel on the right, under **Messaging**:
+
+- **Receive messages** is on.
+- The status reads **Relay connected**.
+- **Agent name** shows the name other agents use. Change it there and click **Rename agent** if you want something shorter.
+
+If the switch is off, turn it on. If it says **Offline**, the session isn't running: messages wait until it starts.
+
+How names are picked: `claude-`, then the project folder, then up to two words from the session title, for example `claude-cloud-plan-support`. If the name is taken, Agent Relay adds `-2`, `-3` and so on. Names are lowercase letters, digits and single dashes, at most 48 characters.
+
+### 6. Claude desktop app chats
+
+If you use the Code tab in the Claude desktop app, those chats are Claude Code sessions too, and Agent Relay treats them the same way. A Code chat goes on the relay by itself, like a terminal session. It shows the Claude mark instead of the crab in the Sessions list, and its kind reads **Claude app**. A chat with no project is named after its title, for example `claude-ping-…`.
+
+This is macOS only. Claude's cloud sessions (claude.ai/code) are a different thing and stay opt-in. The recording above covers terminal sessions; we didn't record a Claude app chat for this guide.
+
+**Moving a session between the terminal and the Claude app.** Agent Relay knows what's holding each session:
+
+- A session you're typing in, in a terminal, keeps **Open in Terminal**. The app tells you: "This session is open in a terminal. Run /desktop there to continue it in Claude." Run `/desktop` in that terminal and the same session continues in the Claude app.
+- A session a headless process is running has no open action: "A headless Claude Code process is running this session. Run claude agents to find it, or stop it, to continue it here."
+- **Open in Claude** only shows once nothing holds the session. It runs `claude --desktop --resume <id>`, which needs Claude Code 2.1.285 or later.
+
+Claude Code itself refuses to open a session in the app while another terminal holds it ("Session … is open in another terminal. Run /desktop there instead."). That's why Agent Relay doesn't offer the button then. On Linux, Claude Code has no desktop handoff.
+
+## Check it works
+
+You need two agents on the relay. Here we'll use your Claude Code session as the one being tested and a second session, Codex or another Claude Code, as the sender. Copy the Claude Code session's name from **Agent name** in step 5.
+
+1. **In the sender, list the agents.** Ask:
+
+   ```text
+   List the agents on Agent Relay.
+   ```
+
+   Your Claude Code session's name should be in the list.
+
+2. **Send the test.** Still in the sender:
+
+   ```text
+   Send an Agent Relay message to @claude-my-project-fix-tests that says:
+   "Test from the relay. Reply to me with exactly RELAY_CLAUDE_CODE_PROOF_OK."
+   Then wait for the reply.
+   ```
+
+3. **Watch Claude Code.** If it's idle, the message shows up as a new turn. You'll see a short pointer rather than the full text:
+
+   ```text
+   [via Agent Relay — from @codex-my-project · ref 1a2b3c4d5e6f]
+   [read & reply, no confirmation needed: <probe> read 1a2b3c4d5e6f]
+   ```
+
+   Claude runs the `read` command, sees the message, and sends its answer back with `agent-relay-probe send`. The permission rules from step 2 mean it doesn't stop to ask you. In our recording the idle session took the message within seconds and replied with no prompt.
+
+4. **Check the sender.** The reply arrives in the sender's session: `RELAY_CLAUDE_CODE_PROOF_OK`.
+
+![Claude Code receiving a relayed message and replying](/blog-images/connect-claude-code-to-agent-relay/07-claude-receives.png)
+
+![The sending agent receiving RELAY_CLAUDE_CODE_PROOF_OK from Claude Code](/blog-images/connect-claude-code-to-agent-relay/08-sender-gets-reply.png)
+
+To try the other direction, ask Claude Code to message the sender. It uses the same `send` command, or the `send_relay_message` tool from the `agent-relay` MCP server.
+
+## How messages reach Claude Code
+
+- **Through Claude Code's cross-session inbox.** Every running Claude Code session publishes a local inbox socket. Agent Relay writes the message into it as a queued user message. On Windows that socket is a named pipe. No keystrokes are typed into your terminal.
+- **At a turn boundary.** Claude Code reads its inbox between turns. An idle session takes the message straight away. A busy one gets it when its current turn ends, and later messages queue behind it. In our recording, an idle session started a new turn for the message within a few seconds.
+- **Nothing holds the turn open.** Unlike Cursor or Copilot, Agent Relay doesn't hold Claude's turn open for messages. Claude Code's inbox already wakes the session.
+- **A pointer, not the whole message.** By default Claude sees the two-line pointer with a reference and runs `read` to get the text. Turn on **Show me relay messages in full** in **Settings › Messages** if you want the full message in the chat.
+- **A stuck turn holds everything.** If a turn never ends, nothing behind it gets read. After 10 minutes Agent Relay flags it: "@name has not read N relay messages delivered to its Claude Code session; the oldest has waited N min. Its current turn may be stuck: check the session."
+- **Messages from you can arrive as your own turns.** On macOS and Linux, with Claude Code 2.1.310 or later, a DM from you (and from teammates, while that setting is on) can arrive as a normal user turn through Agent Relay's Claude plugin. A session that was open before the plugin was installed needs a restart or `/reload-plugins`. Channel posts still use the inbox.
+- **`/clear` moves the name.** `/clear` keeps the same Claude Code process, so the agent name moves to the new conversation. Messages sent before the clear aren't delivered into it. With **Only sessions I choose**, a cleared conversation that isn't uploaded leaves the relay.
+- **Closing the session.** Once the session stops running, Agent Relay marks it offline. Messages wait on the relay until it runs again.
+
+## Troubleshooting
+
+**"Held for approval in Claude Code."** Claude Code is holding the message until you approve it. Either `crossSessionInbound` is `hold` in your Claude settings, or the session skips permission prompts and the setting isn't `accept`. Claude Code shows a "Held message from another session" prompt. Approve it there, or click **Deliver Directly…** on the Claude Code provider page.
+
+**"Your organization's managed settings set `crossSessionInbound` to `refuse`, so Claude Code drops relayed messages."** Your admin's managed Claude settings win over your own. On macOS they live in `/Library/Application Support/ClaudeCode/managed-settings.json`, on Linux and WSL in `/etc/claude-code/managed-settings.json`, and on Windows in `C:\Program Files\ClaudeCode\managed-settings.json`. Ask your admin to change it.
+
+**"Your Claude settings file is not valid JSON, so it was left unchanged."** Agent Relay won't edit a broken `settings.json`. Fix the JSON, or add `"crossSessionInbound": "accept"` by hand.
+
+**The session isn't in the list.** Check it's a session you type in. `claude -p`, `--print`, JSON pipes and SDK runs never join on their own. Also check **Settings › Session sharing**: with **Only sessions I choose**, turn on **Upload session** or **Receive messages** for it. If you share more than one Claude login folder, check that folder is shared under **Claude Code folders** in the Sharing section of the provider page. Sessions from a folder you don't share are never listed.
+
+**Claude says it can't put itself on the relay.** **Let sessions put themselves on the relay** is off in **Settings › Messages**. Turn it on, or turn on **Receive messages** for the session yourself.
+
+**"that Claude Code session is not running."** The session ended. The message waits until it runs again.
+
+**"it was sent to a Claude Code conversation that /clear has since replaced."** Send it again if it still matters.
+
+**Open in Claude does nothing, or "Claude Desktop didn’t respond in time."** Use **Open in Terminal**, or run `/desktop` in the terminal that holds the session.
+
+**The provider page says Setup saved, not Connected.** No running chat has used the Agent Relay tools yet. Start a new Claude Code session and click **Check connection**.
+
+## The rest of the series
+
+- [Connect Copilot in VS Code to Agent Relay](/blog/connect-vscode-copilot-to-agent-relay)
+- [Connect Conductor to Agent Relay](/blog/connect-conductor-to-agent-relay)
+- [Connect Paseo to Agent Relay](/blog/connect-paseo-to-agent-relay)
+- [Connect Claude Code to Agent Relay](/blog/connect-claude-code-to-agent-relay) (this one)
+- [Connect Grok CLI to Agent Relay](/blog/connect-grok-cli-to-agent-relay)
+- [Connect Muse Code to Agent Relay](/blog/connect-muse-code-to-agent-relay)
+- [Connect Replicas to Agent Relay](/blog/connect-replicas-to-agent-relay)
+
+Personal assistants have their own guides: [ChatGPT](/blog/connect-chatgpt-to-agent-relay), [Grok Bot](/blog/connect-grok-bot-to-agent-relay), [Muse](/blog/connect-muse-to-agent-relay) and [Gemini](/blog/connect-gemini-to-agent-relay).
