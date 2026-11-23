@@ -81,51 +81,30 @@ describe("primary host aliases", () => {
     ["vanity redirect", "/virtual-office"],
   ];
 
-  // Cases whose request ends up on a /cloud* path (directly or via a rewrite).
+  // Cases whose request ends up on a /cloud* path (directly or via a rewrite):
+  // on the aliases these go to the new stack instead (see below).
   const cloudCases = new Set(["cloud app", "connect invite", "OAuth well-known", "root MCP endpoint"]);
+  const siteCases = cases.filter(([name]) => !cloudCases.has(name));
 
-  it.each(cases)("routes %s on public.agentrelay.com the same as agentrelay.com", async (_name, path, init) => {
+  it.each(siteCases)("routes %s on both aliases the same as agentrelay.com", async (_name, path, init) => {
     const apex = await routeOf(APEX, path, init);
-    const alias = await routeOf(PUBLIC, path, init);
-    expect(alias.status).toBe(apex.status);
-    expect(alias.location).toBe(apex.location);
-    expect(alias.upstream).toBe(apex.upstream);
-    expect(alias.cloudPath).toBe(apex.cloudPath);
-    if (apex.forwardedHost) expect(alias.forwardedHost).toBe(PUBLIC);
-    expect(alias.response.headers.get("x-robots-tag")).toBe("noindex");
-  });
-
-  it.each(cases.filter(([name]) => !cloudCases.has(name)))(
-    "routes %s on public-staging.agentrelay.com the same as agentrelay.com",
-    async (_name, path, init) => {
-      const apex = await routeOf(APEX, path, init);
-      const alias = await routeOf(PUBLIC_STAGING, path, init);
+    for (const host of [PUBLIC, PUBLIC_STAGING]) {
+      const alias = await routeOf(host, path, init);
       expect(alias.status).toBe(apex.status);
       expect(alias.location).toBe(apex.location);
       expect(alias.upstream).toBe(apex.upstream);
       expect(alias.cloudPath).toBe(apex.cloudPath);
-      if (apex.forwardedHost) expect(alias.forwardedHost).toBe(PUBLIC_STAGING);
+      if (apex.forwardedHost) expect(alias.forwardedHost).toBe(host);
       expect(alias.response.headers.get("x-robots-tag")).toBe("noindex");
-    },
-  );
+    }
+  });
 
-  it.each(cases.filter(([name]) => cloudCases.has(name)))(
-    "never sends %s on public-staging.agentrelay.com to production Cloud",
-    async (_name, path, init) => {
-      const alias = await routeOf(PUBLIC_STAGING, path, init);
-      expect(alias.status).toBe(503);
-      expect(alias.cloudPath).toBeNull();
-      expect(alias.upstream).toBeNull();
-      expect(alias.response.headers.get("x-robots-tag")).toBe("noindex");
-    },
-  );
-
-  it("sends representative paths where agentrelay.com sends them", async () => {
+  it("sends representative site paths where agentrelay.com sends them", async () => {
     expect((await routeOf(PUBLIC, "/docs")).upstream).toBe("https://origin-web.agentrelay.com/docs");
+    expect((await routeOf(PUBLIC, "/blog")).upstream).toBe("https://origin-web.agentrelay.com/blog");
+    expect((await routeOf(PUBLIC, "/signup/teams")).upstream).toBe("https://origin-web.agentrelay.com/signup/teams");
     expect((await routeOf(PUBLIC, "/observer/file/x")).upstream).toBe("https://file-observer.test.invalid/x");
     expect((await routeOf(PUBLIC, "/observer/x")).upstream).toBe("https://observer.relaycast.dev/observer/x");
-    expect((await routeOf(PUBLIC, "/cloud/x")).cloudPath).toBe("/cloud/x");
-    expect((await routeOf(PUBLIC, "/mcp", { method: "POST", body: "{}" })).cloudPath).toBe("/cloud/mcp");
     expect((await routeOf(PUBLIC, "/u/agent-relay", { headers: { accept: "*/*" } })).upstream)
       .toBe("https://origin-web.agentrelay.com/u/agent-relay/agent.md");
   });
@@ -196,45 +175,34 @@ function prodCloudEverywhere() {
   };
 }
 
-describe("staging router", () => {
-  const cloudPaths = [
-    "/cloud", "/cloud/x", "/cloud/api/v1/webhooks/nango", "/mcp",
-    "/.well-known/oauth-authorization-server", "/connect/abcdefghijklmnopqrstuvwxyz012345",
-  ];
 
-  it.each(cloudPaths)("answers 503 for %s with no staging Cloud target", async (path) => {
-    const result = await routeOf(PUBLIC_STAGING, path, {}, { ...STAGING_ENV, CLOUD_WEB_WORKER: undefined, CLOUD_APP_ORIGIN: undefined });
+describe("staging router", () => {
+  // public-staging's own /cloud* redirects to the staging dashboard host (see
+  // "new-stack redirects"); these cover any other host the staging Worker
+  // answers, such as a preview URL.
+  const PREVIEW = "agentrelay-router-staging.example.workers.dev";
+  const cloudPaths = ["/cloud", "/cloud/x", "/cloud/api/v1/webhooks/nango"];
+
+  it.each(cloudPaths)("answers 503 for %s on a non-alias host with no staging Cloud target", async (path) => {
+    const result = await routeOf(PREVIEW, path, {}, { ...STAGING_ENV, CLOUD_WEB_WORKER: undefined, CLOUD_APP_ORIGIN: undefined });
     expect(result.status).toBe(503);
     expect(result.upstream).toBeNull();
   });
 
   it.each(cloudPaths)("never reaches production Cloud for %s, even with every prod path bound", async (path) => {
-    for (const env of [{ ...STAGING_ENV, ...prodCloudEverywhere() }, prodCloudEverywhere()]) {
-      // Second env: a production-shaped Worker receiving a public-staging
-      // request (host-based guard, no ROUTER_ENV).
-      const upstream = stubUpstream();
-      const response = await worker.fetch(new Request(`https://${PUBLIC_STAGING}${path}`), env as unknown as Env, buildCtx());
-      expect(response.status).toBe(503);
-      expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
-      expect(env.WEBHOOK_WORKER.fetch).not.toHaveBeenCalled();
-      expect(upstream).not.toHaveBeenCalled();
-      vi.unstubAllGlobals();
-    }
-  });
-
-  it("guards any host on the staging Worker, not only public-staging", async () => {
     const env = { ...STAGING_ENV, ...prodCloudEverywhere() };
     const upstream = stubUpstream();
-    const response = await worker.fetch(new Request("https://agentrelay-router-staging.example.workers.dev/cloud/x"), env as unknown as Env, buildCtx());
+    const response = await worker.fetch(new Request(`https://${PREVIEW}${path}`), env as unknown as Env, buildCtx());
     expect(response.status).toBe(503);
     expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
+    expect(env.WEBHOOK_WORKER.fetch).not.toHaveBeenCalled();
     expect(upstream).not.toHaveBeenCalled();
   });
 
-  it("proxies /cloud* to the staging CLOUD_PROXY_ORIGIN only", async () => {
+  it("proxies a non-alias host's /cloud* to the staging CLOUD_PROXY_ORIGIN only", async () => {
     const env = { ...STAGING_ENV, ...prodCloudEverywhere(), CLOUD_PROXY_ORIGIN: STAGING_CLOUD };
     const upstream = stubUpstream();
-    const response = await worker.fetch(new Request(`https://${PUBLIC_STAGING}/cloud/api/v1/webhooks/nango`), env as unknown as Env, buildCtx());
+    const response = await worker.fetch(new Request(`https://${PREVIEW}/cloud/api/v1/webhooks/nango`), env as unknown as Env, buildCtx());
     expect(response.status).toBe(200);
     expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
     expect(env.WEBHOOK_WORKER.fetch).not.toHaveBeenCalled();
@@ -248,62 +216,155 @@ describe("staging router", () => {
     expect(staging.forwardedHost).toBe(PUBLIC_STAGING);
   });
 
-  it("ignores the staging-only vars on existing hosts", async () => {
-    const env = { WEB_ORIGIN: "https://origin-web-staging.agentrelay.com", CLOUD_PROXY_ORIGIN: STAGING_CLOUD };
+  it("ignores the staging-only and public-app vars on existing hosts", async () => {
+    const env = {
+      WEB_ORIGIN: "https://origin-web-staging.agentrelay.com",
+      CLOUD_PROXY_ORIGIN: STAGING_CLOUD,
+      PUBLIC_APP_ORIGIN: "https://app.public.agentrelay.com",
+    };
     expect((await routeOf(APEX, "/docs", {}, env)).upstream).toBe("https://origin-web.agentrelay.com/docs");
     expect((await routeOf(PUBLIC, "/docs", {}, env)).upstream).toBe("https://origin-web.agentrelay.com/docs");
-    expect((await routeOf(APEX, "/cloud/x", {}, env)).cloudPath).toBe("/cloud/x");
-    expect((await routeOf(PUBLIC, "/cloud/x", {}, env)).cloudPath).toBe("/cloud/x");
+    for (const path of ["/cloud/x", "/cloud/api/auth/google/start?next=%2F", "/cloud/dashboard"]) {
+      const apex = await routeOf(APEX, path, {}, env);
+      expect(apex.location).toBeNull();
+      expect(apex.cloudPath).toBe(new URL(path, "https://x").pathname);
+    }
+    const login = await routeOf(APEX, "/login", {}, env);
+    expect(login.location).toBeNull();
+    expect(login.upstream).toBe("https://origin-web.agentrelay.com/login");
     const unbound = await routeOf(APEX, "/cloud/x", {}, { ...env, CLOUD_WEB_WORKER: undefined });
     expect(unbound.status).toBe(503);
     expect(unbound.upstream).toBeNull();
   });
 });
 
-describe("public.agentrelay.com sign-in start", () => {
-  const starts = ["/cloud/api/auth/google/start", "/cloud/api/auth/microsoft/start", "/cloud/api/auth/oidc/start/"];
+// [request path, dashboard-host path] for the mapping in src/public-app.ts.
+const APP_MAPPING: Array<[string, string]> = [
+  ["/login", "/login"],
+  ["/login/", "/login"],
+  ["/cloud", "/"],
+  ["/cloud/", "/"],
+  ["/cloud/api/auth/google/start", "/cloud/api/auth/google/start"],
+  ["/cloud/api/auth/microsoft/start", "/cloud/api/auth/microsoft/start"],
+  ["/cloud/api/auth/oidc/start/", "/cloud/api/auth/oidc/start/"],
+  ["/cloud/api/auth/google/callback", "/cloud/api/auth/google/callback"],
+  ["/cloud/api/v1/me", "/cloud/api/v1/me"],
+  ["/cloud/api/v1/webhooks/nango", "/cloud/api/v1/webhooks/nango"],
+  ["/cloud/mcp", "/cloud/mcp"],
+  ["/cloud/.well-known/oauth-authorization-server", "/cloud/.well-known/oauth-authorization-server"],
+  ["/cloud/oauth/authorize", "/cloud/oauth/authorize"],
+  ["/mcp", "/mcp"],
+  ["/.well-known/oauth-authorization-server", "/.well-known/oauth-authorization-server"],
+  ["/.well-known/oauth-protected-resource/mcp", "/.well-known/oauth-protected-resource/mcp"],
+  ["/.well-known/openid-configuration/cloud", "/.well-known/openid-configuration/cloud"],
+  ["/cloud/dashboard", "/"],
+  ["/cloud/dashboard/sessions", "/sessions"],
+  ["/cloud/teams/connect", "/teams/connect"],
+  ["/cloud/login", "/login"],
+  ["/dashboard", "/"],
+  ["/dashboard/", "/"],
+  ["/dashboard/workflows/listeners/abc", "/workflows/listeners/abc"],
+  ["/connect/abcdefghijklmnopqrstuvwxyz012345", "/connect/abcdefghijklmnopqrstuvwxyz012345"],
+];
+const QUERY = "?next=%2Fdashboard%2Fworkflows&invite_token=abc&tag=a&tag=b";
 
-  it.each(starts)("redirects %s to agentrelay.com, keeping the query", async (path) => {
-    for (const method of ["GET", "HEAD"]) {
-      const result = await routeOf(PUBLIC, `${path}?returnTo=%2Fcloud%2Fapp&invite=abc`, { method });
-      expect(result.status).toBe(302);
-      expect(result.location).toBe(`https://agentrelay.com${path}?returnTo=%2Fcloud%2Fapp&invite=abc`);
+describe("new-stack redirects on the aliases", () => {
+  const targets = [
+    [PUBLIC, "https://app.public.agentrelay.com", {}],
+    [PUBLIC_STAGING, "https://app.public-staging.agentrelay.com", STAGING_ENV],
+  ] as const;
+
+  for (const [host, origin, env] of targets) {
+    it.each(APP_MAPPING)(`${host}%s redirects to ${origin}%s, keeping the query`, async (path, target) => {
+      for (const method of ["GET", "HEAD"]) {
+        const result = await routeOf(host, `${path}${QUERY}`, { method }, env);
+        expect(result.status).toBe(302);
+        expect(result.location).toBe(`${origin}${target}${QUERY}`);
+        expect(result.response.headers.get("cache-control")).toBe("no-store");
+        expect(result.response.headers.get("x-robots-tag")).toBe("noindex");
+        expect(result.cloudPath).toBeNull();
+        expect(result.upstream).toBeNull();
+      }
+    });
+  }
+
+  it("uses 307 for other methods so the method and body are kept", async () => {
+    for (const method of ["POST", "PUT", "DELETE"]) {
+      const result = await routeOf(PUBLIC, "/cloud/api/v1/me", { method, body: method === "DELETE" ? undefined : "{}" });
+      expect(result.status).toBe(307);
+      expect(result.location).toBe("https://app.public.agentrelay.com/cloud/api/v1/me");
       expect(result.response.headers.get("cache-control")).toBe("no-store");
       expect(result.cloudPath).toBeNull();
       expect(result.upstream).toBeNull();
     }
   });
 
-  it.each(starts)("does not redirect %s on agentrelay.com", async (path) => {
-    const result = await routeOf(APEX, `${path}?returnTo=x`);
-    expect(result.location).toBeNull();
-    expect(result.cloudPath).toBe(path);
+  it("sends the agent-chat Cloud fallback to the new stack, not the old Cloud", async () => {
+    const chat = "/agent-relay/0123456789abcdef0123456789abcdef";
+    const result = await routeOf(PUBLIC, chat, { method: "POST", body: "hi" }, { RELAY_AGENT_WORKER: undefined });
+    expect(result.status).toBe(307);
+    expect(result.location).toBe("https://app.public.agentrelay.com/cloud/api/v1/agent-chat/agent-relay/0123456789abcdef0123456789abcdef");
+    expect(result.cloudPath).toBeNull();
   });
 
-  it("leaves POST and other auth and /cloud paths on the alias with the binding", async () => {
-    for (const [path, method] of [
-      ["/cloud/api/auth/google/start", "POST"],
-      ["/cloud/api/auth/google/callback", "GET"],
-      ["/cloud/api/auth/github/start", "GET"],
-      ["/cloud/api/auth/google/start/extra", "GET"],
-      ["/cloud/dashboard", "GET"],
-    ] as const) {
-      const result = await routeOf(PUBLIC, path, { method, body: method === "POST" ? "{}" : undefined });
-      expect(result.location).toBeNull();
-      expect(result.cloudPath).toBe(path);
+  it("never calls the old Cloud binding, facade or webhook Worker for alias Cloud paths", async () => {
+    const paths = [...APP_MAPPING.map(([path]) => path), "/cloud/api/v1/workspaces/rw_on/sessions"];
+    for (const host of [PUBLIC, PUBLIC_STAGING]) {
+      for (const method of ["GET", "POST"]) {
+        for (const path of paths) {
+          const env = { ...prodCloudEverywhere(), ...(host === PUBLIC_STAGING ? STAGING_ENV : {}) };
+          const upstream = stubUpstream();
+          const response = await worker.fetch(
+            new Request(`https://${host}${path}`, { method, body: method === "POST" ? "{}" : undefined }),
+            env as unknown as Env,
+            buildCtx(),
+          );
+          expect([302, 307]).toContain(response.status);
+          expect(env.CLOUD_WEB_WORKER.fetch).not.toHaveBeenCalled();
+          expect(env.WEBHOOK_WORKER.fetch).not.toHaveBeenCalled();
+          expect(upstream).not.toHaveBeenCalled();
+          vi.unstubAllGlobals();
+        }
+      }
     }
   });
 
-  it.each(starts)("never sends public-staging %s to production sign-in", async (path) => {
-    for (const env of [{}, { ...STAGING_ENV, CLOUD_WEB_WORKER: undefined }]) {
-      const result = await routeOf(PUBLIC_STAGING, `${path}?returnTo=x`, {}, env);
-      expect(result.status).toBe(503);
-      expect(result.location).toBeNull();
-      expect(result.cloudPath).toBeNull();
-      expect(result.upstream).toBeNull();
+  it("never sends public-staging to the production dashboard", async () => {
+    // A production-shaped env (PUBLIC_APP_ORIGIN for public.*) receiving a
+    // public-staging request still targets the staging dashboard host.
+    for (const env of [{ PUBLIC_APP_ORIGIN: "https://app.public.agentrelay.com" }, STAGING_ENV, {}]) {
+      const result = await routeOf(PUBLIC_STAGING, "/cloud/api/auth/google/start", {}, env);
+      expect(result.location).toBe("https://app.public-staging.agentrelay.com/cloud/api/auth/google/start");
     }
-    const proxied = await routeOf(PUBLIC_STAGING, path, {}, { ...STAGING_ENV, CLOUD_PROXY_ORIGIN: STAGING_CLOUD });
-    expect(proxied.location).toBeNull();
-    expect(proxied.upstream).toBe(`${STAGING_CLOUD}${path}`);
+  });
+
+  it("applies PUBLIC_APP_ORIGIN only to the alias its environment serves", async () => {
+    const custom = "https://dashboard.example.test";
+    expect((await routeOf(PUBLIC, "/login", {}, { PUBLIC_APP_ORIGIN: custom })).location).toBe(`${custom}/login`);
+    expect((await routeOf(PUBLIC, "/login", {}, { ...STAGING_ENV, PUBLIC_APP_ORIGIN: custom })).location)
+      .toBe("https://app.public.agentrelay.com/login");
+    expect((await routeOf(PUBLIC_STAGING, "/login", {}, { ...STAGING_ENV, PUBLIC_APP_ORIGIN: custom })).location)
+      .toBe(`${custom}/login`);
+    // Not an https origin: the default is used.
+    expect((await routeOf(PUBLIC, "/login", {}, { PUBLIC_APP_ORIGIN: "http://evil.test/x" })).location)
+      .toBe("https://app.public.agentrelay.com/login");
+  });
+
+  it("does not redirect sign-in, the dashboard or Cloud on agentrelay.com", async () => {
+    for (const [path] of APP_MAPPING) {
+      const result = await routeOf(APEX, `${path}${QUERY}`);
+      expect(result.location?.startsWith("https://app.public")).not.toBe(true);
+    }
+    const start = await routeOf(APEX, "/cloud/api/auth/google/start?next=x");
+    expect(start.location).toBeNull();
+    expect(start.cloudPath).toBe("/cloud/api/auth/google/start");
+  });
+
+  it("leaves marketing pages on the aliases", async () => {
+    for (const path of ["/", "/docs", "/blog", "/signup/teams", "/agents/register", "/connect", "/cloudy"]) {
+      const result = await routeOf(PUBLIC, path);
+      expect(result.location).toBeNull();
+      expect(result.upstream).toBe(`https://origin-web.agentrelay.com${path}`);
+    }
   });
 });

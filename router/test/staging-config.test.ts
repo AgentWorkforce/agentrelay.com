@@ -27,6 +27,7 @@ describe("staging router config", () => {
     expect(staging.routes).toEqual([{ pattern: "public-staging.agentrelay.com", custom_domain: true }]);
     expect(staging.vars.ROUTER_ENV).toBe("staging");
     expect(staging.vars.WEB_ORIGIN).toBe("https://origin-web-staging.agentrelay.com");
+    expect(staging.vars.PUBLIC_APP_ORIGIN).toBe("https://app.public-staging.agentrelay.com");
   });
 
   it("binds no production Cloud, relay-agent, KV, R2 or analytics", () => {
@@ -54,6 +55,7 @@ describe("production router config", () => {
       { pattern: "www.arelay.to", custom_domain: true },
       { pattern: "public.agentrelay.com", custom_domain: true },
     ]);
+    expect(prod.vars.PUBLIC_APP_ORIGIN).toBe("https://app.public.agentrelay.com");
     expect(prod.vars).not.toHaveProperty("ROUTER_ENV");
     expect(prod.vars).not.toHaveProperty("WEB_ORIGIN");
     expect(prod.vars).not.toHaveProperty("CLOUD_PROXY_ORIGIN");

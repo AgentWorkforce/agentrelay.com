@@ -3,13 +3,18 @@ import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
 import { withMcpGatewayErrors } from "./src/mcp-gateway-errors.js";
-import { isPrimaryHost, isStagingHost, PRIMARY_HOST, PUBLIC_HOST, withAliasHostHeaders } from "./src/hosts.js";
+import { isPrimaryHost, isPrimaryHostAlias, isStagingHost, PRIMARY_HOST, withAliasHostHeaders } from "./src/hosts.js";
+import { publicAppRedirect } from "./src/public-app.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
   // STAGING ONLY. "staging" on the agentrelay-router-staging Worker
   // (wrangler env.staging); unset in production. See isStagingRouting.
   ROUTER_ENV?: string;
+  // The new-stack dashboard origin public.* (prod) / public-staging.* (staging)
+  // redirect sign-in, the dashboard and /cloud* to. Ignored on agentrelay.com
+  // and arelay.to. See src/public-app.ts.
+  PUBLIC_APP_ORIGIN?: string;
   // STAGING ONLY: the staging Cloud (Control) origin /cloud* is proxied to.
   // Ignored unless staging routing applies; unset means staging /cloud*
   // answers 503. Never a production Cloud origin.
@@ -808,23 +813,6 @@ export function getOpenAiAppsChallengeResponse(
   });
 }
 
-// Cloud sets its OAuth state/attempt/return-path/invite cookies host-only on
-// the request host but always builds the callback on
-// https://agentrelay.com/cloud, so a sign-in started on public.agentrelay.com
-// would land on /login?authError=state. Start it on agentrelay.com instead.
-// public.agentrelay.com only: public-staging must never be sent to production
-// sign-in (its /cloud* stays 503 or the staging Cloud origin).
-const CLOUD_AUTH_START_PATH = /^\/cloud\/api\/auth\/(?:google|microsoft|oidc)\/start\/?$/;
-
-export function getPublicHostAuthStartRedirect(url: URL, method: string): Response | undefined {
-  if (url.hostname !== PUBLIC_HOST || (method !== "GET" && method !== "HEAD")) return undefined;
-  if (!CLOUD_AUTH_START_PATH.test(url.pathname)) return undefined;
-  return new Response(null, {
-    status: 302,
-    headers: { Location: `https://${PRIMARY_HOST}${url.pathname}${url.search}`, "Cache-Control": "no-store" },
-  });
-}
-
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
@@ -834,9 +822,13 @@ const router = {
       return openAiAppsChallenge;
     }
 
-    const publicHostAuthStart = getPublicHostAuthStartRedirect(url, request.method);
-    if (publicHostAuthStart) {
-      return publicHostAuthStart;
+    // public.* / public-staging.*: sign-in, the dashboard and Cloud go to the
+    // new stack's dashboard host, before any Cloud rewrite or dispatch.
+    const publicApp = isPrimaryHostAlias(url.hostname)
+      ? publicAppRedirect(url, request.method, env)
+      : undefined;
+    if (publicApp) {
+      return publicApp;
     }
 
     const cloudRewritePath = !isPrimaryHost(url.hostname)
@@ -1014,6 +1006,17 @@ const router = {
     // Worker binding, the webhook Worker, the facade origins, nor
     // CLOUD_APP_ORIGIN. It goes to the staging CLOUD_PROXY_ORIGIN through the
     // generic proxy below, or answers 503 when none is configured.
+    // Anything an alias still has on a /cloud* path after the rewrites above
+    // (the agent-chat Cloud fallback) also goes to the new stack, never to the
+    // old Cloud.
+    const lateRedirect = isPrimaryHostAlias(url.hostname) && isCloudPath(url.pathname)
+      ? publicAppRedirect(url, request.method, env)
+      : undefined;
+    if (lateRedirect) {
+      void recorderRequestClone?.body?.cancel().catch(() => undefined);
+      return lateRedirect;
+    }
+
     const staging = isStagingRouting(env, url.hostname);
     const stagingCloudRoute = staging && isCloudPath(url.pathname);
     if (stagingCloudRoute && !stagingCloudOrigin(env)) {
@@ -1026,7 +1029,8 @@ const router = {
 
     // Empty/invalid/unreadable config retains the existing dispatch below,
     // including webhook offload and Cloud's unavailable-binding response.
-    const facade = staging ? null : await readFacadeRoute(request, env.ROUTER_CONFIG);
+    // The facade's origins are the old Cloud: never for the aliases.
+    const facade = staging || isPrimaryHostAlias(url.hostname) ? null : await readFacadeRoute(request, env.ROUTER_CONFIG);
     if (facade?.mode === "on") {
       // This branch is not recorded. Cancel the unused tee so a streaming
       // mutation body cannot accumulate in the recorder's unread branch.
