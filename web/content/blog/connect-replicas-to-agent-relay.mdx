@@ -143,7 +143,7 @@ Chats started directly in Replicas are not automatically visible on Agent Relay.
 
 Current `relay-control` includes the Replicas lifecycle and environment-identity runtime behind `SELFHOST_REPLICAS_ENABLED=true`; it is off by default. The operator must also configure a public base URL reachable from Replicas and Relaycast, configure the Replicas workspace-identity issuer, and connect the provider key. Follow the maintained [`relay-control` Replicas runbook](https://github.com/AgentWorkforce/relay-control/blob/main/docs/replicas.md) rather than translating hosted Cloud URLs by hand.
 
-When enabled, owner/admin person connections receive the same six lifecycle tools. Self-hosted lifecycle routes use `/api/v1/workspaces/{workspaceId}/replicas`, while provider connection setup remains under `/api/v1/workspaces/{workspaceId}/remote-agent-connections/replicas`.
+When enabled, owner/admin person connections receive the same six lifecycle tools. Unlike hosted Cloud, self-hosted connections authorized through the MCP OAuth connector do not get them; use a signed-in browser or CLI login session. Self-hosted lifecycle routes use `/api/v1/workspaces/{workspaceId}/replicas`, while provider connection setup remains under `/api/v1/workspaces/{workspaceId}/remote-agent-connections/replicas`.
 
 Self-hosted environment setup also registers an HTTP `agent-relay-replica` entry and admits each VM with short-lived Replicas workspace identity. Its three native tools are not the general `/api/v1/mcp/shared-sessions` connection. Keep the feature flag off until the operator has completed the runbook and live target-chat acceptance test.
 
