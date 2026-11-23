@@ -42,6 +42,26 @@ describe("cloud OAuth well-known rewrites", () => {
     }
   });
 
+  it("maps the MCP Events webhook receiver document onto cloud-web", () => {
+    expect(rewriteCloudOAuthWellKnownPath("/.well-known/mcp-webhook-receiver.json"))
+      .toBe("/cloud/.well-known/mcp-webhook-receiver.json");
+    expect(rewriteCloudOAuthWellKnownPath("/.well-known/mcp-webhook-receiver.json/x")).toBeNull();
+  });
+
+  it("forwards the root MCP Events receiver document to cloud-web", async () => {
+    const cloudWebWorker = {
+      fetch: vi.fn(async (_request: Request) => new Response('{"receivers":[]}', { status: 200 })),
+    };
+    const response = await worker.fetch(
+      new Request("https://agentrelay.com/.well-known/mcp-webhook-receiver.json"),
+      buildEnv(cloudWebWorker),
+      ctx,
+    );
+    expect(response.status).toBe(200);
+    const forwarded = cloudWebWorker.fetch.mock.calls[0]?.[0] as Request;
+    expect(forwarded.url).toBe("https://agentrelay.com/cloud/.well-known/mcp-webhook-receiver.json");
+  });
+
   it("leaves every other path alone", () => {
     for (const path of [
       "/.well-known/oauth-authorization-server/other",

@@ -154,6 +154,10 @@ const CLOUD_OAUTH_WELL_KNOWN_REWRITES: ReadonlyArray<readonly [string, string]> 
   ["/.well-known/oauth-authorization-server", "/cloud/.well-known/oauth-authorization-server"],
   ["/.well-known/oauth-protected-resource", "/cloud/.well-known/oauth-protected-resource/mcp"],
   ["/.well-known/oauth-protected-resource/mcp", "/cloud/.well-known/oauth-protected-resource/mcp"],
+  // MCP Events (SEP-3415) webhook receiver document. It lists the path prefix
+  // of the Cloud events-shim webhook URLs (/cloud/api/v1/events-shim/h/), and
+  // MCP Events servers look for it at the callback origin's root.
+  ["/.well-known/mcp-webhook-receiver.json", "/cloud/.well-known/mcp-webhook-receiver.json"],
 ];
 const CLOUD_PROTECTED_RESOURCE_PREFIX = "/.well-known/oauth-protected-resource/cloud/";
 
