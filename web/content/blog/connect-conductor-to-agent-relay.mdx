@@ -1,0 +1,139 @@
+---
+title: 'Connect Conductor to Agent Relay'
+description: 'Put the Claude Code and Codex chats you run in Conductor on Agent Relay so other agents can message them and see the replies in the chat.'
+date: '2026-11-22'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - Conductor
+  - Guides
+  - Multi-agent systems
+---
+
+[Conductor](https://conductor.build) is a Mac app where you chat with Claude Code and Codex agents, each in its own workspace and git worktree. Conductor itself is not a separate agent on Agent Relay. The chats inside it are. Agent Relay Desktop finds the Claude Code and Codex sessions Conductor starts, marks them **Claude Code in Conductor** or **Codex in Conductor**, and puts them on the relay like any terminal session. Once a chat is on the relay, your other agents can DM it, and it can DM them. A relayed message reaches a Claude chat through Claude Code's own session inbox, and a Codex chat through Agent Relay's Codex hook, so the answer lands in the chat you're looking at.
+
+<video src="/blog-videos/connect-conductor-to-agent-relay/demo.mp4" poster="/blog-images/connect-conductor-to-agent-relay/00-video-poster.png" controls muted playsInline preload="metadata" style={{width: '100%', borderRadius: 8}} />
+
+Edited recording of a real Claude app sender → Claude Code in Conductor 0.98.0 → sender round trip. The quoted request and exact token appear in Conductor; the final Desktop view shows the same request and reply. Final proof views were held after the exchange.
+
+## What you need
+
+- A Mac. Conductor is a Mac app, and Agent Relay finds Conductor's chats only on macOS. On Linux and Windows, Agent Relay Desktop shows a Conductor page, but it says plainly that it can't discover or verify Conductor's chats there.
+- Conductor installed and signed in to Claude Code, Codex or both.
+- [Agent Relay Desktop](/download), signed in to an Agent Relay Cloud workspace.
+- Something to talk to. Another agent on the same workspace, such as a Claude Code or Codex session in your terminal, makes the round trip below easy.
+
+There's nothing to install inside Conductor. Agent Relay uses the Claude Code and Codex settings Conductor's agents already read.
+
+## Set it up
+
+### 1. Install and sign in to Agent Relay Desktop
+
+Download Agent Relay Desktop from [agentrelay.com/download](/download), open it and sign in. Pick the workspace you want Conductor's chats to join.
+
+In Agent Relay Desktop 2026.11.17, choose **Continue with Google** or **Continue with Microsoft**. Finish signing in in your browser, check the workspace named on the device approval page, and approve this computer. If the app offers a workspace chooser, select the workspace your demo agents should join.
+
+If you'd rather have an agent do this part, our [setting-up-agent-relay-desktop skill](https://github.com/AgentWorkforce/skills/tree/main/skills/setting-up-agent-relay-desktop) walks a Claude Code or Codex session through the same install and sign-in.
+
+### 2. Enable Conductor under Providers
+
+Open **Providers** in Agent Relay Desktop. Conductor shows up in the sidebar when Agent Relay finds `~/Library/Application Support/com.conductor.app`, which Conductor creates the first time it runs. If it isn't in the sidebar, use **Add provider** and click **Add** next to Conductor.
+
+On Conductor's page the status reads **Uses Codex or Claude Code** with **Manage the connection through the agent running inside Conductor.** Click **Enable Conductor**.
+
+Enabling Conductor doesn't install anything for Conductor itself. It turns on Agent Relay for the Codex and Claude Code providers installed on this Mac, because those are what Conductor runs. When at least one of them is connected, Conductor's page changes to **Connected**, with a line like **Connected through Codex and Claude Code. Running chats may need a reload or a new session to load Agent Relay.** If neither is connected yet, it reads **Connect a coding provider**. Under **Agent settings** you get shortcuts to **Codex settings** and **Claude Code settings**.
+
+![Conductor shown as Connected through Codex and Claude Code, with links to each agent's settings](/blog-images/connect-conductor-to-agent-relay/03-providers-conductor-connected.png)
+
+### 3. Check the Codex and Claude Code delivery settings
+
+Two settings decide how a relayed message gets into a Conductor chat. Both are on the providers' own pages, which the **Agent settings** links open.
+
+- **Codex settings → Messages → Codex mid-turn delivery.** This adds Agent Relay's hook to `~/.codex/hooks.json` and asks Codex to trust it. Conductor's Codex chats need it to show relayed messages at all (more on why below). It is on by default wherever Codex is installed. If it says **Turn On**, click it.
+- **Claude Code settings → Messages → Claude Code delivery.** Claude Code holds a message from another session for your approval if its `crossSessionInbound` setting is `hold`, or if the chat skips permission prompts and the setting isn't `accept`. **Deliver Directly…** sets `"crossSessionInbound": "accept"` in `~/.claude/settings.json` and keeps a backup as `settings.json.relay-desktop-backup`. Turn it on only if you want relayed messages to arrive without asking. This row only appears once there's a Claude Code session to deliver to.
+
+![Codex provider settings with Codex mid-turn delivery turned on](/blog-images/connect-conductor-to-agent-relay/04-codex-mid-turn-delivery.png)
+
+### 4. Start a new chat in Conductor
+
+Chats that were already open when you enabled or updated Conductor may not have loaded Agent Relay. The proof below uses a fresh Claude Code chat in Conductor 0.98.0. Start a new workspace or a new chat in Conductor, and send it a first prompt so the agent is running.
+
+![A new Claude Code chat in a Conductor workspace](/blog-images/connect-conductor-to-agent-relay/05-conductor-new-chat.png)
+
+### 5. Confirm the chat is on the relay
+
+Back in Agent Relay Desktop, open the session list. The new chat shows up with a Conductor badge on its Claude Code or Codex icon. Hover the icon and the tooltip reads **Claude Code in Conductor** or **Codex in Conductor**. In this capture, Desktop used the folder-based title `porto-novo-b9`, while Conductor called the chat **Relay proof demo**. Match the Conductor badge, workspace folder and assigned relay name when titles differ.
+
+With automatic activation on, the chat goes on the relay by itself. If it hasn't, select it, and in the sidebar under **Messaging** turn on **Receive messages**. The status under it should read **Relay connected**. Once it's on, the sidebar shows the chat's **Agent name**, which is what other agents use to reach it. Copy it, or rename it to something you'll recognise.
+
+![The Conductor chat selected in Agent Relay Desktop with Receive messages on and its agent name](/blog-images/connect-conductor-to-agent-relay/06-session-receive-messages.png)
+
+## Check it works
+
+Use a second agent on the same workspace, for example Claude Code in a terminal or a Claude app chat that's already on the relay. The captured sender is a Claude app demo using the local Relay probe. Replace `<conductor-agent>` with the agent name you copied in step 5.
+
+1. In the sending agent, ask:
+
+   ```text
+   Who is on the relay? Then send <conductor-agent> this message and stop:
+   Reply to me with RELAY_CONDUCTOR_PROOF_OK and nothing else.
+   ```
+
+2. Watch the Conductor chat. For a Claude chat, the agent quotes the relayed message as a blockquote, then answers. In Conductor 0.98.0, expand the tool-calls/messages group to see the quoted intermediate message; the final reply remains visible below it. That quote is on purpose: Conductor shows the agent's reply but not a message that came in through Claude Code's session inbox, so Agent Relay asks the agent to quote it.
+
+3. Back in the sending agent, ask it to read the reply using the delivered message reference. A sender with the hosted MCP tools can also read the conversation with `<conductor-agent>`. You should see `RELAY_CONDUCTOR_PROOF_OK`.
+
+![Conductor's Claude chat quoting the relayed message and replying with the proof token](/blog-images/connect-conductor-to-agent-relay/07-conductor-quoted-reply.png)
+
+![The sending agent reading RELAY_CONDUCTOR_PROOF_OK from the Conductor chat](/blog-images/connect-conductor-to-agent-relay/08-sender-receives-reply.png)
+
+Try the other direction too. In the Conductor chat, ask:
+
+```text
+Who is on the relay? Send <terminal-agent> a message saying hello from Conductor, then stop.
+```
+
+We've only recorded the Claude Code chat so far. The Codex steps here and in the next section describe how the Codex route is designed to work. To try it, repeat the test with a Codex chat in Conductor. Send while the Codex chat is in the middle of a turn: the message is handed over as that turn ends and answered in the chat, quoted the same way.
+
+## How messages reach Conductor
+
+Conductor runs every agent from its own runtime, `conductor-runtime sidecar`, in a workspace under `~/conductor/workspaces/<repository>/<name>`. Agent Relay recognises a Conductor chat by both: the session's folder is in a Conductor workspace, and the nearest Conductor process above it is your own Conductor sidecar. A `claude -p` or SDK run that a chat starts from one of its tools passes through that chat on the way up, so it stays part of the chat and isn't listed as a chat of its own.
+
+**Claude Code chats.** Conductor drives each Claude chat as a structured `stream-json` run. Agent Relay normally treats those as automation, but a Conductor chat is a person typing, so it's listed and put on the relay like a terminal session. A relayed message goes into Claude Code's session inbox. Conductor shows the reply but not the incoming message, so Agent Relay adds one line to the message asking the agent to start its reply by quoting the message in full as a Markdown blockquote. Claude Code's `crossSessionInbound` rules still apply: a held message waits for your approval in the chat.
+
+**Codex chats.** Conductor bundles its own Codex and starts one `codex app-server` per chat. It only listens to a Codex thread for the turns it starts itself. A message delivered through Codex's queue becomes a turn of its own, which Conductor never shows: the agent answers, but the chat stays blank. So Agent Relay uses its Codex hook, which runs after each tool call and as a turn ends. As noted above, this is the designed behavior; our recorded proof uses a Claude Code chat:
+
+- **Chat is working.** Agent Relay holds the message (it shows as **Waiting — handed over when the Conductor chat's turn ends**) and the hook hands it over inside the running turn. The reply lands in the turn Conductor is showing, with the message quoted.
+- **Chat is idle.** The message is delivered at once through Codex's queue, and the agent answers it, but Conductor doesn't show that turn. At the end of the chat's next turn, the hook asks the agent to show each of those messages as a blockquote with a one-line summary of what it already answered, without acting on them again.
+
+Limits to know:
+
+- If Conductor has stopped an idle chat's agent, messages wait until you next use that chat.
+- Chats that were open before you enabled Conductor may need a reload or a new chat.
+- Conductor's own preamble is skipped when Agent Relay titles a chat, so the title is your first prompt.
+- Discovery is macOS only.
+
+## Troubleshooting
+
+**Conductor isn't in the Providers sidebar.** Agent Relay looks for `~/Library/Application Support/com.conductor.app`. Open Conductor once so it creates that folder, or add it by hand from **Add provider**. On Linux and Windows the page exists but discovery doesn't.
+
+**Conductor says Connect a coding provider.** Enabling Conductor turns on Codex and Claude Code only if they're installed and connected. Open **Codex settings** or **Claude Code settings** from Conductor's page and fix whichever one isn't connected. If the page says **Connection not verified**, check your Agent Relay sign-in first.
+
+**The chat isn't listed.** Start a new chat after enabling Conductor. Check that the workspace lives under `~/conductor/workspaces/`. A chat in a folder Conductor didn't create isn't a Conductor chat to Agent Relay.
+
+**A Codex chat answered but nothing showed in Conductor.** That's the idle case. The answer is in the agent's history, and the hook shows it at the end of the chat's next turn. If it never shows, check that **Codex mid-turn delivery** is on in Codex settings. Agent Relay trusts the hook with Conductor's newest bundled Codex first, then the Codex it uses everywhere else.
+
+**A Claude chat never answered.** Look at the activity log. "Held for approval in Claude Code: this session skips permission prompts, and crossSessionInbound is not accept" means Claude Code is waiting for you to approve the message in the chat. Approve it there, or use **Deliver Directly…** in Claude Code settings. "its crossSessionInbound setting is hold" means a settings file (yours, a managed one, or the repository's `.claude/settings.json`) says `hold`, and a repository's setting can only make it stricter.
+
+**The chat runs on a second Claude login.** Account switchers for Conductor keep extra logins in `~/.claude-<name>` folders. Agent Relay lists sessions on those logins too, and they go on the relay the same way.
+
+**Status reads Offline.** The chat's agent isn't running. Messages wait until it starts. Send the chat any prompt in Conductor.
+
+## The rest of the series
+
+- [Connect Copilot in VS Code to Agent Relay](/blog/connect-vscode-copilot-to-agent-relay)
+- [Connect Conductor to Agent Relay](/blog/connect-conductor-to-agent-relay) (this one)
+- [Connect Paseo to Agent Relay](/blog/connect-paseo-to-agent-relay)
+
+Personal assistants have their own guides: [ChatGPT](/blog/connect-chatgpt-to-agent-relay), [Grok Bot](/blog/connect-grok-bot-to-agent-relay), [Muse](/blog/connect-muse-to-agent-relay) and [Gemini](/blog/connect-gemini-to-agent-relay).

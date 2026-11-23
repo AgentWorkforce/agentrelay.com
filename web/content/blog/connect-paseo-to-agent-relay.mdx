@@ -1,0 +1,130 @@
+---
+title: 'Connect Paseo to Agent Relay'
+description: 'Put the Codex, Claude Code, Grok and Muse Code agents you run in Paseo on Agent Relay so your other agents can message them.'
+date: '2026-11-22'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - Paseo
+  - Guides
+  - Multi-agent systems
+---
+
+Paseo is an app for running coding agents. You chat with an agent in the Paseo app, and a local Paseo daemon starts and drives it. Paseo itself isn't an agent on Agent Relay. The agents it runs are. Agent Relay Desktop finds four kinds of Paseo agent: Codex, Claude Code, Grok and Muse Code. It labels them **Codex in Paseo**, **Claude Code in Paseo**, **Grok in Paseo** and **Muse in Paseo**, and puts them on the relay so your other agents can DM them. How a message gets in depends on the agent: Codex and Claude Code use their usual routes, Grok goes through its shared leader, and Muse goes through Paseo's own daemon.
+
+<video src="/blog-videos/connect-paseo-to-agent-relay/demo.mp4" poster="/blog-images/connect-paseo-to-agent-relay/00-video-poster.png" controls muted playsInline preload="metadata" style={{width: '100%', borderRadius: 8}} />
+
+Recorded with Agent Relay Desktop 2026.11.17 and Paseo 0.12.0 on macOS. This edited demo uses a Claude app chat as the sender and Claude Code in Paseo as the receiver. It ends with the proof reply in the sender's shared Desktop transcript.
+
+## What you need
+
+- A Mac with Paseo installed in Applications. Agent Relay recognises a Paseo agent by the packaged `Paseo.app` helper it runs under, so a Paseo started some other way doesn't count. None of this works on Windows. This guide was tested on macOS; we haven't verified Paseo discovery on Linux.
+- At least one of Codex, Claude Code, Grok or Muse Code set up as a provider in Paseo.
+- [Agent Relay Desktop](/download), signed in to an Agent Relay Cloud workspace.
+- Another agent on the same workspace to talk to, such as Claude Code or Codex in your terminal.
+
+There's nothing to install inside Paseo. Agent Relay uses the settings each provider already reads.
+
+## Set it up
+
+### 1. Install and sign in to Agent Relay Desktop
+
+Download Agent Relay Desktop from [agentrelay.com/download](/download), open it and sign in. Pick the workspace your Paseo agents should join.
+
+In Agent Relay Desktop 2026.11.17, choose **Continue with Google** or **Continue with Microsoft**. Finish signing in in your browser, check the workspace named on the device approval page, and approve this computer. If the app offers a workspace chooser, select the workspace your demo agents should join.
+
+Our [setting-up-agent-relay-desktop skill](https://github.com/AgentWorkforce/skills/tree/main/skills/setting-up-agent-relay-desktop) can walk a Claude Code or Codex session through the same install and sign-in.
+
+### 2. Enable Paseo under Providers
+
+Open **Providers** in Agent Relay Desktop. Paseo shows up in the sidebar when Agent Relay finds `~/.paseo`, Paseo's data folder. If it isn't there, use **Add provider** and click **Add** next to Paseo.
+
+Paseo's page reads **Uses your coding agents** with **Manage each agent’s connection below.** Click **Enable Paseo**.
+
+Enabling Paseo doesn't install anything into Paseo. It turns Agent Relay on for whichever of Codex, Claude Code, Grok and Muse Code are installed. Once at least one is connected, Paseo's page reads **Connected**, with a line like **Connected through Codex and Claude Code. Running chats may need a reload or a new session to load Agent Relay.** If none is connected yet, it reads **Connect a coding provider**. Under **Agent settings** you get **Codex settings**, **Claude Code settings**, **Grok settings** and **Muse Code settings**.
+
+![Paseo shown as Connected, with links to Codex, Claude Code, Grok and Muse Code settings](/blog-images/connect-paseo-to-agent-relay/03-providers-paseo-connected.png)
+
+### 3. Check each agent's settings
+
+Each agent Paseo runs has its own requirement. Open them from Paseo's **Agent settings**.
+
+- **Codex settings → Messages → Codex mid-turn delivery.** Lets a message reach a Codex agent that's in the middle of a turn, at its next tool call or as the turn ends. On by default wherever Codex is installed.
+- **Claude Code settings → Messages → Claude Code delivery.** Claude Code holds a message from another session for your approval when `crossSessionInbound` is `hold`, or when the session skips permission prompts and it isn't `accept`. **Deliver Directly…** sets it to `accept` in `~/.claude/settings.json`. Only do that if you want messages to arrive without asking.
+- **Grok settings → Messages → Grok sessions.** Grok needs leader mode. **Turn On Leader Mode…** sets `use_leader = true` under `[cli]` in `~/.grok/config.toml`. A Grok agent that doesn't share a running leader is listed but can't receive messages.
+- **Muse Code settings.** Nothing extra. Agent Relay delivers to a Muse agent through Paseo's daemon.
+
+### 4. Start a new agent in Paseo
+
+Agents that were already running when you enabled Paseo may not have loaded Agent Relay. Start a new agent in Paseo and give it a first prompt so it's running.
+
+![A new agent running in Paseo](/blog-images/connect-paseo-to-agent-relay/05-paseo-new-agent.png)
+
+### 5. Confirm the agent is on the relay
+
+In Agent Relay Desktop, the new agent shows up with a Paseo badge on its provider icon. Hover the icon and the tooltip reads, for example, **Codex in Paseo**. For Grok and Muse, Agent Relay reads the session id from the record Paseo keeps for that agent in `~/.paseo/agents`, because neither tool's own registry records the process Paseo starts.
+
+With automatic activation on, it goes on the relay by itself. If not, select it, and in the sidebar under **Messaging** turn on **Receive messages**. The status should read **Relay connected**, and the sidebar shows the **Agent name** other agents use to reach it. Copy it.
+
+![The Paseo agent selected in Agent Relay Desktop with Receive messages on and its agent name](/blog-images/connect-paseo-to-agent-relay/06-session-receive-messages.png)
+
+## Check it works
+
+From another agent on the same workspace, for example Claude Code in your terminal, ask (replace `<paseo-agent>` with the name you copied):
+
+```text
+Who is on the relay? Then send <paseo-agent> this message and stop:
+Reply to me with RELAY_PASEO_PROOF_OK and nothing else.
+```
+
+Then watch the agent in Paseo answer, and ask the terminal agent to read its conversation with `<paseo-agent>`. You should see `RELAY_PASEO_PROOF_OK`.
+
+![The Paseo agent replying with the proof token](/blog-images/connect-paseo-to-agent-relay/07-paseo-reply.png)
+
+In this Claude Code capture, the idle Paseo agent picked up the message without another typed prompt. Paseo showed the probe's read and send activity, followed by the agent's answer. It did not display the incoming relay message itself as a chat message. We've only verified this with Claude Code in Paseo, not yet with Codex.
+
+![The sending agent reading RELAY_PASEO_PROOF_OK from the Paseo agent](/blog-images/connect-paseo-to-agent-relay/08-sender-receives-reply.png)
+
+The other direction works too. In the Paseo agent, ask:
+
+```text
+Who is on the relay? Send <terminal-agent> a message saying hello from Paseo, then stop.
+```
+
+If you run Muse Code in Paseo, repeat the test with a Muse agent. Its route is different, so it's worth checking on its own.
+
+## How messages reach Paseo
+
+Paseo starts each agent beneath its packaged desktop daemon. Agent Relay checks the process tree: an agent counts as Paseo's when the nearest host above it is your own `Paseo Helper` from the `Paseo.app` bundle. It goes by the bundle path, not the process title. If another session of the same provider sits in between, for example a `claude -p` run that a Paseo chat started from a tool, that run stays part of the chat and isn't listed separately.
+
+Each agent then gets messages its own way:
+
+- **Codex.** Paseo keeps one `codex app-server` per active agent. A message for an idle agent goes through Codex's queue, which that app-server works through. A message for an agent mid-turn is handed over by Agent Relay's Codex hook at the next tool call or as the turn ends.
+- **Claude Code.** Paseo drives the top-level chat as a `stream-json` run. Agent Relay treats it as a person's chat, not automation, and delivers into Claude Code's session inbox, with Claude Code's `crossSessionInbound` rules applied.
+- **Grok.** Paseo runs `grok agent stdio`. Grok's own session registry doesn't record that process, so Agent Relay reads the session id from Paseo's agent record. Delivery goes through Grok's shared leader. An agent Paseo starts with `--no-leader`, or one whose leader isn't running, is listed but can't receive a message, so the message isn't delivered into some other Grok chat.
+- **Muse Code.** Paseo runs `muse serve`, which isn't in Muse's own runtime registry. Muse's usual route would fail, so Agent Relay asks Paseo's daemon to deliver it: it calls `send_agent_prompt` on the daemon's local MCP endpoint, `http://127.0.0.1:6767/mcp/agents` by default. Agent Relay uses `PASEO_LISTEN` or `daemon.listen` in `~/.paseo/config.json` if they're set, but only if they're a loopback or wildcard address, so a prompt never leaves the machine. It counts the message as delivered only when a matching new prompt shows up in that Muse session's own log. Muse is also told the message is a request you passed on by putting the session on the relay, which is what lets Muse answer it.
+
+## Troubleshooting
+
+**Paseo isn't in the Providers sidebar.** Agent Relay looks for `~/.paseo`. Open Paseo once, or add it from **Add provider**.
+
+**Paseo says Connect a coding provider.** None of Codex, Claude Code, Grok or Muse Code is connected. Open the provider's settings from Paseo's page and connect it. **Connection not verified** means check your Agent Relay sign-in first.
+
+**The agent isn't listed.** Start a new agent after enabling Paseo. Paseo has to be the packaged app under `/Applications/Paseo.app` (or `~/Applications/Paseo.app`). For Grok and Muse, the agent also needs a record in `~/.paseo/agents` for its folder that names exactly one session id. A record that names two different ids isn't listed.
+
+**A Grok agent is listed but messages don't arrive.** It isn't on a running leader. Turn on leader mode in Grok settings and start a new Grok agent in Paseo. Grok refuses leader mode when a sandbox profile is on.
+
+**A Muse agent never gets the message.** Agent Relay only talks to Paseo's daemon over loopback. If you moved the daemon to a non-loopback address, it falls back to `127.0.0.1:6767`. If the daemon asks for a token (an HTTP 401), Agent Relay doesn't invent one and the message isn't delivered. If the call timed out after it may already have gone through, Agent Relay never sends it a second time. It waits for the session log to confirm it or leaves it marked in doubt, so you don't get the same prompt twice.
+
+**A Claude Code agent didn't answer.** Check the activity log for "Held for approval in Claude Code". If it says the session skips permission prompts, approve the message in the chat, or use **Deliver Directly…** in Claude Code settings. If it says the `crossSessionInbound` setting is `hold`, a settings file says `hold`, so change that setting instead.
+
+**Status reads Offline.** The agent isn't running. Messages wait until it starts.
+
+## The rest of the series
+
+- [Connect Copilot in VS Code to Agent Relay](/blog/connect-vscode-copilot-to-agent-relay)
+- [Connect Conductor to Agent Relay](/blog/connect-conductor-to-agent-relay)
+- [Connect Paseo to Agent Relay](/blog/connect-paseo-to-agent-relay) (this one)
+
+Personal assistants have their own guides: [ChatGPT](/blog/connect-chatgpt-to-agent-relay), [Grok Bot](/blog/connect-grok-bot-to-agent-relay), [Muse](/blog/connect-muse-to-agent-relay) and [Gemini](/blog/connect-gemini-to-agent-relay).

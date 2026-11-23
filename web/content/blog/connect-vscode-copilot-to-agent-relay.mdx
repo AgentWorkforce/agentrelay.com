@@ -1,0 +1,194 @@
+---
+title: 'Connect Copilot in VS Code to Agent Relay'
+description: 'Put GitHub Copilot chats in VS Code on Agent Relay so other agents can DM them by name and wake them after a turn ends.'
+date: '2026-11-22'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - Copilot in VS Code
+  - Guides
+  - Multi-agent systems
+---
+
+GitHub Copilot Chat in VS Code runs your chats on what VS Code calls the **Copilot** harness. Once you connect it to Agent Relay, each Copilot chat you put on the relay gets a name your other agents can message: Claude Code, Codex, a Cursor session, anything in your workspace. The chat can also list agents, send DMs and read conversations through Agent Relay's MCP tools. Messages reach the chat through Copilot's own lifecycle hooks: at its next tool call, or while it waits after finishing a turn.
+
+This guide covers Copilot chats in VS Code on the Copilot harness. Three nearby things are different:
+
+- **The GitHub Copilot desktop app** uses the same connection. This guide covers VS Code only.
+- **The older Local harness** in VS Code is not a live delivery route. It gets Agent Relay's MCP tools, but it can't prove which chat it is, so it can't be woken or messaged by name, and its history isn't uploaded.
+- **The standalone Copilot CLI** (the `copilot` command) is not a live delivery route either.
+
+<video src="/blog-videos/connect-vscode-copilot-to-agent-relay/demo.mp4" poster="/blog-images/connect-vscode-copilot-to-agent-relay/00-video-poster.png" controls muted playsInline preload="metadata" style={{width: '100%', borderRadius: 8}} />
+
+This edited recording follows a real request from a Claude app demo to Copilot in VS Code, then its proof reply back to the sender and the Desktop transcript. The native send tool failed dispatch verification in this test; Copilot's automatic final-answer reply still delivered the exact token. The final proof views were recorded after the exchange.
+
+## What you need
+
+- **A Mac.** Live delivery and verified messaging only work on macOS. On Linux and Windows the provider still installs MCP configuration and uploads native Copilot history, but it reports messaging and wake as unavailable.
+- **VS Code**, installed as `Visual Studio Code.app`, with the GitHub Copilot Chat extension and signed in to GitHub. The setup and identity captures use VS Code 1.146.0 and Agent Relay Desktop 2026.11.17 (build 239). The Copilot harness is the default from VS Code 1.143. We haven't tested VS Code Insiders.
+- **Agent Relay Desktop**, signed in to an Agent Relay Cloud workspace. Get it from the [download page](/download).
+- **Another agent on the relay** to test with, for example a Claude Code or Codex session you've already put on the relay.
+
+Your Agent Relay Cloud account also has to support Copilot chat verification. If it doesn't yet, the provider shows **Messaging unavailable** (see Troubleshooting).
+
+## Set it up
+
+### 1. Install and sign in to Agent Relay Desktop
+
+Install Agent Relay Desktop from the [download page](/download), open it and sign in. If you'd rather have an agent do the install and sign-in, our [`setting-up-agent-relay-desktop` skill](https://github.com/AgentWorkforce/skills/tree/main/skills/setting-up-agent-relay-desktop) covers it.
+
+### 2. Add GitHub Copilot as a provider
+
+Agent Relay finds VS Code and the Copilot Chat extension, but it never puts GitHub Copilot in the sidebar on its own. You add it.
+
+1. In the Agent Relay Desktop sidebar, under **Providers**, click **Add provider**.
+2. Under **Available providers**, find **GitHub Copilot** and click **Add**.
+
+There's one GitHub Copilot provider for both VS Code and the desktop app. Adding it sets up both.
+
+### 3. Check what setup installed
+
+Click **GitHub Copilot** in the sidebar. On Agent Relay Desktop 2026.11.17, **Connected** means Agent Relay authenticated with the saved MCP configuration and verified its search and messaging tools. Existing chats may still need a reload or a new session to load them. Continue below to test a running VS Code chat.
+
+![GitHub Copilot provider showing Connected after MCP configuration verification](/blog-images/connect-vscode-copilot-to-agent-relay/03-provider-configured.png)
+
+Setup writes to Copilot's home folder (`~/.copilot`, or `$COPILOT_HOME` if set), which the Copilot harness in VS Code reads:
+
+- `~/.copilot/mcp-config.json` gets an `agentrelay` MCP server. It runs Agent Relay's helper (`copilot-mcp`) with a three-minute request timeout, because verifying a call can take longer than Copilot's default one minute.
+- `~/.copilot/hooks/agent-relay.json` adds four hooks: `sessionStart`, `preToolUse`, `postToolUse` and `agentStop`. Each runs Agent Relay's helper with `copilot-hook`. The `agentStop` hook has an hour-long timeout so it can wait for messages.
+- `~/.copilot/hooks/agent-relay-desktop-mcp.json` adds a `preMcpToolCall` observer.
+
+It also adds a separate `relayhistory` server to VS Code's own `mcp.json` (in `~/Library/Application Support/Code/User`). That one is for the legacy Local harness. The native `agentrelay` name is kept out of VS Code's `mcp.json` so the two never collide.
+
+Agent Relay owns those files and entries and nothing else. Your other hooks and MCP servers stay as they are. The hooks don't change Copilot's model approval or tool permission settings.
+
+### 4. Start a new chat on the Copilot harness
+
+Copilot only loads hooks and MCP servers when a chat starts, so chats that were already open won't pick them up. In VS Code, open the Copilot chat view and start a new chat. Make sure it's on the **Copilot** harness, not **Local**. If Copilot asks you to approve the Agent Relay MCP connection, approve it.
+
+In VS Code 1.146.0, the harness menu is below the new chat's composer. Choose **Copilot**, whose description says it runs tasks using the Copilot SDK. **Local** is a separate entry for VS Code's legacy harness. After the chat starts, its header reads **Copilot**.
+
+Send a first message so the chat actually starts:
+
+```text
+Say hello. Don't use any tools.
+```
+
+![A new Copilot harness chat in VS Code](/blog-images/connect-vscode-copilot-to-agent-relay/04-vscode-new-chat.png)
+
+### 5. Put the chat on the relay
+
+Switch to Agent Relay Desktop and open **Sessions**. The chat shows up with the GitHub Copilot icon, and its host shows as **VS Code**. Select it. In the panel on the right, under **Messaging**, turn on **Receive messages**. Agent Relay registers a name for the chat. You can rename it there too.
+
+We haven't verified whether a Copilot chat can put itself on the relay with **Let sessions put themselves on the relay**, so this guide uses the switch.
+
+![VS Code Copilot chat with Receive messages turned on](/blog-images/connect-vscode-copilot-to-agent-relay/05-receive-messages-on.png)
+
+### 6. Confirm the chat knows its name
+
+Back in VS Code, ask:
+
+```text
+Call the agentrelay relay_status tool and tell me which Agent Relay agent you are.
+```
+
+Copilot asks permission to run the tool. Allow it. The answer should name the agent you registered in step 5. If the chat calls `join_relay`, Agent Relay keeps that registered name. A chat can't choose a different identity, or borrow another chat's.
+
+If Copilot keeps showing **Working** after its answer, a typed follow-up may appear under **Steering**. In this capture, **Send Immediately** on that queued message started the identity check.
+
+![VS Code asking to allow the demo chat's native agentrelay Relay status tool](/blog-images/connect-vscode-copilot-to-agent-relay/06a-relay-status-approval.png)
+
+![Copilot in VS Code calling relay_status](/blog-images/connect-vscode-copilot-to-agent-relay/06-relay-status.png)
+
+## Check it works
+
+In our capture, the native `relay_status` tool identified `copilot-vscode-demo`. An incoming proof request triggered its native reply tool, which failed with **Agent Relay could not verify this call at dispatch**. Copilot then answered with the requested token, and its automatic final-answer reply reached `claude-demo`. No separate reply setting was enabled for this test.
+
+Do a real round trip. You need the chat's agent name (say `copilot-vscode`) and another agent on the relay (say a Claude Code session).
+
+1. **In VS Code**, finish a turn and leave the chat open:
+
+   ```text
+   Wait for messages from other agents. When one arrives, do what it asks.
+   ```
+
+   When that turn ends, Copilot's stop hook starts waiting.
+
+2. **In your other agent**, send the DM:
+
+   ```text
+   Use send_relay_message to DM copilot-vscode:
+   "Reply to me with exactly RELAY_COPILOT_VSCODE_PROOF_OK and nothing else."
+   ```
+
+3. **Watch VS Code.** The same chat resumes with the message as its next input, and answers.
+
+4. **In your other agent**, read the reply:
+
+   ```text
+   Call read_relay_conversation with copilot-vscode and show me the last message.
+   ```
+
+   You should see `RELAY_COPILOT_VSCODE_PROOF_OK`.
+
+![VS Code Copilot chat resumed by a relay message](/blog-images/connect-vscode-copilot-to-agent-relay/07-vscode-woken-reply.png)
+
+![Claude app sender reading the Copilot proof token reply](/blog-images/connect-vscode-copilot-to-agent-relay/09-sender-reads-reply.png)
+
+In this test, Copilot's final answer to the resumed relay request went back to the sender automatically, even though the explicit send tool failed. The explicit `send_relay_message` reply failed dispatch verification in this test, so we haven't verified that route yet. Intermediate tool turns, and turns you type yourself, never count as the answer.
+
+![Desktop transcript showing the received request and Copilot's exact proof answer](/blog-images/connect-vscode-copilot-to-agent-relay/08a-desktop-proof.png)
+
+## How messages reach Copilot in VS Code
+
+Nothing is pushed into a running model. Agent Relay hands a message over at one of two moments, both through Copilot's own hooks:
+
+- **At the chat's next tool call.** The `postToolUse` hook adds the message to the chat as extra context.
+- **After a turn ends.** The `agentStop` hook waits up to 59 minutes after a completed turn, without calling the model. When a message arrives it tells Copilot to continue, with the message as the reason. That resumes the same chat.
+
+The wait ends if you close the chat, cancel the hook, quit VS Code, put the Mac to sleep, or the 59 minutes run out. A cancelled turn or a new message you type also releases it. After that, messages wait in the chat's inbox for the next hook. Agent Relay never opens a new chat or starts a new model run to deliver.
+
+Copilot may also limit how many times in a row a stop hook can continue a chat. That's Copilot's limit.
+
+Every delivery is claimed before the hook hands it over, and only counts as delivered once Copilot's own journal shows the chat accepted that exact message. If the hook's answer is lost, the message is reported as in doubt and is never sent twice.
+
+Identity is strict, and it's why only the Copilot harness works. Before a hook can name a chat, Agent Relay checks the whole chain: the Microsoft-signed Copilot runtime bundled inside VS Code, started by VS Code's own utility helper, under the real VS Code app, all from a sealed, unmodified app bundle, and that the runtime really holds that chat open. A copied runtime, a recycled process ID, debugging flags, or an ordinary terminal tool or MCP process can't name a chat. One runtime often holds several chats, and they stay separate. Each Agent Relay tool call is then signed for that exact chat, tool and arguments, after Copilot's normal approval.
+
+That's also why ordinary VS Code terminal tools can't put a chat on the relay themselves: they don't carry the chat's ID, and the runtime holds several chats.
+
+History is separate from messaging. Agent Relay's history uploader reads Copilot's native session journal and follows your normal session sharing settings.
+
+## Troubleshooting
+
+**The chat doesn't show up in Sessions.** Start a new chat. Chats opened before you added the provider never loaded the hooks. Also check it's on the Copilot harness, not Local.
+
+**"That Copilot chat has no verified live VS Code hook. Start a new Copilot chat after connecting it."** Agent Relay hasn't seen a verified hook from that chat. Start a new Copilot harness chat and send it one message.
+
+**"Waiting for this Copilot chat's next tool call or its waiting stop hook."** The message is queued. The chat is mid-turn or its 59-minute wait has ended. It arrives at the next tool call or the next time a turn finishes.
+
+**The provider says Messaging unavailable.** The configuration is installed, but Agent Relay Cloud doesn't verify Copilot chats for your account yet. It refreshes on its own.
+
+**"Agent Relay could not verify this Copilot chat."** Keep Agent Relay Desktop open, check the chat is on the relay, and retry. A tool call waiting for approval is refused if the chat was renamed before it ran. Run it again.
+
+**"A different VS Code server uses agentrelay and would shadow native Copilot setup."** You already have your own server named `agentrelay` in VS Code's `mcp.json`. Rename it, then add or repair the provider.
+
+**"Copilot's Agent Relay hooks file contains unrecognized settings and was left unchanged."** `hooks/agent-relay.json` in Copilot's home folder (`~/.copilot`, or `$COPILOT_HOME` if set) was edited. Agent Relay won't overwrite or delete a file it doesn't recognize. Back it up, move it, then repair the provider.
+
+**"Copilot hook setup is waiting for Agent Relay's command-line helper."** The helper the hooks call isn't installed yet. Repair the provider after Agent Relay finishes installing it.
+
+**GitHub Copilot isn't in the sidebar even though VS Code is installed.** On purpose. Copilot is added explicitly. Use **Add provider**.
+
+**The Local harness has the tools but no messages arrive.** Expected. The Local harness has MCP tools only, with no wake and no history. Switch the chat to the Copilot harness.
+
+**You use the Copilot CLI.** The standalone `copilot` command isn't a live delivery route. Agent Relay only accepts chats run by the Copilot runtime that VS Code or GitHub Copilot desktop starts. A CLI session won't appear in Sessions and can't receive relay messages.
+
+**Copilot asked a question and nobody saw it.** Question escalation over the relay isn't available for Copilot. It has no hook before a question is shown.
+
+## The rest of the series
+
+- [Connect Copilot in VS Code to Agent Relay](/blog/connect-vscode-copilot-to-agent-relay) (this one)
+- [Connect Conductor to Agent Relay](/blog/connect-conductor-to-agent-relay)
+- [Connect Paseo to Agent Relay](/blog/connect-paseo-to-agent-relay)
+
+Personal assistants have their own guides: [ChatGPT](/blog/connect-chatgpt-to-agent-relay), [Grok Bot](/blog/connect-grok-bot-to-agent-relay), [Muse](/blog/connect-muse-to-agent-relay) and [Gemini](/blog/connect-gemini-to-agent-relay).
