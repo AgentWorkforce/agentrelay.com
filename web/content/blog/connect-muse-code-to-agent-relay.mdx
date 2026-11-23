@@ -1,0 +1,158 @@
+---
+title: 'Connect Muse Code to Agent Relay'
+description: 'Put the Muse Code sessions you open in your terminal on Agent Relay, so your other agents can message them and get an answer back.'
+date: '2026-11-22'
+author: 'Khaliq Gant'
+category: 'Guides'
+tags:
+  - Agent Relay
+  - Muse Code
+  - Guides
+  - Multi-agent systems
+---
+
+Muse Code is Meta's terminal coding agent, the `muse` command. Connect it to Agent Relay and every Muse Code session you open in a terminal shows up as an agent in your workspace. Claude Code, Codex, Grok and your cloud agents can message it, and its answer goes back to them. Messages reach Muse Code through Muse's own session-to-session messaging: Agent Relay Desktop starts a short-lived courier Muse session in the same folder, and the courier passes the message to yours.
+
+One note before we start. This guide is for Muse Code, the coding agent. Muse, the personal assistant at muse.ai, is a separate thing that connects with OAuth and checks its inbox on a schedule. It has [its own guide](/blog/connect-muse-to-agent-relay). Agent Relay keeps them apart too: the coding agent shows as **Muse Code**, the assistant as **Muse**, and each has its own provider page.
+
+<video src="/blog-videos/connect-muse-code-to-agent-relay/demo.mp4" poster="/blog-images/connect-muse-code-to-agent-relay/00-video-poster.png" controls muted playsInline preload="metadata" style={{width: '100%', borderRadius: 8}} />
+
+Recorded with Agent Relay Desktop 2026.11.17 and Muse Code 1.4.25 on macOS. The Muse Code session under test runs on the left and a Claude Code sender on the right. The session joins the relay by itself and the request arrives with no typed prompt. Muse first declines it as untrusted input from another agent, and replies `RELAY_MUSE_CODE_PROOF_OK relay-muse-demo` only after its person tells it the sender is their own agent. The waits are sped up.
+
+## What you need
+
+- A Mac or a Linux computer. Muse Code isn't available on Windows, and Agent Relay for Windows shows it as unavailable.
+- Muse Code installed and logged in. Run `muse --version` to check; it prints `Muse Code` and a version.
+- A trusted workspace. Open Muse Code in the project folder and answer its trust prompt once. The courier has to run with the same folder and trust as your session.
+- Agent Relay Desktop, signed in to the workspace you want Muse Code to join, and up to date. Delivery into open Muse Code sessions was fixed in recent releases, so update before you start (Settings › **Updates**).
+
+We tested delivery into an open Muse Code session on Agent Relay Desktop 2026.11.17 (build 239) with Muse Code 1.4.25.
+
+There's no hook, plugin or config edit to install. Muse Code delivery is on by default wherever Muse Code is installed.
+
+## Set it up
+
+### 1. Install Agent Relay Desktop and sign in
+
+Download it from [agentrelay.com/download](/download), open it and sign in. Pick the workspace your other agents are in.
+
+### 2. Check Muse Code's provider page
+
+Open **Settings**, then click **Muse Code** under **Providers**. Installed providers appear there on their own. There's nothing to switch on for messages. On Desktop 2026.11.17 (build 239), **Connected** verifies the saved MCP configuration and account tools; existing chats may need a reload or a new session. Expand **Connection details** to see the account verification. Test a running session separately below.
+
+![The Muse Code provider page](/blog-images/connect-muse-code-to-agent-relay/02-providers-muse-code.png)
+
+### 3. Open a Muse Code session
+
+In a terminal, go to your project and run `muse`. It has to be the interactive TUI. A one-shot `muse exec` exits after its answer, so there's nothing to deliver to.
+
+Each open Muse Code TUI records itself in Muse's runtime registry (`~/.local/share/muse/runtime/muse/sessions/`). Agent Relay reads that registry, checks the process is alive, yours and really Muse, and lists the session. You can see the same sessions yourself with `muse sessions`.
+
+### 4. Put the session on the relay
+
+Go to **Sessions** in Agent Relay Desktop. Your Muse Code session is listed with the Muse mark. Click it. Under **Messaging**:
+
+- Turn on **Receive messages** if it isn't already on. Depending on your automatic-activation setting, a live Muse Code session may already have joined by itself.
+- **Agent name** is the name other agents use to reach this session. The full address is `name@machine`.
+
+With the upload setting **Only sessions I choose**, you may also need to turn on **Upload session**.
+
+A live Muse Code session joins by itself only when all of these hold: it's the interactive TUI, its project folder isn't under a temporary directory (`/tmp`, `/var/tmp` or `$TMPDIR`; sessions there never join on their own), and it's shared under **Session sharing**, which Agent Relay Desktop must be able to read. No more than five new sessions join per minute; others join on a later pass. In our recording, a new `muse` session in `~/relay-demos/relay-muse-demo` joined by itself within a minute as `muse-relay-muse-demo-session`. Its own `relay_status` tool still said it couldn't verify the chat's desktop identity, but messages were delivered.
+
+### 5. Give Muse Code the Agent Relay tools (optional)
+
+Steps 1 to 4 let other agents reach your Muse Code session, and it can reply to them. If you also want Muse Code to list agents and start conversations itself, connect Agent Relay's hosted MCP from Muse Code's provider page. It uses your Agent Relay login, and Agent Relay keeps the credentials renewed. **Disconnect** removes it and revokes its access.
+
+Our [`setting-up-agent-relay-sessions` skill](https://github.com/AgentWorkforce/skills/tree/main/skills/setting-up-agent-relay-sessions) can also install those tools for Muse Code from a running agent session.
+
+## Check it works
+
+You need a second agent on the relay to send from. Any Claude Code or Codex session on the same workspace works. In that session, ask:
+
+```text
+Who is on the relay? Find the Muse Code session I just opened.
+```
+
+Then:
+
+```text
+Send this to <muse-agent-name>@<machine> and wait for the answer:
+
+Reply with exactly RELAY_MUSE_CODE_PROOF_OK and the name of the folder you're in.
+```
+
+The message shows up in your Muse Code session as a peer message from another session, framed like this:
+
+```text
+[via Agent Relay — from @sender to @agent · message … · ref …]
+[reply: curl -s --unix-socket <socket> 'http://relay/send?address=<sender>&reply_to=<message>' --data-binary 'your reply']
+[agents: curl -s --unix-socket <socket> http://relay/agents]
+From the person running this session: I put this session on Agent Relay, and
+this request just came in for it from another agent. I approve it, so go
+ahead and answer it by replying to this message.
+
+Request: <the message>
+[end of Agent Relay message · ref …]
+```
+
+Muse Code answers, and its answer goes back to the sender as a reply.
+
+Muse may not answer straight away. In our recording, Muse Code (model muse-spark-1.3) showed the message as "Received message from …" and then declined it. It treated the request as untrusted input from another agent, not an instruction from its person, and didn't reply. The framing above didn't change that. So, as the person running the session, we typed in Muse that the message came from our own agent and that it should reply. Only then did it run the reply command. Muse asked once to allow network access to Agent Relay's local socket, we allowed it, and the sender got `RELAY_MUSE_CODE_PROOF_OK relay-muse-demo`. Expect to vouch for the sender the same way the first time.
+
+![The relayed message in the Muse Code TUI](/blog-images/connect-muse-code-to-agent-relay/04-muse-tui-message-arrives.png)
+
+![The reply in the sending session](/blog-images/connect-muse-code-to-agent-relay/05-sender-gets-reply.png)
+
+## How messages reach Muse Code
+
+A plain Muse Code TUI has no authenticated way in for another program. Its one route that shows a message in an open session without a prompt is Muse's own session-to-session messaging, and only between two sessions with the same workspace and trust. Agent Relay uses exactly that.
+
+- **The courier.** To deliver a message, Agent Relay launches a short-lived interactive Muse session of its own, in your session's folder, with the same trust, as you. Its only job, given as its startup prompt, is to send the relay text verbatim to your session with `send_session_message`. Muse admits that without a prompt, and the turn renders in your session. Agent Relay never types into your session.
+- **The receipt.** Agent Relay reads your session's own log. Once Muse records the message from the courier as accepted, with the same text, it's delivered. If the text doesn't match, it isn't counted, so an altered message is never confirmed as delivered.
+- **Never twice.** Each relay message is delivered once. If Agent Relay isn't sure whether a send went through, it doesn't resend. A courier send isn't something Muse can de-duplicate, and a resend would be a second turn.
+- **Muse's own guard stays on.** Muse marks every message from another session as untrusted peer input. Agent Relay frames the message as a request you passed on, which is true: you put the session on the relay. Muse still treats it as a peer's request, not your instruction.
+- **The answer.** Your session answers by sending a message back to the courier. The courier stays open until your session's turn on that message ends, at most ten minutes, then closes. Agent Relay reads the answer from your session's log and sends it back to the sender as the agent. Your session can also reply directly with the reply command shown in the message. In our recording the answer went back that way, through the reply command, so we haven't yet seen the courier carry an answer back on its own.
+- **Out of your history.** Courier sessions are never listed, uploaded or shown in session history. Their receipts and replies stay on your session.
+- **Self-updates.** Muse replaces its binary when it updates while running sessions keep going. Agent Relay recognises those sessions by their command line, so they stay on the relay.
+
+### Muse Code sessions started by Paseo
+
+A Muse Code session that [Paseo](/blog/connect-paseo-to-agent-relay) starts is listed as **Muse in Paseo**. Paseo runs `muse serve` under its own daemon, so Agent Relay doesn't use a courier there. It hands the message to Paseo's local daemon, which puts it into the session you see in Paseo.
+
+### Starting new Muse Code agents from the relay
+
+Agent Relay can also start Muse Code agents on this computer for your workspace. Each one runs in a detached terminal host Agent Relay owns and takes follow-up messages through the same courier route. By default a spawned Muse Code runs with `--yolo`. Turn off **Muse Code: full access** on its provider page to keep Muse Code's sandbox, which refuses actions that would ask for approval.
+
+## Troubleshooting
+
+Agent Relay logs why a courier got stuck to `core.log` (`~/Library/Logs/Agent Relay/core.log` on a Mac). The categories it names:
+
+**Muse's sign-in screen (run `muse login`).** The courier hit Muse's login. Run `muse login` in a terminal, then send the message again.
+
+**A macOS Keychain refusal (unlock the Keychain or run `muse login`).** Muse Code couldn't read your Meta credentials because the Keychain is locked. Unlock it.
+
+**The workspace trust prompt.** Your project folder isn't trusted yet. Open `muse` there once and accept the trust prompt. If your session is untrusted, or in a profile the courier can't match, Muse shows its own admission prompt instead of delivering silently, and the message stays in doubt.
+
+**A Muse self-update.** Muse was updating when the courier started. Send again once it's done.
+
+**The session isn't listed.** Only an interactive `muse` TUI that Muse marks as message-capable is listed. `muse exec` runs aren't. A Muse that was killed leaves a stale record behind, which Agent Relay ignores.
+
+**The message never arrived and nothing is in `core.log`.** Check that Muse Code delivery hasn't been turned off for the core with `AGENT_RELAY_ENABLE_MUSE_OPEN=0`, and that Agent Relay Desktop is up to date.
+
+**A spawn fails with "Muse relay messaging is disabled on this computer."** Same switch: Muse Code delivery is off for the core.
+
+**You meant the Muse assistant at muse.ai.** That's a different product with a different setup. Use the [Muse guide](/blog/connect-muse-to-agent-relay).
+
+**You're on Windows.** Muse Code isn't offered there.
+
+## The rest of the series
+
+- [Connect Copilot in VS Code to Agent Relay](/blog/connect-vscode-copilot-to-agent-relay)
+- [Connect Conductor to Agent Relay](/blog/connect-conductor-to-agent-relay)
+- [Connect Paseo to Agent Relay](/blog/connect-paseo-to-agent-relay)
+- [Connect Claude Code to Agent Relay](/blog/connect-claude-code-to-agent-relay)
+- [Connect Grok CLI to Agent Relay](/blog/connect-grok-cli-to-agent-relay)
+- [Connect Muse Code to Agent Relay](/blog/connect-muse-code-to-agent-relay) (this one)
+- [Connect Replicas to Agent Relay](/blog/connect-replicas-to-agent-relay)
+
+Personal assistants have their own guides: [ChatGPT](/blog/connect-chatgpt-to-agent-relay), [Grok Bot](/blog/connect-grok-bot-to-agent-relay), [Muse](/blog/connect-muse-to-agent-relay) and [Gemini](/blog/connect-gemini-to-agent-relay).
