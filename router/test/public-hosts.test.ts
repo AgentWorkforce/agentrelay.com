@@ -259,3 +259,51 @@ describe("staging router", () => {
     expect(unbound.upstream).toBeNull();
   });
 });
+
+describe("public.agentrelay.com sign-in start", () => {
+  const starts = ["/cloud/api/auth/google/start", "/cloud/api/auth/microsoft/start", "/cloud/api/auth/oidc/start/"];
+
+  it.each(starts)("redirects %s to agentrelay.com, keeping the query", async (path) => {
+    for (const method of ["GET", "HEAD"]) {
+      const result = await routeOf(PUBLIC, `${path}?returnTo=%2Fcloud%2Fapp&invite=abc`, { method });
+      expect(result.status).toBe(302);
+      expect(result.location).toBe(`https://agentrelay.com${path}?returnTo=%2Fcloud%2Fapp&invite=abc`);
+      expect(result.response.headers.get("cache-control")).toBe("no-store");
+      expect(result.cloudPath).toBeNull();
+      expect(result.upstream).toBeNull();
+    }
+  });
+
+  it.each(starts)("does not redirect %s on agentrelay.com", async (path) => {
+    const result = await routeOf(APEX, `${path}?returnTo=x`);
+    expect(result.location).toBeNull();
+    expect(result.cloudPath).toBe(path);
+  });
+
+  it("leaves POST and other auth and /cloud paths on the alias with the binding", async () => {
+    for (const [path, method] of [
+      ["/cloud/api/auth/google/start", "POST"],
+      ["/cloud/api/auth/google/callback", "GET"],
+      ["/cloud/api/auth/github/start", "GET"],
+      ["/cloud/api/auth/google/start/extra", "GET"],
+      ["/cloud/dashboard", "GET"],
+    ] as const) {
+      const result = await routeOf(PUBLIC, path, { method, body: method === "POST" ? "{}" : undefined });
+      expect(result.location).toBeNull();
+      expect(result.cloudPath).toBe(path);
+    }
+  });
+
+  it.each(starts)("never sends public-staging %s to production sign-in", async (path) => {
+    for (const env of [{}, { ...STAGING_ENV, CLOUD_WEB_WORKER: undefined }]) {
+      const result = await routeOf(PUBLIC_STAGING, `${path}?returnTo=x`, {}, env);
+      expect(result.status).toBe(503);
+      expect(result.location).toBeNull();
+      expect(result.cloudPath).toBeNull();
+      expect(result.upstream).toBeNull();
+    }
+    const proxied = await routeOf(PUBLIC_STAGING, path, {}, { ...STAGING_ENV, CLOUD_PROXY_ORIGIN: STAGING_CLOUD });
+    expect(proxied.location).toBeNull();
+    expect(proxied.upstream).toBe(`${STAGING_CLOUD}${path}`);
+  });
+});

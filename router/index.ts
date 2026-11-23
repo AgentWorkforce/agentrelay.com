@@ -3,7 +3,7 @@ import { recordGuideFetched, type AnalyticsEnv } from "./src/analytics.js";
 import { startEdgeTiming, type EdgeTiming } from "./src/edge-timing.js";
 import { compareFacadeShadow, facadeOriginLabel, fetchFacade, isSafeShadowRequest, readFacadeRoute } from "./src/cloud-facade.js";
 import { withMcpGatewayErrors } from "./src/mcp-gateway-errors.js";
-import { isPrimaryHost, isStagingHost, PRIMARY_HOST, withAliasHostHeaders } from "./src/hosts.js";
+import { isPrimaryHost, isStagingHost, PRIMARY_HOST, PUBLIC_HOST, withAliasHostHeaders } from "./src/hosts.js";
 
 interface Env extends AnalyticsEnv {
   CLOUD_APP_ORIGIN: string;
@@ -808,6 +808,23 @@ export function getOpenAiAppsChallengeResponse(
   });
 }
 
+// Cloud sets its OAuth state/attempt/return-path/invite cookies host-only on
+// the request host but always builds the callback on
+// https://agentrelay.com/cloud, so a sign-in started on public.agentrelay.com
+// would land on /login?authError=state. Start it on agentrelay.com instead.
+// public.agentrelay.com only: public-staging must never be sent to production
+// sign-in (its /cloud* stays 503 or the staging Cloud origin).
+const CLOUD_AUTH_START_PATH = /^\/cloud\/api\/auth\/(?:google|microsoft|oidc)\/start\/?$/;
+
+export function getPublicHostAuthStartRedirect(url: URL, method: string): Response | undefined {
+  if (url.hostname !== PUBLIC_HOST || (method !== "GET" && method !== "HEAD")) return undefined;
+  if (!CLOUD_AUTH_START_PATH.test(url.pathname)) return undefined;
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `https://${PRIMARY_HOST}${url.pathname}${url.search}`, "Cache-Control": "no-store" },
+  });
+}
+
 const router = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext, timing: EdgeTiming): Promise<Response> {
     const url = new URL(request.url);
@@ -815,6 +832,11 @@ const router = {
     const openAiAppsChallenge = getOpenAiAppsChallengeResponse(request, url, env);
     if (openAiAppsChallenge) {
       return openAiAppsChallenge;
+    }
+
+    const publicHostAuthStart = getPublicHostAuthStartRedirect(url, request.method);
+    if (publicHostAuthStart) {
+      return publicHostAuthStart;
     }
 
     const cloudRewritePath = !isPrimaryHost(url.hostname)

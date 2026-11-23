@@ -20,6 +20,7 @@ export const PRIMARY_HOST_ALIASES: ReadonlySet<string> = new Set([
   "public-staging.agentrelay.com",
 ]);
 
+export const PUBLIC_HOST = "public.agentrelay.com";
 export const STAGING_HOST = "public-staging.agentrelay.com";
 
 export function isStagingHost(hostname: string): boolean {

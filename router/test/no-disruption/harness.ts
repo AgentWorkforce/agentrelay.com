@@ -63,6 +63,8 @@ export const PATHS = [
   "/cloud/api/v1/webhooks/nango", "/cloud/api/v1/webhooks/github",
   "/cloud/api/v1/webhooks/composio/connect/callback", "/api/v1/webhooks/nango",
   "/cloud/redirect-me",
+  "/cloud/api/auth/google/start", "/cloud/api/auth/microsoft/start?returnTo=%2Fcloud",
+  "/cloud/api/auth/oidc/start/", "/cloud/api/auth/google/callback?state=x",
   // MCP gateway
   "/mcp", "/cloud/mcp", "/cloud/api/v1/mcp/shared-sessions", "/cloud/api/v1/mcp/relay-events",
   "/cloud/api/v1/replicas/mcp", "/cloud/api/v1/mcp/relay-events?fail=1",
