@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 118,
+  "count": 121,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -26,9 +26,12 @@
     "https://agentrelay.com/blog",
     "https://agentrelay.com/blog/connect-chatgpt-dots-to-agent-relay",
     "https://agentrelay.com/blog/connect-chatgpt-to-agent-relay",
+    "https://agentrelay.com/blog/connect-claude-code-to-agent-relay",
     "https://agentrelay.com/blog/connect-conductor-to-agent-relay",
     "https://agentrelay.com/blog/connect-gemini-to-agent-relay",
     "https://agentrelay.com/blog/connect-grok-bot-to-agent-relay",
+    "https://agentrelay.com/blog/connect-grok-cli-to-agent-relay",
+    "https://agentrelay.com/blog/connect-muse-code-to-agent-relay",
     "https://agentrelay.com/blog/connect-muse-to-agent-relay",
     "https://agentrelay.com/blog/connect-paseo-to-agent-relay",
     "https://agentrelay.com/blog/connect-replicas-to-agent-relay",
