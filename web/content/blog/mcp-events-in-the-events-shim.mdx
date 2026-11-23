@@ -1,0 +1,110 @@
+---
+title: 'MCP Events in the Agent Relay events shim'
+description: 'The Agent Relay events shim now speaks MCP Events (SEP-3415). An MCP client can list, poll and stream an inbox with the Events methods, and the inbox can receive signed Events webhooks from other MCP servers.'
+date: '2026-11-23'
+author: 'Khaliq Gant'
+category: 'Engineering'
+tags:
+  - Agent Relay
+  - MCP
+  - MCP Events
+  - Webhooks
+  - Multi-agent systems
+---
+
+MCP now has a standard way for a server to tell a client that something happened. With [relay#2250](https://github.com/AgentWorkforce/relay/pull/2250), `@agent-relay/events-shim` speaks it in both directions. An inbox's MCP URL is an MCP Events server, and the inbox can receive Events webhooks from other MCP servers.
+
+We want Agent Relay to be the place where MCP Events works for any MCP client. An agent then gets one standard way to be woken and to follow what's happening, instead of a custom hook for each CLI.
+
+## What MCP Events is
+
+MCP is request-driven. A model or a user asks, and a server answers. Agents increasingly need to act when nobody is asking.
+
+[SEP-3415](https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/seps/3415-events-extension.md) defines an extension for this, `io.modelcontextprotocol/events`. The SEP is Final. The extension is published in the [ext-events](https://github.com/modelcontextprotocol/ext-events) repository under its beta specification, and it targets protocol revision `2026-07-28` and later.
+
+The parts that matter here:
+
+- A server lists its event types with `events/list`. Each type has a name, an `inputSchema` for subscription arguments and a `payloadSchema`.
+- There are three delivery modes, and a type can offer any of them. Poll (`events/poll`) is request and response. Push (`events/stream`) is a long-lived request that sends events as notifications. Webhook (`events/subscribe`) registers an `https` callback, and the server POSTs signed events to it under a TTL the client refreshes.
+- Cursors are opaque and defined by the server. A `null` cursor means "from now". `truncated: true` is how a client learns it missed events.
+- The client owns the list of subscriptions. Event payloads are untrusted data, like tool results.
+
+The SEP also says what it leaves open. Its first open question is how a client SDK should hand events to the agent: as injected context, as a special message type, or as a callback. That step, from "an event arrived" to "the model does something", is left to SDKs and hosts.
+
+## Why per-CLI hooks don't scale
+
+The events shim already wakes agents when a webhook arrives. It does that with a different mechanism for nearly every CLI. From the package README:
+
+- Claude Code gets SessionStart and Stop hooks that wait for the next post and exit with it.
+- Codex gets a SessionStart hook that links the inbox to the session through an Agent Relay core.
+- Copilot CLI gets an `agentStop` hook that answers `decision: "block"`. Gemini CLI gets an `AfterAgent` hook that answers `decision: "deny"`.
+- Factory Droid, Cursor CLI and Amp each get their own stop hook or plugin.
+
+Each one has its own limits. Cursor ends a hook after an hour, so a Cursor session idle for longer is not woken. Copilot continues a turn from a hook at most 8 times in a row. Codex can't be woken before the session's first message. That is what each host allows today. But every new CLI is another integration to write, and every host update can break one.
+
+If hosts implement MCP Events, most of that work moves to the host, done once against a shared spec.
+
+## The inbox is an Events server
+
+`initialize` on the inbox MCP URL advertises the extension. SEP-3415 has servers advertise it through `server/discover`, which the shim will add once its MCP SDK speaks protocol `2026-07-28`. The `events/*` methods answer whatever protocol version was negotiated. `events/list` offers one type, `webhook.received`, with two optional arguments: `event_type` (exact, or a prefix ending in `*`) and `mode`. To read pull request events from now on:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "events/poll",
+  "params": {
+    "name": "webhook.received",
+    "cursor": null,
+    "arguments": { "event_type": "pull_request.*" }
+  }
+}
+```
+
+The answer has `events`, a cursor, `truncated`, `hasMore` and `nextPollMs`. Pass the cursor back on the next poll. Cursors are scoped to one inbox. A cursor from another inbox, or one ahead of the newest post, comes back as `truncated: true` rather than silently skipping posts. The inbox keeps a 50-post feed, so a cursor that points at pruned posts also gets `truncated: true`.
+
+`events/stream` answers with an SSE stream. It opens with an `active` notification carrying the position before the replay, sends the backlog, then follows new posts with heartbeats. If posts leave the feed mid-stream, it sends a fresh `active` with `truncated: true` and keeps going. After five minutes by default it closes with a final result, and the client sends `events/stream` again with its last cursor.
+
+`events/subscribe` and `events/unsubscribe` return Unsupported on purpose. The inbox offers poll and push.
+
+**Events reads only observe.** Polling or streaming never changes a post's delivery state. They don't mark posts read or claim them, so they never compete with a relay wake link or a hook listener. The flip side: a session that uses Events and a wake link on the same inbox sees each post twice. Pick one per inbox.
+
+## The inbox receives Events webhooks
+
+A new URL mode, `/h/<token>/mcp`, accepts webhook deliveries from any MCP server that offers Events:
+
+1. `PUT /shims/current/secrets/mcp` with `{}` (and your manage token) returns a generated `whsec_` secret, shown once.
+2. Subscribe at the MCP server with `delivery: { mode: "webhook", url: <the mcp URL>, secret: <that secret> }`.
+3. The inbox answers the server's signed verification challenge. The challenge is not stored and does not wake the agent.
+4. Each delivery is checked as a Standard Webhooks signature (any one `v1,` entry, within five minutes), deduplicated by `webhook-id`, and wakes the agent like any other post. Its event type is the Events `name`.
+
+`gap` and `terminated` envelopes arrive as `mcp.events.gap` and `mcp.events.terminated` posts, with a line telling the agent what happened. A host running the shim can publish `/.well-known/mcp-webhook-receiver.json` by passing `mcpWebhookReceivers`.
+
+This is the forward proxy the SEP describes for clients without a public endpoint: the upstream MCP server sends webhooks to the proxy, and the client reads from the proxy by poll or push. A CLI on a laptop has no public HTTPS address. The inbox does.
+
+## How to use it
+
+In this release the Events server is part of the inbox MCP URL, so there is nothing extra to set up. If your MCP client supports Events, point it at your inbox MCP URL, call `events/list`, then poll or stream `webhook.received`. A client that only looks for the extension in `server/discover` won't find it yet; it has to read the `initialize` advertisement or call the methods directly. If it doesn't yet, the existing `setup` command and hooks from [the events shim page](/mcp-events-shim) keep working as before. Use one or the other on an inbox, not both.
+
+The `mcp` webhook mode is in the package for hosts that run the shim with `handleEventsShimRequest`. A host that stores URL modes in a constrained column has to allow `mcp`. Support in the hosted Agent Relay Cloud inbox is on the roadmap below.
+
+The full details are in the package README and in `specs/mcp-events.md` in the [relay repository](https://github.com/AgentWorkforce/relay).
+
+## Where this goes next
+
+The spec lays out where Agent Relay fits as more hosts speak Events:
+
+- **Relay as an Events server.** Any host that implements Events becomes a Relay client without hooks.
+- **Relay as the hosted forward proxy.** Relay would receive upstream Events webhooks durably and serve them again by poll, push or wake, so a session can close without losing its subscription.
+- **Team dispatch.** The SEP sends the same event to every subscriber. On a team, five people's agents all reacting to one PR comment is a bug. Relay can claim an event once per workspace, then route it to one agent.
+
+The roadmap that gets there:
+
+- Relaycast event types such as `relay.dm.received`, `relay.channel.message` and `relay.mention`, so relay messages are readable as Events.
+- Subscription custody: Relay subscribes upstream for the workspace, persists cursors and TTLs, and refreshes before expiry. The `mcp` URL is the receiving half.
+- Cloud support for the `mcp` webhook mode and the well-known receiver document, so hosted inboxes receive Events webhooks.
+- relayfile ingest, so any provider MCP server that offers Events becomes an integration without per-provider webhook code.
+- Team dispatch built on the leases and routing Relay already has.
+- A freeze on new per-CLI hook work. Existing hooks keep working and get fixes. A new CLI should come in through Events unless that host is clearly far from supporting it.
+
+Related work is coming on the Cloud side. Relay messages reach MCP Events subscribers today by Cloud polling Relaycast, and those wakes can take minutes. [cloud#6479](https://github.com/AgentWorkforce/cloud/pull/6479), which is open, has Relaycast push each message to Cloud so the subscriber wakes within seconds, with polling kept as a safety net.
