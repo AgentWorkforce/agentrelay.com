@@ -26,7 +26,12 @@ Cloud: `https://app.public.agentrelay.com` for `public.*` and
 (`PUBLIC_APP_ORIGIN`, set per environment; `src/public-app.ts` holds the path
 mapping). GET/HEAD get a 302 and other methods a 307, all `no-store`. They are
 redirects, not proxied, because the new Control accepts browser sign-in only
-from its own origin. `agentrelay.com` and arelay.to are unaffected.
+from its own origin. `agentrelay.com` and arelay.to are unaffected. Two
+Cloud APIs the site itself calls same-origin with a bearer token are not
+redirected (fetch drops `Authorization` on a cross-origin redirect):
+`/cloud/api/v1/events-shim/**` (the webhook inbox) and
+`/cloud/api/v1/signup/agent/**` (the Flows/agent signup journey). They keep
+their previous routing.
 
 Staging routing applies on the staging Worker (`ROUTER_ENV=staging`) and to any
 `public-staging.agentrelay.com` request. It falls back to the staging web

@@ -288,6 +288,21 @@ describe("new-stack redirects on the aliases", () => {
     });
   }
 
+  it.each([
+    "/cloud/api/v1/events-shim/inbox",
+    "/cloud/api/v1/events-shim",
+    "/cloud/api/v1/signup/agent/sessions",
+    "/cloud/api/v1/signup/agent/sessions/abc123",
+  ])("keeps the site's same-origin bearer API %s on the alias (no cross-origin redirect)", async (path) => {
+    for (const [host, env] of [[PUBLIC, {}], [PUBLIC_STAGING, STAGING_ENV]] as const) {
+      for (const method of ["GET", "POST"]) {
+        const result = await routeOf(host, path, { method, body: method === "POST" ? "{}" : undefined, headers: { authorization: "Bearer t" } }, env);
+        expect(result.location).toBeNull();
+        expect([302, 307]).not.toContain(result.status);
+      }
+    }
+  });
+
   it("uses 307 for other methods so the method and body are kept", async () => {
     for (const method of ["POST", "PUT", "DELETE"]) {
       const result = await routeOf(PUBLIC, "/cloud/api/v1/me", { method, body: method === "DELETE" ? undefined : "{}" });
