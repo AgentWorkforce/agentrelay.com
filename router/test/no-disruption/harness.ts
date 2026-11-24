@@ -56,6 +56,10 @@ export const PATHS = [
   // Marketing / docs / SEO
   "/", "/docs", "/docs/quickstart", "/blog", "/blog/some-post", "/robots.txt", "/sitemap.xml",
   "/llms.txt", "/download", "/download/", "/agents", "/agents/register",
+  // Sign-in and dashboard entry points (redirected on the public.* aliases only)
+  "/login", "/login/", "/login?next=%2Fcloud%2Fdashboard", "/signup/teams", "/dashboard",
+  "/dashboard/sessions", "/cloud/dashboard/sessions", "/cloud/teams/connect", "/cloud/login",
+  "/.well-known/openid-configuration",
   // Cloud app and its API, OAuth, well-known, webhooks, facade, recorder exclusions
   "/cloud", "/cloud/", "/cloud/dashboard", "/cloud/api/v1/me", "/cloud/api/v1/me/selfhost-docs",
   "/cloud/api/v1/workspaces/rw_example/sessions", "/cloud/api/v1/workspaces/rw_on/sessions",

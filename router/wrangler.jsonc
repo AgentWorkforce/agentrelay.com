@@ -50,7 +50,11 @@
     // is cloud-owned and the script name carries a random hash suffix, so it
     // would change if cloud recreates that Worker — re-copy it from the live
     // router's WEBHOOK_WORKER_ORIGIN if webhook routing ever 5xxs.
-    "WEBHOOK_WORKER_ORIGIN": "https://incoming-webhooks.agentrelay.com"
+    "WEBHOOK_WORKER_ORIGIN": "https://incoming-webhooks.agentrelay.com",
+    // public.agentrelay.com sends sign-in, the dashboard and /cloud* here (the
+    // new EKS stack's dashboard host), as redirects. Ignored on agentrelay.com
+    // and arelay.to. See src/public-app.ts.
+    "PUBLIC_APP_ORIGIN": "https://app.public.agentrelay.com"
   },
 
   // The apex front door. Cloud's prod AgentRelayRouter must have released the
@@ -79,9 +83,9 @@
   // Deliberately NOT bound in staging (no staging counterparts exist; the
   // router tolerates every one being absent). Never add the production ones:
   //   - CLOUD_WEB_WORKER (cloud-web-worker): staging /cloud* never reaches
-  //     production Cloud. It answers 503 unless the STAGING-ONLY
-  //     CLOUD_PROXY_ORIGIN names a staging Cloud (Control) origin.
-  //     TODO(staging-cloud): choose that target.
+  //     production Cloud. On public-staging it redirects to PUBLIC_APP_ORIGIN;
+  //     on any other host the staging Worker answers (e.g. a preview URL) it
+  //     answers 503 unless the STAGING-ONLY CLOUD_PROXY_ORIGIN is set.
   //   - CLOUD_APP_ORIGIN: not set; ROUTER_ENV=staging makes the router ignore it.
   //   - RELAY_AGENT_WORKER (relay-agent): agent-chat/registry routes are
   //     arelay.to only, and staging does not serve arelay.to.
@@ -94,8 +98,11 @@
       "vars": {
         "ROUTER_ENV": "staging",
         "FILE_OBSERVER_ORIGIN": "https://relayfile-file-observer.pages.dev",
-        "WEB_ORIGIN": "https://origin-web-staging.agentrelay.com"
-        // TODO(staging-cloud): "CLOUD_PROXY_ORIGIN": "<staging Cloud (Control) origin>"
+        "WEB_ORIGIN": "https://origin-web-staging.agentrelay.com",
+        // public-staging.agentrelay.com sends sign-in, the dashboard and
+        // /cloud* to the staging stack's dashboard host (src/public-app.ts).
+        "PUBLIC_APP_ORIGIN": "https://app.public-staging.agentrelay.com"
+        // TODO(staging-cloud), for hosts other than public-staging only: "CLOUD_PROXY_ORIGIN": "<staging Cloud (Control) origin>"
       },
       "routes": [
         { "pattern": "public-staging.agentrelay.com", "custom_domain": true }
