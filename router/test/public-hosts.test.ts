@@ -288,6 +288,28 @@ describe("new-stack redirects on the aliases", () => {
     });
   }
 
+  const SAME_ORIGIN_SITE_APIS = [
+    "/cloud/api/v1/events-shim/inbox",
+    "/cloud/api/v1/events-shim",
+    "/cloud/api/v1/signup/agent/sessions",
+    "/cloud/api/v1/signup/agent/sessions/abc123",
+  ];
+
+  it.each(SAME_ORIGIN_SITE_APIS)("public.* keeps the site's same-origin bearer API %s and dispatches it to Cloud (no cross-origin redirect)", async (path) => {
+    for (const method of ["GET", "POST"]) {
+      const result = await routeOf(PUBLIC, path, { method, body: method === "POST" ? "{}" : undefined, headers: { authorization: "Bearer t" } });
+      expect(result.location).toBeNull();
+      expect([302, 307, 503]).not.toContain(result.status);
+      expect(result.cloudPath ?? result.upstream).not.toBeNull();
+    }
+  });
+
+  it.each(SAME_ORIGIN_SITE_APIS)("public-staging.* still redirects %s (it has no Cloud upstream)", async (path) => {
+    const result = await routeOf(PUBLIC_STAGING, path, { method: "GET" }, STAGING_ENV);
+    expect(result.status).toBe(302);
+    expect(result.location).toBe(`https://app.public-staging.agentrelay.com${path}`);
+  });
+
   it("uses 307 for other methods so the method and body are kept", async () => {
     for (const method of ["POST", "PUT", "DELETE"]) {
       const result = await routeOf(PUBLIC, "/cloud/api/v1/me", { method, body: method === "DELETE" ? undefined : "{}" });
