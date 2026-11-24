@@ -53,9 +53,10 @@ const CONTROL_PATHS = [
 // Cloud APIs the marketing site itself calls same-origin with a bearer token
 // (web/lib/teams-cloud.ts teamsCloudUrl): the webhook inbox in
 // EventsShimTry and the Flows/agent signup journey in AgentSignupJourney.
-// They are never redirected: fetch drops Authorization when it follows a
-// redirect to another origin, so those calls would fail. They keep their
-// pre-redirect routing.
+// On public.* they are not redirected: fetch drops Authorization when it
+// follows a redirect to another origin, so those calls would fail; they keep
+// their previous routing (the Cloud dispatch). public-staging.* has no Cloud
+// upstream (the staging fallback answers 503), so there they still redirect.
 const SAME_ORIGIN_CLOUD_API_PATHS = ["/cloud/api/v1/events-shim", "/cloud/api/v1/signup/agent"];
 // Old Cloud invite links (agentrelay.com/connect/<id>, served by Cloud).
 const CONNECT_INVITE_PATH = /^\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?\/?$/i;
@@ -73,11 +74,11 @@ const CONNECT_INVITE_PATH = /^\/connect\/[A-Za-z0-9_-]{32,64}(?:\.(?:json|md))?\
  *   /cloud/<rest>                   -> /<rest>           (relay-webapp)
  *   /dashboard[/<rest>]             -> /<rest>
  *   /connect/<id>                   -> /connect/<id>     (same as /cloud/connect/<id>)
- *   /cloud/api/v1/events-shim/**, /cloud/api/v1/signup/agent/**
- *                                   -> undefined         (same-origin site APIs, not redirected)
+ *
+ * publicAppRedirect additionally leaves SAME_ORIGIN_CLOUD_API_PATHS alone on
+ * public.* (not on public-staging.*).
  */
 export function publicAppPath(pathname: string): string | undefined {
-  if (SAME_ORIGIN_CLOUD_API_PATHS.some((prefix) => within(pathname, prefix))) return undefined;
   if (pathname === "/login/") return "/login";
   if (CONTROL_PATHS.some((prefix) => within(pathname, prefix))) return pathname;
   if (CONNECT_INVITE_PATH.test(pathname)) return pathname;
@@ -95,6 +96,7 @@ export function publicAppPath(pathname: string): string | undefined {
 export function publicAppRedirect(url: URL, method: string, env: PublicAppEnv, pathname = url.pathname): Response | undefined {
   const origin = publicAppOrigin(env, url.hostname);
   if (!origin) return undefined;
+  if (url.hostname === PUBLIC_HOST && SAME_ORIGIN_CLOUD_API_PATHS.some((prefix) => within(pathname, prefix))) return undefined;
   const path = publicAppPath(pathname);
   if (path === undefined) return undefined;
   return new Response(null, {
