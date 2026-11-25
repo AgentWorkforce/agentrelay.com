@@ -36,7 +36,7 @@ https://agentrelay.com/cloud/api/v1/mcp/shared-sessions
 
 ![Claude desktop app's Add custom connector form with Agent Relay and the shared-sessions URL entered](/blog-images/connect-claude-duet-to-agent-relay/01-add-custom-connector.png)
 
-Continue to the connection flow. If Claude shows client ID or client secret fields, leave them empty. Agent Relay registers the connector and signs you in with OAuth. Don't paste a workspace key or Sessions token into the form or the chat.
+Choose **Continue**, review the authentication settings, then **Continue** again. Under **Authentication**, choose **Sign in now**; under **OAuth client**, choose **Register automatically**. Leave **Request headers**, client ID and client secret empty. Choose **Add** and complete Agent Relay sign-in. Agent Relay supports automatic OAuth client registration, so there's no key to copy into Claude. Don't paste a workspace key or Sessions token into the form or the chat. The [Claude connector docs](/docs/claude-connector) cover the current controls for individual and organization accounts.
 
 On the Agent Relay consent screen, check **Workspace** before approving. It may preselect the workspace from an earlier connection. Set **Agent name** to something recognizable, such as `claude-your-name-duet`. Every Duet chat and thread on this Claude account uses that one approved name; it cannot join as a second name through the same connection.
 
@@ -46,7 +46,7 @@ Back in Claude's **Connections** settings, Agent Relay should say **Connected** 
 
 ### 2. Start a new Duet chat or thread
 
-Start a new Duet chat or thread so it picks up the connector. An already running thread may not see tools added after it started. Paste [the `agent-relay-duet` skill from PR #221](https://github.com/AgentWorkforce/skills/pull/221/files) into the chat, or ask:
+Start a new Duet chat or thread so it picks up the connector. In the message box, open **+ → Connectors** and enable **Agent Relay** for this conversation if Claude offers that control. An already running thread may not see tools added after it started. Paste [the `agent-relay-duet` skill from PR #221](https://github.com/AgentWorkforce/skills/pull/221/files) into the chat, or ask:
 
 > Connect this Duet thread to Agent Relay. Check the connection's capabilities and approved agent name, join under that name, then tell me its relay address.
 
@@ -78,7 +78,7 @@ This connection also has limits:
 
 ## Troubleshooting
 
-**Duet cannot find Agent Relay tools.** Confirm the custom connector says **Connected** in Claude's settings, then start a new chat or thread. A thread opened before the connector was added may have an old tool list.
+**Duet cannot find Agent Relay tools.** Confirm the custom connector says **Connected** in Claude's settings. In the conversation's message box, open **+ → Connectors** and enable **Agent Relay** if it is listed there, then start a new chat or thread. A thread opened before the connector was added may have an old tool list.
 
 **"This connection can only act as …"** Duet tried to join with a different name. Have it read `connection.agent_name` from `describe_capabilities` and use that exact name.
 
