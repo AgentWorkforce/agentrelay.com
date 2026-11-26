@@ -46,6 +46,12 @@ global:
     # Stable organization ID that partitions session data. Never change it after
     # the first upload.
     orgId: __ORG_ID__
+  # The RDS CA: the chart ships AWS's public RDS CA bundles, renders the rds-ca
+  # ConfigMap for this region and pins its SHA-256 in every Postgres client.
+  # Nothing to download or hash. Set global instead of a region to trust every
+  # region's bundle.
+  rdsCa:
+    bundle: __REGION__
 
 relaycast:
   # PostgreSQL backend. The chart allows exactly one replica on this backend:
@@ -56,10 +62,6 @@ relaycast:
       image:
         repository: __IMAGE_REPO_PREFIX__/relaycast-self-host
         digest: sha256:ec062ef901af15cf575b53a71d7eb09f2e6ab6e7c0d5be2da35339a275a5c6cc
-  postgresCa:
-    enabled: true
-    configMap: rds-ca
-    key: ca.crt
   # A SQLite-only setting that this backend refuses.
   retention:
     messageTtlDays: null
@@ -98,12 +100,8 @@ sessions-pipeline:
     config:
       existingSecret: agent-relay-read-api
       key: RELAYHISTORY_READ_API_SECRET
+    # Verified against the chart-managed RDS CA (global.rdsCa).
     postgres: { tlsProfile: custom-ca }
-    postgresCa:
-      enabled: true
-      configMap: rds-ca
-      key: ca.crt
-      sha256: __RDS_CA_SHA256__
     search:
       backend: opensearch
       backendId: opensearch-main
@@ -160,9 +158,6 @@ sessions-pipeline:
       existingSecret: agent-relay-ingest-edge-runtime
       databaseUrlKey: database-url
       introspectSecretKey: introspect-secret
-    postgres:
-      caConfigMap: rds-ca
-      caSha256: __RDS_CA_SHA256__
     serviceAccountName: agent-relay-session-ingest-api
     locker:
       bucket: __SESSIONS_BUCKET__
@@ -185,10 +180,7 @@ sessions-pipeline:
     locker:
       bucket: __SESSIONS_BUCKET__
       region: __REGION__
-    postgres:
-      tlsProfile: custom-ca
-      caConfigMap: rds-ca
-      caSha256: __RDS_CA_SHA256__
+    postgres: { tlsProfile: custom-ca }
     bootstrap:
       enabled: true
       existingSecret: search-indexer-owner
@@ -210,11 +202,6 @@ sessions-pipeline:
     existingSecret: agent-relay-secrets
     summaryEncryption:
       existingSecret: agent-relay-secrets
-    postgresCa:
-      enabled: true
-      configMap: rds-ca
-      key: ca.crt
-      sha256: __RDS_CA_SHA256__
     hoopdb:
       existingSecret: agent-relay-secrets
       key: HOOPDB_URL
@@ -259,10 +246,6 @@ sessions-pipeline:
   alleyoop:
     deployment:
       enabled: false
-    postgresCa:
-      enabled: true
-      configMap: rds-ca
-      key: ca.crt
     image: *services_image
     hoopdb:
       existingSecret: agent-relay-secrets
@@ -328,10 +311,6 @@ relay-control:
     audiences:
       - https://history.__DOMAIN__
       - https://api.__DOMAIN__
-  postgresCa:
-    enabled: true
-    configMap: rds-ca
-    key: ca.crt
   networkPolicy:
     ingressFrom:
       - podSelector: {}

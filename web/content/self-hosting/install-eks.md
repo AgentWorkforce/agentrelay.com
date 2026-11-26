@@ -396,11 +396,24 @@ bash rds-setup.sh pre
 ```
 
 It creates the `relaycontrol`, `hoopdb` and `relaycast` databases and their
-roles in short-lived Jobs inside the cluster, plus the `rds-ca` ConfigMap that
-verified TLS needs. It writes every credential to `~/.agent-relay-install`,
+roles in short-lived Jobs inside the cluster, plus the `rds-ca` ConfigMap those
+Jobs verify TLS with. It writes every credential to `~/.agent-relay-install`,
 which only you can read, and prints none of them.
 
-**Done when:** it ends with `pre done`.
+The chart creates its own `rds-ca` in step 11: it ships AWS's RDS CA bundles,
+fills `rds-ca` from the one for your region and pins its hash in every
+service, so you never download the bundle or copy a hash. Delete the copy
+`pre` made for its Jobs so the chart can create it:
+
+```sh
+kubectl -n agent-relay delete configmap rds-ca
+```
+
+**Done when:** `pre` ended with `pre done`, and `kubectl` printed
+`configmap "rds-ca" deleted`.
+
+**Skipped the delete?** Step 11 stops with `ConfigMap rds-ca already exists`.
+Run the delete, then step 11 again.
 
 Copy `~/.agent-relay-install` to your secret store now: it holds the database
 passwords. Never commit it.
@@ -418,11 +431,10 @@ store; do not do it yourself unless they name the exact destination.
 ## 9. Fill in values.yaml
 
 ```sh
-export RDS_CA_SHA256="$(cat ~/.agent-relay-install/rds-ca.sha256)"
 sed -i.orig -e "s|__IMAGE_REPO_PREFIX__|$IMAGE_REPO_PREFIX|g" -e "s|__ORG_ID__|$ORG_ID|g" \
   -e "s|__ORG_NAME__|$ORG_NAME|g" -e "s|__ADMIN_EMAIL__|$ADMIN_EMAIL|g" -e "s|__DOMAIN__|$DOMAIN|g" \
   -e "s|__REGION__|$AWS_REGION|g" -e "s|__SESSIONS_BUCKET__|$SESSIONS_BUCKET|g" \
-  -e "s|__OPENSEARCH_URL__|$OPENSEARCH_URL|g" -e "s|__RDS_CA_SHA256__|$RDS_CA_SHA256|g" \
+  -e "s|__OPENSEARCH_URL__|$OPENSEARCH_URL|g" \
   -e "s|__ALB_SUBNET_CIDR_A__|$ALB_SUBNET_CIDR_A|g" -e "s|__ALB_SUBNET_CIDR_B__|$ALB_SUBNET_CIDR_B|g" \
   values.yaml
 grep -n '__[A-Z_]*__' values.yaml
@@ -450,6 +462,16 @@ EOF
 
 `values.yaml` holds no secret values, only the names of Secrets and keys, so it
 is safe to keep in version control.
+
+`global.rdsCa.bundle` gets `$AWS_REGION`. If the RDS instance is in another
+region, set that region there, or `global` (every region's bundle).
+
+**Bring your own CA?** For a private CA, a proxy in front of RDS, or a
+database that isn't RDS: delete the `rdsCa` block, create your own CA
+ConfigMap, and give each Postgres client its name and SHA-256
+(`postgresCa.configMap` and `sha256`, or `postgres.caConfigMap` and
+`caSha256`). A client that names its own ConfigMap or Secret keeps it even
+with `global.rdsCa.bundle` set.
 
 ## 10. Create the secrets
 

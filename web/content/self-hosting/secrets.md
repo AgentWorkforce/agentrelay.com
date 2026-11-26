@@ -149,8 +149,10 @@ Otherwise a later `helm upgrade` of `agent-relay-secrets` would drop the new key
 | `search-indexer-owner` | `RELAYHISTORY_PIPELINE_CONSUMER_SECRET` | JSON with the database admin URL |
 | `agent-relay-llm` (optional) | `OPENAI_API_KEY` | Your model endpoint's API key |
 
-Every database URL uses `sslmode=verify-full`, against the CA ConfigMap the
-database setup created (`rds-ca` on EKS, `cloud-sql-ca` on GKE).
+Every database URL uses `sslmode=verify-full`, against the database CA
+ConfigMap: `rds-ca` on EKS, which the chart fills from the AWS RDS CA bundle
+for `global.rdsCa.bundle`, and `cloud-sql-ca` on GKE, which the database
+setup creates.
 
 **Back up** `selfhost-encryption-key` and `SUMMARY_MASTER_KEYS`: data encrypted
 with them can't be recovered without them.
