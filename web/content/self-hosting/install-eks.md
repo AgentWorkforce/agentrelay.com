@@ -434,7 +434,7 @@ the options in [Secrets](/docs/self-hosting/secrets) instead of this block.
 
 ```sh
 cd "$INFRA"
-helm dependency build charts/sessions-pipeline && helm dependency build charts/agent-relay
+scripts/selfhost/helm-deps.sh
 helm upgrade --install agent-relay charts/agent-relay --namespace agent-relay \
   -f charts/agent-relay/values-eks.yaml -f charts/agent-relay/values-eks-native.yaml \
   -f "$INSTALL_DIR/values.yaml" --timeout 25m
@@ -442,6 +442,10 @@ cd "$INSTALL_DIR"
 ```
 
 **Done when:** it prints `STATUS: deployed`.
+
+`scripts/selfhost/helm-deps.sh` builds the chart dependencies (`charts/sessions-pipeline`,
+then `charts/agent-relay`) with no `helm repo add`, and leaves your own Helm
+repositories unchanged.
 
 Don't add `--wait`: the read API, ingest edge and search indexer can't become
 ready until step 13, so `--wait` would stall, and it wouldn't report a failed
