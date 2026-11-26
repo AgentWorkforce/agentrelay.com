@@ -41,17 +41,21 @@ answer.
 Run this on the cluster VPN:
 
 ```sh
-kubectl run pgcheck --restart=Never \
+P=pgcheck-$RANDOM
+kubectl run "$P" --restart=Never \
   --image=ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3 \
   -- sleep 3600
-kubectl wait --for=condition=Ready pod/pgcheck --timeout=5m
-kubectl exec pgcheck -- pg_isready -h <rds endpoint> -p 5432 -t 10
-kubectl delete pod pgcheck
+kubectl wait --for=condition=Ready "pod/$P" --timeout=5m
+for i in $(seq 30); do kubectl exec "$P" -- true 2>/dev/null && break; sleep 5; done
+kubectl exec "$P" -- pg_isready -h <rds endpoint> -p 5432 -t 10; rc=$?
+kubectl delete pod "$P" --wait=false; (exit $rc)
 ```
 
 The pod starts detached instead of with `kubectl run --rm -i`: on a node that
-was just created, attaching can fail with `tls: internal error` before the
-node's kubelet certificate is issued, and `--rm` then deletes the pod.
+was just created, attaching (or `exec`) fails with `tls: internal error` until
+the node's kubelet certificate is issued, so the loop retries `exec` for up to
+two and a half minutes. The block exits with `pg_isready`'s status, and deletes
+only the pod it created.
 
 If you mirrored the images to your own registry, use your mirror's PostgreSQL
 image instead.
