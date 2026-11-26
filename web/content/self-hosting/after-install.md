@@ -34,19 +34,23 @@ After the first session is indexed, run this once. It queues any sessions that
 still owe facts, waits for the indexer, then marks each workspace complete:
 
 ```sh
-cd "$INFRA"
-helm upgrade agent-relay charts/agent-relay --namespace agent-relay --reuse-values \
+v="$(helm list -n agent-relay -f '^agent-relay$' -o json | jq -r '.[0].chart' | sed 's/^agent-relay-//')"
+[ -f "$INSTALL_DIR/chart-$v/agent-relay/Chart.yaml" ] ||
+  helm pull oci://ghcr.io/agentworkforce/charts/agent-relay --version "$v" --untar --untardir "$INSTALL_DIR/chart-$v"
+export CHART="$INSTALL_DIR/chart-$v/agent-relay"
+helm upgrade agent-relay "$CHART" --namespace agent-relay --reuse-values \
   --set sessions-pipeline.searchIndexer.outputFacts.bootstrap.enabled=true \
   --set-string sessions-pipeline.searchIndexer.outputFacts.bootstrap.runId=initial \
   --wait --wait-for-jobs --timeout 25m
-cd "$INSTALL_DIR"
 ```
 
 `--reuse-values` keeps everything the install runs now, including the ECR
 images an [upgrade](/docs/self-hosting/upgrades) switched it to. Don't pass
 `values.yaml` here: it still pins the images of the release you first
-installed, and would put them back. `infra` must be checked out at the release
-that is running.
+installed, and would put them back. The first three lines point `$CHART` at the
+chart of the release that is running, pulling it if this folder doesn't have it
+yet: after an [upgrade](/docs/self-hosting/upgrades), or for an install made
+before the guides unpacked the chart into `chart-<version>`.
 
 **Done when:** the upgrade completes. Until that Job completes, the Output and
 daily digest endpoints deliberately answer `*_backfill_incomplete`.
