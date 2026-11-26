@@ -301,10 +301,47 @@ aws acm describe-certificate --certificate-arn "$CERT_ARN" --query Certificate.S
 **Done when:** only `settings checked` prints, and the certificate status is
 `ISSUED`.
 
+Then check that every ServiceAccount with AWS access has its Pod Identity
+association. The Terraform in step 4 creates all of them; if your team created
+the roles itself, this is where a missing one shows up:
+
+| ServiceAccount (namespace `agent-relay`) | Needs | Role |
+|---|---|---|
+| `agent-relay-worker` | S3 read/write | sessions |
+| `agent-relay-session-ingest-api` | S3 read/write | sessions |
+| `agent-relay-search-indexer` | S3 read, OpenSearch write | search indexer (`INDEXER_ROLE_ARN`) |
+| `agent-relay-session-read` | S3 read, OpenSearch read | search reader (`READER_ROLE_ARN`) |
+
+```sh
+for sa in agent-relay-worker agent-relay-session-ingest-api agent-relay-search-indexer agent-relay-session-read; do
+  id="$(aws eks list-pod-identity-associations --cluster-name <cluster name> --region "$AWS_REGION" \
+    --namespace agent-relay --service-account "$sa" --query 'associations[0].associationId' --output text)"
+  case "$id" in a-*) echo "ok $sa" ;; *) echo "MISSING $sa" ;; esac
+done
+```
+
+**Done when:** four lines start with `ok`.
+
+**`MISSING agent-relay-worker`** (or another)? Create it with the role from the
+table (the sessions role is the one `agent-relay-session-ingest-api` uses):
+
+```sh
+aws eks create-pod-identity-association --cluster-name <cluster name> --region "$AWS_REGION" \
+  --namespace agent-relay --service-account <ServiceAccount> --role-arn <role ARN>
+```
+
+Without it the pods get no AWS credentials. For the worker, that shows up only
+later, when the session summary worker logs `no Locker credentials`.
+[IAM and Pod Identity](/docs/self-hosting/iam-pod-identity) has each role's
+exact policy. `agent-relay-alleyoop` isn't used by this install: its
+association is harmless.
+
 **In every new terminal,** first run `cd agent-relay-install && source settings.sh`.
 
 <!-- agent
 Fill DOMAIN, ORG_ID, ORG_NAME and ADMIN_EMAIL only with the human's answers.
+If any ServiceAccount prints MISSING, show the human the create command with
+the role ARN filled in and ASK THE HUMAN before running it: it changes IAM.
 If more than two load balancer subnets are listed, ASK THE HUMAN which ones the
 load balancer uses (by default, all of them). Put two in settings.sh and add a
 third with step 9's "third load balancer subnet" block.
