@@ -39,7 +39,7 @@ One Helm chart, `agent-relay`, installs every service into one namespace,
 | Control API | Sign-in, organizations, policies | Your cluster |
 | Relaycast | Agent messaging | Your cluster |
 | Sessions services | Upload, processing, read API and search indexer | Your cluster |
-| PostgreSQL 17 | Three databases: `relaycontrol`, `relaycast`, `hoopdb` | RDS on AWS, Cloud SQL on Google Cloud |
+| PostgreSQL 16+ (17 or 18 recommended) | Three databases: `relaycontrol`, `relaycast`, `hoopdb` | RDS on AWS, Cloud SQL on Google Cloud |
 | Object storage | Session files | S3 on AWS, Cloud Storage on Google Cloud |
 | Search | Transcript search | OpenSearch on AWS, PostgreSQL on Google Cloud |
 | Pub/Sub and Memorystore | The session pipeline's queue and cache | Google Cloud only |
@@ -53,7 +53,7 @@ Identity). There are no cloud access keys anywhere in the install.
 | You have | Follow |
 |---|---|
 | An EKS cluster, and Terraform may create the AWS resources | [Install on EKS](/docs/self-hosting/install-eks) |
-| An EKS cluster and an RDS PostgreSQL 17 instance you want to reuse | [Install on EKS](/docs/self-hosting/install-eks) with [Use an existing or shared RDS](/docs/self-hosting/existing-rds) |
+| An EKS cluster and an RDS PostgreSQL 16+ instance you want to reuse | [Install on EKS](/docs/self-hosting/install-eks) with [Use an existing or shared RDS](/docs/self-hosting/existing-rds) |
 | An EKS cluster, and your team creates S3, OpenSearch, IAM and the certificate | [Install on EKS](/docs/self-hosting/install-eks) with [Bring your own AWS resources](/docs/self-hosting/bring-your-own-aws) and [IAM and Pod Identity](/docs/self-hosting/iam-pod-identity) |
 | A GKE cluster | [Install on GKE](/docs/self-hosting/install-gke), and [Bring your own Google Cloud resources](/docs/self-hosting/bring-your-own-gcp) if your team creates them |
 | An AKS cluster (community-contributed) | [Install on AKS](/docs/self-hosting/install-aks) |

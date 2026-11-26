@@ -12,7 +12,7 @@ names are fixed: the Helm chart creates exactly these.
 
 ## 1. PostgreSQL
 
-RDS for PostgreSQL 17, with a dedicated admin login:
+RDS for PostgreSQL 16 or later (17 or 18 recommended), with a dedicated admin login:
 [Use an existing or shared RDS](/docs/self-hosting/existing-rds), steps 1 and 2.
 Skip its step 3: you aren't running Terraform.
 
