@@ -66,10 +66,17 @@ gcloud dns record-sets create <that DNS name> --zone <instance>-cloud-sql --type
 **Done when:** from inside the cluster this prints `accepting connections`:
 
 ```sh
-kubectl run pgcheck --rm -i --restart=Never \
+kubectl run pgcheck --restart=Never \
   --image=<MIRROR_ROOT>/ghcr.io/cloudnative-pg/postgresql@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3 \
-  -- pg_isready -h <that DNS name> -p 5432 -t 10
+  -- sleep 3600
+kubectl wait --for=condition=Ready pod/pgcheck --timeout=5m
+kubectl exec pgcheck -- pg_isready -h <that DNS name> -p 5432 -t 10
+kubectl delete pod pgcheck
 ```
+
+The pod starts detached instead of with `kubectl run --rm -i`: on a node that
+was just created, attaching can fail with `tls: internal error` before the
+node's kubelet certificate is issued, and `--rm` then deletes the pod.
 
 ## 3. Cloud Storage bucket for session data
 

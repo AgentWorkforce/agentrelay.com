@@ -41,10 +41,17 @@ answer.
 Run this on the cluster VPN:
 
 ```sh
-kubectl run pgcheck --rm -i --restart=Never \
+kubectl run pgcheck --restart=Never \
   --image=ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3 \
-  -- pg_isready -h <rds endpoint> -p 5432 -t 10
+  -- sleep 3600
+kubectl wait --for=condition=Ready pod/pgcheck --timeout=5m
+kubectl exec pgcheck -- pg_isready -h <rds endpoint> -p 5432 -t 10
+kubectl delete pod pgcheck
 ```
+
+The pod starts detached instead of with `kubectl run --rm -i`: on a node that
+was just created, attaching can fail with `tls: internal error` before the
+node's kubelet certificate is issued, and `--rm` then deletes the pod.
 
 If you mirrored the images to your own registry, use your mirror's PostgreSQL
 image instead.
