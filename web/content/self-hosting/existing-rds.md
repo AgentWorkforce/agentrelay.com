@@ -1,6 +1,6 @@
 ---
 title: Use an existing or shared RDS
-description: Put Agent Relay's databases on an RDS PostgreSQL 17 instance you already run, including a shared one, instead of letting Terraform create one.
+description: Put Agent Relay's databases on an RDS PostgreSQL 16+ instance (17 or 18 recommended) you already run, including a shared one, instead of letting Terraform create one.
 ---
 
 Do these steps in place of step 3 of [Install on EKS](/docs/self-hosting/install-eks),
@@ -9,7 +9,7 @@ already-populated RDS instance, and the existing data was untouched.
 
 **The instance must be:**
 
-- RDS for PostgreSQL **17**;
+- RDS for PostgreSQL **16 or later**; 17 or 18 is recommended;
 - reachable from the EKS cluster's pods on TCP 5432;
 - free of databases named `relaycontrol`, `hoopdb` or `relaycast`, and not
   already used by another Agent Relay install (one install per instance).
@@ -80,7 +80,7 @@ unset PW
 
 **Done when:**
 
-- the version starts with `17`;
+- the version is 16 or later (`16.x`, `17.x` or `18.x`);
 - all three extensions are listed;
 - the `pg_database` query returns no rows;
 - the last command prints a secret ARN. Keep it: it becomes
@@ -98,7 +98,7 @@ This step needs the DBA's master credentials: ASK THE HUMAN (DBA) to run it in
 their own terminal. Never ask for, accept or type the master password.
 Ask them to paste back only: the version line, the extension names, whether the
 pg_database query returned rows, and the secret ARN.
-STOP if the version is not 17, an extension is missing, or any of the three
+STOP if the major version is below 16, an extension is missing, or any of the three
 databases already exists.
 -->
 
