@@ -80,7 +80,7 @@ Then get the release's chart, and check it against the release's own checksums:
 helm pull oci://ghcr.io/agentworkforce/charts/agent-relay --version 0.7.54
 curl -fsSL https://github.com/AgentWorkforce/infra/releases/download/agent-relay-2026.11.16/SHA256SUMS |
   grep ' agent-relay-0.7.54.tgz$' | shasum -a 256 -c
-tar -xzf agent-relay-0.7.54.tgz
+mkdir -p chart-0.7.54 && tar -xzf agent-relay-0.7.54.tgz -C chart-0.7.54
 ```
 
 It's public, so no `helm registry login` is needed. The chart already contains
@@ -90,7 +90,7 @@ its `release-manifest.json`, on the
 [release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.16).
 
 **Done when:** every `shasum` line ends in `OK` (including
-`agent-relay-0.7.54.tgz: OK`), the folder has an `agent-relay` chart folder, and
+`agent-relay-0.7.54.tgz: OK`), `chart-0.7.54/agent-relay/Chart.yaml` exists, and
 `release ok` prints.
 
 <!-- agent
@@ -279,7 +279,7 @@ export PSQL_IMAGE=ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed
 export NAMESPACE=agent-relay
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
 export INFRA="$INSTALL_DIR/infra"   # Terraform (step 4) and the load balancer script (step 14)
-export CHART="$INSTALL_DIR/agent-relay"   # the published chart from step 1
+export CHART="$INSTALL_DIR/chart-0.7.54/agent-relay"   # the published chart from step 1
 TF="$INFRA/terraform/examples/aws-existing-cluster"
 export RDS_HOST="$(terraform -chdir="$TF" output -raw database_host)"
 export RDS_ADMIN_SECRET_ARN="$(terraform -chdir="$TF" output -raw database_admin_secret_arn)"
