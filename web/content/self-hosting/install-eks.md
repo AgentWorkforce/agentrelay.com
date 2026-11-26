@@ -54,6 +54,9 @@ git -C infra checkout agent-relay-2026.11.16
 test "$(git -C infra rev-parse HEAD)" = ece71b9df93df64cb63676d2a0ca2767eccc6599 && echo "release ok"
 ```
 
+The `infra` checkout is only for the Terraform in step 4 and the load balancer
+script in step 14. Helm installs the published chart instead (below).
+
 Tools: `terraform` 1.11 or later, `helm` 3.10 or later (Helm 3, not Helm 4),
 `kubectl`, `aws` (CLI v2), `jq`, `yq`, `openssl`, `python3`, `curl` 7.75 or
 later, and [`crane`](https://github.com/google/go-containerregistry/releases),
@@ -71,11 +74,29 @@ helm version --short
 `rds-setup.sh` uses `sha256sum`, which macOS has from version 14. On older
 macOS, also run `brew install coreutils`.
 
-**Done when:** every `shasum` line ends in `OK`, and `release ok` prints.
+Then get the release's chart, and check it against the release's own checksums:
+
+```sh
+helm pull oci://ghcr.io/agentworkforce/charts/agent-relay --version 0.7.54
+curl -fsSL https://github.com/AgentWorkforce/infra/releases/download/agent-relay-2026.11.16/SHA256SUMS |
+  grep ' agent-relay-0.7.54.tgz$' | shasum -a 256 -c
+tar -xzf agent-relay-0.7.54.tgz
+```
+
+It's public, so no `helm registry login` is needed. The chart already contains
+every subchart and the EKS profiles (`values-eks.yaml`, `values-eks-native.yaml`),
+so there's nothing to build. A release's chart version is `.chart.version` in
+its `release-manifest.json`, on the
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.16).
+
+**Done when:** every `shasum` line ends in `OK` (including
+`agent-relay-0.7.54.tgz: OK`), the folder has an `agent-relay` chart folder, and
+`release ok` prints.
 
 <!-- agent
 STOP if any checksum line is not OK or "release ok" does not print. Do not edit
-the downloaded files to make a check pass.
+the downloaded files to make a check pass. Never install from a chart that
+failed its checksum.
 -->
 
 ## 2. Connect to AWS and the cluster
@@ -257,7 +278,8 @@ export SERVICES_IMAGE=ghcr.io/agentworkforce/sessions-pipeline@sha256:fd2efd61dc
 export PSQL_IMAGE=ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed6923f9ba2399cf9070379a353c710c29ced8a294be73986a2c3dae7e599ce3
 export NAMESPACE=agent-relay
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
-export INFRA="$INSTALL_DIR/infra"
+export INFRA="$INSTALL_DIR/infra"   # Terraform (step 4) and the load balancer script (step 14)
+export CHART="$INSTALL_DIR/agent-relay"   # the published chart from step 1
 TF="$INFRA/terraform/examples/aws-existing-cluster"
 export RDS_HOST="$(terraform -chdir="$TF" output -raw database_host)"
 export RDS_ADMIN_SECRET_ARN="$(terraform -chdir="$TF" output -raw database_admin_secret_arn)"
@@ -433,13 +455,13 @@ the options in [Secrets](/docs/self-hosting/secrets) instead of this block.
 ## 11. Install with Helm
 
 ```sh
-cd "$INFRA"
-helm dependency build charts/sessions-pipeline && helm dependency build charts/agent-relay
-helm upgrade --install agent-relay charts/agent-relay --namespace agent-relay \
-  -f charts/agent-relay/values-eks.yaml -f charts/agent-relay/values-eks-native.yaml \
+helm upgrade --install agent-relay "$CHART" --namespace agent-relay \
+  -f "$CHART/values-eks.yaml" -f "$CHART/values-eks-native.yaml" \
   -f "$INSTALL_DIR/values.yaml" --timeout 25m
-cd "$INSTALL_DIR"
 ```
+
+`$CHART` is the published chart from step 1. It has every subchart inside, so
+there's no `helm dependency build` and no `helm repo add`.
 
 **Done when:** it prints `STATUS: deployed`.
 
@@ -485,11 +507,9 @@ echo "$MIGRATION_JOB"   # exactly one name, agent-relay-worker-migrate-<hash>
 bash rds-setup.sh post
 kubectl -n agent-relay rollout restart deploy/agent-relay-read-api deploy/agent-relay-ingest-edge deploy/agent-relay-search-indexer
 for j in $(kubectl -n agent-relay get jobs -o name | grep search-indexer-bootstrap); do kubectl -n agent-relay delete "$j"; done
-cd "$INFRA"
-helm upgrade --install agent-relay charts/agent-relay --namespace agent-relay \
-  -f charts/agent-relay/values-eks.yaml -f charts/agent-relay/values-eks-native.yaml \
+helm upgrade --install agent-relay "$CHART" --namespace agent-relay \
+  -f "$CHART/values-eks.yaml" -f "$CHART/values-eks-native.yaml" \
   -f "$INSTALL_DIR/values.yaml" --timeout 25m
-cd "$INSTALL_DIR"
 kubectl -n agent-relay wait --for=condition=complete "$(kubectl -n agent-relay get jobs -o name | grep search-indexer-bootstrap)" --timeout=10m
 kubectl -n agent-relay rollout status deploy --timeout=10m
 kubectl -n agent-relay get pods
