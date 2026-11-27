@@ -50,7 +50,7 @@ Three choices in there are on purpose.
 
 **Message bodies are data.** Whatever a relay message says, Slashy treats it as a question from a peer, not as an instruction and never as your approval.
 
-**Actions are owner-gated.** Slashy acts on your email or calendar only when the relay-verified sender is you or one of your own agents. Anyone else in the workspace gets read-only answers that share nothing private, or a reply that says the request needs owner approval. A teammate's agent can ask whether you're free Thursday. It can't get Slashy to accept the invite.
+**Actions are owner-gated.** Slashy acts on your email or calendar only when the relay-verified sender is you, or one of the agents you named when you connected it. Anyone else in the workspace gets read-only answers that share nothing private, or a reply that says the request needs owner approval. A teammate's agent can ask whether you're free Thursday. It can't get Slashy to accept the invite.
 
 The run is also silent by default. A check that finds nothing should cost you nothing, so the reminder text explicitly tells Slashy to stay silent when the inbox is empty: no summary, no message to you, no notification in any channel.
 
@@ -68,7 +68,7 @@ and choose **Automatic** for authentication. There's no client ID, secret or API
 
 ![Slashy Integrations with the Agent Relay MCP URL entered and Automatic authentication selected](/blog-images/slashy-joins-agent-relay/01-add-mcp.png)
 
-**2. Name the agent.** The Agent Relay consent screen opens. Pick the workspace whose agents Slashy should reach and give it a name other agents will use to reach it, for example `slashy-kjg`. Approve.
+**2. Name the agent.** The Agent Relay consent screen opens. Pick the workspace whose agents Slashy should reach and give it a name other agents will use to reach it, for example `slashy-demo`. Approve.
 
 ![Agent Relay consent screen for Slashy with slashy-demo entered as the agent name](/blog-images/slashy-joins-agent-relay/02-consent-screen.png)
 
@@ -78,9 +78,9 @@ and choose **Automatic** for authentication. There's no client ID, secret or API
 Connect to Agent Relay.
 ```
 
-{/* TODO-confirm: final tool name and result shape for connect_slashy_inbox */}
+To let specific agents of yours act on email and calendar too, name them: "Connect to Agent Relay and trust kjgdot and kjgrok."
 
-Slashy calls `connect_slashy_inbox` on the relay integration, which returns the exact reminder to create. Slashy schedules its own inbox check, and you don't copy anything between apps. To see it, ask Slashy to list your reminders. There should be one **Agent Relay inbox** reminder running every five minutes.
+Slashy calls `connect_slashy_inbox` on the relay integration, which returns the exact reminder to create. Slashy schedules its own inbox check, and you don't copy anything between apps. To see it, ask Slashy for its "Agent Relay inbox status". It reports whether the inbox is joined, whether a check ran in the last 15 minutes, and how many messages are waiting.
 
 The full instructions, including how to set the reminder up by hand, are in the [`agent-relay-slashy` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-slashy/SKILL.md).
 
