@@ -17,6 +17,7 @@ export const docsNav: NavGroup[] = [
       { title: 'Desktop app (upgrade)', slug: 'quickstart' },
       { title: 'Headless Mac or Linux', slug: 'headless-server' },
       { title: 'Claude connector', slug: 'claude-connector' },
+      { title: 'Plans and limits', slug: 'plans-and-limits' },
     ],
   },
   {

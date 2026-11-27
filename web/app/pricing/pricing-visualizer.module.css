@@ -1,0 +1,88 @@
+.visualizer {
+  max-width: 1120px;
+  margin: 80px auto 0;
+  padding: 0 24px;
+  scroll-margin-top: 100px;
+}
+.heading h2 {
+  margin: 0;
+  font-family: var(--font-heading), sans-serif;
+  font-size: clamp(1.8rem, 3.2vw, 2.6rem);
+  font-weight: 520;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+}
+.heading { margin-bottom: 28px; }
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr);
+  gap: 40px;
+  padding: 28px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.usageControl { padding-top: 28px; }
+.controlLabel, .rateRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.controlLabel label { font-size: 1rem; }
+.visualizer input[type='number'] {
+  width: 86px;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-xs);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.usageControl input[type='range'] { width: 100%; min-height: 44px; margin: 8px 0 0; accent-color: var(--primary); cursor: pointer; }
+.rangeLabels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--fg-muted); }
+.results { min-width: 0; }
+.period { margin: 0 0 16px; font-size: 0.8rem; color: var(--fg-muted); }
+.total h3 { margin: 0; font-size: 1rem; font-weight: 500; }
+.amount { margin: 8px 0; color: var(--fg); font-size: clamp(1.8rem, 3.2vw, 2.6rem); font-weight: 550; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.amount span { font-size: 0.9rem; font-weight: 400; letter-spacing: 0; color: var(--fg-muted); margin-left: 3px; }
+.formula { margin: 0 0 8px; font-size: 0.85rem; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.detail, .explanation, .proposal { color: var(--fg-muted); font-size: 0.8rem; line-height: 1.6; }
+.detail { margin: 6px 0; }
+.comparison { margin: 20px 0 0; font-size: 0.9rem; line-height: 1.6; }
+.enterprisePrompt { margin: 12px 0 0; font-size: 0.85rem; line-height: 1.6; }
+.enterprisePrompt a { color: var(--primary); text-decoration: underline; text-underline-offset: 3px; }
+.options details { border-bottom: 1px solid var(--line); }
+.options summary { min-height: 48px; padding: 14px 0; cursor: pointer; font-size: 0.9rem; }
+.options details[open] { padding-bottom: 20px; }
+.explanation { max-width: 65ch; }
+.explanation p { margin: 0 0 12px; }
+.assumptions { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
+.assumptions fieldset { min-width: 0; padding: 0; margin: 0; border: 0; }
+.assumptions legend { font-size: 0.95rem; font-weight: 500; margin-bottom: 8px; }
+.rateRow { margin: 12px 0; font-size: 0.85rem; }
+.assumptionsFooter { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-top: 12px; }
+.reset { border: 1px solid var(--line); border-radius: var(--r-xs); background: transparent; color: var(--fg); font: inherit; font-size: 0.8rem; min-height: 44px; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.reset:active { transform: scale(0.97); }
+.visualizer :is(input, button, summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 4px; }
+@media (hover: hover) {
+  .reset:hover { border-color: var(--fg-muted); }
+  .options summary:hover { color: var(--primary); }
+}
+.proposal { margin: 16px 0 0; font-size: 0.75rem; }
+.chart { overflow-x: auto; margin: 12px 0 24px; }
+.chart svg { display: block; width: 100%; min-width: 420px; }
+.chart text { fill: var(--fg-muted); font-size: 13px; font-family: var(--font-geist-sans), sans-serif; }
+.gridLine { stroke: var(--line); stroke-width: 1; }
+.currentLine { stroke: var(--fg-faint); stroke-width: 1; stroke-dasharray: 3 5; }
+.priceLine { color: var(--primary); }
+.priceLine path { stroke: currentColor; fill: none; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.priceLine circle { fill: var(--bg); stroke: currentColor; stroke-width: 2.5; }
+
+@media (max-width: 800px) {
+  .workspace { grid-template-columns: 1fr; gap: 28px; }
+  .usageControl { padding-top: 0; }
+}
+@media (max-width: 600px) {
+  .visualizer { padding: 0 16px; margin-top: 56px; }
+  .assumptions { grid-template-columns: 1fr; gap: 24px; }
+  .assumptionsFooter { align-items: start; flex-direction: column; gap: 12px; }
+}
