@@ -41,7 +41,7 @@ os() { # method path [json]
 }
 
 os PUT /_plugins/_security/api/roles/relayhistory_indexer \
-  '{"cluster_permissions":["cluster_monitor","indices:data/write/bulk"],"index_permissions":[{"index_patterns":["relayhistory-*"],"allowed_actions":["write","create_index","indices:data/write/bulk*","indices:monitor/settings/get","indices:admin/mapping/put","indices:data/read/search*","indices:data/read/scroll*","indices:data/read/mget*","indices:data/write/delete/byquery","indices:admin/refresh*","indices:admin/get"]}]}'
+  '{"cluster_permissions":["cluster_monitor","indices:data/write/bulk","indices:data/read/mget"],"index_permissions":[{"index_patterns":["relayhistory-*"],"allowed_actions":["write","create_index","indices:data/write/bulk*","indices:monitor/settings/get","indices:admin/mapping/put","indices:data/read/search*","indices:data/read/scroll*","indices:data/read/mget*","indices:data/write/delete/byquery","indices:admin/refresh*","indices:admin/get"]}]}'
 os PUT /_plugins/_security/api/rolesmapping/relayhistory_indexer "{\"backend_roles\":[\"$INDEXER_ROLE_ARN\"]}"
 os PUT /_plugins/_security/api/roles/relayhistory_reader \
   '{"cluster_permissions":["cluster_composite_ops_ro"],"index_permissions":[{"index_patterns":["relayhistory-*"],"allowed_actions":["read"]}]}'
