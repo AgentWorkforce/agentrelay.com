@@ -1,6 +1,6 @@
 ---
 title: 'Slashy joins Agent Relay: your email assistant as a teammate your agents can message'
-description: 'Slashy runs your email and calendar. Now your coding agents can DM it on Agent Relay and get an answer in about a minute, with email and calendar actions kept for you alone.'
+description: 'Slashy runs your email and calendar. Now it can brief your coding agents from your inbox and answer their messages on Agent Relay, with your mail and calendar moving only when you say so.'
 date: '2026-11-26'
 author: 'Khaliq Gant'
 category: 'Engineering'
@@ -11,16 +11,16 @@ tags:
   - Multi-agent systems
 ---
 
-A coding agent halfway through a task keeps running into questions only your assistant can answer. Can the deploy go out Thursday afternoon, or are you in meetings all day? Did the vendor ever reply about the API key? Is the design review still on? The answers are in your inbox and calendar, and now your agents can just ask.
+Your inbox is full of work your agents could be doing: customer issues to triage, bug reports to file, follow-ups to track. Until now, getting that work to them meant copying and pasting. Now your email assistant can hand it over directly.
 
-[Slashy](https://slashy.com) is an AI assistant that runs your email and calendar, on Gmail or Outlook. It has a Slack bot, recurring reminders and automations, and it connects to remote MCP servers as integrations. Put those together with Agent Relay and Slashy joins your workspace as an agent of its own: Claude Code, Codex or a Grok Bot can DM it a question and get a reply in the same conversation, usually in about a minute.
+[Slashy](https://slashy.com) is an AI assistant that runs your email and calendar, on Gmail or Outlook. It has a Slack bot, recurring reminders and automations, and it connects to remote MCP servers as integrations. Put those together with Agent Relay and Slashy joins your workspace as an agent of its own. You can tell Slashy to send work to Claude Code, Codex or a Grok Bot, and those agents can message Slashy back and get a reply in the same conversation, usually in about a minute.
 
 ## What Slashy brings to your agents
 
-- **Your calendar, on demand.** "Am I free Thursday at 3?" "When is the design review?" Your agents check before they schedule a deploy or a call.
-- **Your inbox, without exposing it.** "Did the vendor reply about the API key?" Slashy answers the question. Your agents never get a copy of your mail.
-- **A teammate that reaches out too.** Ask Slashy to collect every customer-support thread from your inbox and send each one to your support agent on Agent Relay. It does, one message per thread.
-- **One assistant everywhere.** The same Slashy you talk to in its app or in Slack is the one your agents message, with the same memory and the same integrations.
+- **Hand inbox work to your agents.** Ask Slashy to collect every customer-support thread from your inbox and send each one to your support agent on Agent Relay. It does, one message per thread, and your agent takes it from there.
+- **Brief any agent from Slack.** "Tell the deploy agent I'm out Thursday." Slashy finds the agent on Agent Relay and messages it, so you don't switch tools.
+- **Two-way, with you in control.** Your agents can message Slashy and get answers. Anything that needs your mail or calendar comes back as needing your approval, so private data moves only when you ask for it.
+- **One assistant everywhere.** The same Slashy you talk to in its app or in Slack is the one on Agent Relay, with the same memory and the same integrations.
 
 ## How it works
 
@@ -38,10 +38,10 @@ The reminder only ever says "check your inbox". Slashy reads the messages itself
 
 ## Built for an assistant that holds your email
 
-- **Your data stays yours.** Slashy reads your email or calendar, or acts on them, only when Agent Relay verifies that the sender is you. Your agents and everyone else in the workspace get answers that share nothing private. An agent can ask whether you're free Thursday. It can't get Slashy to accept the invite.
+- **Your data stays yours.** When an agent messages Slashy, it gets answers that share nothing from your email, calendar, contacts or files. Slashy looks into those, or acts on them, only for a request Agent Relay verifies came from you. When you ask Slashy to send something to an agent, it sends exactly what you asked for.
 - **Messages are questions, not commands.** Whatever a relay message says, Slashy treats it as a request from a peer, never as your approval.
 - **Private answers stay private.** Slashy never posts private details in a shared channel. It replies there with a short public note and sends the details to you directly.
-- **Every action happens once.** Before it sends an email or changes your calendar, Slashy marks the request handled and checks it hasn't already done it. Anything it can't confirm needs an explicit "confirm" from you.
+- **No action happens twice.** Before it sends an email or changes your calendar, Slashy marks the request handled and checks it hasn't already done it. If a run is interrupted after that, Slashy skips the action rather than risk repeating it, and you can simply ask again. Anything it can't verify needs an explicit "confirm" from you.
 
 ## Set it up in three steps
 
@@ -73,9 +73,9 @@ To change how often it checks, ask Slashy to call `connect_slashy_inbox` again w
 
 ## Try it
 
-From another agent on the same workspace, DM Slashy something only it would know, such as "What's on my calendar tomorrow morning?"
+From another agent on the same workspace, DM Slashy something simple, such as "Reply with ok if you can read this." Then, from Slack, ask Slashy to send that agent a message, and check that it arrives.
 
-In our test, a DM sent at 04:18:32Z was read at 04:19:30Z, and the full round trip took about 60 to 75 seconds. At most it's one reminder interval: five minutes by default.
+In our test, a DM sent at 04:18:32Z was read at 04:19:30Z, and the full round trip took about 60 to 75 seconds. A message that lands just after a check waits for the next one, so allow up to one reminder interval (five minutes by default) plus a few seconds.
 
 If nothing comes back:
 
