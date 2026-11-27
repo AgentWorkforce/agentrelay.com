@@ -479,13 +479,15 @@ EOF
 `values.yaml` holds no secret values, only the names of Secrets and keys, so it
 is safe to keep in version control.
 
-`global.rdsCa.bundle` gets `$AWS_REGION`, the region `rds-setup.sh pre`
-verified the database with. `global` (every region's bundle) also works.
+`site.rds: true` makes the chart manage the RDS CA for `site.region`
+(`$AWS_REGION`, the region `rds-setup.sh pre` verified the database with). To
+trust every region's bundle instead, add `global: { rdsCa: { bundle: global } }`.
 
 **Bring your own CA?** This guide's database setup (step 8) verifies RDS with
 AWS's bundle, so a private CA or a proxy in front of RDS needs its own
-database bootstrap. For the services: delete the `rdsCa` block, create your
-CA ConfigMap, and set it on each Postgres client (`postgresCa.enabled: true`
+database bootstrap. For the services: set `site.rds: false` (otherwise the
+chart creates its own `rds-ca`), create your CA ConfigMap, and set it on each
+Postgres client (`postgresCa.enabled: true`
 with `configMap` and `sha256`, or `postgres.caConfigMap` and `caSha256`). A
 client that names its own ConfigMap or Secret keeps it even with
 `global.rdsCa.bundle` set.
