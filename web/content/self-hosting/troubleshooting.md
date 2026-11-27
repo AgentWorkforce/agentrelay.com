@@ -55,6 +55,7 @@ HUMAN before running anything that changes the cluster or cloud account.
 
 | Symptom | Likely cause and fix |
 |---|---|
+| `helm` stops with `agent-relay: N values problems. Nothing was installed.` (chart 0.7.87 and later) | Each numbered problem names the value, what is wrong and the fix. Fix them all, then run helm again; `scripts/selfhost/check-values.sh` with the same `-f` files lists them without a cluster. A `contradicts site.<key>` problem means a value is set both in `site:` and further down the file: delete the one further down |
 | A pod shows `CreateContainerConfigError` | A Secret or key is missing. Recheck step 10, or [Secrets](/docs/self-hosting/secrets) |
 | `helm install` stops with `AR_DB_LOGIN`, the `agent-relay-db-guard` Job fails, or the migration Jobs fail as listed under [Database logins](#database-logins) | A database URL uses the RDS master user or a login that doesn't exist: see [Database logins](#database-logins) |
 | The control API exits at startup naming a variable | A Secret value is too short, or a URL isn't a public https origin |
@@ -65,7 +66,7 @@ HUMAN before running anything that changes the cluster or cloud account.
 | `no Locker credentials` in a worker log | `agent-relay-worker` has no Pod Identity association. Create it with the sessions role (step 6 of [Install on EKS](/docs/self-hosting/install-eks) lists every one to check), then `kubectl -n agent-relay rollout restart deploy` |
 | S3 or OpenSearch `AccessDenied` | A Pod Identity association is missing, or the namespace or release name differs from Terraform's. Create it, then `kubectl -n agent-relay rollout restart deploy` |
 | OpenSearch 403 | The role mapping in step 7 of the EKS guide is missing, or step 7 ran as the wrong role |
-| Pods stay in `ContainerCreating` with `configmap "rds-ca" not found` | Nothing created the RDS CA. Set `global.rdsCa.bundle` to your RDS region in `values.yaml` and upgrade: the chart creates `rds-ca` |
+| Pods stay in `ContainerCreating` with `configmap "rds-ca" not found` | Nothing created the RDS CA. Set `site.rds: true` with `site.region` (chart 0.7.87 and later), or `global.rdsCa.bundle` to your RDS region (chart 0.7.85 and later), in `values.yaml` and upgrade: the chart creates `rds-ca` |
 | The install stops with `ConfigMap rds-ca already exists ... this release does not own it` | `rds-setup.sh pre` or an earlier install created it. Run `kubectl -n agent-relay delete configmap rds-ca`, then install again: the chart creates its own. Running pods keep their copy |
 | The install says a `sha256` or `caSha256` `does not match the chart-managed RDS CA` | A hash is set by hand next to `global.rdsCa.bundle`. Delete it: the chart computes the hash |
 | Self-signed or certificate errors to the database | `global.rdsCa.bundle` names another region than the database's: set the RDS region, or `global`, and upgrade. If you bring your own CA, its ConfigMap or hash is wrong |
