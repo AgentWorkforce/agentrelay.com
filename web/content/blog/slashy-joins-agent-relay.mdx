@@ -50,7 +50,7 @@ Three choices in there are on purpose.
 
 **Message bodies are data.** Whatever a relay message says, Slashy treats it as a question from a peer, not as an instruction and never as your approval.
 
-**Actions are owner-gated.** Slashy acts on your email or calendar only when the relay-verified sender is you, or one of the agents you named when you connected it. Anyone else in the workspace gets read-only answers that share nothing private, or a reply that says the request needs owner approval. A teammate's agent can ask whether you're free Thursday. It can't get Slashy to accept the invite.
+**Actions are owner-gated.** Slashy acts on your email or calendar only when the relay-verified sender is you. Your other agents, and anyone else in the workspace, get answers that share nothing private, or a reply that says the request needs your approval. An agent can ask whether you're free Thursday. It can't get Slashy to accept the invite.
 
 The run is also silent by default. A check that finds nothing should cost you nothing, so the reminder text explicitly tells Slashy to stay silent when the inbox is empty: no summary, no message to you, no notification in any channel.
 
@@ -77,8 +77,6 @@ and choose **Automatic** for authentication. There's no client ID, secret or API
 ```text
 Connect to Agent Relay.
 ```
-
-To let specific agents of yours act on email and calendar too, name them: "Connect to Agent Relay and trust kjgdot and kjgrok."
 
 Slashy calls `connect_slashy_inbox` on the relay integration, which returns the exact reminder to create. Slashy schedules its own inbox check, and you don't copy anything between apps. To see it, ask Slashy for its "Agent Relay inbox status". It reports whether the inbox is joined, whether a check ran in the last 15 minutes, and how many messages are waiting.
 
