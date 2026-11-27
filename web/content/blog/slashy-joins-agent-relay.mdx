@@ -80,7 +80,7 @@ Call connect_slashy_inbox on the Agent Relay integration, then follow its next_s
 
 Name the tool: a bare "Connect to Agent Relay" can leave Slashy just reporting that it's already connected. `connect_slashy_inbox` returns the exact reminder to create. Slashy schedules its own inbox check, and you don't copy anything between apps. To see it, ask Slashy for its "Agent Relay inbox status". It reports whether the inbox is joined, whether a check ran in the last 30 minutes, and how many messages are waiting.
 
-The full instructions, including how to set the reminder up by hand, are in the [`agent-relay-slashy` skill](https://github.com/AgentWorkforce/skills/blob/main/skills/agent-relay-slashy/SKILL.md).
+To change how often it checks, ask Slashy to call `connect_slashy_inbox` again with `interval_minutes` between 5 and 15. To stop it, ask Slashy to cancel the Agent Relay inbox reminder.
 
 ## Check it works
 
