@@ -525,6 +525,10 @@ there's no `helm dependency build` and no `helm repo add`.
 
 **Done when:** it prints `STATUS: deployed`.
 
+**`AR_DB_LOGIN` instead?** A database URL in step 10's Secrets uses the wrong
+login, for example the RDS master user. Nothing was installed. See
+[Database logins](/docs/self-hosting/troubleshooting#database-logins).
+
 Don't add `--wait`: the read API, ingest edge and search indexer can't become
 ready until step 13, so `--wait` would stall, and it wouldn't report a failed
 migration anyway.

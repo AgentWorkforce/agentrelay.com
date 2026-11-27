@@ -33,7 +33,10 @@ HUMAN before running anything that changes the cluster or cloud account.
   ingest edge and search indexer restart. Its database login doesn't exist until
   step 13 (`rds-setup.sh post` or `cloud-sql-setup.sh post`), which reruns it.
 - **The search indexer restarts until the bootstrap Job completes** in step 13,
-  with `permission denied for schema sessions`. It recovers by itself.
+  with `permission denied for schema sessions`. It recovers once the bootstrap
+  Job has rerun after `rds-setup.sh post`. Helm does not rerun a failed Job
+  that keeps its name, so step 13 deletes it first and runs `helm upgrade`
+  again.
 - **`helm upgrade --install` prints `STATUS: deployed` with a failed migration
   Job.** Helm doesn't wait for Jobs here: always run the migration check.
 - **On GKE, the Ingress has no address for 15 to 20 minutes after step 11,**
@@ -53,6 +56,7 @@ HUMAN before running anything that changes the cluster or cloud account.
 | Symptom | Likely cause and fix |
 |---|---|
 | A pod shows `CreateContainerConfigError` | A Secret or key is missing. Recheck step 10, or [Secrets](/docs/self-hosting/secrets) |
+| `helm install` stops with `AR_DB_LOGIN`, the `agent-relay-db-guard` Job fails, or the migration Jobs fail as listed under [Database logins](#database-logins) | A database URL uses the RDS master user or a login that doesn't exist: see [Database logins](#database-logins) |
 | The control API exits at startup naming a variable | A Secret value is too short, or a URL isn't a public https origin |
 | `ImagePullBackOff` | The nodes can't pull the image: check ECR or Artifact Registry pull access, and that the mirror copied the pinned digest |
 | `cloud-sql-setup.sh pre` waits about 10 minutes, then says its Job did not succeed | On a new Google Cloud project the node service account has no roles, so the Job's image pull fails with `403`. Grant it `roles/artifactregistry.reader` on the mirror repository ([step 5 of the GKE guide](/docs/self-hosting/install-gke)), then run `pre` again |
@@ -75,6 +79,53 @@ HUMAN before running anything that changes the cluster or cloud account.
 | The setup key is refused with `409 admin_already_signed_in` | The admin already signed in another way. Sign in with that method; the key is only for the very first sign-in |
 | The setup key is expired or lost | Mint a new one with the bootstrap token: step 16 of the EKS guide |
 
+## Database logins
+
+All of the symptoms below have one cause: a database URL in the install
+Secrets logs in with the wrong login. Usually every URL uses the RDS master
+user `postgres`, or the per-service logins were never created. Each service
+needs its own login. `rds-setup.sh pre` (step 8) creates them and writes their
+URLs in the right shapes, and step 10 creates the Secrets from those files.
+Never put the master user in a Secret. If you write the Secrets yourself,
+follow [RDS database setup by hand](https://github.com/AgentWorkforce/infra/blob/agent-relay-2026.11.21/docs/self-hosted-rds-manual-setup.md)
+from step 1.3.
+
+**`helm install` or `helm upgrade` refuses** (agent-relay-2026.11.21, chart
+0.7.85, and later), and nothing is installed or changed:
+
+```text
+Error: INSTALLATION FAILED: execution error at (agent-relay/templates/db-guard.yaml:10:4):
+AR_DB_LOGIN: the database credentials in this release's Secrets are wrong; nothing was installed or changed:
+  - agent-relay-secrets: database-url logs in as "postgres" (the RDS master user). Each service needs its own login.
+  - search-indexer-runtime: RELAYHISTORY_PIPELINE_CONSUMER_SECRET holds a bare URL; it must be JSON {"hoopdb_url":"postgresql://..."}.
+```
+
+Helm also refuses two services sharing one login, a missing Secret or key, and
+a URL without a host. Helm can only read the Secrets on a real install or
+`--dry-run=server`. `helm template` and a plain `--dry-run` skip the check.
+
+**`failed pre-install: resource Job/agent-relay/agent-relay-db-guard ... Failed`**
+means Helm connected with each URL and found a login with administrator
+privileges, a wrong password or a database it can't reach. The reason is in
+the Job's log:
+
+```sh
+kubectl -n agent-relay logs job/agent-relay-db-guard
+```
+
+**With an older chart, or with `databaseGuard.enabled=false`,** the same
+mistake shows up later, as unrelated-looking migration failures:
+
+- `relaycast-migrate` exits 65 after a list of `FAIL` checks (`not_createdb`,
+  `no_role_memberships`, `owns_schema` and others) ending in
+  `refusing: the session is not a correctly scoped owner identity`;
+- `relay-control-migrate` crashes with a stack trace ending in
+  `routine: 'get_role_oid'` (`role "control_api_runtime" does not exist`);
+- `agent-relay-worker-migrate` logs `"error_code":"runtime_role_missing"`;
+- everything else waits or restarts.
+
+Fix the Secrets, delete the failed Jobs and run `helm upgrade` again.
+
 ## A migration Job failed
 
 Read its log:
@@ -87,12 +138,25 @@ Fix the cause, delete the failed Job, and run the same `helm upgrade` again,
 which recreates it. A Job name includes a hash of its spec, so a changed
 setting gives a new Job.
 
-- **`role "<name>" does not exist`:** the database's runtime role has another
-  name than the chart expects. Check with your migration owner connection:
+- **`role "<name>" does not exist`:** usually the logins were never created:
+  see [Database logins](#database-logins). Otherwise the database's runtime
+  role has another name than the chart expects. Check with your migration owner connection:
   `SELECT rolname FROM pg_roles WHERE rolname NOT LIKE 'pg_%' ORDER BY 1;`
   and share only role names.
 - **`42501` with `role check failed bootstrap:...`:** the database roles weren't
   set up. Run `rds-setup.sh pre` (or `cloud-sql-setup.sh pre`) on a new install.
+- **`"error_code":"rds_profile_unproven"` after a later `helm upgrade`:** if
+  you installed with `configure-rds.sh`, it passed
+  `~/.agent-relay-install/hoopdb-layout-values.yaml` as the last `-f` file. A
+  later upgrade without it drops
+  `sessions-pipeline.worker.migrations.rdsLayout: separate-database`. Add that
+  file again, or copy its settings into your `values.yaml`, and upgrade.
+- **The `search-indexer-bootstrap` Job failed with `SearchIndexError: search
+  index: unavailable (network)` or `(credentials)`:** it can't reach OpenSearch,
+  or has no AWS credentials to sign its requests. Check the OpenSearch URL, the
+  VPC security group and the search indexer's Pod Identity association, then
+  delete the Job and run `helm upgrade` again. Until it succeeds, the search
+  indexer reports `permission denied for schema sessions`.
 - **A migration checksum mismatch:** the image changed a migration the database
   already applied. Don't edit the migration ledger:
   [escalate](/docs/self-hosting/support) with the old and new image digests,
