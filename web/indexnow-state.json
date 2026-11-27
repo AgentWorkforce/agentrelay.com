@@ -1,6 +1,6 @@
 {
   "host": "agentrelay.com",
-  "count": 123,
+  "count": 124,
   "urls": [
     "https://agentrelay.com/",
     "https://agentrelay.com/about",
@@ -47,6 +47,7 @@
     "https://agentrelay.com/blog/mcp-events-in-the-events-shim",
     "https://agentrelay.com/blog/promptgramming",
     "https://agentrelay.com/blog/six-workflow-patterns-agent-relay",
+    "https://agentrelay.com/blog/slashy-joins-agent-relay",
     "https://agentrelay.com/blog/someone-elses-agent-in-your-repo",
     "https://agentrelay.com/blog/thanksgiving-family-assistants-relay-channel",
     "https://agentrelay.com/blog/the-agent-centered-world-is-almost-here",
