@@ -704,12 +704,17 @@ where you are signed in, open
 contains `relaycastApiKey`, the workspace's Relaycast key, and
 `urls.relaycastUrl`, its public Relaycast URL. Treat the key as a password.
 
+Run this on its own, then paste the key and press Enter (nothing is shown):
+
+```sh
+read -rs RK
+```
+
 Register two agents, send a direct message from one to the other, and read it
 back as the recipient:
 
 ```sh
 CAST="<urls.relaycastUrl>"
-read -rs RK   # paste relaycastApiKey, then Enter
 A="verify-a-$(date +%s)"; B="verify-b-$(date +%s)"
 reg() { curl -fsS -X POST "$CAST/v1/agents" -H "authorization: Bearer $RK" \
   -H 'content-type: application/json' -d "{\"name\":\"$1\"}" | jq -r .data.token; }
