@@ -7,11 +7,11 @@ Run the steps in order. Copy each block, replace every `<...>`, and check the
 **Done when** line before you move on. Expect about two hours, most of it
 waiting on AWS.
 
-**Release:** `agent-relay-2026.11.21` (infra commit `14bf54d0`, chart 0.7.85).
+**Release:** `agent-relay-2026.11.22` (infra commit `95e810db`, chart 0.7.87).
 These steps were run end to end on an existing EKS cluster on 2026-11-14:
 installed with `agent-relay-2026.11.3`, then upgraded to `agent-relay-2026.11.5`
 with [Upgrades](/docs/self-hosting/upgrades). `values.yaml` renders against
-`agent-relay-2026.11.21` but was not installed from it. To run a newer release,
+`agent-relay-2026.11.22` but was not installed from it. To run a newer release,
 install this one and then follow Upgrades.
 
 **You need:**
@@ -50,8 +50,8 @@ curl -fsSLO "$base/SHA256SUMS"
 for f in $(awk '{print $2}' SHA256SUMS); do curl -fsSLO "$base/$f"; done
 shasum -a 256 -c SHA256SUMS
 git clone https://github.com/AgentWorkforce/infra.git
-git -C infra checkout agent-relay-2026.11.21
-test "$(git -C infra rev-parse HEAD)" = 14bf54d0782fb320b87e4e0e8129304fd1b02ed3 && echo "release ok"
+git -C infra checkout agent-relay-2026.11.22
+test "$(git -C infra rev-parse HEAD)" = 95e810db28083d0c831972d570da628a395bd360 && echo "release ok"
 ```
 
 The `infra` checkout is only for the Terraform in step 4 and the load balancer
@@ -77,20 +77,20 @@ macOS, also run `brew install coreutils`.
 Then get the release's chart, and check it against the release's own checksums:
 
 ```sh
-helm pull oci://ghcr.io/agentworkforce/charts/agent-relay --version 0.7.85
-curl -fsSL https://github.com/AgentWorkforce/infra/releases/download/agent-relay-2026.11.21/SHA256SUMS |
-  grep ' agent-relay-0.7.85.tgz$' | shasum -a 256 -c
-mkdir -p chart-0.7.85 && tar -xzf agent-relay-0.7.85.tgz -C chart-0.7.85
+helm pull oci://ghcr.io/agentworkforce/charts/agent-relay --version 0.7.87
+curl -fsSL https://github.com/AgentWorkforce/infra/releases/download/agent-relay-2026.11.22/SHA256SUMS |
+  grep ' agent-relay-0.7.87.tgz$' | shasum -a 256 -c
+mkdir -p chart-0.7.87 && tar -xzf agent-relay-0.7.87.tgz -C chart-0.7.87
 ```
 
 It's public, so no `helm registry login` is needed. The chart already contains
 every subchart and the EKS profiles (`values-eks.yaml`, `values-eks-native.yaml`),
 so there's nothing to build. A release's chart version is `.chart.version` in
 its `release-manifest.json`, on the
-[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.21).
+[release page](https://github.com/AgentWorkforce/infra/releases/tag/agent-relay-2026.11.22).
 
 **Done when:** every `shasum` line ends in `OK` (including
-`agent-relay-0.7.85.tgz: OK`), `chart-0.7.85/agent-relay/Chart.yaml` exists, and
+`agent-relay-0.7.87.tgz: OK`), `chart-0.7.87/agent-relay/Chart.yaml` exists, and
 `release ok` prints.
 
 <!-- agent
@@ -279,7 +279,7 @@ export PSQL_IMAGE=ghcr.io/cloudnative-pg/postgresql:17-standard-trixie@sha256:ed
 export NAMESPACE=agent-relay
 export INSTALL_DIR="$PWD"   # run "source settings.sh" from the agent-relay-install folder
 export INFRA="$INSTALL_DIR/infra"   # Terraform (step 4) and the load balancer script (step 14)
-export CHART="$INSTALL_DIR/chart-0.7.85/agent-relay"   # the published chart from step 1
+export CHART="$INSTALL_DIR/chart-0.7.87/agent-relay"   # the published chart from step 1
 TF="$INFRA/terraform/examples/aws-existing-cluster"
 export RDS_HOST="$(terraform -chdir="$TF" output -raw database_host)"
 export RDS_ADMIN_SECRET_ARN="$(terraform -chdir="$TF" output -raw database_admin_secret_arn)"
@@ -442,6 +442,20 @@ grep -n '__[A-Z_]*__' values.yaml
 
 **Done when:** the only line printed is `__LLM_MODEL__`. You set that one later,
 when you [turn on titles and summaries](/docs/self-hosting/after-install).
+
+The domain, region, bucket, OpenSearch URL, org and admin each appear once, in
+the `site:` block at the top of `values.yaml`; the chart fills every other
+place that needs them. Check the file before you install. This needs no
+cluster, and it lists every problem at once (an example value left in, a
+domain the chart refuses such as a `.internal` name, an OpenSearch URL without
+`https://`), each with where it is and the fix:
+
+```sh
+"$INFRA/scripts/selfhost/check-values.sh" --chart "$CHART" \
+  -f "$CHART/values-eks.yaml" -f "$CHART/values-eks-native.yaml" -f values.yaml
+```
+
+**Done when:** it prints `check-values: no problems found`.
 
 **A third load balancer subnet?** Add it to every network policy, or requests
 through that subnet answer 504:
