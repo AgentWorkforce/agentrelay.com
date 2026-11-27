@@ -1,4 +1,4 @@
-]7;file://Khaliqs-MacBook-Pro.local/Users/khaliqgant/Projects/AgentWorkforce/infra-- RDS adapter: executed by the CREATEROLE migration owner, never a workload.
+-- RDS adapter: executed by the CREATEROLE migration owner, never a workload.
 -- pre creates only the identity; post grants after the search bootstrap exists.
 \set ON_ERROR_STOP 1
 BEGIN;

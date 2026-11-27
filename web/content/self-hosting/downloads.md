@@ -27,7 +27,7 @@ Used by [this guide](/docs/self-hosting/install-eks). Checksums: [`SHA256SUMS`](
 | [`helm-secrets-prepare.sh`](https://agentrelay.com/self-hosting/files/eks/helm-secrets-prepare.sh) | `f3d790f69e3b544b4c6b2e1dfdf85cef2777f861e9419cfc839524281b118852` |
 | [`okta-setup.sh`](https://agentrelay.com/self-hosting/files/eks/okta-setup.sh) | `d2208cdf9011cd06fb103250da1fc9129b69dc6f4119456da531593c2728f1d7` |
 | [`opensearch-roles-via-cluster.sh`](https://agentrelay.com/self-hosting/files/eks/opensearch-roles-via-cluster.sh) | `b43755a02f2972ad9f8b405b8f2c3acd20cf1f6d999009f1cbe644f3f4fa90b8` |
-| [`rds-session-erase-search.sql`](https://agentrelay.com/self-hosting/files/eks/rds-session-erase-search.sql) | `323a20ad2e94a729293928039c10262c981c44d6d5199c27bc120fb6dc56415f` |
+| [`rds-session-erase-search.sql`](https://agentrelay.com/self-hosting/files/eks/rds-session-erase-search.sql) | `fcfbca110103573d9f6b168c15f2526c23bf678c18e3b48b21c47ea3b80e3933` |
 | [`rds-setup.sh`](https://agentrelay.com/self-hosting/files/eks/rds-setup.sh) | `f5ec7386147341788a0fd454c3bf6202102b976eb36d791f77fda48acc1629e9` |
 | [`values.yaml`](https://agentrelay.com/self-hosting/files/eks/values.yaml) | `ddcc2e53d22bda59bf35e1244233b6564d47e12cc24c2e142967f5aff0edaf93` |
 
