@@ -23,18 +23,18 @@
 # and, with rds: true, the RDS CA.
 site:
   # Base domain: the dashboard is <domain>, plus api., cast. and history.<domain>.
-  domain: __DOMAIN__
+  domain: "__DOMAIN__"
   # Region of the sessions bucket and the OpenSearch domain (and, with
   # rds: true, of the RDS instance).
-  region: __REGION__
-  sessionsBucket: __SESSIONS_BUCKET__
-  opensearchUrl: __OPENSEARCH_URL__
+  region: "__REGION__"
+  sessionsBucket: "__SESSIONS_BUCKET__"
+  opensearchUrl: "__OPENSEARCH_URL__"
   # Stable organization ID that partitions session data. Never change it after
   # the first upload.
-  orgId: __ORG_ID__
+  orgId: "__ORG_ID__"
   # The first organization and its administrator (setup key sign-in).
-  orgName: __ORG_NAME__
-  adminEmail: __ADMIN_EMAIL__
+  orgName: "__ORG_NAME__"
+  adminEmail: "__ADMIN_EMAIL__"
   # The databases are on Amazon RDS in region: the chart renders the rds-ca
   # ConfigMap from the AWS bundle it ships and pins its sha256 in every Postgres
   # client. For another region, or global, set global.rdsCa.bundle instead.
@@ -207,6 +207,7 @@ sessions-pipeline:
         existingSecret: agent-relay-secrets
         key: HOOPDB_MIGRATION_URL
       databaseMode: rds
+      rdsLayout: separate-database
       supabaseShim: false
       runtimeRole: sessions_pipeline_runtime
       runtimeRoleLogin: true

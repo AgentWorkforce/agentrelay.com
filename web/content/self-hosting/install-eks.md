@@ -455,7 +455,9 @@ domain the chart refuses such as a `.internal` name, an OpenSearch URL without
   -f "$CHART/values-eks.yaml" -f "$CHART/values-eks-native.yaml" -f values.yaml
 ```
 
-**Done when:** it prints `check-values: no problems found`.
+**Done when:** it prints `check-values: no problems found`. It needs Helm 3.13 or later:
+an older Helm renders for Kubernetes 1.25 when there is no cluster, and the
+chart requires 1.28, so the check stops at `chart requires kubeVersion`.
 
 **A third load balancer subnet?** Add it to every network policy, or requests
 through that subnet answer 504:
