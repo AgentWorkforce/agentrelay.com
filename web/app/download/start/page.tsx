@@ -7,6 +7,7 @@ import { LogoIcon, LogoWordmark } from '../../../components/SiteNav';
 import { desktopAssetByFile, desktopAssetUrl } from '../../../lib/desktop-downloads';
 import { absoluteUrl } from '../../../lib/site';
 import { DownloadStatus } from './DownloadStatus';
+import { MacInstallGuide } from './MacInstallGuide';
 import s from './start.module.css';
 
 export const metadata: Metadata = {
@@ -24,6 +25,8 @@ type PageProps = { searchParams: Promise<{ build?: string | string[] }> };
 export default async function DownloadStartPage({ searchParams }: PageProps) {
   const { build } = await searchParams;
   const asset = desktopAssetByFile(typeof build === 'string' ? build : undefined);
+
+  if (asset?.os === 'macos') return <MacInstallGuide asset={asset} />;
 
   return (
     <div className={s.page}>

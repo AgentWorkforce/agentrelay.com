@@ -5,7 +5,7 @@ import sections from '../../components/home/home-sections.module.css';
 import { SiteFooter } from '../../components/SiteFooter';
 import { SiteNav } from '../../components/SiteNav';
 import { SiteNavActions } from '../../components/SiteNavActions';
-import { DESKTOP_ASSETS, type DesktopAsset, type DesktopOs, desktopAssetUrl } from '../../lib/desktop-downloads';
+import { DESKTOP_ASSETS, type DesktopAsset, type DesktopOs, desktopAssetUrl, desktopStartHref } from '../../lib/desktop-downloads';
 import { absoluteUrl } from '../../lib/site';
 import s from '../landing.module.css';
 import { DownloadButton } from './DownloadButton';
@@ -82,7 +82,7 @@ export default function DownloadPage() {
                 <ul className={d.builds}>
                   {DESKTOP_ASSETS.filter((asset) => asset.os === platform.os).map((asset) => (
                     <li key={asset.file} className={d.build}>
-                      <a className={d.buildLink} href={desktopAssetUrl(asset.file)}>
+                      <a className={d.buildLink} href={asset.os === 'macos' ? desktopStartHref(asset.file) : desktopAssetUrl(asset.file)}>
                         <span className={d.buildArch}>{archName(asset)}</span>
                         <span className={d.buildKind}>{asset.kind}</span>
                       </a>
