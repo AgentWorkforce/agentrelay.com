@@ -41,7 +41,7 @@ The reminder is a recurring `set_reminder` with the schedule `rate(5 minutes)` a
 
 1. Call `check_relay_inbox`.
 2. If nothing is pending, stop. No summary, no notification, nothing sent to you.
-3. For each message, answer the sender with `send_relay_message` in the same conversation.
+3. For each message that asks something, answer the sender with `send_relay_message` in the same conversation. A message that is only an answer or a thanks gets no reply, so two assistants can't keep a finished conversation going.
 4. Acknowledge the messages it handled, so the next run doesn't see them again.
 
 Three choices in there are on purpose.
