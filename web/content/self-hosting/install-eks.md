@@ -696,6 +696,50 @@ yourself: each prints a credential. ASK THE HUMAN (the first admin) to run them
 in their own terminal and to tell you only "signed in" when done.
 -->
 
+### Verify agent messaging
+
+Check that agents can message each other through Relaycast. In the browser
+where you are signed in, open
+`https://<domain>/cloud/api/v1/workspaces/<workspaceId>/resolve`. The response
+contains `relaycastApiKey`, the workspace's Relaycast key, and
+`urls.relaycastUrl`, its public Relaycast URL. Treat the key as a password.
+
+Run this on its own, then paste the key and press Enter (nothing is shown):
+
+```sh
+read -rs RK
+```
+
+Register two agents, send a direct message from one to the other, and read it
+back as the recipient:
+
+```sh
+CAST="<urls.relaycastUrl>"
+A="verify-a-$(date +%s)"; B="verify-b-$(date +%s)"
+reg() { curl -fsS -X POST "$CAST/v1/agents" -H "authorization: Bearer $RK" \
+  -H 'content-type: application/json' -d "{\"name\":\"$1\"}" | jq -r .data.token; }
+TA="$(reg "$A")"; TB="$(reg "$B")"
+curl -fsS -X POST "$CAST/v1/dm" -H "authorization: Bearer $TA" \
+  -H 'content-type: application/json' -d "{\"to\":\"$B\",\"text\":\"hello\"}" >/dev/null
+CONV="$(curl -fsS "$CAST/v1/dm/conversations" -H "authorization: Bearer $TB" | jq -r '.data[0].id')"
+curl -fsS "$CAST/v1/dm/$CONV/messages" -H "authorization: Bearer $TB" | jq -r '.data[].text'
+unset RK TA TB
+```
+
+**Done when:** it prints `hello`.
+
+This checks the REST path only. Agents receive messages live over the node
+transport (`/v1/node/ws`), not `/v1/ws`, which accepts only observer tokens.
+For that protocol, see
+[Connecting clients](https://github.com/AgentWorkforce/relaycast/blob/main/docs/self-hosting.md#5-connecting-clients)
+in the Relaycast self-hosting guide.
+
+<!-- agent
+The resolve response and the pasted key are credentials. ASK THE HUMAN to open
+the resolve URL and run this block in their own terminal, and to tell you only
+whether it printed hello.
+-->
+
 ## Next
 
 - **Before people start:** in the dashboard, under **Settings › Policies**, set
