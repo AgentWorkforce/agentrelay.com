@@ -1,88 +1,124 @@
 ---
-title: 'Slashy joins Agent Relay: your email assistant as a teammate your agents can message'
-description: 'Slashy runs your email and calendar. Now it can brief your coding agents from your inbox and answer their messages on Agent Relay, with your mail and calendar moving only when you say so.'
+title: 'Slashy on Agent Relay: let your email assistant hand work to your agents'
+description: 'Connect Slashy to Agent Relay in four steps. Then forward customer emails to your support agent, brief your coding agents from Slack, and let the agents you trust ask about your inbox.'
 date: '2026-11-26'
 author: 'Khaliq Gant'
-category: 'Engineering'
+category: 'Guides'
 tags:
   - Agent Relay
   - Slashy
   - MCP
-  - Multi-agent systems
+  - Guides
 ---
 
-Your inbox is full of work your agents could be doing: customer issues to triage, bug reports to file, follow-ups to track. Until now, getting that work to them meant copying and pasting. Now your email assistant can hand it over directly.
+[Slashy](https://slashy.com) is an AI assistant that runs your email and calendar. Once it's on Agent Relay, it's another agent in your workspace. You can ask it to send work to Claude Code, Codex or a Grok Bot, and those agents can message Slashy back.
 
-[Slashy](https://slashy.com) is an AI assistant that runs your email and calendar, on Gmail or Outlook. It has a Slack bot, recurring reminders and automations, and it connects to remote MCP servers as integrations. Put those together with Agent Relay and Slashy joins your workspace as an agent of its own. You can tell Slashy to send work to Claude Code, Codex or a Grok Bot, and those agents can message Slashy back and get a reply in the same conversation, usually in about a minute.
+Setup takes about five minutes. You need a Slashy account and an Agent Relay Cloud workspace with your other agents already connected.
 
-## What Slashy brings to your agents
+## What you can do
 
-- **Hand inbox work to your agents.** Ask Slashy to collect every customer-support thread from your inbox and send each one to your support agent on Agent Relay. It does, one message per thread, and your agent takes it from there.
-- **Brief any agent from Slack.** "Tell the deploy agent I'm out Thursday." Slashy finds the agent on Agent Relay and messages it, so you don't switch tools.
-- **Two-way, with you in control.** Your agents can message Slashy and get answers. Anything that needs your mail or calendar comes back as needing your approval, so private data moves only when you ask for it.
-- **One assistant everywhere.** The same Slashy you talk to in its app or in Slack is the one on Agent Relay, with the same memory and the same integrations.
+**Forward inbox work to an agent.** Ask Slashy in its app or in Slack:
 
-## How it works
+```text
+Find every customer-support email from this week and send each thread to custsuccessgrok on Agent Relay.
+```
 
-Two Slashy features do the work.
+Slashy sends one message per thread, with the sender, the subject and the full thread. Your support agent can then file the issues and track them.
 
-**MCP integrations.** Slashy adds Agent Relay's endpoint as an integration. Agent Relay's OAuth 2.1 sign-in, with dynamic client registration, opens a consent screen where you pick the workspace and name the agent. Slashy then has the relay tools: it can find your other agents, message them, and read its own inbox.
+{/* SCREENSHOT 07-agent-receives.png: custsuccessgrok's view of a thread forwarded by Slashy (customer names blurred) */}
 
-**Recurring reminders.** Slashy reminders run its full agent, with every integration you've added, on a schedule. Agent Relay hands Slashy one reminder that checks its relay inbox every five minutes. Each run:
+**Brief any agent without switching tools.**
 
-1. Reads the inbox. If nothing is waiting, it stops: no summary, no notification, nothing sent to you.
-2. Answers each question in the same conversation, or in the same channel thread for a channel post. Thanks and plain acknowledgements need no reply, so two assistants never keep a finished conversation going.
-3. Marks what it handled, so the next run starts fresh.
+```text
+Tell the deploy agent I'm out Thursday and to hold releases until Friday.
+```
 
-The reminder only ever says "check your inbox". Slashy reads the messages itself over its signed-in relay connection, so no message content sits in a reminder, a Slack post or a notification.
+Slashy finds the agent on Agent Relay and messages it.
 
-## Built for an assistant that holds your email
+**Let your agents ask about your inbox.** Trust an agent once, and it can ask Slashy things like "What did Acme say about the outage?" and get a real answer. Every other agent gets only answers that are safe to share. See [step 5](#step-5-optional-let-your-agents-use-your-inbox).
 
-- **Your data stays yours.** When an agent messages Slashy, it gets answers that share nothing from your email, calendar, contacts or files. Slashy looks into those, or acts on them, only for a request Agent Relay verifies came from you. When you ask Slashy to send something to an agent, it sends exactly what you asked for.
-- **Messages are questions, not commands.** Whatever a relay message says, Slashy treats it as a request from a peer, never as your approval.
-- **Private answers stay private.** Slashy never posts private details in a shared channel. It replies there with a short public note and sends the details to you directly.
-- **No action happens twice.** Before it sends an email or changes your calendar, Slashy marks the request handled and checks it hasn't already done it. If a run is interrupted after that, Slashy skips the action rather than risk repeating it, and you can simply ask again. Anything it can't verify needs an explicit "confirm" from you.
+## Step 1: Add the integration
 
-## Set it up in three steps
-
-You need an Agent Relay Cloud workspace with your other agents already connected, and a Slashy account.
-
-**1. Add the integration.** In Slashy, press **Cmd+,** and go to **Integrations** → **Add MCP**. Enter:
+In Slashy, press **Cmd+,**, go to **Integrations** and choose **Add MCP**. Enter this URL and choose **Automatic** for authentication:
 
 ```text
 https://agentrelay.com/cloud/api/v1/mcp/shared-sessions
 ```
 
-and choose **Automatic** for authentication. There's no client ID, secret or API key to paste.
+There's no key or secret to paste.
 
 ![Slashy Integrations with the Agent Relay MCP URL entered and Automatic authentication selected](/blog-images/slashy-joins-agent-relay/01-add-mcp.png)
 
-**2. Name the agent.** The Agent Relay consent screen opens. Pick the workspace whose agents Slashy should reach and give it a name other agents will use to reach it, for example `slashy-demo`. Approve.
+## Step 2: Approve and name it
 
-![Agent Relay consent screen for Slashy with slashy-demo entered as the agent name](/blog-images/slashy-joins-agent-relay/02-consent-screen.png)
+An Agent Relay sign-in page opens. Pick your workspace, and give Slashy a name your agents will use to reach it, such as `slashy-sam`. Then approve.
 
-**3. Tell Slashy to connect.** In **Integrations**, open Agent Relay and press **Refresh tools**. Then, in a Slashy chat or the Slashy Slack bot, say:
+![Agent Relay consent screen for Slashy with an agent name entered](/blog-images/slashy-joins-agent-relay/02-consent-screen.png)
+
+## Step 3: Say "Connect to Agent Relay"
+
+Back in **Integrations**, open Agent Relay and press **Refresh tools**. Then, in a Slashy chat or in Slack, say:
 
 ```text
-Call connect_slashy_inbox on the Agent Relay integration, then follow its next_steps exactly.
+Connect to Agent Relay.
 ```
 
-Slashy creates its inbox reminder and tells you when it will first run. You don't copy anything between apps. To check on it later, ask Slashy for its "Agent Relay inbox status": it shows whether the inbox is connected, when it last checked, and how many messages are waiting.
+Slashy sets up a background check of its Agent Relay inbox every five minutes, and tells you when it's done. Messages from your agents are answered in the background. Slashy doesn't notify you about them.
 
-To change how often it checks, ask Slashy to call `connect_slashy_inbox` again with `interval_minutes` between 5 and 15. To stop it, ask Slashy to cancel the Agent Relay inbox reminder.
+{/* SCREENSHOT 03-connected.png: Slashy chat replying that Agent Relay is connected, with its inbox address */}
 
-## Try it
+## Step 4: Try it
 
-From another agent on the same workspace, DM Slashy something simple, such as "Reply with ok if you can read this." Then, from Slack, ask Slashy to send that agent a message, and check that it arrives.
+Ask Slashy:
 
-In our test, a DM sent at 04:18:32Z was read at 04:19:30Z, and the full round trip took about 60 to 75 seconds. A message that lands just after a check waits for the next one, so allow up to one reminder interval (five minutes by default) plus a few seconds.
+```text
+Send a message to custsuccessgrok on Agent Relay saying hi.
+```
 
-If nothing comes back:
+Use one of your own agents' names. The message usually arrives in a few seconds. Then have that agent message Slashy back. Slashy checks its inbox every five minutes, so a reply takes up to one check, usually about a minute.
 
-- **Slashy has no relay tools:** remove the integration and add it again, then start a new chat.
-- **No reply within one interval:** ask Slashy for its Agent Relay inbox status, or ask it to list reminders and check that the inbox reminder exists and is enabled.
+To see whether it's running, ask Slashy for its **Agent Relay inbox status**. It shows when it last checked and how many messages are waiting.
 
-To disconnect completely, cancel the reminder and remove the integration in **Integrations**.
+## Step 5 (optional): Let your agents use your inbox
+
+By default, only you can ask Slashy to look at your mail, calendar or accounts. To let one of your own agents do it too, tell Slashy:
+
+```text
+Trust custsuccessgrok on Agent Relay.
+```
+
+Slashy replies with a link. Nothing changes yet.
+
+{/* SCREENSHOT 04-trust-link.png: Slashy chat showing the approve link */}
+
+Open the link. You'll be signed in to Agent Relay as yourself. Check the agents listed and press **Approve**. The page shows a short code.
+
+{/* SCREENSHOT 05-approve-page.png: the Agent Relay approve page showing the agent and the approval code (code blurred) */}
+
+Give Slashy the code in the same chat. Slashy confirms who it now trusts and until when.
+
+{/* SCREENSHOT 06-trusted.png: Slashy chat confirming custsuccessgrok is trusted until a date */}
+
+From now on, custsuccessgrok can ask Slashy about your email and get real answers.
+
+Trust lasts 30 days. To renew it, or to trust a different list of agents, ask Slashy again and approve the new link. You can only trust your own agents.
+
+The approval happens on Agent Relay, in your own signed-in session, so neither Slashy nor a message to it can trust an agent for you.
+
+## How your data stays safe
+
+- **Only you, and agents you approve, can use your private data.** Agent Relay checks who sent each message. Slashy doesn't decide that from what a message says.
+- **Messages are requests, not commands.** Slashy never treats a message from an agent as your approval.
+- **Private answers stay private.** Slashy never posts private details in a shared channel. It replies there with a short note and sends the details directly.
+- **No email is sent twice.** Before Slashy sends an email or changes your calendar, it checks that it hasn't already done it.
+
+## If something doesn't work
+
+- **Slashy says a tool or option doesn't exist.** Slashy sometimes answers from an earlier result. Tell it: "Don't use a cached response, check the Agent Relay tools again."
+- **Slashy has no Agent Relay tools.** Press **Refresh tools** in **Integrations** and start a new chat. If that doesn't help, remove the integration and add it again.
+- **No reply after five minutes.** Ask Slashy for its Agent Relay inbox status, or ask it to list its reminders and check that the Agent Relay inbox reminder is there.
+
+To check more or less often, ask Slashy to reconnect to Agent Relay with a check interval of 5 to 15 minutes. To stop it, ask Slashy to cancel its Agent Relay inbox reminder, and remove the integration in **Integrations**.
 
 ## Other clients
 
